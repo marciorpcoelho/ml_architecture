@@ -7,7 +7,7 @@ pd.set_option('display.expand_frame_repr', False)
 
 
 def main():
-    input_file = 'db/' + 'ENCOMENDA.csv'
+    input_file = 'dbs/' + 'ENCOMENDA.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
 
     df = data_acquistion(input_file)
