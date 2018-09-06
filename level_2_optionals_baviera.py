@@ -1,72 +1,122 @@
 import time
+import sys
+import timeit
+import schedule
+import logging
 import pandas as pd
-from level_1_a_data_acquisition import read_csv
-from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, score_calculation, duplicate_removal
+import level_2_optionals_baviera_options
+from level_1_a_data_acquisition import read_csv, log_files
+from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function
 from level_1_e_deployment import save_csv
 pd.set_option('display.expand_frame_repr', False)
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename='logs/optionals_baviera.txt', filemode='a')
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
 
 def main():
+    logging.info('Project: Baviera Stock Optimization')
+
+    # log_files('optional_baviera')
+
+    # Options:
     input_file = 'dbs/' + 'ENCOMENDA.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
+    stockdays_threshold, margin_threshold = 45, 3.5
+    target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
 
     df = data_acquistion(input_file)
-    data_processing(df)
+    data_processing(df, stockdays_threshold, margin_threshold)
     data_modelling()
     model_evaluation()
     deployment()
 
+    # df = pd.DataFrame()
+    # save_csv(df, 'logs/optionals_baviera_ran.csv')
+
+    # sys.stdout.flush()
+    logging.info('Finished - Project: Baviera Stock Optimization\n')
+    # return schedule.CancelJob
+
 
 def data_acquistion(input_file):
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step A...')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step A...')
+    logging.info('Started Step A...')
 
     df = read_csv(input_file, delimiter=';', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
 
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Ended Step A.')
+    logging.info('Finished Step A.')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
 
     return df
 
 
-def data_processing(df):
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step B...')
+def data_processing(df, stockdays_threshold, margin_threshold):
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step B...')
+    logging.info('Started Step B...')
 
     df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])
-    df = remove_rows(df, df.loc[df['Opcional'] == 'preço de venda', :].index)
+    df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])
 
     dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca'}
     df = string_replacer(df, dict_strings_to_replace)
-    df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that has missing values which are needed
+    df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
     df.dropna(axis=0, inplace=True)  # Removes all remaining NA's.
 
-    df.loc[:, 'Navegação'], df.loc[:, 'Sensores'], df.loc[:, 'Cor_Interior'], df.loc[:, 'Caixa Auto'], df.loc[:, 'Cor_Exterior'], df.loc[:, 'Jantes'] = 0, 0, 0, 0, 0, 0  # New Columns
+    df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes'])
 
-    dict_cols_to_take_date = {'buy_': 'Data Compra', 'sell_': 'Data Venda'}
-    df = date_cols(df, dict_cols_to_take_date)
+    dict_cols_to_take_date_info = {'buy_': 'Data Compra', 'sell_': 'Data Venda'}
+    df = date_cols(df, dict_cols_to_take_date_info)
+    df = options_scraping(df)
+    df = color_replacement(df)
 
-    df = options_scraping(df)  # Need to recheck this
-    df = color_replacement(df)  # Need to recheck this
-    df = score_calculation(df)  # Need to recheck this
-    df = duplicate_removal(df)  # Need to recheck this
+    df = total_price(df)
+    df = duplicate_removal(df, subset_col='Nº Stock')
+    df = remove_columns(df, ['Cor', 'Interior', 'Versão', 'Opcional', 'A', 'S', 'Custo', 'Vendedor', 'Canal de Venda'])
+    # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
+    df = reindex(df)
 
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step B.')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Checkpoint B.1...')
+    logging.info('Checkpoint B.1...')
+    # Checkpoint B.1 - this should be the first savepoint of the df. If an error is found after this point, the code should check for the df of this checkpoint
+
+    df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
+    df = margin_calculation(df)
+    df = score_calculation(df, stockdays_threshold, margin_threshold)
+
+    cols_to_group = ['Cor_Exterior', 'Cor_Interior', 'Jantes', 'Local da Venda', 'Modelo']
+    dictionaries = [level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict]
+    df = col_group(df, cols_to_group, dictionaries)
+    df = new_features_optionals_baviera(df, sel_cols=['Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])
+
+    df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])
+
+    logging.info('Finished Step B.')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step B.')
 
 
 def data_modelling():
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
+    logging.info('Started Step C...')
 
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step C.')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step C.')
+    logging.info('Finished Step C.')
 
 
 def model_evaluation():
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
+    logging.info('Started Step D...')
 
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
+    logging.info('Finished Step D.')
 
 
 def deployment():
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step E...')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step E...')
+    logging.info('Started Step E...')
 
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step E.')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step E.')
+    logging.info('Finished Step E.')
 
 
 if __name__ == '__main__':
