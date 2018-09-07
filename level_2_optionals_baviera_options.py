@@ -1,3 +1,7 @@
+import numpy as np
+from sklearn import tree, linear_model
+from sklearn.ensemble import RandomForestClassifier
+
 
 # Dictionaries:
 color_ext_dict = {
@@ -51,5 +55,17 @@ model_dict = {
     'mini': ['MINI 5p', 'MINI 3p'],
     'motos': ['Série C', 'Série F', 'Série K', 'Série R'],
     'outros': ['S2 Cabrio', 'S2 Gran Tourer', 'S2 Coupé', 'S3 Gran Turismo', 'S4 Coupé', 'S4 Cabrio', 'S5 Gran Turismo', 'S6 Cabrio', 'S6 Gran Turismo', 'S6 Gran Coupe', 'S6 Coupé', 'S7 Berlina', 'S7 L Berlina', 'X2 SAC', 'X4 SUV', 'X5 SUV', 'X5 M', 'X6', 'X6 M', 'Z4 Roadster', 'M2 Coupé', 'M3 Berlina', 'M4 Cabrio', 'M4 Coupé', 'M5 Berlina', 'S6 Gran Turismo', 'S6 Cabrio', 'S6 Coupé', 'S6 Gran Coupe', 'S7 Berlina', 'S7 L Berlina']
+}
+
+# models = {
+    # tree.DecisionTreeClassifier: [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}],
+    # RandomForestClassifier: [{'n_estimators': [10, 25, 50, 100], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}],
+    # linear_model.LogisticRegression: [{'C': np.logspace(-2, 2, 20)}]
+# }
+
+classification_models = {
+    'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
+    'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
+    'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20)}]]
 }
 

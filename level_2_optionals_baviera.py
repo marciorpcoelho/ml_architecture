@@ -5,7 +5,8 @@ import logging
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, log_files
-from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, df_copy, ohe, global_variables_saving, prov_replacement, dataset_split
+from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split
+from level_1_c_data_modelling import ClassFit
 from level_1_e_deployment import save_csv
 pd.set_option('display.expand_frame_repr', False)
 
@@ -25,11 +26,14 @@ def main():
     stockdays_threshold, margin_threshold = 45, 3.5
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
+    models = ['dt', 'rf', 'lr']
+    k = 10
+    score = 'recall'
     ###
 
     df = data_acquistion(input_file)
     df, train_x, train_y, test_x, test_y = data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check)
-    data_modelling(df, train_x, train_y, test_x, test_y)
+    data_modelling(df, train_x, train_y, test_x, test_y, models, k, score, oversample_check)
     model_evaluation()
     deployment()
 
@@ -68,7 +72,7 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
 
     df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes'])
 
-    dict_cols_to_take_date_info = {'buy_': 'Data Compra', 'sell_': 'Data Venda'}
+    dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
     df = date_cols(df, dict_cols_to_take_date_info)
     df = options_scraping(df)
     df = color_replacement(df)
@@ -96,10 +100,13 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     global_variables_saving(df, project='optionals_baviera')
     df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])
 
+    ### Need to remove: 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock'
+
     # df = df_copy(df)
     ohe_cols = ['Jantes_new', 'Cor_Interior_new', 'Cor_Exterior_new', 'Local da Venda_new', 'Modelo_new', 'Prov_new', 'buy_day', 'buy_month', 'buy_year']
-    df_ohe = ohe(df, ohe_cols)
-    train_x, train_y, test_x, test_y = dataset_split(df_ohe, target_variable, oversample_check)
+    df_ohe = df.copy(deep=True)
+    df_ohe = ohe(df_ohe, ohe_cols)
+    train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Data Venda', 'Data Compra', 'Margem', 'Nº Stock']]], target_variable, oversample_check)
 
     logging.info('Finished Step B.')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step B.')
@@ -107,9 +114,31 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     return df, train_x, train_y, test_x, test_y
 
 
-def data_modelling(df, train_x, train_y, test_x, test_y):
+def data_modelling(df, train_x, train_y, test_x, test_y, models, k, score, oversample_check, voting=0):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
     logging.info('Started Step C...')
+
+    if oversample_check:
+        oversample_flag_backup, original_index_backup = train_x['oversample_flag'], train_x['original_index']
+        remove_columns(train_x, ['oversample_flag', 'original_index'])
+
+    print(train_x.shape, '\n', train_y.shape)
+    print(test_x.shape, '\n', test_y.shape)
+    for df in [train_x, train_y, test_x, test_y]:
+        print(type(df))
+    sys.exit()
+
+    for model in models:
+        clf = ClassFit(clf=level_2_optionals_baviera_options.classification_models[model][0])
+        clf.grid_search(parameters=level_2_optionals_baviera_options.classification_models[model][1], k=k, score=score)
+        clf.clf_fit(x=train_x, y=train_y)
+        clf_best = clf.grid.best_estimator_
+        if not voting:
+            clf_best.fit(train_x, train_y)
+
+
+
+
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step C.')
     logging.info('Finished Step C.')

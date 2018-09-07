@@ -200,6 +200,7 @@ def col_group(df, columns_to_replace, dictionaries):
             variable = df.loc[df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull(), columns_to_replace[dictionaries.index(dictionary)]].unique()
             logging.warning('Column Grouping - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new'))
             logging.warning('Value(s) not grouped: {}'.format(variable))
+        df.drop(columns_to_replace[dictionaries.index(dictionary)], axis=1, inplace=True)
     return df
 
 
@@ -262,7 +263,7 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
 def new_features_optionals_baviera(df, sel_cols):
     df_grouped = df.sort_values(by=['Data Venda']).groupby(sel_cols)
     df = df_grouped.apply(previous_sales_info_optionals_baviera)
-    remove_columns(df, ['sell_day', 'sell_month', 'sell_year'])
+    # remove_columns(df, ['sell_day', 'sell_month', 'sell_year'])
 
     return df.fillna(0)
 
@@ -350,6 +351,8 @@ def oversample_data(train_x, train_y):
     train_x['oversample_flag'] = range(train_x.shape[0])
     train_x['original_index'] = train_x.index
     # print(train_x.shape, '\n', train_y['new_score'].value_counts())
+
+    print(train_x, train_y)
 
     ros = RandomOverSampler(random_state=42)
     train_x_resampled, train_y_resampled = ros.fit_sample(train_x, train_y.values.ravel())
