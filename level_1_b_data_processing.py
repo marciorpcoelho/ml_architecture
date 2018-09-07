@@ -1,8 +1,17 @@
 import nltk
 import sys
 import logging
+import warnings
 import numpy as np
+import pandas as pd
 from scipy import stats
+from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import RandomOverSampler
+warnings.simplefilter('ignore', FutureWarning)
+
+# Globals Definition
+MEAN_TOTAL_PRICE = 0  # optionals_baviera
+STD_TOTAL_PRICE = 0  # optionals_baviera
 
 # logging.basicConfig(level=logging.WARN, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename='logs/optionals_baviera.txt', filemode='a')
 
@@ -56,13 +65,6 @@ def string_replacer(df, dictionary):
 
 
 def date_cols(df, dictionary):
-    # df.loc[:, 'buy_day'] = df['Data Compra'].dt.day
-    # df.loc[:, 'buy_month'] = df['Data Compra'].dt.month
-    # df.loc[:, 'buy_year'] = df['Data Compra'].dt.year
-    # df.loc[:, 'sell_day'] = df['Data Venda'].dt.day
-    # df.loc[:, 'sell_month'] = df['Data Venda'].dt.month
-    # df.loc[:, 'sell_year'] = df['Data Venda'].dt.year
-
     for key in dictionary.keys():
         df.loc[:, key + 'day'] = df[dictionary[key]].dt.day
         df.loc[:, key + 'month'] = df[dictionary[key]].dt.month
@@ -200,8 +202,6 @@ def col_group(df, columns_to_replace, dictionaries):
             logging.warning('Value(s) not grouped: {}'.format(variable))
     return df
 
-# df.loc[df['B'].isin(teste), 'B_new'] = 2
-
 
 def total_price(df):
     df['price_total'] = df['Custo'].groupby(df['Nº Stock']).transform('sum')
@@ -215,14 +215,21 @@ def margin_calculation(df):
     return df
 
 
+def prov_replacement(df):
+    df.loc[df['Prov'] == 'Viaturas Km 0', 'Prov'] = 'Novos'
+    df.rename({'Prov': 'Prov_new'}, axis=1, inplace=True)
+
+    return df
+
+
 def color_replacement(df):
     color_types = ['Cor_Interior', 'Cor_Exterior']
     colors_to_replace = {'black': 'preto', 'preto/silver': 'preto/prateado', 'tartufo': 'truffle', 'preto/laranja/preto/lara': 'preto/laranja', 'dacota': 'dakota', 'white': 'branco', 'blue': 'azul', 'red': 'vermelho', 'grey': 'cinzento', 'silver': 'prateado', 'orange': 'laranja', 'green': 'verde', 'anthrazit': 'antracite', 'antracit': 'antracite', 'brown': 'castanho', 'antracito': 'antracite', 'âmbar/preto/pr': 'ambar/preto/preto', 'beige': 'bege', 'kaschmirsilber': 'cashmere', 'beje': 'bege'}
 
     unknown_ext_colors = df[df['Cor_Exterior'] == 0]['Cor'].unique()
     unknown_int_colors = df[df['Cor_Interior'] == 0]['Interior'].unique()
-    print('Unknown Exterior Colors:', unknown_ext_colors, ', Removed', df[df['Cor_Exterior'] == 0].shape[0], 'lines in total, corresponding to ', df[df['Cor_Exterior'] == 0]['Nº Stock'].nunique(), 'vehicles')  # 49 lines removed, 3 vehicles
-    print('Unknown Interior Colors:', unknown_int_colors, ', Removed', df[df['Cor_Interior'] == 0].shape[0], 'lines in total, corresponding to ', df[df['Cor_Interior'] == 0]['Nº Stock'].nunique(), 'vehicles')  # 2120 lines removed, 464 vehicles
+    # print('Unknown Exterior Colors:', unknown_ext_colors, ', Removed', df[df['Cor_Exterior'] == 0].shape[0], 'lines in total, corresponding to ', df[df['Cor_Exterior'] == 0]['Nº Stock'].nunique(), 'vehicles')  # 49 lines removed, 3 vehicles
+    # print('Unknown Interior Colors:', unknown_int_colors, ', Removed', df[df['Cor_Interior'] == 0].shape[0], 'lines in total, corresponding to ', df[df['Cor_Interior'] == 0]['Nº Stock'].nunique(), 'vehicles')  # 2120 lines removed, 464 vehicles
 
     for color_type in color_types:
         df[color_type] = df[color_type].replace(colors_to_replace)
@@ -233,11 +240,11 @@ def color_replacement(df):
 
 def score_calculation(df, stockdays_threshold, margin_threshold):
     df['stock_days'] = (df['Data Venda'] - df['Data Compra']).dt.days
-    df['stock_days_norm'] = (df['stock_days'] - df['stock_days'].min()) / (df['stock_days'].max() - df['stock_days'].min())
-    df['inv_stock_days_norm'] = 1 - df['stock_days_norm']
+    # df['stock_days_norm'] = (df['stock_days'] - df['stock_days'].min()) / (df['stock_days'].max() - df['stock_days'].min())
+    # df['inv_stock_days_norm'] = 1 - df['stock_days_norm']
 
-    df['margem_percentagem_norm'] = (df['margem_percentagem'] - df['margem_percentagem'].min()) / (df['margem_percentagem'].max() - df['margem_percentagem'].min())
-    df['score'] = df['inv_stock_days_norm'] * df['margem_percentagem_norm']
+    # df['margem_percentagem_norm'] = (df['margem_percentagem'] - df['margem_percentagem'].min()) / (df['margem_percentagem'].max() - df['margem_percentagem'].min())
+    # df['score'] = df['inv_stock_days_norm'] * df['margem_percentagem_norm']
 
     df['stock_days_class'] = 0
     df.loc[df['stock_days'] <= stockdays_threshold, 'stock_days_class'] = 1
@@ -247,7 +254,7 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
     df['new_score'] = 0
     df.loc[(df['stock_days_class'] == 1) & (df['margin_class'] == 1), 'new_score'] = 1
 
-    df.drop(['stock_days_norm', 'inv_stock_days_norm', 'margem_percentagem_norm'], axis=1, inplace=True)
+    # df.drop(['stock_days_norm', 'inv_stock_days_norm', 'margem_percentagem_norm'], axis=1, inplace=True)
 
     return df
 
@@ -300,6 +307,78 @@ def previous_sales_info_optionals_baviera(x):
 def z_scores_function(df, cols_to_normalize):
     for column in cols_to_normalize:
         df[column] = stats.zscore(df[column])
+
+    return df
+
+
+def global_variables_saving(df, project):
+    if project == 'optionals_baviera':
+        global MEAN_TOTAL_PRICE
+        MEAN_TOTAL_PRICE = np.mean(df['price_total'])
+        global STD_TOTAL_PRICE
+        STD_TOTAL_PRICE = np.std(df['price_total'])
+
+
+def df_copy(df):
+
+    copy = df.copy(deep=True)
+
+    return df, copy
+
+
+def dataset_split(df, target, oversample=0):
+    df_train, df_test = train_test_split(df, stratify=df[target], random_state=2)  # This ensures that the classes are evenly distributed by train/test datasets; Default split is 0.75/0.25 train/test
+
+    df_train_y = df_train[target]
+    df_train_x = df_train.drop(target, axis=1)
+
+    df_test_y = df_test[target]
+    df_test_x = df_test.drop(target, axis=1)
+
+    # print('train_x', df_train_x.shape, 'test_x', df_test_x.shape)
+    # print('train_y', df_train_y.shape, 'test_y', df_test_y.shape)
+
+    if oversample:
+        print('Oversampling small classes...')
+        df_train_x, df_train_y = oversample_data(df_train_x, df_train_y)
+
+    return df_train_x, df_train_y, df_test_x, df_test_y
+
+
+def oversample_data(train_x, train_y):
+
+    train_x['oversample_flag'] = range(train_x.shape[0])
+    train_x['original_index'] = train_x.index
+    # print(train_x.shape, '\n', train_y['new_score'].value_counts())
+
+    ros = RandomOverSampler(random_state=42)
+    train_x_resampled, train_y_resampled = ros.fit_sample(train_x, train_y.values.ravel())
+
+    train_x_resampled = pd.DataFrame(np.atleast_2d(train_x_resampled), columns=list(train_x))
+    train_y_resampled = pd.Series(train_y_resampled)
+    for column in list(train_x_resampled):
+        if train_x_resampled[column].dtype != train_x[column].dtype:
+            print('Problem found with dtypes, fixing it...', )
+            dtype_checkup(train_x_resampled, train_x)
+        break
+
+    return train_x_resampled, train_y_resampled
+
+
+def dtype_checkup(train_x_resampled, train_x):
+    for column in list(train_x):
+        train_x_resampled[column] = train_x_resampled[column].astype(train_x[column].dtype)
+
+
+def ohe(df, cols):
+
+    for column in cols:
+        uniques = df[column].unique()
+        for value in uniques:
+            new_column = column + '_' + str(value)
+            df[new_column] = 0
+            df.loc[df[column] == value, new_column] = 1
+        df.drop(column, axis=1, inplace=True)
 
     return df
 

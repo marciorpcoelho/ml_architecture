@@ -21,9 +21,9 @@ color_int_dict = {
 
 jantes_dict = {
     'standard': ['standard', '15', '16'],
-    'seventeen_pol': ['17'],
-    'eighteen_pol': ['18'],
-    'nineteen_or_twenty_pol': ['19', '20']
+    '17': ['17'],
+    '18': ['18'],
+    '19/20': ['19', '20']
 }
 
 sales_place_dict = {

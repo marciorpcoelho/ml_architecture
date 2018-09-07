@@ -1,12 +1,11 @@
 import time
 import sys
-import timeit
 import schedule
 import logging
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, log_files
-from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function
+from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, df_copy, ohe, global_variables_saving, prov_replacement, dataset_split
 from level_1_e_deployment import save_csv
 pd.set_option('display.expand_frame_repr', False)
 
@@ -19,15 +18,18 @@ def main():
 
     # log_files('optional_baviera')
 
-    # Options:
-    input_file = 'dbs/' + 'ENCOMENDA.csv'
+    ### Options:
+    # input_file = 'dbs/' + 'ENCOMENDA.csv'
+    input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
     stockdays_threshold, margin_threshold = 45, 3.5
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
+    oversample_check = 0
+    ###
 
     df = data_acquistion(input_file)
-    data_processing(df, stockdays_threshold, margin_threshold)
-    data_modelling()
+    df, train_x, train_y, test_x, test_y = data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check)
+    data_modelling(df, train_x, train_y, test_x, test_y)
     model_evaluation()
     deployment()
 
@@ -43,7 +45,8 @@ def data_acquistion(input_file):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step A...')
     logging.info('Started Step A...')
 
-    df = read_csv(input_file, delimiter=';', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    # df = read_csv(input_file, delimiter=';', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
 
     logging.info('Finished Step A.')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
@@ -51,7 +54,7 @@ def data_acquistion(input_file):
     return df
 
 
-def data_processing(df, stockdays_threshold, margin_threshold):
+def data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step B...')
     logging.info('Started Step B...')
 
@@ -72,7 +75,7 @@ def data_processing(df, stockdays_threshold, margin_threshold):
 
     df = total_price(df)
     df = duplicate_removal(df, subset_col='Nº Stock')
-    df = remove_columns(df, ['Cor', 'Interior', 'Versão', 'Opcional', 'A', 'S', 'Custo', 'Vendedor', 'Canal de Venda'])
+    df = remove_columns(df, ['Cor', 'Interior', 'Versão', 'Opcional', 'A', 'S', 'Custo', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])
     # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
     df = reindex(df)
 
@@ -87,15 +90,24 @@ def data_processing(df, stockdays_threshold, margin_threshold):
     cols_to_group = ['Cor_Exterior', 'Cor_Interior', 'Jantes', 'Local da Venda', 'Modelo']
     dictionaries = [level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict]
     df = col_group(df, cols_to_group, dictionaries)
+    df = prov_replacement(df)
     df = new_features_optionals_baviera(df, sel_cols=['Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])
 
+    global_variables_saving(df, project='optionals_baviera')
     df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])
+
+    # df = df_copy(df)
+    ohe_cols = ['Jantes_new', 'Cor_Interior_new', 'Cor_Exterior_new', 'Local da Venda_new', 'Modelo_new', 'Prov_new', 'buy_day', 'buy_month', 'buy_year']
+    df_ohe = ohe(df, ohe_cols)
+    train_x, train_y, test_x, test_y = dataset_split(df_ohe, target_variable, oversample_check)
 
     logging.info('Finished Step B.')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step B.')
 
+    return df, train_x, train_y, test_x, test_y
 
-def data_modelling():
+
+def data_modelling(df, train_x, train_y, test_x, test_y):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
     logging.info('Started Step C...')
 
