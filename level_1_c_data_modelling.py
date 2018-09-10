@@ -1,27 +1,30 @@
 import pandas as pd
 import numpy as np
+import time
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score
+from level_2_optionals_baviera_options import classification_models
 pd.set_option('display.expand_frame_repr', False)
 
 
-class ClassFit(object):
+class ClassificationTraining(object):
     def __init__(self, clf, params=None):
         if params:
             self.clf = clf(**params)
         else:
             self.clf = clf()
 
-    def predict(self, x):
-        return self.clf.predict(x)
-
     def grid_search(self, parameters, k, score):
         self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score)
 
     def clf_fit(self, x, y):
         self.grid.fit(x, y)
+
+    def predict(self, x):
+        # return self.clf.predict(x)
+        self.grid.predict(x)
 
     def grid_performance(self, prediction, y):
         self.micro = f1_score(y, prediction, average='micro', labels=np.unique(prediction))
@@ -36,7 +39,7 @@ class ClassFit(object):
         return self.clf.feature_importances_
 
 
-class ClusterFit(object):
+class ClusterTraining(object):
     def __init__(self, clf, params=None):
         if params:
             self.clf = clf(**params)
@@ -66,22 +69,8 @@ class ClusterFit(object):
     def cluster_centers(self):
         return self.clf.cluster_centers_
 
-    def predict(self, x):
-        return self.clf.predict(x)
 
-    def silhouette_score_avg(self, x, cluster_clients):
-        self.silh_score = silhouette_score(x, cluster_clients)
-        print('\nThe Avg. Silhouette Score is: %.3f' % self.silh_score)
-
-    def cluster_clients_counts(self, cluster_clients):
-        _, self.clusters_size = np.unique(cluster_clients, return_counts=True)
-        print('Client Counts per cluster:', self.clusters_size)
-
-    def sample_silhouette_score(self, x, cluster_clients):
-        self.sample_silh_score = silhouette_samples(x, cluster_clients)
-
-
-class RegFit(object):
+class RegressionTraining(object):
     def __init__(self, clf, params=None):
         if params:
             self.clf = clf(**params)
@@ -100,14 +89,25 @@ class RegFit(object):
     def clf_fit(self, x, y):
         self.clf.fit(x, y)
 
-    def mse_func(self, prediction, groundtruth):
-        self.mse = mean_squared_error(groundtruth, prediction)  # Mean Square Error
-        return self.mse
 
-    def score_func(self, prediction, groundtruth):
-        # return self.clf.score(groundtruth, prediction)  # R^2
-        self.score = r2_score(groundtruth, prediction)
-        return self.score
+def model_training(models, train_x, train_y, test_x, k, score, voting=0):
 
-    def coefficients(self):
-        return self.clf.coef_
+    predictions, running_times = {}, {}
+    for model in models:
+        start = time.time()
+        clf = ClassificationTraining(clf=classification_models[model][0])
+        clf.grid_search(parameters=classification_models[model][1], k=k, score=score)
+        clf.clf_fit(x=train_x, y=train_y)
+        clf_best = clf.grid.best_estimator_
+
+        if not voting:
+            clf_best.fit(train_x, train_y)
+            prediction_trainer, prediction_test = clf_best.predict(train_x), clf_best.predict(test_x)
+            predictions[model] = [prediction_trainer, prediction_test]
+            running_times[model] = time.time() - start
+        elif voting:
+            predictions[model] = clf_best
+
+        classes = clf.grid.classes_
+
+    return predictions, classes, running_times
