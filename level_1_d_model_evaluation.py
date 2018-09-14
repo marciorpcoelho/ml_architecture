@@ -75,6 +75,23 @@ def model_choice(df_results, metric, threshold):
         logging.info('No models above minimum performance threshold.')
 
 
+def model_comparison(best_model_name, best_model_value, metric):
+    # Assumes comparison between the same metrics;
+
+    name = 'place_holder'
+
+    try:
+        old_results = pd.read_csv('output/' + name)
+        if old_results[old_results.loc[:, metric].gt(best_model_value)].shape[0]:
+            logging.warning('Previous results are better than current ones - Will maintain.')
+        else:
+            logging.info('Current results are better than previous ones - Will replace.')
+    except FileNotFoundError:
+        logging.info('No previous results found.')
+
+
+
+
 
 
 

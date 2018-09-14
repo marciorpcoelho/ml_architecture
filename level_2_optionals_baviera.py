@@ -7,7 +7,7 @@ import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, log_files
 from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split
 from level_1_c_data_modelling import model_training
-from level_1_d_model_evaluation import performance_evaluation, model_choice
+from level_1_d_model_evaluation import performance_evaluation, model_choice, model_comparison
 from level_1_e_deployment import save_csv
 pd.set_option('display.expand_frame_repr', False)
 
@@ -20,14 +20,14 @@ def main():
     # log_files('optional_baviera')
 
     ### Options:
-    # input_file = 'dbs/' + 'ENCOMENDA.csv'
-    input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
+    input_file = 'dbs/' + 'ENCOMENDA.csv'
+    # input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
     stockdays_threshold, margin_threshold = 45, 3.5
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
-    models = ['dt', 'rf']
-    # models = ['dt', 'rf', 'lr']
+    # models = ['dt', 'rf']
+    models = ['dt', 'rf', 'lr']
     k = 10
     gridsearch_score = 'recall'
     metric = 'accuracy'
@@ -37,7 +37,7 @@ def main():
 
     df = data_acquistion(input_file)
     df, train_x, train_y, test_x, test_y = data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check)
-    model_predictions, classes, running_times = data_modelling(df, train_x, train_y, test_x, test_y, models, k, gridsearch_score, oversample_check)
+    model_predictions, classes, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score, oversample_check)
     model_evaluation(models, model_predictions, running_times, classes, metric, metric_threshold, train_y, test_y)
     deployment()
 
@@ -54,7 +54,7 @@ def data_acquistion(input_file):
     logging.info('Started Step A...')
 
     # df = read_csv(input_file, delimiter=';', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
-    df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    df = read_csv(input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
 
     logging.info('Finished Step A.')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
@@ -66,51 +66,53 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step B...')
     logging.info('Started Step B...')
 
-    df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])
-    df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])
+    df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
+    df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
 
     dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca'}
-    df = string_replacer(df, dict_strings_to_replace)
+    df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
     df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
-    df.dropna(axis=0, inplace=True)  # Removes all remaining NA's.
+    df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
-    df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes'])
+    df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes'])  # Creates new columns filled with zeros, which will be filled in the future
 
     dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
-    df = date_cols(df, dict_cols_to_take_date_info)
-    df = options_scraping(df)
-    df = color_replacement(df)
+    df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
+    df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+    df = color_replacement(df)  # Translates all english colors to portuguese
 
-    df = total_price(df)
-    df = duplicate_removal(df, subset_col='Nº Stock')
-    df = remove_columns(df, ['Cor', 'Interior', 'Versão', 'Opcional', 'A', 'S', 'Custo', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])
+    df = total_price(df)  # Creates a new column with the total cost for each configuration;
+    df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
+    df = remove_columns(df, ['Cor', 'Interior', 'Versão', 'Opcional', 'A', 'S', 'Custo', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])  # Remove columns not needed atm;
     # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
-    df = reindex(df)
+    df = reindex(df)  # Creates a new order index - after removing duplicate rows, the index loses its sequence/order
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Checkpoint B.1...')
     logging.info('Checkpoint B.1...')
     # ToDO: Checkpoint B.1 - this should be the first savepoint of the df. If an error is found after this point, the code should check for the df of this checkpoint
 
     df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
-    df = margin_calculation(df)
-    df = score_calculation(df, stockdays_threshold, margin_threshold)
+    # Removes entries of motorcycles (Série), recent car models (Z4), MINI models (MINI) and those whose order is Demonstração and Em Utilização
+    df = margin_calculation(df)  # Calculates the margin in percentage of the total price
+    df = score_calculation(df, stockdays_threshold, margin_threshold)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
+    # where only configurations with 1 in both dimension, have 1 as new_score
 
     cols_to_group = ['Cor_Exterior', 'Cor_Interior', 'Jantes', 'Local da Venda', 'Modelo']
     dictionaries = [level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict]
-    df = col_group(df, cols_to_group, dictionaries)
-    df = prov_replacement(df)
-    df = new_features_optionals_baviera(df, sel_cols=['Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])
+    df = col_group(df, cols_to_group, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
+    # groups are shown in level_2_optionals_baviera_options
+    df = prov_replacement(df)  # Replaces all entries with order type of Viaturas Km 0 as Novos
+    df = new_features_optionals_baviera(df, sel_cols=['Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])  # Creates a series of new features, explained in the provided pdf
 
-    global_variables_saving(df, project='optionals_baviera')
-    df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])
-
-    ### Need to remove: 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock'
+    global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
+    df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])  # Converts all the mentioned columns to their respective Z-Score
 
     # df = df_copy(df)
     ohe_cols = ['Jantes_new', 'Cor_Interior_new', 'Cor_Exterior_new', 'Local da Venda_new', 'Modelo_new', 'Prov_new', 'buy_day', 'buy_month', 'buy_year']
-    df_ohe = df.copy(deep=True)
-    df_ohe = ohe(df_ohe, ohe_cols)
-    train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Data Venda', 'Data Compra', 'Margem', 'Nº Stock']]], target_variable, oversample_check)
+    df_ohe = df.copy(deep=True)  # Creates a copy of the original df
+    df_ohe = ohe(df_ohe, ohe_cols)  # Creates the OHE for columns in ohe_cols
+    train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
+    # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed
 
     logging.info('Finished Step B.')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step B.')
@@ -118,7 +120,7 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     return df, train_x, train_y, test_x, test_y
 
 
-def data_modelling(df, train_x, train_y, test_x, test_y, models, k, score, oversample_check, voting=0):
+def data_modelling(df, train_x, train_y, test_x, models, k, score, oversample_check, voting=0):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
     logging.info('Started Step C...')
 
@@ -126,7 +128,8 @@ def data_modelling(df, train_x, train_y, test_x, test_y, models, k, score, overs
         oversample_flag_backup, original_index_backup = train_x['oversample_flag'], train_x['original_index']
         remove_columns(train_x, ['oversample_flag', 'original_index'])
 
-    predictions, classes, running_times = model_training(models, train_x, train_y, test_x, k, score, voting)
+    predictions, classes, running_times = model_training(models, train_x, train_y, test_x, k, score, voting)  # Training of each referenced model
+    #  ToDo: Save models locally
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step C.')
     logging.info('Finished Step C.')
@@ -138,10 +141,12 @@ def model_evaluation(models, model_predictions, running_times, classes, metric, 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     logging.info('Started Step D...')
 
-    results_training, results_test = performance_evaluation(models, classes, model_predictions, running_times, train_y, test_y)
-    # save_csv()  # ToDO: Save csv locally
-    best_model_name, best_model_value = model_choice(results_test, metric, metric_threshold)
-    print(best_model_name, best_model_value)
+    results_training, results_test = performance_evaluation(models, classes, model_predictions, running_times, train_y, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
+    # in the provided pdf
+
+    # save_csv()  # ToDo: Save csv locally
+    best_model_name, best_model_value = model_choice(results_test, metric, metric_threshold)  # Chooses the best model based a chosen metric/threshold
+    model_comparison(best_model_name, best_model_value, metric)  # Compares the best model from the previous step with the already existing result - only compares within the same metric
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
     logging.info('Finished Step D.')
@@ -150,6 +155,8 @@ def model_evaluation(models, model_predictions, running_times, classes, metric, 
 def deployment():
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step E...')
     logging.info('Started Step E...')
+
+    # save_csv  # ToDo: Save df locally
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step E.')
     logging.info('Finished Step E.')

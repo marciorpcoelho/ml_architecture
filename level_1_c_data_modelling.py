@@ -92,16 +92,20 @@ class RegressionTraining(object):
 
 def model_training(models, train_x, train_y, test_x, k, score, voting=0):
 
+    print(train_x.head())
+    print()
+    print(test_x.head())
+
     predictions, running_times = {}, {}
     for model in models:
         start = time.time()
         clf = ClassificationTraining(clf=classification_models[model][0])
         clf.grid_search(parameters=classification_models[model][1], k=k, score=score)
-        clf.clf_fit(x=train_x, y=train_y)
+        clf.clf_fit(x=train_x, y=train_y.values.ravel())
         clf_best = clf.grid.best_estimator_
 
         if not voting:
-            clf_best.fit(train_x, train_y)
+            clf_best.fit(train_x, train_y.values.ravel())
             prediction_trainer, prediction_test = clf_best.predict(train_x), clf_best.predict(test_x)
             predictions[model] = [prediction_trainer, prediction_test]
             running_times[model] = time.time() - start
