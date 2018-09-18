@@ -2,14 +2,16 @@ import time
 import sys
 import schedule
 import logging
+import warnings
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, log_files
 from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split
-from level_1_c_data_modelling import model_training
-from level_1_d_model_evaluation import performance_evaluation, model_choice, model_comparison
+from level_1_c_data_modelling import model_training, save_model
+from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df
 from level_1_e_deployment import save_csv
 pd.set_option('display.expand_frame_repr', False)
+warnings.filterwarnings('ignore')  # ToDO: remove this line
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename='logs/optionals_baviera.txt', filemode='a')
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -20,14 +22,13 @@ def main():
     # log_files('optional_baviera')
 
     ### Options:
-    input_file = 'dbs/' + 'ENCOMENDA.csv'
-    # input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
+    # input_file = 'dbs/' + 'ENCOMENDA.csv'
+    input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
     stockdays_threshold, margin_threshold = 45, 3.5
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
-    # models = ['dt', 'rf']
-    models = ['dt', 'rf', 'lr']
+    models = ['dt', 'rf', 'lr', 'ab', 'gc', 'ann', 'voting']
     k = 10
     gridsearch_score = 'recall'
     metric = 'accuracy'
@@ -37,12 +38,12 @@ def main():
 
     df = data_acquistion(input_file)
     df, train_x, train_y, test_x, test_y = data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check)
-    model_predictions, classes, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score, oversample_check)
-    model_evaluation(models, model_predictions, running_times, classes, metric, metric_threshold, train_y, test_y)
+    classes, best_models, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score, oversample_check)
+    model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y)
     deployment()
 
     # df = pd.DataFrame()
-    # save_csv(df, 'logs/optionals_baviera_ran.csv')
+    # save_csv(df, 'logs/optionals_baviera_ran')
 
     # sys.stdout.flush()
     logging.info('Finished - Project: Baviera Stock Optimization\n')
@@ -54,7 +55,7 @@ def data_acquistion(input_file):
     logging.info('Started Step A...')
 
     # df = read_csv(input_file, delimiter=';', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
-    df = read_csv(input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
 
     logging.info('Finished Step A.')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
@@ -85,9 +86,10 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
     df = remove_columns(df, ['Cor', 'Interior', 'Versão', 'Opcional', 'A', 'S', 'Custo', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])  # Remove columns not needed atm;
     # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
-    df = reindex(df)  # Creates a new order index - after removing duplicate rows, the index loses its sequence/order
+    # df = reindex(df)  # Creates a new order index - after removing duplicate rows, the index loses its sequence/order
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Checkpoint B.1...')
+    save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_b1'])  # Saves a first version of the DF after treatment
     logging.info('Checkpoint B.1...')
     # ToDO: Checkpoint B.1 - this should be the first savepoint of the df. If an error is found after this point, the code should check for the df of this checkpoint
 
@@ -120,34 +122,47 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     return df, train_x, train_y, test_x, test_y
 
 
-def data_modelling(df, train_x, train_y, test_x, models, k, score, oversample_check, voting=0):
+def data_modelling(df, train_x, train_y, test_x, models, k, score, oversample_check):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
     logging.info('Started Step C...')
 
-    if oversample_check:
-        oversample_flag_backup, original_index_backup = train_x['oversample_flag'], train_x['original_index']
-        remove_columns(train_x, ['oversample_flag', 'original_index'])
+    df.sort_index(inplace=True)
+    # print(df.head(20))
 
-    predictions, classes, running_times = model_training(models, train_x, train_y, test_x, k, score, voting)  # Training of each referenced model
-    #  ToDo: Save models locally
+    # oversample_check = 1
+    # if oversample_check:
+        # oversample_flag_backup, original_index_backup = train_x['oversample_flag'], train_x['original_index']
+        # remove_columns(train_x, ['oversample_flag', 'original_index'])
+        # original_index_backup = train_x.index
+        # print(original_index_backup)
+    # oversample_check = 0
+
+    classes, best_models, running_times = model_training(models, train_x, train_y, k, score)  # Training of each referenced model
+    save_model(best_models, models)
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step C.')
     logging.info('Finished Step C.')
 
-    return predictions, classes, running_times
+    return classes, best_models, running_times
 
 
-def model_evaluation(models, model_predictions, running_times, classes, metric, metric_threshold, train_y, test_y):
+def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     logging.info('Started Step D...')
 
-    results_training, results_test = performance_evaluation(models, classes, model_predictions, running_times, train_y, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
+    results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
     # in the provided pdf
+    save_csv([results_training, results_test], ['output/' + 'model_performance_train_df', 'output/' + 'model_performance_test_df'])
+    plot_roc_curve(best_models, models, train_x, train_y, test_x, test_y, 'roc_curve_temp', save_dir='plots/')
 
-    # save_csv()  # ToDo: Save csv locally
     best_model_name, best_model_value = model_choice(results_test, metric, metric_threshold)  # Chooses the best model based a chosen metric/threshold
-    model_comparison(best_model_name, best_model_value, metric)  # Compares the best model from the previous step with the already existing result - only compares within the same metric
+    if model_comparison(best_model_name, best_model_value, metric):  # Compares the best model from the previous step with the already existing result - only compares within the same metric
+        proba_training, proba_test = probability_evaluation(best_model_name, best_models, train_x, test_x)
+        # print(proba_training.shape, proba_test.shape)
+        df_best_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[best_model_name], train_x, train_y, test_x, test_y)
 
+        print(df_best_model)
+        print(df_best_model.shape)
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
     logging.info('Finished Step D.')
 

@@ -1,8 +1,25 @@
 import pandas as pd
 import numpy as np
 import logging
-from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score
+import os
+import matplotlib.pyplot as plt
+from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc
 pd.set_option('display.expand_frame_repr', False)
+
+my_dpi = 96
+
+dict_models_name_conversion = {
+    'dt': ['Decision Tree'],
+    'rf': ['Random Forest'],
+    'lr': ['Logistic Regression'],
+    'knn': ['KNN'],
+    'svm': ['SVM'],
+    'ab': ['Adaboost'],
+    'gc': ['Gradient'],
+    'bayes': ['Bayesian'],
+    'ann': ['ANN'],
+    'voting': ['Voting']
+}
 
 
 class ClassificationEvaluation(object):
@@ -29,12 +46,14 @@ class RegressionEvaluation(object):
         self.score = r2_score(groundtruth, prediction)
 
 
-def performance_evaluation(models, classes, model_predictions, running_times, train_y, test_y):
+def performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y):
 
     results_train, results_test = [], []
+    predictions = {}
     for model in models:
-        evaluation_training = ClassificationEvaluation(groundtruth=train_y, prediction=model_predictions[model][0])
-        evaluation_test = ClassificationEvaluation(groundtruth=test_y, prediction=model_predictions[model][1])
+        evaluation_training = ClassificationEvaluation(groundtruth=train_y, prediction=best_models[model].predict(train_x))
+        evaluation_test = ClassificationEvaluation(groundtruth=test_y, prediction=best_models[model].predict(test_x))
+        predictions[model] = [evaluation_training, evaluation_test]
 
         row_train = {'micro': getattr(evaluation_training, 'micro'),
                      'average': getattr(evaluation_training, 'average'),
@@ -62,8 +81,36 @@ def performance_evaluation(models, classes, model_predictions, running_times, tr
     df_results_train = pd.DataFrame(results_train, index=models)
     df_results_test = pd.DataFrame(results_test, index=models)
 
-    return df_results_train, df_results_test
+    return df_results_train, df_results_test, predictions
 
+
+def probability_evaluation(models_name, models, train_x, test_x):
+    proba_train = models[models_name].predict_proba(train_x)
+    proba_test = models[models_name].predict_proba(test_x)
+
+    return proba_train, proba_test
+
+
+def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, train_y, test_x, test_y):
+    train_x['proba_0'] = [x[0] for x in proba_training]
+    train_x['proba_1'] = [x[1] for x in proba_training]
+    train_x['score_class_gt'] = train_y
+    train_x['score_class_pred'] = predictions[0]
+
+    test_x['proba_0'] = [x[0] for x in proba_test]
+    test_x['proba_1'] = [x[1] for x in proba_test]
+    test_x['score_class_gt'] = test_y
+    test_x['score_class_pred'] = predictions[1]
+
+    train_test_datasets = pd.concat([train_x, test_x])
+    train_test_datasets.sort_index(inplace=True)
+
+    df['proba_0'] = train_test_datasets['proba_0']
+    df['proba_1'] = train_test_datasets['proba_1']
+    df['score_class_gt'] = train_test_datasets['score_class_gt']
+    df['score_class_pred'] = train_test_datasets['score_class_pred']
+
+    return df
 
 def model_choice(df_results, metric, threshold):
 
@@ -75,20 +122,55 @@ def model_choice(df_results, metric, threshold):
         logging.info('No models above minimum performance threshold.')
 
 
+def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):
+    plt.subplots(figsize=(800 / my_dpi, 800 / my_dpi), dpi=my_dpi)
+    for model in models_name:
+        prob_train_init = models[model].fit(train_x, train_y).predict_proba(test_x)
+        prob_test_1 = [x[1] for x in prob_train_init]
+        fpr, tpr, _ = roc_curve(test_y, prob_test_1, pos_label=1)
+        roc_auc = auc(fpr, tpr)
+        plt.plot(fpr, tpr, lw=2, label='ROC curve (area = %0.2f)' % roc_auc + ' ' + str(dict_models_name_conversion[model][0]))
+
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic per Model')
+    plt.legend(loc="lower right")
+    plt.grid()
+    plt.tight_layout()
+    save_fig(save_name, save_dir=save_dir)
+    plt.clf()
+    plt.close()
+
+
+def save_fig(name, save_dir='output/'):
+    # Saves plot in at least two formats, png and pdf
+
+    if os.path.exists(save_dir + str(name) + '.png'):
+        os.remove(save_dir + str(name) + '.png')
+
+    plt.savefig(save_dir + str(name) + '.png')
+    plt.savefig(save_dir + str(name) + '.pdf')
+
+
 def model_comparison(best_model_name, best_model_value, metric):
     # Assumes comparison between the same metrics;
 
     name = 'place_holder'
 
     try:
-        old_results = pd.read_csv('output/' + name)
+        old_results = pd.read_csv('output/' + name)  # ToDo: The name of the file should reflect the last time it was ran
         if old_results[old_results.loc[:, metric].gt(best_model_value)].shape[0]:
             logging.warning('Previous results are better than current ones - Will maintain.')
+            return 0
         else:
             logging.info('Current results are better than previous ones - Will replace.')
+            return 1
     except FileNotFoundError:
         logging.info('No previous results found.')
-
+        return 1
 
 
 

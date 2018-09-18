@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import datetime
+import pickle
 import time
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
@@ -26,14 +28,15 @@ class ClassificationTraining(object):
         # return self.clf.predict(x)
         self.grid.predict(x)
 
-    def grid_performance(self, prediction, y):
-        self.micro = f1_score(y, prediction, average='micro', labels=np.unique(prediction))
-        # self.average = f1_score(y, prediction, average='weighted', labels=np.unique(prediction))
-        self.macro = f1_score(y, prediction, average='macro', labels=np.unique(prediction))
-        self.accuracy = accuracy_score(y, prediction)
-        # self.precision = precision_score(y, prediction, average=None)
-        # self.recall = recall_score(y, prediction, average=None)
-        self.class_report = classification_report(y, prediction)
+    # ToDo: Remove following comments?
+    # def grid_performance(self, prediction, y):
+    #     self.micro = f1_score(y, prediction, average='micro', labels=np.unique(prediction))
+    #     # self.average = f1_score(y, prediction, average='weighted', labels=np.unique(prediction))
+    #     self.macro = f1_score(y, prediction, average='macro', labels=np.unique(prediction))
+    #     self.accuracy = accuracy_score(y, prediction)
+    #     # self.precision = precision_score(y, prediction, average=None)
+    #     # self.recall = recall_score(y, prediction, average=None)
+    #     self.class_report = classification_report(y, prediction)
 
     def feature_importance(self):
         return self.clf.feature_importances_
@@ -90,28 +93,49 @@ class RegressionTraining(object):
         self.clf.fit(x, y)
 
 
-def model_training(models, train_x, train_y, test_x, k, score, voting=0):
+def model_training(models, train_x, train_y, k, score):
+    best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
 
-    print(train_x.head())
-    print()
-    print(test_x.head())
-
-    predictions, running_times = {}, {}
     for model in models:
-        start = time.time()
-        clf = ClassificationTraining(clf=classification_models[model][0])
-        clf.grid_search(parameters=classification_models[model][1], k=k, score=score)
-        clf.clf_fit(x=train_x, y=train_y.values.ravel())
-        clf_best = clf.grid.best_estimator_
+        print('MODEL:', model)
+        if model != 'voting':
+            start = time.time()
+            clf = ClassificationTraining(clf=classification_models[model][0])
+            clf.grid_search(parameters=classification_models[model][1], k=k, score=score)
+            clf.clf_fit(x=train_x, y=train_y.values.ravel())
+            clf_best = clf.grid.best_estimator_
 
-        if not voting:
+            best_models_pre_fit[model] = clf_best
             clf_best.fit(train_x, train_y.values.ravel())
-            prediction_trainer, prediction_test = clf_best.predict(train_x), clf_best.predict(test_x)
-            predictions[model] = [prediction_trainer, prediction_test]
-            running_times[model] = time.time() - start
-        elif voting:
-            predictions[model] = clf_best
+            best_models_pos_fit[model] = clf_best
+
+        if model == 'voting':
+            start = time.time()
+            parameters = {'estimators': [(x, y) for x, y in zip(best_models_pre_fit.keys(), best_models_pre_fit.values())]}
+            vote_clf = ClassificationTraining(clf=classification_models['voting'][0], params=parameters)
+            vote_clf.grid_search(parameters=classification_models['voting'][1], k=k, score=score)
+            vote_clf.clf_fit(x=train_x, y=train_y.values.ravel())
+            vote_clf_best = vote_clf.grid.best_estimator_
+            vote_clf_best.fit(train_x, train_y.values.ravel())
+            best_models_pos_fit['voting'] = vote_clf_best
+            running_times['voting'] = time.time() - start
+
+        running_times[model] = time.time() - start
 
         classes = clf.grid.classes_
 
-    return predictions, classes, running_times
+    return classes, best_models_pos_fit, running_times
+
+
+def save_model(clfs, model_name):
+
+    # timestamp = str(datetime.datetime.now().day) + '_' + str(datetime.datetime.now().month) + '_' + str(datetime.datetime.now().year) + '_' + str(datetime.datetime.now().hour) + '_' + str(datetime.datetime.now().minute) + '_' + str(datetime.datetime.now().second)
+    timestamp = str(datetime.datetime.now().day) + '_' + str(datetime.datetime.now().month) + '_' + str(datetime.datetime.now().year)
+
+    i = 0
+    for clf in clfs:
+        file_name = 'models/' + str(model_name[i]) + '_best_' + str(timestamp) + '.sav'
+        i += 1
+
+        pickle.dump(clf, open(file_name, 'wb'))
+
