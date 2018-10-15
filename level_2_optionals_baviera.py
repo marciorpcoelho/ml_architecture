@@ -6,7 +6,7 @@ import warnings
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, log_files
-from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split
+from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split, null_analysis, zero_analysis
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding
 from level_1_e_deployment import save_csv
@@ -22,8 +22,8 @@ def main():
     # log_files('optional_baviera')
 
     ### Options:
-    # input_file = 'dbs/' + 'ENCOMENDA.csv'
-    input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
+    input_file = 'dbs/' + 'ENCOMENDA.csv'
+    # input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
     # input_file = 'dbs/' + 'teste_s2_gran.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
     stockdays_threshold, margin_threshold = 45, 3.5
@@ -56,8 +56,10 @@ def data_acquistion(input_file):
     logging.info('Started Step A...')
 
     # df = read_csv(input_file, delimiter=';', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
-    df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
-    print(df.head())
+    try:
+        df = read_csv(input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    except UnicodeDecodeError:
+        df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
 
     logging.info('Finished Step A.')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
@@ -72,16 +74,20 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
     df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
 
-    dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca'}
+    dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada', ('Opcional', 'bi-xénon'): 'bixénon'}
     df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
     df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
     df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
-    df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes'])  # Creates new columns filled with zeros, which will be filled in the future
+    df = new_column_creation(df, ['Versão', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon'])  # Creates new columns filled with zeros, which will be filled in the future
 
     dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
     df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
     df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+    null_analysis(df)
+    zero_analysis(df)
+    df.to_csv('output/' + 'testing_new_parameters.csv')
+    sys.exit()
     df = color_replacement(df)  # Translates all english colors to portuguese
 
     df = total_price(df)  # Creates a new column with the total cost for each configuration;
