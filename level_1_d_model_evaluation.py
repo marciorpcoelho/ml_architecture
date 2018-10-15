@@ -112,6 +112,14 @@ def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, 
 
     return df
 
+
+def df_decimal_places_rounding(df, dictionary):
+
+    df = df.round(dictionary)
+
+    return df
+
+
 def model_choice(df_results, metric, threshold):
 
     try:

@@ -8,7 +8,7 @@ import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, log_files
 from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split
 from level_1_c_data_modelling import model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df
+from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding
 from level_1_e_deployment import save_csv
 pd.set_option('display.expand_frame_repr', False)
 warnings.filterwarnings('ignore')  # ToDO: remove this line
@@ -24,6 +24,7 @@ def main():
     ### Options:
     # input_file = 'dbs/' + 'ENCOMENDA.csv'
     input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
+    # input_file = 'dbs/' + 'teste_s2_gran.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
     stockdays_threshold, margin_threshold = 45, 3.5
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
@@ -56,6 +57,7 @@ def data_acquistion(input_file):
 
     # df = read_csv(input_file, delimiter=';', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
     df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    print(df.head())
 
     logging.info('Finished Step A.')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
@@ -107,7 +109,7 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     df = new_features_optionals_baviera(df, sel_cols=['Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])  # Creates a series of new features, explained in the provided pdf
 
     global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
-    df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])  # Converts all the mentioned columns to their respective Z-Score
+    # df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])  # Converts all the mentioned columns to their respective Z-Score
 
     # df = df_copy(df)
     ohe_cols = ['Jantes_new', 'Cor_Interior_new', 'Cor_Exterior_new', 'Local da Venda_new', 'Modelo_new', 'Prov_new', 'buy_day', 'buy_month', 'buy_year']
@@ -127,15 +129,6 @@ def data_modelling(df, train_x, train_y, test_x, models, k, score, oversample_ch
     logging.info('Started Step C...')
 
     df.sort_index(inplace=True)
-    # print(df.head(20))
-
-    # oversample_check = 1
-    # if oversample_check:
-        # oversample_flag_backup, original_index_backup = train_x['oversample_flag'], train_x['original_index']
-        # remove_columns(train_x, ['oversample_flag', 'original_index'])
-        # original_index_backup = train_x.index
-        # print(original_index_backup)
-    # oversample_check = 0
 
     classes, best_models, running_times = model_training(models, train_x, train_y, k, score)  # Training of each referenced model
     save_model(best_models, models)
@@ -160,7 +153,9 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
         proba_training, proba_test = probability_evaluation(best_model_name, best_models, train_x, test_x)
         # print(proba_training.shape, proba_test.shape)
         df_best_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[best_model_name], train_x, train_y, test_x, test_y)
+        df_best_model = df_decimal_places_rounding(df_best_model, {'proba_0': 1, 'proba_1': 2})
 
+        print(best_model_name)
         print(df_best_model)
         print(df_best_model.shape)
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
