@@ -22,9 +22,9 @@ def main():
     # log_files('optional_baviera')
 
     ### Options:
-    input_file = 'dbs/' + 'ENCOMENDA.csv'
+    # input_file = 'dbs/' + 'ENCOMENDA.csv'
     # input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
-    # input_file = 'dbs/' + 'teste_s2_gran.csv'
+    input_file = 'dbs/' + 'teste_s4.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
     stockdays_threshold, margin_threshold = 45, 3.5
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
@@ -74,19 +74,21 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
     df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
 
-    dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada', ('Opcional', 'bi-xénon'): 'bixénon'}
+    dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
+                               ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege'}
     df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
     df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
     df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
-    df = new_column_creation(df, ['Versão', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon'])  # Creates new columns filled with zeros, which will be filled in the future
+    df = new_column_creation(df, ['Versão', 'Edicao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
 
     dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
     df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
     df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
     null_analysis(df)
     zero_analysis(df)
-    df.to_csv('output/' + 'testing_new_parameters.csv')
+    print(df)
+    # df.to_csv('output/' + 'testing_new_parameters.csv')
     sys.exit()
     df = color_replacement(df)  # Translates all english colors to portuguese
 

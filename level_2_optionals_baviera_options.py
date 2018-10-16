@@ -6,24 +6,60 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, Gradien
 
 
 # Dictionaries:
+# Old Cor_Exterior
+# color_ext_dict = {
+#     'preto': ['preto'],
+#     'cinzento': ['cinzento', 'prateado', 'prata', 'cinza'],
+#     'branco': ['branco'],
+#     'azul': ['azul', 'bluestone'],
+#     'verde': ['verde'],
+#     'vermelho/laranja': ['vermelho', 'laranja'],
+#     'burgundy': ['burgundy'],
+#     'castanho': ['castanho', 'terra', 'jatoba'],
+#     'outros': ['aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone']
+# }
+
+# New Cor_Exterior
 color_ext_dict = {
     'preto': ['preto'],
-    'cinzento': ['cinzento', 'prateado', 'prata', 'cinza'],
     'branco': ['branco'],
-    'azul': ['azul', 'bluestone'],
-    'verde': ['verde'],
-    'vermelho/laranja': ['vermelho', 'laranja'],
-    'burgundy': ['burgundy'],
-    'castanho': ['castanho', 'terra', 'jatoba'],
-    'outros': ['aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone']
+    'cinzento': ['cinzento', 'prateado', 'prata', 'cinza', 'bluestone'],
+    'azul': ['azul'],
+    'outros': ['castanho', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
 }
 
+# Old Cor_Interior
 color_int_dict = {
     'preto': ['preto', 'prata/preto/preto', 'veneto/preto', 'preto/preto', 'ambar/preto/preto'],
     'antracite': ['antracite', 'antracite/cinza/preto', 'antracite/preto', 'antracite/vermelho/preto', 'antracite/vermelho', 'anthtacite/preto', 'anthracite/silver'],
     'castanho': ['castanho', 'oak', 'terra', 'mokka', 'vernasca'],
     'others': ['champagne', 'branco', 'oyster', 'prata/cinza', 'bege', 'oyster/preto', 'azul', 'cinzento', 'truffle', 'burgundy', 'zagora/preto', 'sonoma/preto', 'laranja', 'taupe/preto', 'vermelho', 'silverstone', 'nevada', 'cognac/preto', 'preto/laranja', 'preto/prateado']
 }
+
+
+# 'preto': ['prata/preto/preto', 'veneto/preto', 'ambar/preto/preto']
+# 'antracite': ['antracite', 'antracite/cinza/preto', 'antracite/preto', 'antracite/vermelho/preto', 'antracite/vermelho', 'anthtacite/preto', 'anthracite/silver']
+# 'castanho': ['castanho', 'oak', 'terra', 'mokka', 'vernasca']
+# 'others': ['champagne', 'branco', 'oyster', 'prata/cinza', 'bege', 'oyster/preto', 'azul', 'cinzento', 'truffle', 'burgundy', 'zagora/preto', 'sonoma/preto', 'laranja', 'taupe/preto', 'vermelho', 'silverstone', 'nevada', 'cognac/preto', 'preto/laranja', 'preto/prateado']
+
+# New Cor_Interior
+# color_int_dict = {
+#     'preto': ['preto'],
+#     'dakota_preto': ['preto/preto', 'preto/vermelho/preto', 'preto/oyster'],
+#     'dakota_branco': [],
+#     'dakota_vermelho': [],
+#     'dakota_bege': [],
+#     'dakota_oyster': [],
+#     'dakota_castanho': [],
+#     'dakota_azul': [],
+#     'dakota_mocha_castanho': [],
+#     'nappa_preto': [],
+#     'nappa_branco': [],
+#     'vernasca_bege': [],
+#     'vernasca_oyster': [],
+#     'vernasca_castanho': [],
+#     'others': [],
+# }
 
 jantes_dict = {
     'standard': ['standard', '15', '16'],
