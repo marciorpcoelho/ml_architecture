@@ -6,7 +6,7 @@ import warnings
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, log_files
-from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split, null_analysis, zero_analysis
+from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split, null_analysis, zero_analysis, value_count_histogram
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding
 from level_1_e_deployment import save_csv
@@ -22,9 +22,9 @@ def main():
     # log_files('optional_baviera')
 
     ### Options:
-    # input_file = 'dbs/' + 'ENCOMENDA.csv'
+    input_file = 'dbs/' + 'ENCOMENDA.csv'
     # input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
-    input_file = 'dbs/' + 'teste_s4.csv'
+    # input_file = 'dbs/' + 'teste_various_models.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
     stockdays_threshold, margin_threshold = 45, 3.5
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
@@ -74,32 +74,30 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
     df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
 
+    # dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
+    #                            ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', 'mokka'): 'mocha'}
     dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
-                               ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege'}
+                               ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
+                               ('Interior', 'mokka'): 'mocha', ('Interior', 'beige'): 'bege', ('Interior', 'dakota\''): 'dakota'}
     df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
     df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
     df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
-    df = new_column_creation(df, ['Versão', 'Edicao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
+    df = new_column_creation(df, ['Versao', 'Edicao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
 
     dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
     df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
     df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
-    null_analysis(df)
-    zero_analysis(df)
-    print(df)
-    # df.to_csv('output/' + 'testing_new_parameters.csv')
-    sys.exit()
     df = color_replacement(df)  # Translates all english colors to portuguese
 
     df = total_price(df)  # Creates a new column with the total cost for each configuration;
     df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
-    df = remove_columns(df, ['Cor', 'Interior', 'Versão', 'Opcional', 'A', 'S', 'Custo', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])  # Remove columns not needed atm;
+    df = remove_columns(df, ['Cor', 'A', 'S', 'Custo', 'Versão', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])  # Remove columns not needed atm;
     # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
     # df = reindex(df)  # Creates a new order index - after removing duplicate rows, the index loses its sequence/order
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Checkpoint B.1...')
-    save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_b1'])  # Saves a first version of the DF after treatment
+    # save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_b1'])  # Saves a first version of the DF after treatment
     logging.info('Checkpoint B.1...')
     # ToDO: Checkpoint B.1 - this should be the first savepoint of the df. If an error is found after this point, the code should check for the df of this checkpoint
 
@@ -109,9 +107,21 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     df = score_calculation(df, stockdays_threshold, margin_threshold)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
     # where only configurations with 1 in both dimension, have 1 as new_score
 
-    cols_to_group = ['Cor_Exterior', 'Cor_Interior', 'Jantes', 'Local da Venda', 'Modelo']
+    cols_to_group_layer_1 = ['Cor_Exterior', 'Cor_Interior']
+    dictionaries_layer_1 = [level_2_optionals_baviera_options.color_ext_dict_layer_1, level_2_optionals_baviera_options.color_int_dict_layer_1]
+    df = col_group(df, cols_to_group_layer_1, dictionaries_layer_1)
+
+    print(df.head())
+    save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_b1'])
+
+    null_analysis(df)
+    zero_analysis(df)
+
+    sys.exit()
+
+    cols_to_group_layer_2 = ['Cor_Exterior', 'Cor_Interior', 'Jantes', 'Local da Venda', 'Modelo']
     dictionaries = [level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict]
-    df = col_group(df, cols_to_group, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
+    df = col_group(df, cols_to_group_layer_2, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
     # groups are shown in level_2_optionals_baviera_options
     df = prov_replacement(df)  # Replaces all entries with order type of Viaturas Km 0 as Novos
     df = new_features_optionals_baviera(df, sel_cols=['Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])  # Creates a series of new features, explained in the provided pdf
@@ -119,7 +129,6 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
     # df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])  # Converts all the mentioned columns to their respective Z-Score
 
-    # df = df_copy(df)
     ohe_cols = ['Jantes_new', 'Cor_Interior_new', 'Cor_Exterior_new', 'Local da Venda_new', 'Modelo_new', 'Prov_new', 'buy_day', 'buy_month', 'buy_year']
     df_ohe = df.copy(deep=True)  # Creates a copy of the original df
     df_ohe = ohe(df_ohe, ohe_cols)  # Creates the OHE for columns in ohe_cols
@@ -161,7 +170,7 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
         proba_training, proba_test = probability_evaluation(best_model_name, best_models, train_x, test_x)
         # print(proba_training.shape, proba_test.shape)
         df_best_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[best_model_name], train_x, train_y, test_x, test_y)
-        df_best_model = df_decimal_places_rounding(df_best_model, {'proba_0': 1, 'proba_1': 2})
+        df_best_model = df_decimal_places_rounding(df_best_model, {'proba_0': 2, 'proba_1': 2})
 
         print(best_model_name)
         print(df_best_model)

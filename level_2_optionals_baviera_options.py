@@ -20,7 +20,7 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, Gradien
 # }
 
 # New Cor_Exterior
-color_ext_dict = {
+color_ext_dict_layer_1 = {
     'preto': ['preto'],
     'branco': ['branco'],
     'cinzento': ['cinzento', 'prateado', 'prata', 'cinza', 'bluestone'],
@@ -29,37 +29,40 @@ color_ext_dict = {
 }
 
 # Old Cor_Interior
-color_int_dict = {
-    'preto': ['preto', 'prata/preto/preto', 'veneto/preto', 'preto/preto', 'ambar/preto/preto'],
-    'antracite': ['antracite', 'antracite/cinza/preto', 'antracite/preto', 'antracite/vermelho/preto', 'antracite/vermelho', 'anthtacite/preto', 'anthracite/silver'],
-    'castanho': ['castanho', 'oak', 'terra', 'mokka', 'vernasca'],
-    'others': ['champagne', 'branco', 'oyster', 'prata/cinza', 'bege', 'oyster/preto', 'azul', 'cinzento', 'truffle', 'burgundy', 'zagora/preto', 'sonoma/preto', 'laranja', 'taupe/preto', 'vermelho', 'silverstone', 'nevada', 'cognac/preto', 'preto/laranja', 'preto/prateado']
-}
+# color_int_dict = {
+#     'preto': ['preto', 'prata/preto/preto', 'veneto/preto', 'preto/preto', 'ambar/preto/preto'],
+#     'antracite': ['antracite', 'antracite/cinza/preto', 'antracite/preto', 'antracite/vermelho/preto', 'antracite/vermelho', 'anthtacite/preto', 'anthracite/silver'],
+#     'castanho': ['castanho', 'oak', 'terra', 'mokka', 'vernasca'],
+#     'others': ['champagne', 'branco', 'oyster', 'prata/cinza', 'bege', 'oyster/preto', 'azul', 'cinzento', 'truffle', 'burgundy', 'zagora/preto', 'sonoma/preto', 'laranja', 'taupe/preto', 'vermelho', 'silverstone', 'nevada', 'cognac/preto', 'preto/laranja', 'preto/prateado']
+# }
 
+dakota_colors = ['oyster/cinza', 'black/contrast', 'preto/preto', 'preto/vermelho/preto', 'preto/oyster', 'preto/debroado', 'preto/azul/preto', 'oyster/preto', 'ivory/preto', 'ivory', 'coral', 'preto', 'preta', 'branco', 'branca', 'bege', 'veneto/preto', 'oyster', 'oyster/oyster', 'castanho', 'terra', 'conhaque', 'conhaque/castanho/preto', 'conhaque/castanho/preto/conhaque', 'cognac/preto', 'brown', 'azul', 'mocha/preto', 'mocha/preto/mocha', 'mocha']
+nappa_colors = ['preto', 'white', 'ivory', 'ivory/branco', 'bege', 'mocha', 'castanho', 'cognac/preto']
+vernasca_colors = ['canberra', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac']
 
-# 'preto': ['prata/preto/preto', 'veneto/preto', 'ambar/preto/preto']
-# 'antracite': ['antracite', 'antracite/cinza/preto', 'antracite/preto', 'antracite/vermelho/preto', 'antracite/vermelho', 'anthtacite/preto', 'anthracite/silver']
-# 'castanho': ['castanho', 'oak', 'terra', 'mokka', 'vernasca']
-# 'others': ['champagne', 'branco', 'oyster', 'prata/cinza', 'bege', 'oyster/preto', 'azul', 'cinzento', 'truffle', 'burgundy', 'zagora/preto', 'sonoma/preto', 'laranja', 'taupe/preto', 'vermelho', 'silverstone', 'nevada', 'cognac/preto', 'preto/laranja', 'preto/prateado']
 
 # New Cor_Interior
-# color_int_dict = {
-#     'preto': ['preto'],
-#     'dakota_preto': ['preto/preto', 'preto/vermelho/preto', 'preto/oyster'],
-#     'dakota_branco': [],
-#     'dakota_vermelho': [],
-#     'dakota_bege': [],
-#     'dakota_oyster': [],
-#     'dakota_castanho': [],
-#     'dakota_azul': [],
-#     'dakota_mocha_castanho': [],
-#     'nappa_preto': [],
-#     'nappa_branco': [],
-#     'vernasca_bege': [],
-#     'vernasca_oyster': [],
-#     'vernasca_castanho': [],
-#     'others': [],
-# }
+color_int_dict_layer_1 = {
+    'preto': ['preto'],
+    'dakota_preto': ['dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto', 'dakota_preta', 'dakota_black/contrast'],
+    'dakota_branco': ['dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white'],
+    'dakota_vermelho': ['dakota_coral'],
+    'dakota_bege': ['dakota_bege'],
+    'dakota_oyster': ['dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza'],
+    'dakota_castanho': ['dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
+    'dakota_azul': ['dakota_azul'],
+    'dakota_mocha_castanho': ['dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha'],
+    'nappa_preto': ['nappa_preto'],
+    'nappa_branco': ['nappa_white', 'nappa_ivory', 'nappa_ivory/branco'],
+    'nappa_bege': ['nappa_bege'],
+    'nappa_mocha': ['nappa_mocha'],
+    'nappa_castanho': ['nappa_castanho', 'nappa_cognac/preto'],
+    'vernasca_bege': ['vernasca_canberra'],
+    'vernasca_preto': ['vernasca_preta', 'vernasca_preto/com', 'vernasca_preto/preto'],
+    'vernasca_oyster': ['vernasca_oyster'],
+    'vernasca_castanho': ['vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac'],
+    'others': [0],
+}
 
 jantes_dict = {
     'standard': ['standard', '15', '16'],
