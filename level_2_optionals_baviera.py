@@ -214,7 +214,6 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
             df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
             save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
 
-
     # return df_best_model
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
     logging.info('Finished Step D.')

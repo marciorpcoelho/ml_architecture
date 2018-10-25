@@ -53,3 +53,4 @@ def sql_truncate(database, view):
     cursor.close()
     cnxn.close()
 
+
