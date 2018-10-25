@@ -3,7 +3,7 @@ import numpy as np
 import logging
 import os
 import matplotlib.pyplot as plt
-from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc
+from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
 pd.set_option('display.expand_frame_repr', False)
 
 my_dpi = 96
@@ -31,6 +31,7 @@ class ClassificationEvaluation(object):
         self.precision = precision_score(groundtruth, prediction, average=None)
         self.recall = recall_score(groundtruth, prediction, average=None)
         self.classification_report = classification_report(groundtruth, prediction)
+        self.roc_auc_curve = roc_auc_score(groundtruth, prediction)
 
 
 class ClusterEvaluation(object):
@@ -51,14 +52,17 @@ def performance_evaluation(models, best_models, classes, running_times, train_x,
     results_train, results_test = [], []
     predictions = {}
     for model in models:
-        evaluation_training = ClassificationEvaluation(groundtruth=train_y, prediction=best_models[model].predict(train_x))
-        evaluation_test = ClassificationEvaluation(groundtruth=test_y, prediction=best_models[model].predict(test_x))
-        predictions[model] = [evaluation_training, evaluation_test]
+        prediction_train = best_models[model].predict(train_x)
+        prediction_test = best_models[model].predict(test_x)
+        evaluation_training = ClassificationEvaluation(groundtruth=train_y, prediction=prediction_train)
+        evaluation_test = ClassificationEvaluation(groundtruth=test_y, prediction=prediction_test)
+        predictions[model] = [prediction_train.astype(int, copy=False), prediction_test.astype(int, copy=False)]
 
         row_train = {'micro': getattr(evaluation_training, 'micro'),
                      'average': getattr(evaluation_training, 'average'),
                      'macro': getattr(evaluation_training, 'macro'),
                      'accuracy': getattr(evaluation_training, 'accuracy'),
+                     'roc_curve': getattr(evaluation_training, 'roc_auc_curve'),
                      ('precision_class_' + str(classes[0])): getattr(evaluation_training, 'precision')[0],
                      ('precision_class_' + str(classes[1])): getattr(evaluation_training, 'precision')[1],
                      ('recall_class_' + str(classes[0])): getattr(evaluation_training, 'recall')[0],
@@ -69,6 +73,7 @@ def performance_evaluation(models, best_models, classes, running_times, train_x,
                     'average': getattr(evaluation_test, 'average'),
                     'macro': getattr(evaluation_test, 'macro'),
                     'accuracy': getattr(evaluation_test, 'accuracy'),
+                    'roc_curve': getattr(evaluation_test, 'roc_auc_curve'),
                     ('precision_class_' + str(classes[0])): getattr(evaluation_test, 'precision')[0],
                     ('precision_class_' + str(classes[1])): getattr(evaluation_test, 'precision')[1],
                     ('recall_class_' + str(classes[0])): getattr(evaluation_test, 'recall')[0],
@@ -107,7 +112,7 @@ def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, 
 
     df['proba_0'] = train_test_datasets['proba_0']
     df['proba_1'] = train_test_datasets['proba_1']
-    df['score_class_gt'] = train_test_datasets['score_class_gt']
+    df['score_class_gt'] = train_test_datasets['score_class_gt'].astype(int, copy=False)
     df['score_class_pred'] = train_test_datasets['score_class_pred']
 
     return df
@@ -122,12 +127,14 @@ def df_decimal_places_rounding(df, dictionary):
 
 def model_choice(df_results, metric, threshold):
 
-    try:
-        best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'running_time']].idxmax().head(1).values[0]
-        best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'running_time']].max().head(1).values[0]
-        return best_model_name, best_model_value
-    except ValueError:
-        logging.info('No models above minimum performance threshold.')
+    # try:
+    best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'running_time']].idxmax().head(1).values[0]
+    best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'running_time']].max().head(1).values[0]
+    return best_model_name, best_model_value
+    #  ToDo Need to include the try/except conditions again
+    #  ToDO Need to add an exit condition when there's no better model/below minimum threshold
+    # except ValueError:
+    #     logging.info('No models above minimum performance threshold.')
 
 
 def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):

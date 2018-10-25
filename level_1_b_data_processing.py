@@ -213,6 +213,7 @@ def zero_analysis(df):
 #     df.loc[df['Jantes'] == 0, 'Jantes'] = 'standard'
 #     return df
 
+
 def value_count_histogram(df, column, name, output_dir='output/'):
     plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
     counts = df[column].value_counts().values
@@ -286,10 +287,10 @@ def options_scraping(df):
                 if 'desportiva' in tokenized_options and 'm' in tokenized_options:
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'desportiva_m'
                 if 'line' in tokenized_options and 'luxury' in tokenized_options:
-                    df.loc[df['Nº Stock'] == key, 'Versao'] = 'luxury'
-                if 'X5' in tokenized_modelo:
-                    if 'comfort' in tokenized_options:
-                        df.loc[df['Nº Stock'] == key, 'Versao'] = 'comfort'
+                    df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_luxury'
+                # if 'X5' in tokenized_modelo:
+                #     if 'comfort' in tokenized_options:
+                #         df.loc[df['Nº Stock'] == key, 'Versao'] = 'comfort'
 
             if 'pack' in tokenized_options and 'desportivo' in tokenized_options and 'm' in tokenized_options:
                 if 'S1' in tokenized_modelo:
@@ -424,17 +425,17 @@ def options_scraping(df):
         # Jantes
         if 'S1' in tokenized_modelo or 'S2' in tokenized_modelo:
             if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = 16
+                df.loc[df['Nº Stock'] == key, 'Jantes'] = '16'
 
         if 'S3' in tokenized_modelo:
             if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = 16
+                df.loc[df['Nº Stock'] == key, 'Jantes'] = '16'
             if buy_year >= 2017:
                 df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
 
         if 'S4' in tokenized_modelo:
             if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = 17
+                df.loc[df['Nº Stock'] == key, 'Jantes'] = '17'
             if buy_year >= 2016:
                 df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
             if buy_year >= 2017:
@@ -444,7 +445,7 @@ def options_scraping(df):
 
         if 'S5' in tokenized_modelo:
             if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = 17
+                df.loc[df['Nº Stock'] == key, 'Jantes'] = '17'
             df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
             if buy_year >= 2017:
                 df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
@@ -457,16 +458,16 @@ def options_scraping(df):
 
         if 'X1' in tokenized_modelo:
             if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = 17
+                df.loc[df['Nº Stock'] == key, 'Jantes'] = '17'
 
         if 'X3' in tokenized_modelo:
             if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = 18
+                df.loc[df['Nº Stock'] == key, 'Jantes'] = '18'
             df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
             df.loc[df['Nº Stock'] == key, 'Caixa Auto'] = 1
 
     df.loc[df['Versao'] == 0, 'Versao'] = 'base'
-    df.loc[df['Jantes'] == 0, 'Jantes'] = 'Standard'
+    df.loc[df['Jantes'] == 0, 'Jantes'] = 'standard'
     return df
 
 
@@ -533,6 +534,9 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
 
     df['new_score'] = 0
     df.loc[(df['stock_days_class'] == 1) & (df['margin_class'] == 1), 'new_score'] = 1
+
+    df['days_stock_price'] = (0.05/360) * df['price_total'] * df['stock_days']
+    df['score_euros'] = df['Margem'] - df['days_stock_price']
 
     # df.drop(['stock_days_norm', 'inv_stock_days_norm', 'margem_percentagem_norm'], axis=1, inplace=True)
 
