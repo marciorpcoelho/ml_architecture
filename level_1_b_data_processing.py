@@ -603,6 +603,10 @@ def global_variables_saving(df, project):
         STD_TOTAL_PRICE = np.std(df['price_total'])
 
 
+def feature_selection(df, column_count):
+    print()
+
+
 def df_copy(df):
 
     copy = df.copy(deep=True)
