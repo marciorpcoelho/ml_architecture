@@ -7,7 +7,7 @@ import os.path
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, log_files
-from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split, null_analysis, zero_analysis, value_count_histogram
+from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, reindex, total_price, margin_calculation, col_group, new_features_optionals_baviera, z_scores_function, ohe, global_variables_saving, prov_replacement, dataset_split, null_analysis, zero_analysis, value_count_histogram, column_rename
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding
 from level_1_e_deployment import save_csv, sql_inject, sql_truncate
@@ -23,8 +23,8 @@ def main():
     # log_files('optional_baviera')
 
     ### Options:
-    # input_file = 'dbs/' + 'ENCOMENDA.csv'
-    input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
+    input_file = 'dbs/' + 'ENCOMENDA.csv'
+    # input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
     # input_file = 'dbs/' + 'teste_various_models.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
 
@@ -43,11 +43,11 @@ def main():
     view = "VHE_Fact_DW_Sales"
     ###
 
-    # df = data_acquistion(input_file)
-    # df, train_x, train_y, test_x, test_y = data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check, parametrization_v2)
-    # classes, best_models, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score, oversample_check)
-    # model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development)
-    deployment(db, view)
+    df = data_acquistion(input_file)
+    df, train_x, train_y, test_x, test_y = data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check, parametrization_v2)
+    classes, best_models, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score, oversample_check)
+    model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development)
+    # deployment(db, view)
 
     # df = pd.DataFrame()
     # save_csv(df, 'logs/optionals_baviera_ran')
@@ -77,71 +77,71 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step B...')
     logging.info('Started Step B...')
 
-    if not os.path.isfile('output/' + 'ENCOMENDA_checkpoint_end_b.csv'):
-        print('Checkpoint not found. Processing data...')
-        df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
-        df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
+    # if not os.path.isfile('output/' + 'ENCOMENDA_checkpoint_end_b.csv'):
+    #     print('Checkpoint not found. Processing data...')
+    df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
+    df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
 
-        if not parametrization_v2:
-            dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
-                                   ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', 'mokka'): 'mocha', ('Interior', '\'dakota\''): 'dakota'}
-        elif parametrization_v2:
-            dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
+    if not parametrization_v2:
+        dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
+                               ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', 'mokka'): 'mocha', ('Interior', '\'dakota\''): 'dakota'}
+    elif parametrization_v2:
+        dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
                                    ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
-                                   ('Interior', 'mokka'): 'mocha', ('Interior', 'beige'): 'bege', ('Interior', 'dakota\''): 'dakota'}
+                                   ('Interior', 'mokka'): 'mocha', ('Interior', 'beige'): 'bege', ('Interior', 'dakota\''): 'dakota', ('Interior', 'antracite/cinza/p'): 'antracite/cinza/preto', ('Interior', 'antracite/cinza/pretoreto'): 'antracite/cinza/preto', ('Interior', 'nevada\''): 'nevada',
+                                   ('Interior', '"nappa"'): 'nappa', ('Interior', 'anthrazit'): 'antracite', ('Interior', 'antracito'): 'antracite', ('Interior', 'preto/laranja/preto/lara'): 'preto/laranja', ('Interior', 'anthtacite'): 'antracite'}
 
-        df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
-        df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
-        df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
+    df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
+    df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
+    df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
-        if parametrization_v2:
-            df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
-            # df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
-        elif not parametrization_v2:
-            df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes'])  # Creates new columns filled with zeros, which will be filled in the future
+    if parametrization_v2:
+        df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
+        # df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
+    elif not parametrization_v2:
+        df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes'])  # Creates new columns filled with zeros, which will be filled in the future
 
-        dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
-        df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
-        df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
-        df = color_replacement(df)  # Translates all english colors to portuguese
+    dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
+    df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
+    df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+    df = color_replacement(df)  # Translates all english colors to portuguese
 
-        df = total_price(df)  # Creates a new column with the total cost for each configuration;
-        df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
-        df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'A', 'S', 'Custo', 'Versão', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])  # Remove columns not needed atm;
-        # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
-        # df = reindex(df)  # Creates a new order index - after removing duplicate rows, the index loses its sequence/order
+    df = total_price(df)  # Creates a new column with the total cost for each configuration;
+    df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
+    df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'A', 'S', 'Custo', 'Versão', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])  # Remove columns not needed atm;
+    # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
+    # df = reindex(df)  # Creates a new order index - after removing duplicate rows, the index loses its sequence/order
 
-        # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Checkpoint B.1...')
-        # save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_b1'])  # Saves a first version of the DF after treatment
-        logging.info('Checkpoint B.1...')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Checkpoint B.1...')
+    # save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_b1'])  # Saves a first version of the DF after treatment
+    logging.info('Checkpoint B.1...')
+
     # ToDO: Checkpoint B.1 - this should be the first savepoint of the df. If an error is found after this point, the code should check for the df of this checkpoint
-    elif os.path.isfile('output/' + 'ENCOMENDA_checkpoint_end_b.csv'):
-        print('Checkpoint B1 found, loading it...')
-        df = pd.read_csv('output/' + 'ENCOMENDA_checkpoint_end_b.csv', delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    # elif os.path.isfile('output/' + 'ENCOMENDA_checkpoint_end_b.csv'):
+    #     print('Checkpoint B1 found, loading it...')
+    #     df = pd.read_csv('output/' + 'ENCOMENDA_checkpoint_end_b.csv', delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
 
     df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
     # Removes entries of motorcycles (Série), recent car models (Z4), MINI models (MINI) and those whose order is Demonstração and Em Utilização
     df = margin_calculation(df)  # Calculates the margin in percentage of the total price
     df = score_calculation(df, stockdays_threshold, margin_threshold)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
     # where only configurations with 1 in both dimension, have 1 as new_score
+    value_count_histogram(df, 'Cor_Interior', 'cor_interior', output_dir='plots/')
 
     if parametrization_v2:
         cols_to_group_layer_1 = ['Cor_Exterior', 'Cor_Interior']
         dictionaries_layer_1 = [level_2_optionals_baviera_options.color_ext_dict_layer_1, level_2_optionals_baviera_options.color_int_dict_layer_1]
         df = col_group(df, cols_to_group_layer_1, dictionaries_layer_1)
+        value_count_histogram(df, 'Cor_Interior_new', 'cor_interior_layer_1', output_dir='plots/')
 
-        # print(df.head())
-        # save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_b1'])
+        column_rename(df, ['Cor_Interior_new'], ['Cor_Interior'])
 
-        # null_analysis(df)
-        # zero_analysis(df)
-
-        # sys.exit()
-
-        cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Modelo', 'Versao', 'Tipo_Interior']
-        dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict]
+        cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Interior']
+        dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_int_dict_layer_2]
         df = col_group(df, cols_to_group_layer_2, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
         # groups are shown in level_2_optionals_baviera_options
+        value_count_histogram(df, 'Cor_Interior_new', 'cor_interior_layer_2', output_dir='plots/')
+
     elif not parametrization_v2:
         cols_to_group = ['Cor_Exterior', 'Cor_Interior', 'Jantes', 'Local da Venda', 'Modelo']
         dictionaries = [level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict]

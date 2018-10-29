@@ -46,31 +46,58 @@ color_int_dict = {
 }
 
 dakota_colors = ['oyster/cinza', 'black/contrast', 'preto/preto', 'preto/vermelho/preto', 'preto/oyster', 'preto/debroado', 'preto/azul/preto', 'oyster/preto', 'ivory/preto', 'ivory', 'coral', 'preto', 'preta', 'branco', 'branca', 'bege', 'veneto/preto', 'oyster', 'oyster/oyster', 'castanho', 'terra', 'conhaque', 'conhaque/castanho/preto', 'conhaque/castanho/preto/conhaque', 'cognac/preto', 'brown', 'azul', 'mocha/preto', 'mocha/preto/mocha', 'mocha']
-nappa_colors = ['preto', 'white', 'ivory', 'ivory/branco', 'bege', 'mocha', 'castanho', 'cognac/preto']
-vernasca_colors = ['canberra', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac']
+nappa_colors = ['preto', 'white', 'ivory', 'ivory/branco', 'bege', 'mocha', 'castanho', 'cognac/preto', 'antracite']
+vernasca_colors = ['canberra', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac', 'azuis/preto', 'anthracite/preto']
+nevada_colors = ['terra', 'brown', 'preto/preto', 'bege', 'oyster', 'oyster/leather', 'preto', 'branco', 'mocha']
+merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'taupe/preto', 'vermelho']
 
 
-# New Cor_Interior
+# # New Cor_Interior
+# color_int_dict_layer_1 = {
+#     'preto': ['preto'],
+#     'dakota_preto': ['dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto', 'dakota_preta', 'dakota_black/contrast'],
+#     'dakota_branco': ['dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white'],
+#     'dakota_vermelho': ['dakota_coral'],
+#     'dakota_bege': ['dakota_bege'],
+#     'dakota_oyster': ['dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza'],
+#     'dakota_castanho': ['dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
+#     'dakota_azul': ['dakota_azul'],
+#     'dakota_mocha_castanho': ['dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha'],
+#     'nappa_preto': ['nappa_preto'],
+#     'nappa_branco': ['nappa_white', 'nappa_ivory', 'nappa_ivory/branco'],
+#     'nappa_bege': ['nappa_bege'],
+#     'nappa_mocha': ['nappa_mocha'],
+#     'nappa_castanho': ['nappa_castanho', 'nappa_cognac/preto'],
+#     'vernasca_bege': ['vernasca_canberra'],
+#     'vernasca_preto': ['vernasca_preta', 'vernasca_preto/com', 'vernasca_preto/preto'],
+#     'vernasca_oyster': ['vernasca_oyster'],
+#     'vernasca_castanho': ['vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac'],
+#     'others': [0],
+# }
+
+# New Cor_Interior v2
 color_int_dict_layer_1 = {
+    'preto': ['nappa_antracite', 'vernasca_anthracite/preto', 'merino_preto', 'nevada_preto', 'merino_preto/preto', 'nevada_preto/preto', 'vernasca_preta', 'vernasca_preto/com', 'vernasca_preto/preto', 'preto', 'dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto', 'dakota_preta', 'dakota_black/contrast', 'nappa_preto'],
+    'branco': ['nevada_branco', 'merino_branco', 'dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white', 'nappa_white', 'nappa_ivory', 'nappa_ivory/branco'],
+    'vermelho': ['merino_vermelho', 'dakota_coral'],
+    'bege': ['merino_bege', 'dakota_bege', 'nappa_bege', 'vernasca_canberra', 'nevada_bege'],
+    'oyster': ['dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza', 'vernasca_oyster', 'nevada_oyster', 'nevada_oyster/leather', 'oyster'],
+    'castanho': ['castanho', 'merino_castanho', 'nevada_terra', 'nevada_brown', 'vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac', 'nappa_castanho', 'nappa_cognac/preto', 'dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
+    'azul': ['dakota_azul', 'vernasca_azuis/preto'],
+    'mocha': ['dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha', 'nappa_mocha', 'nevada_mocha'],
+    'cinzento': ['merino_silverstone', 'merino_taupe/preto', 'cinzento'],
+    'laranja': ['merino_laranja'],
+    'amarelo': ['amarelo'],
+    'mini/mota': ['mini/mota'],
+    'others': ['0']
+}
+
+color_int_dict_layer_2 = {
     'preto': ['preto'],
-    'dakota_preto': ['dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto', 'dakota_preta', 'dakota_black/contrast'],
-    'dakota_branco': ['dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white'],
-    'dakota_vermelho': ['dakota_coral'],
-    'dakota_bege': ['dakota_bege'],
-    'dakota_oyster': ['dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza'],
-    'dakota_castanho': ['dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
-    'dakota_azul': ['dakota_azul'],
-    'dakota_mocha_castanho': ['dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha'],
-    'nappa_preto': ['nappa_preto'],
-    'nappa_branco': ['nappa_white', 'nappa_ivory', 'nappa_ivory/branco'],
-    'nappa_bege': ['nappa_bege'],
-    'nappa_mocha': ['nappa_mocha'],
-    'nappa_castanho': ['nappa_castanho', 'nappa_cognac/preto'],
-    'vernasca_bege': ['vernasca_canberra'],
-    'vernasca_preto': ['vernasca_preta', 'vernasca_preto/com', 'vernasca_preto/preto'],
-    'vernasca_oyster': ['vernasca_oyster'],
-    'vernasca_castanho': ['vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac'],
-    'others': [0],
+    'castanho/mocha': ['castanho', 'mocha'],
+    'bege/oyster/branco': ['bege', 'oyster', 'branco'],
+    'cinzento': ['cinzento'],
+    'outros': ['amarelo', 'vermelho', 'azul', 'laranja', 'others'],
 }
 
 # Old Jantes
@@ -126,19 +153,19 @@ versao_dict = {
     'urban/desportiva': ['line_urban', 'desportiva_m', 'pack_desportivo_m']
 }
 
-tipo_int_dict = {
-    'tecido': ['tecido'],
-    'pele': ['pele'],
-    'combinação': ['combinação'],
-    'interior_m': ['tecido_micro', 0]
-}
-
-# v2
 # tipo_int_dict = {
 #     'tecido': ['tecido'],
 #     'pele': ['pele'],
-#     'combinação/interior_m': ['combinação', 'tecido_micro', 0]
+#     'combinação': ['combinação'],
+#     'interior_m': ['tecido_micro', 0]
 # }
+
+# v2
+tipo_int_dict = {
+    'tecido': ['tecido'],
+    'pele': ['pele'],
+    'combinação/interior_m': ['combinação', 'tecido_micro', 0]
+}
 
 classification_models = {
     'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],

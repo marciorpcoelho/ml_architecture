@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
-from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors
+from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors
 warnings.simplefilter('ignore', FutureWarning)
 
 # Globals Definition
@@ -216,6 +216,7 @@ def zero_analysis(df):
 
 def value_count_histogram(df, column, name, output_dir='output/'):
     plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
+    df.loc[df[column] == 0, column] = '0'
     counts = df[column].value_counts().values
     values = df[column].value_counts().index
     rects = plt.bar(values, counts)
@@ -373,18 +374,14 @@ def options_scraping(df):
             if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58']:
                 continue
             else:
-                # print(tokenized_color)
                 sys.exit('Error: Color Not Found')
         if len(color) > 1:  # Fixes cases such as 'white silver'
             color = [color[0]]
-        # print(color)
         color = color * group.shape[0]
-        # print(color)
         try:
             df.loc[df['Nº Stock'] == key, 'Cor_Exterior'] = color
         except ValueError:
             print(color)
-            sys.exit()
 
         ### Cor Interior/Tipo Interior
         line_interior = group['Interior'].head(1).values[0]
@@ -405,11 +402,25 @@ def options_scraping(df):
             if color_int:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'vernasca_' + color_int[0]
                 # continue
+        elif 'nevada' in tokenized_interior:
+            color_int = [x for x in tokenized_interior if x in nevada_colors]
+            if color_int:
+                df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'nevada_' + color_int[0]
+        elif 'merino' in tokenized_interior:
+            color_int = [x for x in tokenized_interior if x in merino_colors]
+            if color_int:
+                df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'merino_' + color_int[0]
         else:
-            # color_int = [x for x in interior_colors if x in tokenized_interior]
-            if 'preto' in tokenized_interior:
+            if 'antraci' in tokenized_interior or 'antracit' in tokenized_interior or 'anthracite/silver' in tokenized_interior or 'preto/laranja' in tokenized_interior or 'preto/silver' in tokenized_interior or 'preto/preto' in tokenized_interior or 'confort' in tokenized_interior or 'standard' in tokenized_interior or 'preto' in tokenized_interior or 'antracite' in tokenized_interior or 'antracite/laranja' in tokenized_interior or 'antracite/preto' in tokenized_interior or 'antracite/cinza/preto' in tokenized_interior or 'antracite/vermelho/preto' in tokenized_interior or 'antracite/vermelho' in tokenized_interior:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'preto'
-                # continue
+            elif 'oyster/preto' in tokenized_interior:
+                df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'oyster'
+            elif 'platinu' in tokenized_interior or 'grey' in tokenized_interior or 'prata/preto/preto' in tokenized_interior or 'prata/cinza' in tokenized_interior:
+                df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'cinzento'
+            elif 'castanho' in tokenized_interior or 'walnut' in tokenized_interior:
+                df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'castanho'
+            elif 'âmbar/preto/pr' in tokenized_interior:
+                df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'amarelo'
 
         # Tipo Interior
         if 'comb' in tokenized_interior or 'combin' in tokenized_interior or 'combinação' in tokenized_interior or 'tecido/pele' in tokenized_interior:
@@ -471,6 +482,12 @@ def options_scraping(df):
     return df
 
 
+def column_rename(df, cols_to_replace, new_cols_names):
+    for column in cols_to_replace:
+        df.rename(index=str, columns={cols_to_replace[cols_to_replace.index(column)]: new_cols_names[cols_to_replace.index(column)]}, inplace=True)
+    return df
+
+
 def col_group(df, columns_to_replace, dictionaries):
     for dictionary in dictionaries:
         for key in dictionary.keys():
@@ -507,8 +524,8 @@ def color_replacement(df):
     color_types = ['Cor_Exterior']
     colors_to_replace = {'black': 'preto', 'preto/silver': 'preto/prateado', 'tartufo': 'truffle', 'preto/laranja/preto/lara': 'preto/laranja', 'white': 'branco', 'blue': 'azul', 'red': 'vermelho', 'grey': 'cinzento', 'silver': 'prateado', 'orange': 'laranja', 'green': 'verde', 'anthrazit': 'antracite', 'antracit': 'antracite', 'brown': 'castanho', 'antracito': 'antracite', 'âmbar/preto/pr': 'ambar/preto/preto', 'beige': 'bege', 'kaschmirsilber': 'cashmere', 'beje': 'bege'}
 
-    unknown_ext_colors = df[df['Cor_Exterior'] == 0]['Cor'].unique()
-    unknown_int_colors = df[df['Cor_Interior'] == 0]['Interior'].unique()
+    # unknown_ext_colors = df[df['Cor_Exterior'] == 0]['Cor'].unique()
+    # unknown_int_colors = df[df['Cor_Interior'] == 0]['Interior'].unique()
     # print('Unknown Exterior Colors:', unknown_ext_colors, ', Removed', df[df['Cor_Exterior'] == 0].shape[0], 'lines in total, corresponding to ', df[df['Cor_Exterior'] == 0]['Nº Stock'].nunique(), 'vehicles')  # 49 lines removed, 3 vehicles
     # print('Unknown Interior Colors:', unknown_int_colors, ', Removed', df[df['Cor_Interior'] == 0].shape[0], 'lines in total, corresponding to ', df[df['Cor_Interior'] == 0]['Nº Stock'].nunique(), 'vehicles')  # 2120 lines removed, 464 vehicles
 
