@@ -5,6 +5,8 @@ import datetime
 import warnings
 import numpy as np
 import pandas as pd
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import f_classif
 import matplotlib.pyplot as plt
 from scipy import stats
 from sklearn.model_selection import train_test_split
@@ -97,6 +99,7 @@ def zero_analysis(df):
     print(tab_info)
 
 
+# Parametrization v1
 # def options_scraping(df):
 #     colors_pt = ['preto', 'branco', 'azul', 'verde', 'tartufo', 'vermelho', 'antracite/vermelho', 'anthtacite/preto', 'preto/laranja/preto/lara', 'prata/cinza', 'cinza', 'preto/silver', 'cinzento', 'prateado', 'prata', 'amarelo', 'laranja', 'castanho', 'dourado', 'antracit', 'antracite/preto', 'antracite/cinza/preto', 'branco/outras', 'antracito', 'antracite', 'antracite/vermelho/preto', 'oyster/preto', 'prata/preto/preto', 'âmbar/preto/pr', 'bege', 'terra', 'preto/laranja', 'cognac/preto', 'bronze', 'beige', 'beje', 'veneto/preto', 'zagora/preto', 'mokka/preto', 'taupe/preto', 'sonoma/preto', 'preto/preto', 'preto/laranja/preto']
 #     colors_en = ['black', 'havanna', 'merino', 'vernasca', 'walnut', 'chocolate', 'nevada', 'moonstone', 'anthracite/silver', 'white', 'coffee', 'blue', 'red', 'grey', 'silver', 'orange', 'green', 'bluestone', 'aqua', 'burgundy', 'anthrazit', 'truffle', 'brown', 'oyster', 'tobacco', 'jatoba', 'storm', 'champagne', 'cedar', 'silverstone', 'chestnut', 'kaschmirsilber', 'oak', 'mokka']
@@ -244,6 +247,7 @@ def save_fig(name, save_dir='output/'):
     plt.savefig(save_dir + str(name) + '.png')
 
 
+# Parametrization v2
 def options_scraping(df):
     colors_pt = ['preto', 'branco', 'azul', 'verde', 'tartufo', 'vermelho', 'antracite/vermelho', 'anthtacite/preto', 'preto/laranja/preto/lara', 'prata/cinza', 'cinza', 'preto/silver', 'cinzento', 'prateado', 'prata', 'amarelo', 'laranja', 'castanho', 'dourado', 'antracit', 'antracite/preto', 'antracite/cinza/preto', 'branco/outras', 'antracito', 'antracite', 'antracite/vermelho/preto', 'oyster/preto', 'prata/preto/preto', 'âmbar/preto/pr', 'bege', 'terra', 'preto/laranja', 'cognac/preto', 'bronze', 'beige', 'beje', 'veneto/preto', 'zagora/preto', 'mokka/preto', 'taupe/preto', 'sonoma/preto', 'preto/preto', 'preto/laranja/preto', 'preto/vermelho']
     colors_en = ['black', 'havanna', 'merino', 'walnut', 'chocolate', 'nevada', 'moonstone', 'anthracite/silver', 'white', 'coffee', 'blue', 'red', 'grey', 'silver', 'orange', 'green', 'bluestone', 'aqua', 'burgundy', 'anthrazit', 'truffle', 'brown', 'oyster', 'tobacco', 'jatoba', 'storm', 'champagne', 'cedar', 'silverstone', 'chestnut', 'kaschmirsilber', 'oak', 'mokka']
@@ -253,7 +257,6 @@ def options_scraping(df):
         ## Modelo
         line_modelo = group['Modelo'].head(1).values[0]
         buy_year = pd.to_datetime(group['Data Compra'].head(1).values[0]).year
-        buy_month = pd.to_datetime(group['Data Compra'].head(1).values[0]).month
         tokenized_modelo = nltk.word_tokenize(line_modelo)
         if tokenized_modelo[0] == 'Série':
             df.loc[df['Modelo'] == line_modelo, 'Modelo'] = ' '.join(tokenized_modelo[:2])
@@ -289,9 +292,6 @@ def options_scraping(df):
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'desportiva_m'
                 if 'line' in tokenized_options and 'luxury' in tokenized_options:
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_luxury'
-                # if 'X5' in tokenized_modelo:
-                #     if 'comfort' in tokenized_options:
-                #         df.loc[df['Nº Stock'] == key, 'Versao'] = 'comfort'
 
             if 'pack' in tokenized_options and 'desportivo' in tokenized_options and 'm' in tokenized_options:
                 if 'S1' in tokenized_modelo:
@@ -316,15 +316,12 @@ def options_scraping(df):
             if "xénon" in tokenized_options or 'bixénon' in tokenized_options:
                 # if df.loc[df['Nº Stock'] == key, 'Farois_LED'].all() == 0:
                 df.loc[df['Nº Stock'] == key, 'Farois_Xenon'] = 1
-            elif "luzes" in tokenized_options and "led" in tokenized_options and 'nevoeiro' not in tokenized_options:
-                # df.loc[df['Nº Stock'] == key, 'Farois_Xenon'] = 0
+            elif "luzes" in tokenized_options and "led" in tokenized_options and 'nevoeiro' not in tokenized_options or 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
                 df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
-            elif 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options:
-                # df.loc[df['Nº Stock'] == key, 'Farois_Xenon'] = 0
-                df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
-            elif 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
-                # df.loc[df['Nº Stock'] == key, 'Farois_Xenon'] = 0
-                df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
+            # elif 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options:
+            #     df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
+            # elif 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
+            #     df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
 
             # Barras Tejadilho
             if 'barras' in tokenized_options:
@@ -421,6 +418,10 @@ def options_scraping(df):
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'castanho'
             elif 'âmbar/preto/pr' in tokenized_interior:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'amarelo'
+            elif 'champagne' in tokenized_interior:
+                df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'bege'
+            elif 'crimson' in tokenized_interior:
+                df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'vermelho'
 
         # Tipo Interior
         if 'comb' in tokenized_interior or 'combin' in tokenized_interior or 'combinação' in tokenized_interior or 'tecido/pele' in tokenized_interior:
@@ -434,9 +435,8 @@ def options_scraping(df):
 
         # Standard Equipment
         # Jantes
-        if 'S1' in tokenized_modelo or 'S2' in tokenized_modelo:
-            if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = '16'
+        if 'S1' in tokenized_modelo and df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0 or 'S2' in tokenized_modelo and df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
+            df.loc[df['Nº Stock'] == key, 'Jantes'] = '16'
 
         if 'S3' in tokenized_modelo:
             if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
@@ -467,9 +467,8 @@ def options_scraping(df):
             df.loc[df['Nº Stock'] == key, 'Caixa Auto'] = 1
             df.loc[df['Nº Stock'] == key, 'Alarme'] = 1
 
-        if 'X1' in tokenized_modelo:
-            if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = '17'
+        if 'X1' in tokenized_modelo and df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
+            df.loc[df['Nº Stock'] == key, 'Jantes'] = '17'
 
         if 'X3' in tokenized_modelo:
             if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
@@ -538,11 +537,7 @@ def color_replacement(df):
 
 def score_calculation(df, stockdays_threshold, margin_threshold):
     df['stock_days'] = (df['Data Venda'] - df['Data Compra']).dt.days
-    # df['stock_days_norm'] = (df['stock_days'] - df['stock_days'].min()) / (df['stock_days'].max() - df['stock_days'].min())
-    # df['inv_stock_days_norm'] = 1 - df['stock_days_norm']
-
-    # df['margem_percentagem_norm'] = (df['margem_percentagem'] - df['margem_percentagem'].min()) / (df['margem_percentagem'].max() - df['margem_percentagem'].min())
-    # df['score'] = df['inv_stock_days_norm'] * df['margem_percentagem_norm']
+    df.loc[df['stock_days'].lt(0), 'stock_days'] = 0
 
     df['stock_days_class'] = 0
     df.loc[df['stock_days'] <= stockdays_threshold, 'stock_days_class'] = 1
@@ -554,8 +549,6 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
 
     df['days_stock_price'] = (0.05/360) * df['price_total'] * df['stock_days']
     df['score_euros'] = df['Margem'] - df['days_stock_price']
-
-    # df.drop(['stock_days_norm', 'inv_stock_days_norm', 'margem_percentagem_norm'], axis=1, inplace=True)
 
     return df
 
@@ -620,9 +613,22 @@ def global_variables_saving(df, project):
         STD_TOTAL_PRICE = np.std(df['price_total'])
 
 
-def feature_selection(df, column_count):
+def feature_selection(df, features, target_variable, feature_count, criteria=f_classif):
 
-    print()
+    sel_features = []
+    for feature in features:
+        for feature_2 in list(df):
+            if feature in feature_2:
+                sel_features.append(feature_2)
+
+    selector = SelectKBest(criteria, k=feature_count).fit(df[sel_features], df[target_variable])
+    idxs_selected = selector.get_support(indices=True)
+
+    features_new = list(list(sel_features)[i] for i in idxs_selected)
+
+    removed_features = [x for x in sel_features if x not in list(features_new)]
+
+    return features_new, removed_features
 
 
 def df_copy(df):
@@ -640,9 +646,6 @@ def dataset_split(df, target, oversample=0):
 
     df_test_y = df_test[target]
     df_test_x = df_test.drop(target, axis=1)
-
-    # print('train_x', df_train_x.shape, 'test_x', df_test_x.shape)
-    # print('train_y', df_train_y.shape, 'test_y', df_test_y.shape)
 
     if oversample:
         print('Oversampling small classes...')

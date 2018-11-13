@@ -50,13 +50,19 @@ class RegressionEvaluation(object):
 def performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y):
 
     results_train, results_test = [], []
-    predictions = {}
+    predictions, feat_importance = {}, pd.DataFrame(index=list(train_x), columns={'Importance'})
     for model in models:
         prediction_train = best_models[model].predict(train_x)
         prediction_test = best_models[model].predict(test_x)
         evaluation_training = ClassificationEvaluation(groundtruth=train_y, prediction=prediction_train)
         evaluation_test = ClassificationEvaluation(groundtruth=test_y, prediction=prediction_test)
         predictions[model] = [prediction_train.astype(int, copy=False), prediction_test.astype(int, copy=False)]
+        try:
+            feat_importance['Importance'] = best_models[model].feature_importances_
+            feat_importance.sort_values(by='Importance', ascending=False, inplace=True)
+            feat_importance.to_csv('output/' + 'feature_importance_' + str(model) + '.csv')
+        except AttributeError:
+            pass
 
         row_train = {'micro': getattr(evaluation_training, 'micro'),
                      'average': getattr(evaluation_training, 'average'),
@@ -96,7 +102,7 @@ def probability_evaluation(models_name, models, train_x, test_x):
     return proba_train, proba_test
 
 
-def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, train_y, test_x, test_y):
+def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, train_y, test_x, test_y, configuration_parameters):
     train_x['proba_0'] = [x[0] for x in proba_training]
     train_x['proba_1'] = [x[1] for x in proba_training]
     train_x['score_class_gt'] = train_y
@@ -115,7 +121,33 @@ def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, 
     df['score_class_gt'] = train_test_datasets['score_class_gt'].astype(int, copy=False)
     df['score_class_pred'] = train_test_datasets['score_class_pred']
 
+    df_grouped = df.groupby(configuration_parameters)
+    df = df_grouped.apply(additional_info)
+    df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda_new'])
+    df = df_grouped2.apply(additional_info_local)
+
     return df
+
+
+def additional_info_local(x):
+    x['nr_cars_sold_local'] = len(x)
+    x['average_percentage_margin_local'] = x['margem_percentagem'].mean()
+    x['average_stock_days_local'] = x['stock_days'].mean()
+    x['average_score_local'] = x['score_class_gt'].mean()
+    x['average_score_pred_local'] = x['score_class_pred'].mean()
+    x['average_score_euros_local'] = x['score_euros'].mean()
+
+    return x
+
+
+def additional_info(x):
+    x['nr_cars_sold'] = len(x)
+    x['average_percentage_margin'] = x['margem_percentagem'].mean()
+    x['average_stock_days'] = x['stock_days'].mean()
+    x['average_score'] = x['score_class_gt'].mean()
+    x['average_score_pred'] = x['score_class_pred'].mean()
+    x['average_score_euros'] = x['score_euros'].mean()
+    return x
 
 
 def df_decimal_places_rounding(df, dictionary):

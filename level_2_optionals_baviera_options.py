@@ -79,8 +79,8 @@ merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'bra
 color_int_dict_layer_1 = {
     'preto': ['nappa_antracite', 'vernasca_anthracite/preto', 'merino_preto', 'nevada_preto', 'merino_preto/preto', 'nevada_preto/preto', 'vernasca_preta', 'vernasca_preto/com', 'vernasca_preto/preto', 'preto', 'dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto', 'dakota_preta', 'dakota_black/contrast', 'nappa_preto'],
     'branco': ['nevada_branco', 'merino_branco', 'dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white', 'nappa_white', 'nappa_ivory', 'nappa_ivory/branco'],
-    'vermelho': ['merino_vermelho', 'dakota_coral'],
-    'bege': ['merino_bege', 'dakota_bege', 'nappa_bege', 'vernasca_canberra', 'nevada_bege'],
+    'vermelho': ['vermelho', 'merino_vermelho', 'dakota_coral'],
+    'bege': ['merino_bege', 'dakota_bege', 'nappa_bege', 'vernasca_canberra', 'nevada_bege', 'bege'],
     'oyster': ['dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza', 'vernasca_oyster', 'nevada_oyster', 'nevada_oyster/leather', 'oyster'],
     'castanho': ['castanho', 'merino_castanho', 'nevada_terra', 'nevada_brown', 'vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac', 'nappa_castanho', 'nappa_cognac/preto', 'dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
     'azul': ['dakota_azul', 'vernasca_azuis/preto'],
@@ -89,15 +89,14 @@ color_int_dict_layer_1 = {
     'laranja': ['merino_laranja'],
     'amarelo': ['amarelo'],
     'mini/mota': ['mini/mota'],
-    'others': ['0']
+    'others': ['0', 0]
 }
 
 color_int_dict_layer_2 = {
     'preto': ['preto'],
     'castanho/mocha': ['castanho', 'mocha'],
     'bege/oyster/branco': ['bege', 'oyster', 'branco'],
-    'cinzento': ['cinzento'],
-    'outros': ['amarelo', 'vermelho', 'azul', 'laranja', 'others'],
+    'outros': ['amarelo', 'vermelho', 'azul', 'laranja', 'cinzento', 'others'],
 }
 
 # Old Jantes
@@ -164,7 +163,7 @@ versao_dict = {
 tipo_int_dict = {
     'tecido': ['tecido'],
     'pele': ['pele'],
-    'combinação/interior_m': ['combinação', 'tecido_micro', 0]
+    'combinação/interior_m': ['combinação', 'tecido_micro', 0, '0']
 }
 
 classification_models = {
@@ -177,6 +176,61 @@ classification_models = {
     'gc': [GradientBoostingClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
     'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
     'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'alpha': [1e-5], 'solver': ['sgd']}]],
-    'voting': [VotingClassifier, [{'voting': ['soft']}]]  # ToDo: Need to create code for this model
+    'voting': [VotingClassifier, [{'voting': ['soft']}]]
 }
 
+column_sql_renaming = {
+        'Jantes_new': 'Rims_Size',
+        'Caixa Auto': 'Auto_Trans',
+        'Navegação': 'Navigation',
+        'Sensores': 'Park_Front_Sens',
+        'Cor_Interior_new': 'Colour_Int',
+        'Cor_Exterior_new': 'Colour_Ext',
+        'Modelo_new': 'Model_Code',
+        'Local da Venda_new': 'Sales_Place',
+        'Margem': 'Margin', 'margem_percentagem':
+        'Margin_Percentage',
+        'price_total': 'Sell_Value',
+        'Data Venda': 'Sell_Date',
+        'buy_day': 'Purchase_Day',
+        'buy_month': 'Purchase_Month',
+        'buy_year': 'Purchase_Year',
+        'score_euros': 'Score_Euros',
+        'stock_days': 'Stock_Days',
+        'days_stock_price': 'Stock_Days_Price',
+        'proba_0': 'Probability_0',
+        'proba_1': 'Probability_1',
+        'score_class_gt': 'Score_Class_GT',
+        'score_class_pred': 'Score_Class_Pred',
+        '7_Lug': 'Seven_Seats',
+        'AC Auto': 'AC_Auto', 'Alarme': 'Alarm',
+        'Barras_Tej': 'Roof_Bars',
+        'Teto_Abrir': 'Open_Roof',
+        'Farois_LED': 'LED_Lights',
+        'Farois_Xenon': 'Xenon_Lights',
+        'Prot.Solar': 'Solar_Protection',
+        'Tipo_Interior_new': 'Interior_Type',
+        'Versao_new': 'Version',
+        'average_percentage_margin': 'Average_Margin_Percentage',
+        'average_percentage_margin_local': 'Average_Margin_Percentage_Local',
+        'average_score_euros': 'Average_Score_Euros',
+        'average_score_euros_local': 'Average_Score_Euros_Local',
+        'average_stock_days': 'Average_Stock_Days',
+        'average_stock_days_local': 'Average_Stock_Days_Local',
+        'average_score': 'Average_Score_Class_GT',
+        'average_score_local': 'Average_Score_Class_GT_Local',
+        'average_score_pred': 'Average_Score_Class_Pred',
+        'average_score_pred_local': 'Average_Score_Class_Pred_Local',
+        'nr_cars_sold': 'Number_Cars_Sold',
+        'nr_cars_sold_local': 'Number_Cars_Sold_Local'
+}
+
+
+columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext','Sales_Place',
+                   'Model_Code', 'Purchase_Day', 'Purchase_Month', 'Purchase_Year', 'Margin', 'Margin_Percentage',
+                   'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
+                   'Score_Class_Pred', 'Sell_Date', 'Seven_Seats', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
+                   'Xenon_Lights', 'Solar_Protection', 'Interior_Type', 'Version', 'Average_Margin_Percentage', 'Average_Score_Euros',
+                   'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local',
+                   'Average_Margin_Percentage_Local', 'Average_Score_Euros_Local', 'Average_Stock_Days_Local', 'Average_Score_Class_GT_Local',
+                   'Average_Score_Class_Pred_Local']

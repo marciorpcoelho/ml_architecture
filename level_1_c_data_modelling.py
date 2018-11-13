@@ -6,7 +6,6 @@ import time
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score
 from level_2_optionals_baviera_options import classification_models
 pd.set_option('display.expand_frame_repr', False)
 
@@ -25,7 +24,6 @@ class ClassificationTraining(object):
         self.grid.fit(x, y)
 
     def predict(self, x):
-        # return self.clf.predict(x)
         self.grid.predict(x)
 
     # ToDo: Remove following comments?
@@ -129,7 +127,6 @@ def model_training(models, train_x, train_y, k, score):
 
 def save_model(clfs, model_name):
 
-    # timestamp = str(datetime.datetime.now().day) + '_' + str(datetime.datetime.now().month) + '_' + str(datetime.datetime.now().year) + '_' + str(datetime.datetime.now().hour) + '_' + str(datetime.datetime.now().minute) + '_' + str(datetime.datetime.now().second)
     timestamp = str(datetime.datetime.now().day) + '_' + str(datetime.datetime.now().month) + '_' + str(datetime.datetime.now().year)
 
     i = 0
