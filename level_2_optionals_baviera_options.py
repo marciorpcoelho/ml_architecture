@@ -25,7 +25,7 @@ color_ext_dict_layer_1 = {
     'branco': ['branco'],
     'cinzento': ['cinzento', 'prateado', 'prata', 'cinza', 'bluestone'],
     'azul': ['azul'],
-    'outros': ['castanho', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
+    'outros': ['undefined', 'castanho', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
 }
 
 
@@ -226,7 +226,7 @@ column_sql_renaming = {
 }
 
 
-columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext','Sales_Place',
+columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
                    'Model_Code', 'Purchase_Day', 'Purchase_Month', 'Purchase_Year', 'Margin', 'Margin_Percentage',
                    'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
                    'Score_Class_Pred', 'Sell_Date', 'Seven_Seats', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
@@ -234,3 +234,47 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local',
                    'Average_Margin_Percentage_Local', 'Average_Score_Euros_Local', 'Average_Stock_Days_Local', 'Average_Score_Class_GT_Local',
                    'Average_Score_Class_Pred_Local']
+
+
+column_performance_sql_renaming = {
+    'start_section_a': 'Section_A_Start',
+    'start_section_b': 'Section_B_Start',
+    'checkpoint_b1': 'Checkpoint_B1',
+    'start_section_c': 'Section_C_Start',
+    'start_section_d': 'Section_D_Start',
+    'start_section_e': 'Section_E_Start',
+    'end_section_a': 'Section_A_End',
+    'end_section_b': 'Section_B_End',
+    'end_section_c': 'Section_C_End',
+    'end_section_d': 'Section_D_End',
+    'end_section_e': 'Section_E_End',
+    'start_modelo': 'Model_Code_Start',
+    'end_modelo': 'Model_Code_End',
+    'start_nav_all': 'Navigation_Start',
+    'end_nav_all': 'Navigation_End',
+    'start_barras_all': 'Roof_Bars_Start',
+    'end_barras_all': 'Roof_Bars_End',
+    'start_alarme_all': 'Alarm_Start',
+    'end_alarme_all': 'Alarm_End',
+    'start_7_lug_all': 'Seven_Seats_Start',
+    'end_7_lug_all': 'Seven_Seats_End',
+    'start_prot_all': 'Solar_Protection_Start',
+    'end_prot_all': 'Solar_Protection_End',
+    'start_ac_all': 'AC_Auto_Start',
+    'end_ac_all': 'AC_Auto_End',
+    'start_teto_all': 'Open_Roof_Start',
+    'end_teto_all': 'Open_Roof_End',
+    'duration_versao_all': 'Version_Duration',
+    'duration_trans_all': 'Auto_Trans_Duration',
+    'duration_sens_all': 'Park_Front_Sens_Duration',
+    'duration_jantes_all': 'Rims_Size_Duration',
+    'duration_farois_all': 'Lights_Duration',
+    'start_cor_ext_all': 'Colour_Ext_Start',
+    'end_cor_ext_all': 'Colour_Ext_End',
+    'start_cor_int_all': 'Colour_Int_Start',
+    'end_cor_int_all': 'Colour_Int_End',
+    'start_int_type_all': 'Interior_Type_Start',
+    'end_int_type_all': 'Interior_Type_End',
+    'start_standard': 'Standard_Start',
+    'end_standard': 'Standard_End'
+}

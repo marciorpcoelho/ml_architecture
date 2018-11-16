@@ -11,6 +11,7 @@ from level_1_b_data_processing import lowercase_column_convertion, remove_rows, 
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding
 from level_1_e_deployment import save_csv, sql_inject, sql_truncate
+from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info
 pd.set_option('display.expand_frame_repr', False)
 warnings.filterwarnings('ignore')  # ToDO: remove this line
 
@@ -18,6 +19,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 configuration_parameters = ['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Farois_LED', 'Farois_Xenon', 'Jantes_new', 'Modelo_new', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior_new', 'Versao_new']
+performance_list = []
 
 
 def main():
@@ -26,8 +28,6 @@ def main():
 
     ### Options:
     input_file = 'dbs/' + 'ENCOMENDA.csv'
-    # input_file = 'dbs/' + 'testing_ENCOMENDA.csv'
-    # input_file = 'dbs/' + 'teste_various_models.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
 
     stockdays_threshold, margin_threshold = 45, 3.5
@@ -44,15 +44,15 @@ def main():
     view = "VHE_Fact_DW_OrderOptimization"
     ###
 
-    # for number_of_features in range(10, 46):
-    #     print('Number of features:', number_of_features)
     number_of_features = 'all'
-    # df = data_acquistion(input_file)
-    # df, train_x, train_y, test_x, test_y = data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check, number_of_features)
-    # classes, best_models, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score)
-    # best_model = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features)
-    best_model = 0
-    deployment(best_model, db, view, output_file)
+    df = data_acquistion(input_file)
+    df, train_x, train_y, test_x, test_y = data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check, number_of_features)
+    classes, best_models, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score)
+    best_model = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features)
+    # best_model = 0
+    vehicle_count = deployment(best_model, db, view, output_file)
+
+    performance_info(vehicle_count)
 
     # sys.stdout.flush()
     logging.info('Finished - Project: Baviera Stock Optimization\n')
@@ -61,6 +61,7 @@ def main():
 
 def data_acquistion(input_file):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step A...')
+    performance_info_append(time.time(), 'start_section_a')
     logging.info('Started Step A...')
 
     try:
@@ -69,6 +70,7 @@ def data_acquistion(input_file):
         df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
 
     logging.info('Finished Step A.')
+    performance_info_append(time.time(), 'end_section_a')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
 
     return df
@@ -76,6 +78,7 @@ def data_acquistion(input_file):
 
 def data_processing(df, stockdays_threshold, margin_threshold, target_variable, oversample_check, number_of_features):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step B...')
+    performance_info_append(time.time(), 'start_section_b')
     logging.info('Started Step B...')
 
     if not os.path.isfile('output/' + 'ENCOMENDA_checkpoint_end_b.csv'):
@@ -109,13 +112,14 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
         # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Checkpoint B.1...')
         save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_b1'])  # Saves a first version of the DF after treatment
         logging.info('Checkpoint B.1...')
+        performance_info_append(time.time(), 'checkpoint_b1')
 
     # ToDO: Checkpoint B.1 - this should be the first savepoint of the df. If an error is found after this point, the code should check for the df of this checkpoint
     elif os.path.isfile('output/' + 'ENCOMENDA_checkpoint_b1.csv'):
         print('Checkpoint B1 found, loading it...')
         df = pd.read_csv('output/' + 'ENCOMENDA_checkpoint_b1.csv', index_col=0, parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal='.')
 
-    df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
+    # df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
     # Removes entries of motorcycles (Série), recent car models (Z4), MINI models (MINI) and those whose order is Demonstração and Em Utilização
     df = margin_calculation(df)  # Calculates the margin in percentage of the total price
     df = score_calculation(df, stockdays_threshold, margin_threshold)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
@@ -152,6 +156,7 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
 
     save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_end_b'])  # Saves a first version of the DF after treatment
     logging.info('Finished Step B.')
+    performance_info_append(time.time(), 'end_section_b')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step B.')
 
     return df, train_x, train_y, test_x, test_y
@@ -159,6 +164,7 @@ def data_processing(df, stockdays_threshold, margin_threshold, target_variable, 
 
 def data_modelling(df, train_x, train_y, test_x, models, k, score):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
+    performance_info_append(time.time(), 'start_section_c')
     logging.info('Started Step C...')
 
     df.sort_index(inplace=True)
@@ -168,12 +174,14 @@ def data_modelling(df, train_x, train_y, test_x, models, k, score):
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step C.')
     logging.info('Finished Step C.')
+    performance_info_append(time.time(), 'end_section_c')
 
     return classes, best_models, running_times
 
 
 def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
+    performance_info_append(time.time(), 'start_section_d')
     logging.info('Started Step D...')
 
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
@@ -197,11 +205,13 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
     logging.info('Finished Step D.')
+    performance_info_append(time.time(), 'end_section_d')
     return df_model
 
 
 def deployment(df, db, view, output_file):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step E...')
+    performance_info_append(time.time(), 'start_section_e')
     logging.info('Started Step E...')
 
     df = pd.read_csv('output/' + 'db_final_classification_gc.csv', index_col=0)
@@ -216,12 +226,16 @@ def deployment(df, db, view, output_file):
     #                               'Farois_LED': 'LED_Lights', 'Farois_Xenon': 'Xenon_Lights', 'Prot.Solar': 'Solar_Protection', 'Tipo_Interior_new': 'Interior_Type', 'Versao_new': 'Version', 'average_percentage_margin': 'Average_Margin_Percentage',
     #                               'average_score_euros': 'Average_Score_Euros', 'average_stock_days': 'Average_Stock_Days', 'average_score': 'Average_Score_Class_GT', 'average_score_pred': 'Average_Score_Class_Pred',
     #                               'nr_cars_sold': 'Number_Cars_Sold'}, inplace=True)
-    sql_inject(df, db, view, level_2_optionals_baviera_options.column_sql_renaming)
+
+    # sql_inject(df, db, view, level_2_optionals_baviera_options.column_sql_renaming)
+    sql_inject(df, db, view, level_2_optionals_baviera_options.columns_for_sql)
 
     # save_csv([df], [output_file])  # ToDo: Save df locally
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step E.')
     logging.info('Finished Step E.')
+    performance_info_append(time.time(), 'end_section_e')
 
+    return df.shape[0]
 
 if __name__ == '__main__':
     main()

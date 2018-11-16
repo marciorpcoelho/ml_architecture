@@ -1,6 +1,7 @@
 import nltk
 import sys
 import logging
+import time
 import datetime
 import warnings
 import numpy as np
@@ -12,6 +13,7 @@ from scipy import stats
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors
+from level_2_optionals_baviera_performance_report_info import performance_info_append
 warnings.simplefilter('ignore', FutureWarning)
 
 # Globals Definition
@@ -99,124 +101,6 @@ def zero_analysis(df):
     print(tab_info)
 
 
-# Parametrization v1
-# def options_scraping(df):
-#     colors_pt = ['preto', 'branco', 'azul', 'verde', 'tartufo', 'vermelho', 'antracite/vermelho', 'anthtacite/preto', 'preto/laranja/preto/lara', 'prata/cinza', 'cinza', 'preto/silver', 'cinzento', 'prateado', 'prata', 'amarelo', 'laranja', 'castanho', 'dourado', 'antracit', 'antracite/preto', 'antracite/cinza/preto', 'branco/outras', 'antracito', 'antracite', 'antracite/vermelho/preto', 'oyster/preto', 'prata/preto/preto', 'âmbar/preto/pr', 'bege', 'terra', 'preto/laranja', 'cognac/preto', 'bronze', 'beige', 'beje', 'veneto/preto', 'zagora/preto', 'mokka/preto', 'taupe/preto', 'sonoma/preto', 'preto/preto', 'preto/laranja/preto']
-#     colors_en = ['black', 'havanna', 'merino', 'vernasca', 'walnut', 'chocolate', 'nevada', 'moonstone', 'anthracite/silver', 'white', 'coffee', 'blue', 'red', 'grey', 'silver', 'orange', 'green', 'bluestone', 'aqua', 'burgundy', 'anthrazit', 'truffle', 'brown', 'oyster', 'tobacco', 'jatoba', 'storm', 'champagne', 'cedar', 'silverstone', 'chestnut', 'kaschmirsilber', 'oak', 'mokka']
-#
-#     df_grouped = df.groupby('Nº Stock')
-#     for key, group in df_grouped:
-#         ### Navegação/Sensor/Transmissão
-#         for line_options in group['Opcional']:
-#             tokenized_options = nltk.word_tokenize(line_options)
-#             if 'navegação' in tokenized_options:
-#                 df.loc[df['Nº Stock'] == key, 'Navegação'] = 1
-#
-#             if 'pdc-sensores' in tokenized_options:
-#                 for word in tokenized_options:
-#                     if 'diant' in word:
-#                         df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
-#
-#             if 'transmissão' in tokenized_options or 'caixa' in tokenized_options:
-#                 for word in tokenized_options:
-#                     if 'auto' in word:
-#                         df.loc[df['Nº Stock'] == key, 'Caixa Auto'] = 1
-#
-#         ### Cor Exterior
-#         line_color = group['Cor'].head(1).values[0]
-#         tokenized_color = nltk.word_tokenize(line_color)
-#         color = [x for x in colors_pt if x in tokenized_color]
-#         if not color:
-#             color = [x for x in colors_en if x in tokenized_color]
-#         if not color:
-#             if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58']:
-#                 continue
-#             else:
-#                 # print(tokenized_color)
-#                 sys.exit('Error: Color Not Found')
-#         if len(color) > 1:  # Fixes cases such as 'white silver'
-#             color = [color[0]]
-#         color = color * group.shape[0]
-#         df.loc[df['Nº Stock'] == key, 'Cor_Exterior'] = color
-#
-#         ### Cor Interior
-#         line_interior = group['Interior'].head(1).values[0]
-#         tokenized_interior = nltk.word_tokenize(line_interior)
-#
-#         color_interior = [x for x in colors_pt if x in tokenized_interior]
-#
-#         if not color_interior:
-#             color_interior = [x for x in colors_en if x in tokenized_interior]
-#
-#         if 'truffle' in tokenized_interior:
-#             color_interior = ['truffle']
-#
-#         if 'banco' in tokenized_interior and 'standard' in tokenized_interior:
-#             color_interior = ['preto']
-#
-#         # if not color_interior:
-#         #     print(tokenized_interior)
-#         #     sys.exit('No Interior Color')
-#
-#         if len(color_interior) > 1:
-#             # print('Too Many Colors:', tokenized_interior, color_interior)
-#
-#             if 'nevada' in tokenized_interior:
-#                 color_interior = ['nevada']
-#             if 'preto' in tokenized_interior and 'antracite' in tokenized_interior:
-#                 color_interior = ['preto/antracite']
-#
-#             # if 'beje' in tokenized_interior and 'havanna' in tokenized_interior:
-#             #     color_interior = ['beje']
-#             # if 'bege' in tokenized_interior and 'veneto' in tokenized_interior:
-#             #     color_interior = ['bege']
-#             # if 'bege' in tokenized_interior and 'preto' in tokenized_interior:
-#             #     color_interior = ['bege']
-#             # if 'bege' in tokenized_interior and 'sonoma/preto' in tokenized_interior:
-#             #     color_interior = ['bege']
-#             # if 'bege' in tokenized_interior and 'zagora/preto' in tokenized_interior:
-#             #     color_interior = ['bege']
-#
-#             if 'beje' in tokenized_interior or 'bege' in tokenized_interior:
-#                 if 'havanna' in tokenized_interior or 'veneto' in tokenized_interior or 'preto' in tokenized_interior or 'sonoma/preto' in tokenized_interior or 'zagora/preto' in tokenized_interior:
-#                     color_interior = ['bege']
-#
-#             # if 'dacota' in tokenized_interior and 'bege' in tokenized_interior:
-#             #     color_interior = ['dakota']
-#             # if 'dakota' in tokenized_interior:
-#             #     color_interior = ['dakota']
-#
-#             if 'vernasca' in tokenized_interior and 'anthtacite/preto' in tokenized_interior:
-#                 color_interior = ['vernasca']
-#             # print('Changed to:', color_interior)
-#
-#         color_interior = color_interior * group.shape[0]
-#         try:
-#             df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = color_interior
-#         except ValueError:
-#             # print(key, '\n', color_interior)
-#             continue
-#
-#         ### Jantes
-#         for line_options in group['Opcional']:
-#             tokenized_jantes = nltk.word_tokenize(line_options)
-#             for value in range(15, 21):
-#                 if str(value) in tokenized_jantes:
-#                     jantes_size = [str(value)] * group.shape[0]
-#                     df.loc[df['Nº Stock'] == key, 'Jantes'] = jantes_size
-#
-#         ## Modelo
-#         line_modelo = group['Modelo'].head(1).values[0]
-#         tokenized_modelo = nltk.word_tokenize(line_modelo)
-#         if tokenized_modelo[0] == 'Série':
-#             df.loc[df['Modelo'] == line_modelo, 'Modelo'] = ' '.join(tokenized_modelo[:2])
-#         else:
-#             df.loc[df['Modelo'] == line_modelo, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
-#
-#     df.loc[df['Jantes'] == 0, 'Jantes'] = 'standard'
-#     return df
-
-
 def value_count_histogram(df, column, name, output_dir='output/'):
     plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
     df.loc[df[column] == 0, column] = '0'
@@ -248,42 +132,390 @@ def save_fig(name, save_dir='output/'):
 
 
 # Parametrization v2
+# def options_scraping(df):
+#     colors_pt = ['preto', 'branco', 'azul', 'verde', 'tartufo', 'vermelho', 'antracite/vermelho', 'anthtacite/preto', 'preto/laranja/preto/lara', 'prata/cinza', 'cinza', 'preto/silver', 'cinzento', 'prateado', 'prata', 'amarelo', 'laranja', 'castanho', 'dourado', 'antracit', 'antracite/preto', 'antracite/cinza/preto', 'branco/outras', 'antracito', 'antracite', 'antracite/vermelho/preto', 'oyster/preto', 'prata/preto/preto', 'âmbar/preto/pr', 'bege', 'terra', 'preto/laranja', 'cognac/preto', 'bronze', 'beige', 'beje', 'veneto/preto', 'zagora/preto', 'mokka/preto', 'taupe/preto', 'sonoma/preto', 'preto/preto', 'preto/laranja/preto', 'preto/vermelho']
+#     colors_en = ['black', 'havanna', 'merino', 'walnut', 'chocolate', 'nevada', 'moonstone', 'anthracite/silver', 'white', 'coffee', 'blue', 'red', 'grey', 'silver', 'orange', 'green', 'bluestone', 'aqua', 'burgundy', 'anthrazit', 'truffle', 'brown', 'oyster', 'tobacco', 'jatoba', 'storm', 'champagne', 'cedar', 'silverstone', 'chestnut', 'kaschmirsilber', 'oak', 'mokka']
+#
+#     df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
+#
+#     df_performance = pd.DataFrame()
+#     df_grouped = df.groupby('Nº Stock')
+#     i = 0
+#     start_nav, start_nav_2, start_nav_3, start_sens, start_trans, start_vers, start_lights, start_barras, start_7_lug, start_alarme, start_prot, start_ac, start_teto, start_jantes = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+#
+#     ### Modelo
+#     start_modelo = time.time()
+#     unique_models = df['Modelo'].unique()
+#     for model in unique_models:
+#         if 'Série' not in model:
+#             tokenized_modelo = nltk.word_tokenize(model)
+#             df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
+#     end_modelo = time.time() - start_modelo
+#
+#     for key, group in df_grouped:
+#         line_modelo = group['Modelo'].head(1).values[0]
+#         tokenized_modelo = nltk.word_tokenize(line_modelo)
+#
+#         ### Navegação/Sensor/Transmissão/Versão/Barras Tejadilho/Jantes
+#         start_options = time.time()
+#         for line_options in group['Opcional']:
+#             tokenized_options = nltk.word_tokenize(line_options)
+#
+#             start = time.time()
+#             # if 'navegação' in tokenized_options:
+#             #     df.loc[df['Nº Stock'] == key, 'Navegação'] = 1
+#             duration = time.time() - start
+#             start_nav += duration
+#             # print('Elapsed time Navegação: ', (time.time() - start_nav), 'seconds...')
+#
+#             start = time.time()
+#             if 'pdc-sensores' in tokenized_options:
+#                 for word in tokenized_options:
+#                     if 'diant' in word:
+#                         df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
+#             duration = time.time() - start
+#             start_sens += duration
+#             # print('Elapsed time Sensores: ', (time.time() - start_sens), 'seconds...')
+#
+#             start = time.time()
+#             if 'transmissão' in tokenized_options or 'caixa' in tokenized_options:
+#                 for word in tokenized_options:
+#                     if 'auto' in word:
+#                         df.loc[df['Nº Stock'] == key, 'Caixa Auto'] = 1
+#             duration = time.time() - start
+#             start_trans += duration
+#             # print('Elapsed time Transmissão: ', (time.time() - start_trans), 'seconds...')
+#
+#             # Versão
+#             start = time.time()
+#             if 'advantage' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'Versao'] = 'advantage'
+#             elif 'versão' in tokenized_options or 'bmw' in tokenized_options:
+#                 if 'line' in tokenized_options and 'sport' in tokenized_options:
+#                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_sport'
+#                 elif 'line' in tokenized_options and 'urban' in tokenized_options:
+#                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_urban'
+#                 elif 'desportiva' in tokenized_options and 'm' in tokenized_options:
+#                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'desportiva_m'
+#                 elif 'line' in tokenized_options and 'luxury' in tokenized_options:
+#                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_luxury'
+#             elif 'pack' in tokenized_options and 'desportivo' in tokenized_options and 'm' in tokenized_options:
+#                 if 'S1' in tokenized_modelo:
+#                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'desportiva_m'
+#                 elif 'S5' in tokenized_modelo or 'S3' in tokenized_modelo or 'S2' in tokenized_modelo:
+#                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'pack_desportivo_m'
+#             elif 'bmw' in tokenized_options and 'modern' in tokenized_options:  # no need to search for string line, there are no bmw modern without line;
+#                 if 'S5' in tokenized_modelo:
+#                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_luxury'
+#                 else:
+#                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_urban'
+#             elif 'xline' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'Versao'] = 'xline'
+#             duration = time.time() - start
+#             start_vers += duration
+#             # print('Elapsed time Versão: ', (time.time() - start_vers), 'seconds...')
+#
+#             # Faróis
+#             start = time.time()
+#             if "xénon" in tokenized_options or 'bixénon' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'Farois_Xenon'] = 1
+#             elif "luzes" in tokenized_options and "led" in tokenized_options and 'nevoeiro' not in tokenized_options or 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
+#             duration = time.time() - start
+#             start_lights += duration
+#
+#             # Barras Tejadilho
+#             start = time.time()
+#             if 'barras' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'Barras_Tej'] = 1
+#             duration = time.time() - start
+#             start_barras += duration
+#             # print('Elapsed time Barras: ', (time.time() - start_barras), 'seconds...')
+#
+#             # 7 Lugares
+#             start = time.time()
+#             if 'terceira' in tokenized_options and 'fila' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, '7_Lug'] = 1
+#             duration = time.time() - start
+#             start_7_lug += duration
+#             # print('Elapsed time 7 Lug: ', (time.time() - start_7_lug), 'seconds...')
+#
+#             # Alarme
+#             start = time.time()
+#             if 'alarme' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'Alarme'] = 1
+#             duration = time.time() - start
+#             start_alarme += duration
+#             # print('Elapsed time Alarme: ', (time.time() - start_alarme), 'seconds...')
+#
+#             # Vidros com Proteção Solar
+#             start = time.time()
+#             if 'proteção' in tokenized_options and 'solar' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'Prot.Solar'] = 1
+#             duration = time.time() - start
+#             start_prot += duration
+#             # print('Elapsed time Prot: ', (time.time() - start_prot), 'seconds...')
+#
+#             # AC Auto
+#             start = time.time()
+#             if 'ar' in tokenized_options and 'condicionado' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'AC Auto'] = 1
+#             duration = time.time() - start
+#             start_ac += duration
+#             # print('Elapsed time AC: ', (time.time() - start_ac), 'seconds...')
+#
+#             # Teto de Abrir
+#             start = time.time()
+#             if 'teto' in tokenized_options and 'abrir' in tokenized_options:
+#                 df.loc[df['Nº Stock'] == key, 'Teto_Abrir'] = 1
+#             duration = time.time() - start
+#             start_teto += duration
+#             # print('Elapsed time Teto: ', (time.time() - start_teto), 'seconds...')
+#
+#             # Jantes
+#             start = time.time()
+#             for value in range(15, 21):
+#                 if str(value) in tokenized_options:
+#                     jantes_size = [str(value)] * group.shape[0]
+#                     df.loc[df['Nº Stock'] == key, 'Jantes'] = jantes_size
+#             # print('Elapsed time Jantes: ', (time.time() - start_jantes), 'seconds...')
+#             duration = time.time() - start
+#             start_jantes += duration
+#
+#         end_options = time.time() - start_options
+#         # print('Elapsed time Options: ', (time.time() - start_options), 'seconds...')
+#
+#         ### Cor Exterior
+#         start_cor_ext = time.time()
+#         line_color = group['Cor'].head(1).values[0]
+#         tokenized_color = nltk.word_tokenize(line_color)
+#         color = [x for x in colors_pt if x in tokenized_color]
+#         if not color:
+#             color = [x for x in colors_en if x in tokenized_color]
+#         if not color:
+#             if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58']:
+#                 continue
+#             else:
+#                 sys.exit('Error: Color Not Found')
+#         if len(color) > 1:  # Fixes cases such as 'white silver'
+#             color = [color[0]]
+#         color = color * group.shape[0]
+#         try:
+#             df.loc[df['Nº Stock'] == key, 'Cor_Exterior'] = color
+#         except ValueError:
+#             print(color)
+#         end_cor_ext = time.time() - start_cor_ext
+#         # print('Elapsed time Cor Exterior: ', (time.time() - start_cor_ext), 'seconds...')
+#
+#         ### Cor Interior/Tipo Interior
+#         start_cor_int = time.time()
+#         line_interior = group['Interior'].head(1).values[0]
+#         tokenized_interior = nltk.word_tokenize(line_interior)
+#
+#         if 'dakota' in tokenized_interior:
+#             color_int = [x for x in tokenized_interior if x in dakota_colors]
+#             if color_int:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'dakota_' + color_int[0]
+#                 # continue
+#         elif 'nappa' in tokenized_interior:
+#             color_int = [x for x in tokenized_interior if x in nappa_colors]
+#             if color_int:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'nappa_' + color_int[0]
+#                 # continue
+#         elif 'vernasca' in tokenized_interior:
+#             color_int = [x for x in tokenized_interior if x in vernasca_colors]
+#             if color_int:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'vernasca_' + color_int[0]
+#                 # continue
+#         elif 'nevada' in tokenized_interior:
+#             color_int = [x for x in tokenized_interior if x in nevada_colors]
+#             if color_int:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'nevada_' + color_int[0]
+#         elif 'merino' in tokenized_interior:
+#             color_int = [x for x in tokenized_interior if x in merino_colors]
+#             if color_int:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'merino_' + color_int[0]
+#         else:
+#             if 'antraci' in tokenized_interior or 'antracit' in tokenized_interior or 'anthracite/silver' in tokenized_interior or 'preto/laranja' in tokenized_interior or 'preto/silver' in tokenized_interior or 'preto/preto' in tokenized_interior or 'confort' in tokenized_interior or 'standard' in tokenized_interior or 'preto' in tokenized_interior or 'antracite' in tokenized_interior or 'antracite/laranja' in tokenized_interior or 'antracite/preto' in tokenized_interior or 'antracite/cinza/preto' in tokenized_interior or 'antracite/vermelho/preto' in tokenized_interior or 'antracite/vermelho' in tokenized_interior:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'preto'
+#             elif 'oyster/preto' in tokenized_interior:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'oyster'
+#             elif 'platinu' in tokenized_interior or 'grey' in tokenized_interior or 'prata/preto/preto' in tokenized_interior or 'prata/cinza' in tokenized_interior:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'cinzento'
+#             elif 'castanho' in tokenized_interior or 'walnut' in tokenized_interior:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'castanho'
+#             elif 'âmbar/preto/pr' in tokenized_interior:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'amarelo'
+#             elif 'champagne' in tokenized_interior:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'bege'
+#             elif 'crimson' in tokenized_interior:
+#                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'vermelho'
+#         end_cor_int = time.time() - start_cor_int
+#         # print('Elapsed time Cor Interior: ', (time.time() - start_cor_int), 'seconds...')
+#
+#         start_int = time.time()
+#         # Tipo Interior
+#         if 'comb' in tokenized_interior or 'combin' in tokenized_interior or 'combinação' in tokenized_interior or 'tecido/pele' in tokenized_interior:
+#             df.loc[df['Nº Stock'] == key, 'Tipo_Interior'] = 'combinação'
+#         elif 'hexagon\'' in tokenized_interior or 'hexagon/alcantara' in tokenized_interior:
+#             df.loc[df['Nº Stock'] == key, 'Tipo_Interior'] = 'tecido_micro'
+#         elif 'tecido' in tokenized_interior or 'cloth' in tokenized_interior:
+#             df.loc[df['Nº Stock'] == key, 'Tipo_Interior'] = 'tecido'
+#         elif 'pele' in tokenized_interior or 'leather' in tokenized_interior or 'dakota\'' in tokenized_interior or 'couro' in tokenized_interior:
+#             df.loc[df['Nº Stock'] == key, 'Tipo_Interior'] = 'pele'
+#         end_int = time.time() - start_int
+#         # print('Elapsed time Interior: ', (time.time() - start_int), 'seconds...')
+#
+#         df_performance['vehicle_' + str(i)] = [end_modelo, end_options, end_cor_ext, end_cor_int, end_int]
+#         i += 1
+#
+#     # Standard Equipment
+#     # start_standard = time.time()
+#     criteria_model_s1 = df['Modelo'].str.contains('S1')
+#     criteria_model_s2 = df['Modelo'].str.contains('S2')
+#     criteria_model_s3 = df['Modelo'].str.contains('S3')
+#     criteria_model_s4 = df['Modelo'].str.contains('S4')
+#     criteria_model_s5 = df['Modelo'].str.contains('S5')
+#     criteria_model_x1 = df['Modelo'].str.contains('X1')
+#     criteria_model_x3 = df['Modelo'].str.contains('X3')
+#     criteria_jantes_0 = df['Jantes'] == 0
+#     criteria_farois_led_0 = df['Farois_LED'] == 0
+#     criteria_buy_year_ge_2017 = pd.to_datetime(df['Data Compra'].values).year >= 2017
+#     criteria_buy_year_lt_2017 = pd.to_datetime(df['Data Compra'].values).year < 2017
+#     criteria_buy_year_ge_2016 = pd.to_datetime(df['Data Compra'].values).year >= 2016
+#
+#     df.loc[df[criteria_model_s1 & criteria_jantes_0].index, 'Jantes'] = '16'
+#     df.loc[df[criteria_model_s2 & criteria_jantes_0].index, 'Jantes'] = '16'
+#     df.loc[df[criteria_model_s3 & criteria_jantes_0].index, 'Jantes'] = '16'
+#     df.loc[df[criteria_model_s3 & criteria_buy_year_ge_2017].index, 'Farois_LED'] = 1
+#     df.loc[df[criteria_model_s4 & criteria_jantes_0].index, 'Jantes'] = '17'
+#     df.loc[df[criteria_model_s4 & criteria_buy_year_ge_2016].index, 'Sensores'] = 1
+#     df.loc[df[criteria_model_s4 & criteria_buy_year_ge_2017].index, 'Farois_LED'] = 1
+#     df.loc[df[criteria_model_s4 & criteria_buy_year_lt_2017 & criteria_farois_led_0].index, 'Farois_Xenon'] = 1
+#     df.loc[df[criteria_model_s5 & criteria_jantes_0].index, 'Jantes'] = '17'
+#     df.loc[df[criteria_model_s5 & criteria_buy_year_ge_2017].index, 'Farois_LED'] = 1
+#     df.loc[df[criteria_model_s5 & criteria_buy_year_ge_2017].index, 'Alarme'] = 1
+#     df.loc[df[criteria_model_s5 & criteria_buy_year_lt_2017 & criteria_farois_led_0].index, 'Farois_Xenon'] = 1
+#     df.loc[df[criteria_model_s5].index, 'Sensores'] = 1
+#     df.loc[df[criteria_model_s5].index, 'Navegação'] = 1
+#     df.loc[df[criteria_model_s5].index, 'Caixa Auto'] = 1
+#     df.loc[df[criteria_model_x1 & criteria_jantes_0].index, 'Jantes'] = '17'
+#     df.loc[df[criteria_model_x3 & criteria_jantes_0].index, 'Jantes'] = '18'
+#     df.loc[df[criteria_model_x3].index, 'Sensores'] = 1
+#     df.loc[df[criteria_model_x3].index, 'Caixa Auto'] = 1
+#
+#     # end_standard = time.time() - start_standard
+#     print('start_nav', start_nav, '\n', 'start_nav_2', start_nav_2, '\n', 'start_nav_3', start_nav_3, '\n', 'start_sens', start_sens, '\n', 'start_trans', start_trans,'\n','start_vers', start_vers,'\n', 'start_lights', start_lights,'\n',
+#           'start_barras', start_barras,'\n', 'start_7_lug', start_7_lug,'\n', 'start_alarme', start_alarme, '\n','start_prot', start_prot,'\n','start_ac', start_ac,'\n',
+#           'start_teto', start_teto,'\n', 'start_jantes', start_jantes)
+#     # print('Elapsed time Standard: ', end_standard, 'seconds...')
+#
+#     df_performance.to_csv('output/' + 'df_performance.csv')
+#     df.loc[df['Versao'] == 0, 'Versao'] = 'base'
+#     df.loc[df['Jantes'] == 0, 'Jantes'] = 'standard'
+#     return df
+
 def options_scraping(df):
     colors_pt = ['preto', 'branco', 'azul', 'verde', 'tartufo', 'vermelho', 'antracite/vermelho', 'anthtacite/preto', 'preto/laranja/preto/lara', 'prata/cinza', 'cinza', 'preto/silver', 'cinzento', 'prateado', 'prata', 'amarelo', 'laranja', 'castanho', 'dourado', 'antracit', 'antracite/preto', 'antracite/cinza/preto', 'branco/outras', 'antracito', 'antracite', 'antracite/vermelho/preto', 'oyster/preto', 'prata/preto/preto', 'âmbar/preto/pr', 'bege', 'terra', 'preto/laranja', 'cognac/preto', 'bronze', 'beige', 'beje', 'veneto/preto', 'zagora/preto', 'mokka/preto', 'taupe/preto', 'sonoma/preto', 'preto/preto', 'preto/laranja/preto', 'preto/vermelho']
     colors_en = ['black', 'havanna', 'merino', 'walnut', 'chocolate', 'nevada', 'moonstone', 'anthracite/silver', 'white', 'coffee', 'blue', 'red', 'grey', 'silver', 'orange', 'green', 'bluestone', 'aqua', 'burgundy', 'anthrazit', 'truffle', 'brown', 'oyster', 'tobacco', 'jatoba', 'storm', 'champagne', 'cedar', 'silverstone', 'chestnut', 'kaschmirsilber', 'oak', 'mokka']
 
-    df_grouped = df.groupby('Nº Stock')
-    for key, group in df_grouped:
-        ## Modelo
-        line_modelo = group['Modelo'].head(1).values[0]
-        buy_year = pd.to_datetime(group['Data Compra'].head(1).values[0]).year
-        tokenized_modelo = nltk.word_tokenize(line_modelo)
-        if tokenized_modelo[0] == 'Série':
-            df.loc[df['Modelo'] == line_modelo, 'Modelo'] = ' '.join(tokenized_modelo[:2])
-        else:
-            df.loc[df['Modelo'] == line_modelo, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
+    df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
 
-        ### Navegação/Sensor/Transmissão/Versão/Barras Tejadilho/Jantes
+    df_grouped = df.groupby('Nº Stock')
+    start_nav_all, end_nav_all = [], []
+    start_barras_all, end_barras_all = [], []
+    start_alarme_all, end_alarme_all = [], []
+    start_7_lug_all, end_7_lug_all = [], []
+    start_prot_all, end_prot_all = [], []
+    start_ac_all, end_ac_all = [], []
+    start_teto_all, end_teto_all = [], []
+    duration_sens_all, duration_trans_all, duration_versao_all, duration_farois_all, duration_jantes_all = [], [], [], [], []
+    start_cor_ext_all, end_cor_ext_all = [], []
+    start_cor_int_all, end_cor_int_all = [], []
+    start_int_type_all, end_int_type_all = [], []
+
+    # Modelo
+    performance_info_append(time.time(), 'start_modelo')
+    unique_models = df['Modelo'].unique()
+    for model in unique_models:
+        if 'Série' not in model:
+            tokenized_modelo = nltk.word_tokenize(model)
+            df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
+    performance_info_append(time.time(), 'end_modelo')
+
+    for key, group in df_grouped:
+        duration_sens, duration_trans, duration_versao, duration_farois, duration_jantes = 0, 0, 0, 0, 0
+        line_modelo = group['Modelo'].head(1).values[0]
+        tokenized_modelo = nltk.word_tokenize(line_modelo)
+        optionals = set(group['Opcional'])
+
+        # Navegação
+        start_nav_all.append(time.time())
+        if len([x for x in optionals if 'navegação' in x]):
+            df.loc[df['Nº Stock'] == key, 'Navegação'] = 1
+        end_nav_all.append(time.time())
+
+        # Barras Tejadilho
+        start_barras_all.append(time.time())
+        if len([x for x in optionals if 'barras' in x]):
+            df.loc[df['Nº Stock'] == key, 'Barras_Tej'] = 1
+        end_barras_all.append(time.time())
+
+        # Alarme
+        start_alarme_all.append(time.time())
+        if len([x for x in optionals if 'alarme' in x]):
+            df.loc[df['Nº Stock'] == key, 'Alarme'] = 1
+        end_alarme_all.append(time.time())
+
+        # 7 Lugares
+        start_7_lug_all.append(time.time())
+        if len([x for x in optionals if 'terceira' in x]):
+            df.loc[df['Nº Stock'] == key, '7_Lug'] = 1
+        end_7_lug_all.append(time.time())
+
+        # Vidros com Proteção Solar
+        start_prot_all.append(time.time())
+        if len([x for x in optionals if 'proteção' in x and 'solar' in x]):
+            df.loc[df['Nº Stock'] == key, 'Prot.Solar'] = 1
+        end_prot_all.append(time.time())
+
+        # AC Auto
+        start_ac_all.append(time.time())
+        if len([x for x in optionals if 'ar' in x and 'condicionado' in x]):
+            df.loc[df['Nº Stock'] == key, 'AC Auto'] = 1
+        end_ac_all.append(time.time())
+
+        # Teto Abrir
+        start_teto_all.append(time.time())
+        if len([x for x in optionals if 'teto' in x and 'abrir' in x]):
+            df.loc[df['Nº Stock'] == key, 'Teto_Abrir'] = 1
+        end_teto_all.append(time.time())
+
+        # Sensor/Transmissão/Versão/Jantes
         for line_options in group['Opcional']:
             tokenized_options = nltk.word_tokenize(line_options)
-            if 'navegação' in tokenized_options:
-                df.loc[df['Nº Stock'] == key, 'Navegação'] = 1
 
+            start = time.time()
             if 'pdc-sensores' in tokenized_options:
                 for word in tokenized_options:
                     if 'diant' in word:
                         df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
+            duration = time.time() - start
+            duration_sens += duration
 
+            start = time.time()
             if 'transmissão' in tokenized_options or 'caixa' in tokenized_options:
                 for word in tokenized_options:
                     if 'auto' in word:
                         df.loc[df['Nº Stock'] == key, 'Caixa Auto'] = 1
+            duration = time.time() - start
+            duration_trans += duration
 
             # Versão
+            start = time.time()
             if 'advantage' in tokenized_options:
                 df.loc[df['Nº Stock'] == key, 'Versao'] = 'advantage'
-
-            if 'versão' in tokenized_options or 'bmw' in tokenized_options:
+            elif 'versão' in tokenized_options or 'bmw' in tokenized_options:
                 if 'line' in tokenized_options and 'sport' in tokenized_options:
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_sport'
                 if 'line' in tokenized_options and 'urban' in tokenized_options:
@@ -292,76 +524,45 @@ def options_scraping(df):
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'desportiva_m'
                 if 'line' in tokenized_options and 'luxury' in tokenized_options:
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_luxury'
-
             if 'pack' in tokenized_options and 'desportivo' in tokenized_options and 'm' in tokenized_options:
                 if 'S1' in tokenized_modelo:
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'desportiva_m'
-                if 'S5' in tokenized_modelo:
+                elif 'S5' in tokenized_modelo or 'S3' in tokenized_modelo or 'S2' in tokenized_modelo:
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'pack_desportivo_m'
-                if 'S3' in tokenized_modelo:
-                    df.loc[df['Nº Stock'] == key, 'Versao'] = 'pack_desportivo_m'
-                if 'S2' in tokenized_modelo:
-                    df.loc[df['Nº Stock'] == key, 'Versao'] = 'pack_desportivo_m'
-
             if 'bmw' in tokenized_options and 'modern' in tokenized_options:  # no need to search for string line, there are no bmw modern without line;
                 if 'S5' in tokenized_modelo:
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_luxury'
                 else:
                     df.loc[df['Nº Stock'] == key, 'Versao'] = 'line_urban'
-
             if 'xline' in tokenized_options:
                 df.loc[df['Nº Stock'] == key, 'Versao'] = 'xline'
+            duration = time.time() - start
+            duration_versao += duration
 
             # Faróis
+            start = time.time()
             if "xénon" in tokenized_options or 'bixénon' in tokenized_options:
-                # if df.loc[df['Nº Stock'] == key, 'Farois_LED'].all() == 0:
                 df.loc[df['Nº Stock'] == key, 'Farois_Xenon'] = 1
             elif "luzes" in tokenized_options and "led" in tokenized_options and 'nevoeiro' not in tokenized_options or 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
                 df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
-            # elif 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options:
-            #     df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
-            # elif 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
-            #     df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
-
-            # Barras Tejadilho
-            if 'barras' in tokenized_options:
-                df.loc[df['Nº Stock'] == key, 'Barras_Tej'] = 1
-
-            # 7 Lugares
-            if 'terceira' in tokenized_options and 'fila' in tokenized_options:
-                df.loc[df['Nº Stock'] == key, '7_Lug'] = 1
-
-            # Alarme
-            if 'alarme' in tokenized_options:
-                df.loc[df['Nº Stock'] == key, 'Alarme'] = 1
-
-            # Vidros com Proteção Solar
-            if 'proteção' in tokenized_options and 'solar' in tokenized_options:
-                df.loc[df['Nº Stock'] == key, 'Prot.Solar'] = 1
-
-            # AC Auto
-            if 'ar' in tokenized_options and 'condicionado' in tokenized_options:
-                df.loc[df['Nº Stock'] == key, 'AC Auto'] = 1
-
-            # Teto de Abrir
-            if 'teto' in tokenized_options and 'abrir' in tokenized_options:
-                df.loc[df['Nº Stock'] == key, 'Teto_Abrir'] = 1
-
-            # # Edição
-            # if 'sport' in tokenized_options and 'shadow' in tokenized_options:
-            #     df.loc[df['Nº Stock'] == key, 'Edicao'] = 'sport_shadow'
-            # elif 'luxury' in tokenized_options and 'purity' in tokenized_options:
-            #     df.loc[df['Nº Stock'] == key, 'Edicao'] = 'luxury_purity'
-            # elif 'm' in tokenized_options and 'shadow' in tokenized_options:
-            #     df.loc[df['Nº Stock'] == key, 'Edicao'] = 'shadow_m'
+            duration = time.time() - start
+            duration_farois += duration
 
             # Jantes
+            start = time.time()
             for value in range(15, 21):
                 if str(value) in tokenized_options:
                     jantes_size = [str(value)] * group.shape[0]
                     df.loc[df['Nº Stock'] == key, 'Jantes'] = jantes_size
+            duration = time.time() - start
+            duration_jantes += duration
 
-        ### Cor Exterior
+        durations = [duration_farois, duration_jantes, duration_sens, duration_trans, duration_versao]
+        durations_all = [duration_versao_all, duration_trans_all, duration_sens_all, duration_jantes_all, duration_farois_all]
+        [duration_all.append(duration) for (duration_all, duration) in zip(durations_all, durations)]
+
+        # Cor Exterior
+        start_cor_ext_all.append(time.time())
         line_color = group['Cor'].head(1).values[0]
         tokenized_color = nltk.word_tokenize(line_color)
         color = [x for x in colors_pt if x in tokenized_color]
@@ -369,7 +570,7 @@ def options_scraping(df):
             color = [x for x in colors_en if x in tokenized_color]
         if not color:
             if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58']:
-                continue
+                color = ['undefined']
             else:
                 sys.exit('Error: Color Not Found')
         if len(color) > 1:  # Fixes cases such as 'white silver'
@@ -379,8 +580,10 @@ def options_scraping(df):
             df.loc[df['Nº Stock'] == key, 'Cor_Exterior'] = color
         except ValueError:
             print(color)
+        end_cor_ext_all.append(time.time())
 
-        ### Cor Interior/Tipo Interior
+        # Cor Interior
+        start_cor_int_all.append(time.time())
         line_interior = group['Interior'].head(1).values[0]
         tokenized_interior = nltk.word_tokenize(line_interior)
 
@@ -388,17 +591,14 @@ def options_scraping(df):
             color_int = [x for x in tokenized_interior if x in dakota_colors]
             if color_int:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'dakota_' + color_int[0]
-                # continue
         elif 'nappa' in tokenized_interior:
             color_int = [x for x in tokenized_interior if x in nappa_colors]
             if color_int:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'nappa_' + color_int[0]
-                # continue
         elif 'vernasca' in tokenized_interior:
             color_int = [x for x in tokenized_interior if x in vernasca_colors]
             if color_int:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'vernasca_' + color_int[0]
-                # continue
         elif 'nevada' in tokenized_interior:
             color_int = [x for x in tokenized_interior if x in nevada_colors]
             if color_int:
@@ -408,7 +608,7 @@ def options_scraping(df):
             if color_int:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'merino_' + color_int[0]
         else:
-            if 'antraci' in tokenized_interior or 'antracit' in tokenized_interior or 'anthracite/silver' in tokenized_interior or 'preto/laranja' in tokenized_interior or 'preto/silver' in tokenized_interior or 'preto/preto' in tokenized_interior or 'confort' in tokenized_interior or 'standard' in tokenized_interior or 'preto' in tokenized_interior or 'antracite' in tokenized_interior or 'antracite/laranja' in tokenized_interior or 'antracite/preto' in tokenized_interior or 'antracite/cinza/preto' in tokenized_interior or 'antracite/vermelho/preto' in tokenized_interior or 'antracite/vermelho' in tokenized_interior:
+            if 'antraci' in tokenized_interior or 'antracit' in tokenized_interior or 'anthracite/silver' in tokenized_interior or 'preto/laranja' in tokenized_interior or 'preto/silver' in tokenized_interior or 'preto/preto' in tokenized_interior or 'confort' in tokenized_interior or 'standard' in tokenized_interior or 'preto' in tokenized_interior or 'antracite' in tokenized_interior or 'antracite/laranja' in tokenized_interior or 'antracite/preto' in tokenized_interior or 'antracite/cinza/preto' in tokenized_interior or 'antracite/vermelho/preto' in tokenized_interior or 'antracite/vermelho' in tokenized_interior or 'interiores' in tokenized_interior:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'preto'
             elif 'oyster/preto' in tokenized_interior:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'oyster'
@@ -422,8 +622,10 @@ def options_scraping(df):
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'bege'
             elif 'crimson' in tokenized_interior:
                 df.loc[df['Nº Stock'] == key, 'Cor_Interior'] = 'vermelho'
+        end_cor_int_all.append(time.time())
 
         # Tipo Interior
+        start_int_type_all.append(time.time())
         if 'comb' in tokenized_interior or 'combin' in tokenized_interior or 'combinação' in tokenized_interior or 'tecido/pele' in tokenized_interior:
             df.loc[df['Nº Stock'] == key, 'Tipo_Interior'] = 'combinação'
         elif 'hexagon\'' in tokenized_interior or 'hexagon/alcantara' in tokenized_interior:
@@ -432,52 +634,53 @@ def options_scraping(df):
             df.loc[df['Nº Stock'] == key, 'Tipo_Interior'] = 'tecido'
         elif 'pele' in tokenized_interior or 'leather' in tokenized_interior or 'dakota\'' in tokenized_interior or 'couro' in tokenized_interior:
             df.loc[df['Nº Stock'] == key, 'Tipo_Interior'] = 'pele'
+        end_int_type_all.append(time.time())
 
-        # Standard Equipment
-        # Jantes
-        if 'S1' in tokenized_modelo and df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0 or 'S2' in tokenized_modelo and df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-            df.loc[df['Nº Stock'] == key, 'Jantes'] = '16'
+    starts_ends = [start_nav_all, end_nav_all, start_barras_all, end_barras_all, start_alarme_all, end_alarme_all, start_7_lug_all, end_7_lug_all, start_prot_all, end_prot_all, start_ac_all, end_ac_all,
+                   start_teto_all, end_teto_all, duration_versao_all, duration_trans_all, duration_sens_all, duration_jantes_all, duration_farois_all, start_cor_ext_all, end_cor_ext_all, start_cor_int_all, end_cor_int_all, start_int_type_all, end_int_type_all]
+    tags = ['start_nav_all', 'end_nav_all', 'start_barras_all', 'end_barras_all', 'start_alarme_all', 'end_alarme_all', 'start_7_lug_all', 'end_7_lug_all', 'start_prot_all', 'end_prot_all', 'start_ac_all', 'end_ac_all',
+            'start_teto_all', 'end_teto_all', 'duration_versao_all', 'duration_trans_all', 'duration_sens_all', 'duration_jantes_all', 'duration_farois_all', 'start_cor_ext_all', 'end_cor_ext_all', 'start_cor_int_all', 'end_cor_int_all', 'start_int_type_all', 'end_int_type_all']
+    [performance_info_append(start_end, tag) for (start_end, tag) in zip(starts_ends, tags)]
 
-        if 'S3' in tokenized_modelo:
-            if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = '16'
-            if buy_year >= 2017:
-                df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
+    # ToDo: move the following code to it's own function
+    # Standard Equipment
+    performance_info_append(time.time(), 'start_standard')
+    criteria_model_s1 = df['Modelo'].str.contains('S1')
+    criteria_model_s2 = df['Modelo'].str.contains('S2')
+    criteria_model_s3 = df['Modelo'].str.contains('S3')
+    criteria_model_s4 = df['Modelo'].str.contains('S4')
+    criteria_model_s5 = df['Modelo'].str.contains('S5')
+    criteria_model_x1 = df['Modelo'].str.contains('X1')
+    criteria_model_x3 = df['Modelo'].str.contains('X3')
+    criteria_jantes_0 = df['Jantes'] == 0
+    criteria_farois_led_0 = df['Farois_LED'] == 0
+    criteria_buy_year_ge_2017 = pd.to_datetime(df['Data Compra'].values).year >= 2017
+    criteria_buy_year_lt_2017 = pd.to_datetime(df['Data Compra'].values).year < 2017
+    criteria_buy_year_ge_2016 = pd.to_datetime(df['Data Compra'].values).year >= 2016
 
-        if 'S4' in tokenized_modelo:
-            if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = '17'
-            if buy_year >= 2016:
-                df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
-            if buy_year >= 2017:
-                df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
-            if buy_year < 2017 and df.loc[df['Nº Stock'] == key, 'Farois_LED'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Farois_Xenon'] = 1
-
-        if 'S5' in tokenized_modelo:
-            if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = '17'
-            df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
-            if buy_year >= 2017:
-                df.loc[df['Nº Stock'] == key, 'Farois_LED'] = 1
-            if buy_year < 2017 and df.loc[df['Nº Stock'] == key, 'Farois_LED'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Farois_Xenon'] = 1
-            df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
-            df.loc[df['Nº Stock'] == key, 'Navegação'] = 1
-            df.loc[df['Nº Stock'] == key, 'Caixa Auto'] = 1
-            df.loc[df['Nº Stock'] == key, 'Alarme'] = 1
-
-        if 'X1' in tokenized_modelo and df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-            df.loc[df['Nº Stock'] == key, 'Jantes'] = '17'
-
-        if 'X3' in tokenized_modelo:
-            if df.loc[df['Nº Stock'] == key, 'Jantes'].unique() == 0:
-                df.loc[df['Nº Stock'] == key, 'Jantes'] = '18'
-            df.loc[df['Nº Stock'] == key, 'Sensores'] = 1
-            df.loc[df['Nº Stock'] == key, 'Caixa Auto'] = 1
-
+    df.loc[df[criteria_model_s1 & criteria_jantes_0].index, 'Jantes'] = '16'
+    df.loc[df[criteria_model_s2 & criteria_jantes_0].index, 'Jantes'] = '16'
+    df.loc[df[criteria_model_s3 & criteria_jantes_0].index, 'Jantes'] = '16'
+    df.loc[df[criteria_model_s3 & criteria_buy_year_ge_2017].index, 'Farois_LED'] = 1
+    df.loc[df[criteria_model_s4 & criteria_jantes_0].index, 'Jantes'] = '17'
+    df.loc[df[criteria_model_s4 & criteria_buy_year_ge_2016].index, 'Sensores'] = 1
+    df.loc[df[criteria_model_s4 & criteria_buy_year_ge_2017].index, 'Farois_LED'] = 1
+    df.loc[df[criteria_model_s4 & criteria_buy_year_lt_2017 & criteria_farois_led_0].index, 'Farois_Xenon'] = 1
+    df.loc[df[criteria_model_s5 & criteria_jantes_0].index, 'Jantes'] = '17'
+    df.loc[df[criteria_model_s5 & criteria_buy_year_ge_2017].index, 'Farois_LED'] = 1
+    df.loc[df[criteria_model_s5 & criteria_buy_year_ge_2017].index, 'Alarme'] = 1
+    df.loc[df[criteria_model_s5 & criteria_buy_year_lt_2017 & criteria_farois_led_0].index, 'Farois_Xenon'] = 1
+    df.loc[df[criteria_model_s5].index, 'Sensores'] = 1
+    df.loc[df[criteria_model_s5].index, 'Navegação'] = 1
+    df.loc[df[criteria_model_s5].index, 'Caixa Auto'] = 1
+    df.loc[df[criteria_model_x1 & criteria_jantes_0].index, 'Jantes'] = '17'
+    df.loc[df[criteria_model_x3 & criteria_jantes_0].index, 'Jantes'] = '18'
+    df.loc[df[criteria_model_x3].index, 'Sensores'] = 1
+    df.loc[df[criteria_model_x3].index, 'Caixa Auto'] = 1
     df.loc[df['Versao'] == 0, 'Versao'] = 'base'
     df.loc[df['Jantes'] == 0, 'Jantes'] = 'standard'
+    performance_info_append(time.time(), 'end_standard')
+
     return df
 
 
@@ -523,11 +726,6 @@ def color_replacement(df):
     color_types = ['Cor_Exterior']
     colors_to_replace = {'black': 'preto', 'preto/silver': 'preto/prateado', 'tartufo': 'truffle', 'preto/laranja/preto/lara': 'preto/laranja', 'white': 'branco', 'blue': 'azul', 'red': 'vermelho', 'grey': 'cinzento', 'silver': 'prateado', 'orange': 'laranja', 'green': 'verde', 'anthrazit': 'antracite', 'antracit': 'antracite', 'brown': 'castanho', 'antracito': 'antracite', 'âmbar/preto/pr': 'ambar/preto/preto', 'beige': 'bege', 'kaschmirsilber': 'cashmere', 'beje': 'bege'}
 
-    # unknown_ext_colors = df[df['Cor_Exterior'] == 0]['Cor'].unique()
-    # unknown_int_colors = df[df['Cor_Interior'] == 0]['Interior'].unique()
-    # print('Unknown Exterior Colors:', unknown_ext_colors, ', Removed', df[df['Cor_Exterior'] == 0].shape[0], 'lines in total, corresponding to ', df[df['Cor_Exterior'] == 0]['Nº Stock'].nunique(), 'vehicles')  # 49 lines removed, 3 vehicles
-    # print('Unknown Interior Colors:', unknown_int_colors, ', Removed', df[df['Cor_Interior'] == 0].shape[0], 'lines in total, corresponding to ', df[df['Cor_Interior'] == 0]['Nº Stock'].nunique(), 'vehicles')  # 2120 lines removed, 464 vehicles
-
     for color_type in color_types:
         df[color_type] = df[color_type].replace(colors_to_replace)
         df.drop(df[df[color_type] == 0].index, axis=0, inplace=True)
@@ -556,7 +754,6 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
 def new_features_optionals_baviera(df, sel_cols):
     df_grouped = df.sort_values(by=['Data Venda']).groupby(sel_cols)
     df = df_grouped.apply(previous_sales_info_optionals_baviera)
-    # remove_columns(df, ['sell_day', 'sell_month', 'sell_year'])
 
     return df.fillna(0)
 
