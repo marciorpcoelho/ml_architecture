@@ -1,6 +1,13 @@
 import os
 import time
 import pyodbc
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv('info.env')
+DSN = os.getenv('DSN')
+UID = os.getenv('UID')
+PWD = os.getenv('PWD')
 
 
 def save_csv(dfs, names):
@@ -20,7 +27,7 @@ def sql_inject(df, database, view, columns):
 
     print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
 
-    cnxn = pyodbc.connect('DSN=MLG;UID=interplataformas;PWD=inf2008;DATABASE=' + database)
+    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
     cursor = cnxn.cursor()
 
     # for item in list(columns.values()):
@@ -49,7 +56,7 @@ def sql_inject(df, database, view, columns):
 
 def sql_truncate(database, view):
     print('Truncating view ' + view + ' from DB ' + database)
-    cnxn = pyodbc.connect('DSN=MLG;UID=interplataformas;PWD=inf2008;DATABASE=' + database)
+    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
     query = "TRUNCATE TABLE " + view
     cursor = cnxn.cursor()
     cursor.execute(query)
@@ -57,3 +64,15 @@ def sql_truncate(database, view):
     cnxn.commit()
     cursor.close()
     cnxn.close()
+
+
+def sql_day_check(database, view, date_column):
+    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+    cursor = cnxn.cursor()
+
+    cursor.execute('SELECT MAX(' + '[' + date_column + ']' + ') FROM ' + database + '.dbo.' + view)
+
+    result = cursor.fetchone()
+    result_date = datetime.strptime(result[0], '%Y-%m-%d')
+
+    return result_date
