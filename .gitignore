@@ -106,3 +106,6 @@ venv.bak/
 .mypy_cache/
 
 .idea/
+/testing.py
+/info.env
+!/testing.py

@@ -4,8 +4,22 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
 
+# Options:
+margin_threshold = 3.5
+stock_days_threshold = 45
+update_frequency_days = 15
+
 
 # Dictionaries:
+
+sql_info = {
+    'database': 'BI_MLG',
+    'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
+    'feature_contribution': 'VHE_Fact_Feature_Contribution',
+    'performance_running_time': 'LOG_Performance_Running_Time',
+    'performance_algorithm_results': 'LOG_Performance_Algorithms_Results',
+}
+
 # Old Cor_Exterior
 color_ext_dict = {
     'preto': ['preto'],
@@ -51,29 +65,6 @@ vernasca_colors = ['canberra', 'preta', 'preto/com', 'preto/preto', 'oyster', 'm
 nevada_colors = ['terra', 'brown', 'preto/preto', 'bege', 'oyster', 'oyster/leather', 'preto', 'branco', 'mocha']
 merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'taupe/preto', 'vermelho']
 
-
-# # New Cor_Interior
-# color_int_dict_layer_1 = {
-#     'preto': ['preto'],
-#     'dakota_preto': ['dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto', 'dakota_preta', 'dakota_black/contrast'],
-#     'dakota_branco': ['dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white'],
-#     'dakota_vermelho': ['dakota_coral'],
-#     'dakota_bege': ['dakota_bege'],
-#     'dakota_oyster': ['dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza'],
-#     'dakota_castanho': ['dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
-#     'dakota_azul': ['dakota_azul'],
-#     'dakota_mocha_castanho': ['dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha'],
-#     'nappa_preto': ['nappa_preto'],
-#     'nappa_branco': ['nappa_white', 'nappa_ivory', 'nappa_ivory/branco'],
-#     'nappa_bege': ['nappa_bege'],
-#     'nappa_mocha': ['nappa_mocha'],
-#     'nappa_castanho': ['nappa_castanho', 'nappa_cognac/preto'],
-#     'vernasca_bege': ['vernasca_canberra'],
-#     'vernasca_preto': ['vernasca_preta', 'vernasca_preto/com', 'vernasca_preto/preto'],
-#     'vernasca_oyster': ['vernasca_oyster'],
-#     'vernasca_castanho': ['vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac'],
-#     'others': [0],
-# }
 
 # New Cor_Interior v2
 color_int_dict_layer_1 = {
@@ -152,13 +143,6 @@ versao_dict = {
     'urban/desportiva': ['line_urban', 'desportiva_m', 'pack_desportivo_m']
 }
 
-# tipo_int_dict = {
-#     'tecido': ['tecido'],
-#     'pele': ['pele'],
-#     'combinação': ['combinação'],
-#     'interior_m': ['tecido_micro', 0]
-# }
-
 # v2
 tipo_int_dict = {
     'tecido': ['tecido'],
@@ -225,7 +209,6 @@ column_sql_renaming = {
         'nr_cars_sold_local': 'Number_Cars_Sold_Local'
 }
 
-
 columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
                    'Model_Code', 'Purchase_Day', 'Purchase_Month', 'Purchase_Year', 'Margin', 'Margin_Percentage',
                    'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
@@ -234,7 +217,6 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local',
                    'Average_Margin_Percentage_Local', 'Average_Score_Euros_Local', 'Average_Stock_Days_Local', 'Average_Score_Class_GT_Local',
                    'Average_Score_Class_Pred_Local']
-
 
 column_performance_sql_renaming = {
     'start_section_a': 'Section_A_Start',
@@ -278,3 +260,57 @@ column_performance_sql_renaming = {
     'start_standard': 'Standard_Start',
     'end_standard': 'Standard_End'
 }
+
+column_checkpoint_sql_renaming = {
+    'Jantes_new': 'Rims_Size',
+    'Caixa Auto': 'Auto_Trans',
+    'Navegação': 'Navigation',
+    'Sensores': 'Park_Front_Sens',
+    'Cor_Interior_new': 'Colour_Int',
+    'Cor_Exterior_new': 'Colour_Ext',
+    'Modelo_new': 'Model_Code',
+    'Local da Venda_new': 'Sales_Place',
+    'Margem': 'Margin',
+    'margem_percentagem': 'Margin_Percentage',
+    'price_total': 'Sell_Value',
+    'Data Compra': 'Buy_Date',
+    'Data Venda': 'Sell_Date',
+    'buy_day': 'Purchase_Day',
+    'buy_month': 'Purchase_Month',
+    'buy_year': 'Purchase_Year',
+    'score_euros': 'Score_Euros',
+    'stock_days': 'Stock_Days',
+    'days_stock_price': 'Stock_Days_Price',
+    '7_Lug': 'Seven_Seats',
+    'AC Auto': 'AC_Auto',
+    'Alarme': 'Alarm',
+    'Barras_Tej': 'Roof_Bars',
+    'Teto_Abrir': 'Open_Roof',
+    'Farois_LED': 'LED_Lights',
+    'Farois_Xenon': 'Xenon_Lights',
+    'Prot.Solar': 'Solar_Protection',
+    'Tipo_Interior_new': 'Interior_Type',
+    'Versao_new': 'Version',
+    'Nº Stock': 'Vehicle_Number',
+    'average_score_dynamic': 'Average_Score_Dynamic',
+    'average_score_dynamic_std': 'Average_Score_Dynamic_STD',
+    'average_score_global': 'Average_Score_Global',
+    'last_margin': 'Margin_Last',
+    'last_score': 'Score_Last',
+    'last_stock_days': 'Stock_Days_Last',
+    'margin_class': 'Margin_Class',
+    'max_score_global': 'Max_Score_Global',
+    'median_score_global': 'Median_Score_Global',
+    'min_score_global': 'Min_Score_Global',
+    'new_score': 'New_Score',
+    'number_prev_sales': 'Number_Previous_Sales',
+    'prev_average_score_dynamic': 'Prev_Average_Score_Dynamic',
+    'prev_average_score_dynamic_std': 'Prev_Average_Score_Dynamic_STD',
+    'prev_sales_check': 'Previous_Sales_Check',
+    'q1_score_global': 'Q1_Score_Global',
+    'q3_score_global': 'Q3_Score_Global',
+    'stock_days_class': 'Stock_Days_Class',
+}
+
+
+

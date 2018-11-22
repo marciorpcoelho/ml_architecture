@@ -7,6 +7,7 @@ from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
 from level_2_optionals_baviera_options import classification_models
+from level_2_optionals_baviera_performance_report_info import performance_info_append
 pd.set_option('display.expand_frame_repr', False)
 
 
@@ -130,9 +131,10 @@ def save_model(clfs, model_name):
     timestamp = str(datetime.datetime.now().day) + '_' + str(datetime.datetime.now().month) + '_' + str(datetime.datetime.now().year)
 
     i = 0
-    for clf in clfs:
+    for clf in clfs.values():
         file_name = 'models/' + str(model_name[i]) + '_best_' + str(timestamp) + '.sav'
         i += 1
 
-        pickle.dump(clf, open(file_name, 'wb'))
-
+        file_handler = open(file_name, 'wb')
+        pickle.dump(clf, file_handler)
+        file_handler.close()

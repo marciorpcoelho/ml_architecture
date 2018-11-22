@@ -2,8 +2,11 @@ import pandas as pd
 import numpy as np
 import logging
 import os
+import sys
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
+from level_1_e_deployment import sql_inject, sql_date_comparison
+from level_2_optionals_baviera_options import sql_info
 pd.set_option('display.expand_frame_repr', False)
 
 my_dpi = 96
@@ -64,33 +67,39 @@ def performance_evaluation(models, best_models, classes, running_times, train_x,
         except AttributeError:
             pass
 
-        row_train = {'micro': getattr(evaluation_training, 'micro'),
-                     'average': getattr(evaluation_training, 'average'),
-                     'macro': getattr(evaluation_training, 'macro'),
-                     'accuracy': getattr(evaluation_training, 'accuracy'),
-                     'roc_curve': getattr(evaluation_training, 'roc_auc_curve'),
-                     ('precision_class_' + str(classes[0])): getattr(evaluation_training, 'precision')[0],
-                     ('precision_class_' + str(classes[1])): getattr(evaluation_training, 'precision')[1],
-                     ('recall_class_' + str(classes[0])): getattr(evaluation_training, 'recall')[0],
-                     ('recall_class_' + str(classes[1])): getattr(evaluation_training, 'recall')[1],
-                     'running_time': running_times[model]}
+        row_train = {'Micro_F1': getattr(evaluation_training, 'micro'),
+                     'Average_F1': getattr(evaluation_training, 'average'),
+                     'Macro_F1': getattr(evaluation_training, 'macro'),
+                     'Accuracy': getattr(evaluation_training, 'accuracy'),
+                     'ROC_Curve': getattr(evaluation_training, 'roc_auc_curve'),
+                     ('Precision_Class_' + str(classes[0])): getattr(evaluation_training, 'precision')[0],
+                     ('Precision_Class_' + str(classes[1])): getattr(evaluation_training, 'precision')[1],
+                     ('Recall_Class_' + str(classes[0])): getattr(evaluation_training, 'recall')[0],
+                     ('Recall_Class_' + str(classes[1])): getattr(evaluation_training, 'recall')[1],
+                     'Running_Time': running_times[model]}
 
-        row_test = {'micro': getattr(evaluation_test, 'micro'),
-                    'average': getattr(evaluation_test, 'average'),
-                    'macro': getattr(evaluation_test, 'macro'),
-                    'accuracy': getattr(evaluation_test, 'accuracy'),
-                    'roc_curve': getattr(evaluation_test, 'roc_auc_curve'),
-                    ('precision_class_' + str(classes[0])): getattr(evaluation_test, 'precision')[0],
-                    ('precision_class_' + str(classes[1])): getattr(evaluation_test, 'precision')[1],
-                    ('recall_class_' + str(classes[0])): getattr(evaluation_test, 'recall')[0],
-                    ('recall_class_' + str(classes[1])): getattr(evaluation_test, 'recall')[1],
-                    'running_time': running_times[model]}
+        row_test = {'Micro_F1': getattr(evaluation_test, 'micro'),
+                    'Average_F1': getattr(evaluation_test, 'average'),
+                    'Macro_F1': getattr(evaluation_test, 'macro'),
+                    'Accuracy': getattr(evaluation_test, 'accuracy'),
+                    'ROC_Curve': getattr(evaluation_test, 'roc_auc_curve'),
+                    ('Precision_Class_' + str(classes[0])): getattr(evaluation_test, 'precision')[0],
+                    ('Precision_Class_' + str(classes[1])): getattr(evaluation_test, 'precision')[1],
+                    ('Recall_Class_' + str(classes[0])): getattr(evaluation_test, 'recall')[0],
+                    ('Recall_Class_' + str(classes[1])): getattr(evaluation_test, 'recall')[1],
+                    'Running_Time': running_times[model]}
 
         results_train.append(row_train)
         results_test.append(row_test)
 
     df_results_train = pd.DataFrame(results_train, index=models)
+    df_results_train['Algorithms'] = df_results_train.index
+    df_results_train['Dataset'] = ['Train'] * df_results_train.shape[0]
     df_results_test = pd.DataFrame(results_test, index=models)
+    df_results_test['Algorithms'] = df_results_test.index
+    df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
+
+    sql_inject(pd.concat([df_results_train, df_results_test]), sql_info['database'], sql_info['performance_algorithm_results'], list(df_results_train), time_to_last_update=0, check_date=1)
 
     return df_results_train, df_results_test, predictions
 
@@ -100,6 +109,89 @@ def probability_evaluation(models_name, models, train_x, test_x):
     proba_test = models[models_name].predict_proba(test_x)
 
     return proba_train, proba_test
+
+
+def feature_contribution(df, configuration_parameters):
+    configuration_parameters.remove('Modelo_new')
+    boolean_parameters = [x for x in configuration_parameters if list(df[x].unique()) == [0, 1] or list(df[x].unique()) == [1, 0]]
+    non_boolean_parameters = [x for x in configuration_parameters if x not in boolean_parameters]
+    df_feature_contribution_total = pd.DataFrame()
+
+    for model in df['Modelo_new'].unique():
+        model_mask = df['Modelo_new'] == model
+        df_model = df.loc[df[model_mask].index, :]
+
+        mask_class_1 = df_model['score_class_gt'] == 1
+        mask_class_0 = df_model['score_class_gt'] == 0
+        class_1 = df_model.loc[df_model[mask_class_1].index, :]
+        class_0 = df_model.loc[df_model[mask_class_0].index, :]
+        differences_boolean, differences_non_boolean, features_boolean, features_non_boolean = [], [], [], []
+        differences_feature, features, model_tag = [], [], []
+
+        for feature in configuration_parameters:
+            if feature in boolean_parameters:
+                c1_f1 = class_1.loc[class_1[feature] == 1, :].shape[0]
+                c1_f0 = class_1.loc[class_1[feature] == 0, :].shape[0]
+                c0_f1 = class_0.loc[class_0[feature] == 1, :].shape[0]
+                c0_f0 = class_0.loc[class_0[feature] == 0, :].shape[0]
+                f1 = c1_f1 + c0_f1
+                f0 = c1_f0 + c0_f0
+
+                try:
+                    p_c1_f1 = c1_f1 / f1 * 1.
+                    p_c1_f0 = c1_f0 / f0 * 1.
+                    differences_boolean.append(p_c1_f1 - p_c1_f0)
+                    features_boolean.append(feature + '_sim')
+                except ZeroDivisionError:
+                    continue
+
+            elif feature in non_boolean_parameters:
+                for value in df_model[feature].unique():
+                    if value == 'outros':
+                        continue
+
+                    c1_f1 = class_1.loc[class_1[feature] == value, :].shape[0]
+                    c1_f0 = class_1.loc[class_1[feature] != value, :].shape[0]
+                    c0_f1 = class_0.loc[class_0[feature] == value, :].shape[0]
+                    c0_f0 = class_0.loc[class_0[feature] != value, :].shape[0]
+
+                    # ToDo: There might be cases where only one value for a feature is available if the df is too small (Only Preto as Cor_Interior, e.g.). I should add a try/exception to catch these for the conditions there feature != value
+
+                    f1 = c1_f1 + c0_f1
+                    f0 = c1_f0 + c0_f0
+
+                    try:
+                        p_c1_f1 = c1_f1 / f1 * 1.
+                        p_c1_f0 = c1_f0 / f0 * 1.
+                    except ZeroDivisionError:
+                        print('Insufficient data for feature ' + str(feature) + ' and value ' + str(value) + '.')
+                        continue
+
+                    differences_non_boolean.append(p_c1_f1 - p_c1_f0)
+                    features_non_boolean.append(feature + '_' + value)
+
+        differences_feature.extend(differences_boolean)
+        differences_feature.extend(differences_non_boolean)
+        features.extend(features_boolean)
+        features.extend(features_non_boolean)
+        model_tag.extend([model] * (len(differences_boolean) + len(differences_non_boolean)))
+
+        df_feature_contribution = pd.DataFrame()
+        df_feature_contribution['Features'] = features
+        df_feature_contribution['Differences'] = differences_feature
+        df_feature_contribution['Model_Code'] = model_tag
+
+        if abs(df_feature_contribution['Differences'].min()) > df_feature_contribution['Differences'].max():
+            max_range_value = abs(df_feature_contribution['Differences'].min())
+            min_range_value = df_feature_contribution['Differences'].min()
+        else:
+            max_range_value = df_feature_contribution['Differences'].max()
+            min_range_value = df_feature_contribution['Differences'].max() * -1
+        df_feature_contribution['Differences_Normalized'] = 2 * df_feature_contribution['Differences'] / (max_range_value - min_range_value)
+
+        df_feature_contribution_total = pd.concat([df_feature_contribution_total, df_feature_contribution])
+
+    sql_inject(df_feature_contribution_total, sql_info['database'], sql_info['feature_contribution'], list(df_feature_contribution_total), truncate=1)
 
 
 def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, train_y, test_x, test_y, configuration_parameters):
