@@ -39,8 +39,6 @@ def main():
     metric, metric_threshold = 'roc_auc_curve', 0.75
     # possible_evaluation_metrics: 'roc_auc_curve', 'micro', 'average', 'macro', 'accuracy', 'precision', 'recall', 'classification_report'
     development = 1
-    db = "BI_MLG"
-    view = "VHE_Fact_DW_OrderOptimization"
     ###
 
     number_of_features = 'all'
@@ -49,7 +47,7 @@ def main():
     classes, best_models, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score)
     best_model = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features)
     # best_model = 0
-    vehicle_count = deployment(best_model, db, view, output_file)
+    vehicle_count = deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'], output_file)
 
     performance_info(vehicle_count)
 

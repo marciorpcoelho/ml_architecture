@@ -24,6 +24,7 @@ sql_info = {
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
     'performance_running_time': 'LOG_Performance_Running_Time',
     'performance_algorithm_results': 'LOG_Performance_Algorithms_Results',
+    'final_table': 'VHE_Fact_DW_OrderOptimization',
 }
 
 # Old Cor_Exterior

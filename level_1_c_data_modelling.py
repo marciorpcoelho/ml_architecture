@@ -7,7 +7,6 @@ from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
 from level_2_optionals_baviera_options import classification_models
-from level_2_optionals_baviera_performance_report_info import performance_info_append
 pd.set_option('display.expand_frame_repr', False)
 
 
@@ -19,7 +18,7 @@ class ClassificationTraining(object):
             self.clf = clf()
 
     def grid_search(self, parameters, k, score):
-        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score)
+        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, n_jobs=4)
 
     def clf_fit(self, x, y):
         self.grid.fit(x, y)
