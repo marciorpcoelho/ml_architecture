@@ -3,13 +3,7 @@ import time
 import pyodbc
 import pandas as pd
 from datetime import datetime
-from dotenv import load_dotenv
-from level_2_optionals_baviera_options import update_frequency_days
-
-load_dotenv('info.env')
-DSN = os.getenv('DSN')
-UID = os.getenv('UID')
-PWD = os.getenv('PWD')
+from level_2_optionals_baviera_options import update_frequency_days, DSN, UID, PWD
 
 
 def save_csv(dfs, names):

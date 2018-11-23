@@ -1,17 +1,23 @@
 import numpy as np
+import os
 from sklearn import tree, linear_model, neighbors, svm
 from sklearn.neural_network import MLPClassifier
 from sklearn.naive_bayes import GaussianNB
+from py_dotenv import read_dotenv
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
+dotenv_path = 'info.env'
+read_dotenv(dotenv_path)
 
 # Options:
 margin_threshold = 3.5
 stock_days_threshold = 45
 update_frequency_days = 15
 
+DSN = os.getenv('DSN')
+UID = os.getenv('UID')
+PWD = os.getenv('PWD')
 
 # Dictionaries:
-
 sql_info = {
     'database': 'BI_MLG',
     'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
