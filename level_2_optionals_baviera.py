@@ -186,7 +186,7 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
 
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
     # in the provided pdf
-    save_csv([results_training, results_test], ['output/' + 'model_performance_train_df_' + str(number_of_features), 'output/' + 'model_performance_test_df_' + str(number_of_features)])
+    # save_csv([results_training, results_test], ['output/' + 'model_performance_train_df_' + str(number_of_features), 'output/' + 'model_performance_test_df_' + str(number_of_features)])
     plot_roc_curve(best_models, models, train_x, train_y, test_x, test_y, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
 
     if not development:

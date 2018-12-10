@@ -63,8 +63,6 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
     cursor.close()
     cnxn.close()
 
-
-
     return upload
 
 
@@ -85,7 +83,7 @@ def sql_date_comparison(df, database, view, date_column, time_to_last_update):
     current_date = datetime.strptime(time_tag, '%d/%m/%y')
 
     df['Date'] = [time_tag] * df.shape[0]
-    df['Date'] = pd.to_datetime(df['Date'])
+    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
 
     last_date = sql_date_checkup(database, view, date_column)
 
