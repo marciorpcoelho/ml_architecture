@@ -17,53 +17,56 @@ def save_csv(dfs, names):
 
 
 def sql_inject(df, database, view, columns, time_to_last_update=update_frequency_days, truncate=0, check_date=0):
-    start = time.time()
-    columns_string = str()
-    values_string = 'values ('
 
-    if truncate:
-        sql_truncate(database, view)
+    return
 
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
-    cursor = cnxn.cursor()
-
-    if check_date:
-        columns += ['Date']
-
-    for item in columns:
-        columns_string += '[' + item + '], '
-        values_string += '?, '
-
-    columns_string = columns_string[:-2] + '' + columns_string[-1:]
-    values_string = values_string[:-2] + ')' + values_string[-1:]
-
-    try:
-        if check_date:
-            time_result = sql_date_comparison(df, database, view, 'Date', time_to_last_update)
-            if time_result:
-                print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
-                for index, row in df.iterrows():
-                    cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
-                upload = 1
-            elif not time_result:
-                print('Newer data already exists.')
-                upload = 0
-        if not check_date:
-            print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
-            for index, row in df.iterrows():
-                cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
-            upload = 1
-
-        print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
-    except pyodbc.ProgrammingError:
-        upload = 0
-        save_csv([df], ['output/' + view + '_backup'])
-
-    cnxn.commit()
-    cursor.close()
-    cnxn.close()
-
-    return upload
+    # start = time.time()
+    # columns_string = str()
+    # values_string = 'values ('
+    #
+    # if truncate:
+    #     sql_truncate(database, view)
+    #
+    # cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+    # cursor = cnxn.cursor()
+    #
+    # if check_date:
+    #     columns += ['Date']
+    #
+    # for item in columns:
+    #     columns_string += '[' + item + '], '
+    #     values_string += '?, '
+    #
+    # columns_string = columns_string[:-2] + '' + columns_string[-1:]
+    # values_string = values_string[:-2] + ')' + values_string[-1:]
+    #
+    # try:
+    #     if check_date:
+    #         time_result = sql_date_comparison(df, database, view, 'Date', time_to_last_update)
+    #         if time_result:
+    #             print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
+    #             for index, row in df.iterrows():
+    #                 cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+    #             upload = 1
+    #         elif not time_result:
+    #             print('Newer data already exists.')
+    #             upload = 0
+    #     if not check_date:
+    #         print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
+    #         for index, row in df.iterrows():
+    #             cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+    #         upload = 1
+    #
+    #     print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
+    # except pyodbc.ProgrammingError:
+    #     upload = 0
+    #     save_csv([df], ['output/' + view + '_backup'])
+    #
+    # cnxn.commit()
+    # cursor.close()
+    # cnxn.close()
+    #
+    # return upload
 
 
 def sql_truncate(database, view):

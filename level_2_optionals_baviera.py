@@ -180,7 +180,7 @@ def data_modelling(df, train_x, train_y, test_x, models, k, score):
 
 
 def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features):
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
+    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     performance_info_append(time.time(), 'start_section_d')
     logging.info('Started Step D...')
 
@@ -197,12 +197,14 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
             df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     elif development:
         for model_name in models:
-            print('Evaluating model ' + str(model_name) + '...')
+            start = time.time()
+            print('Evaluating model ' + str(model_name) + '@ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
             train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
             proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
             df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
             df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
             save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
+            print('Elapsed time: %f' % (time.time() - start))
 
     feature_contribution(df_model, configuration_parameters)
 
