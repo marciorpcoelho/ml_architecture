@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import re
 from sklearn import tree, linear_model, neighbors, svm
 from sklearn.neural_network import MLPClassifier
 from sklearn.naive_bayes import GaussianNB
@@ -25,6 +26,7 @@ sql_info = {
     'performance_running_time': 'LOG_Performance_Running_Time',
     'performance_algorithm_results': 'LOG_Performance_Algorithms_Results',
     'final_table': 'VHE_Fact_DW_OrderOptimization',
+    'error_log': 'LOG_Performance_Errors',
 }
 
 # Old Cor_Exterior
@@ -319,5 +321,13 @@ column_checkpoint_sql_renaming = {
     'stock_days_class': 'Stock_Days_Class',
 }
 
+log_files = {
+    'full_log': 'logs/optionals_baviera.txt'
+}
 
-
+regex_dict = {
+    'error_full': r'((?:\#[^\#\r\n]*){1})$',  # Catches the error message from the eof up to the unique value #
+    'error_only': r'[\n](.*){1}$',
+    'between_quotes': r'"(.*?)"',
+    'lines_number': r'[0-9]{1,}\,',
+}

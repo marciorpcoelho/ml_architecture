@@ -11,12 +11,14 @@ from level_1_b_data_processing import lowercase_column_convertion, remove_rows, 
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution
 from level_1_e_deployment import save_csv, sql_inject, sql_age_comparison, sql_retrieve_df
-from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info
+from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_parsing
 pd.set_option('display.expand_frame_repr', False)
 warnings.filterwarnings('ignore')  # ToDO: remove this line
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename='logs/optionals_baviera.txt', filemode='a')
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=level_2_optionals_baviera_options.log_files['full_log'], filemode='a')
+logging.Logger('errors')
+# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
+# logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
 
 configuration_parameters = ['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Farois_LED', 'Farois_Xenon', 'Jantes_new', 'Modelo_new', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior_new', 'Versao_new']
 performance_list = []
@@ -24,7 +26,6 @@ performance_list = []
 
 def main():
     logging.info('Project: Baviera Stock Optimization')
-    # log_files('optional_baviera')
 
     ### Options:
     input_file = 'dbs/' + 'ENCOMENDA.csv'
@@ -46,7 +47,6 @@ def main():
     df, train_x, train_y, test_x, test_y = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score)
     best_model = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features)
-    # best_model = 0
     vehicle_count = deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'], output_file)
 
     performance_info(vehicle_count)
@@ -234,4 +234,8 @@ def deployment(df, db, view, output_file):
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as exception:
+        logging.exception('#')
+        error_parsing(level_2_optionals_baviera_options.log_files['full_log'])
