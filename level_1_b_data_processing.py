@@ -433,12 +433,12 @@ def options_scraping(df):
     results = pool.map(options_scraping_per_line, [(key, group) for (key, group) in df_grouped])
     pool.close()
     df = pd.concat([result[0] for result in results])
-    start_nav_all = [start_nav_all.append(result[1]) for result in results]
-    end_nav_all = [end_nav_all.append(result[2]) for result in results]
-    start_barras_all = [start_barras_all.append(result[3]) for result in results]
-    end_barras_all = [end_barras_all.append(result[4]) for result in results]
-    duration_sens_all = [duration_sens_all.append(result[5]) for result in results]
-    duration_trans_all = [duration_trans_all.append(result[6]) for result in results]
+    [start_nav_all.append(result[1]) for result in results]
+    [end_nav_all.append(result[2]) for result in results]
+    [start_barras_all.append(result[3]) for result in results]
+    [end_barras_all.append(result[4]) for result in results]
+    [duration_sens_all.append(result[5]) for result in results]
+    [duration_trans_all.append(result[6]) for result in results]
 
     starts_ends = [start_nav_all, end_nav_all, start_barras_all, end_barras_all, duration_sens_all, duration_trans_all]
     tags = ['start_nav_all', 'end_nav_all', 'start_barras_all', 'end_barras_all', 'duration_sens_all', 'duration_trans_all']
