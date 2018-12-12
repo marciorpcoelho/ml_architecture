@@ -4,12 +4,13 @@ import schedule
 import logging
 import warnings
 import os.path
+import multiprocessing
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv
 from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution
+from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_evaluation
 from level_1_e_deployment import save_csv, sql_inject, sql_age_comparison, sql_retrieve_df
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_parsing
 pd.set_option('display.expand_frame_repr', False)
@@ -34,7 +35,6 @@ def main():
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
     models = ['dt', 'rf', 'lr', 'ab', 'gc', 'ann', 'voting']
-    # models = ['gc']
     k = 10  # Stratified Cross-Validation number of Folds
     gridsearch_score = 'recall'  # Metric on which to optimize GridSearchCV
     metric, metric_threshold = 'roc_auc_curve', 0.75
@@ -183,6 +183,7 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     performance_info_append(time.time(), 'start_section_d')
     logging.info('Started Step D...')
+    processes_list = []
 
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
     # in the provided pdf
@@ -196,15 +197,24 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
             df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[best_model_name], train_x, train_y, test_x, test_y, configuration_parameters)
             df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     elif development:
+        start = time.time()
+        parent_conn, child_conn = multiprocessing.Pipe()
         for model_name in models:
-            start = time.time()
-            print('Evaluating model ' + str(model_name) + '@ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
-            train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
-            proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
-            df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
-            df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
-            save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
-            print('Elapsed time: %f' % (time.time() - start))
+            p = multiprocessing.Process(target=multiprocess_evaluation, args=(child_conn, df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters))
+            p.start()
+            processes_list.append(p)
+        for process in processes_list:
+            df_model = parent_conn.recv()  # Note: .recv() needs to be before .join() because "The subprocess will be blocked in put() waiting for the main process to remove some data from the queue with get(), but the main process is blocked in join() waiting for the subprocess to finish. This results in a deadlock."
+            process.join()  # ToDo: Might need to add a timeout parameter here, in case the code hangs after an error (it's waiting for a process to terminate)
+
+            # start = time.time()
+            # print('Evaluating model ' + str(model_name) + '@ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
+            # train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
+            # proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
+            # df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
+            # df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
+            # save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
+        print('A - Total Elapsed time: %f' % (time.time() - start))
 
     feature_contribution(df_model, configuration_parameters)
 
