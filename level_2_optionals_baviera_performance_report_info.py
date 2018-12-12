@@ -42,7 +42,7 @@ def error_parsing(log_error_file):
     error_files = rx.findall(error_full[0])
     rx = re.compile(regex_dict['lines_number'])
     error_line_number = rx.findall(error_full[0])
-    error_line_number = [x.replace(',', '') for x in error_line_number]
+    error_line_number = [x.replace(',', '').replace(' ', '') for x in error_line_number]
     df_error['Error_Full'] = [error_full[0]] * len(error_files)
     df_error['Error_Only'] = [error_only[0]] * len(error_files)
     df_error['File_Loc'] = error_files

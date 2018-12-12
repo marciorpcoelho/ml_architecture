@@ -18,7 +18,7 @@ warnings.filterwarnings('ignore')  # ToDO: remove this line
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=level_2_optionals_baviera_options.log_files['full_log'], filemode='a')
 logging.Logger('errors')
-# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
 
 configuration_parameters = ['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Farois_LED', 'Farois_Xenon', 'Jantes_new', 'Modelo_new', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior_new', 'Versao_new']

@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import re
+from multiprocessing import cpu_count
 from sklearn import tree, linear_model, neighbors, svm
 from sklearn.neural_network import MLPClassifier
 from sklearn.naive_bayes import GaussianNB
@@ -17,6 +17,7 @@ update_frequency_days = 15
 DSN = os.getenv('DSN')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
+pool_workers = cpu_count()
 
 # Dictionaries:
 sql_info = {
@@ -329,5 +330,5 @@ regex_dict = {
     'error_full': r'((?:\#[^\#\r\n]*){1})$',  # Catches the error message from the eof up to the unique value #
     'error_only': r'[\n](.*){1}$',
     'between_quotes': r'"(.*?)"',
-    'lines_number': r'[0-9]{1,}\,',
+    'lines_number': r'\s[0-9]{1,}\,',
 }
