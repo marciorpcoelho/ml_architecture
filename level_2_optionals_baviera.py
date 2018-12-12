@@ -51,9 +51,7 @@ def main():
 
     performance_info(vehicle_count)
 
-    # sys.stdout.flush()
     logging.info('Finished - Project: Baviera Stock Optimization\n')
-    # return schedule.CancelJob
 
 
 def data_acquistion(input_file):

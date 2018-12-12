@@ -355,10 +355,6 @@ def save_fig(name, save_dir='output/'):
 #             df.loc[df['Nº Stock'] == key, 'Tipo_Interior'] = 'pele'
 #         end_int_type_all.append(time.time())
 #
-#     print(df.shape)
-#     print('standard time %.2f' % (time.time() - start_stanrd))
-#     sys.exit()
-#
 #     starts_ends = [start_nav_all, end_nav_all, start_barras_all, end_barras_all, start_alarme_all, end_alarme_all, start_7_lug_all, end_7_lug_all, start_prot_all, end_prot_all, start_ac_all, end_ac_all,
 #                    start_teto_all, end_teto_all, duration_versao_all, duration_trans_all, duration_sens_all, duration_jantes_all, duration_farois_all, start_cor_ext_all, end_cor_ext_all, start_cor_int_all, end_cor_int_all, start_int_type_all, end_int_type_all]
 #     tags = ['start_nav_all', 'end_nav_all', 'start_barras_all', 'end_barras_all', 'start_alarme_all', 'end_alarme_all', 'start_7_lug_all', 'end_7_lug_all', 'start_prot_all', 'end_prot_all', 'start_ac_all', 'end_ac_all',
@@ -411,14 +407,14 @@ def options_scraping(df):
     df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
 
     df_grouped = df.groupby('Nº Stock')
-    # start_nav_all, end_nav_all = [], []
-    # start_barras_all, end_barras_all = [], []
+    start_nav_all, end_nav_all = [], []
+    start_barras_all, end_barras_all = [], []
     # start_alarme_all, end_alarme_all = [], []
     # start_7_lug_all, end_7_lug_all = [], []
     # start_prot_all, end_prot_all = [], []
     # start_ac_all, end_ac_all = [], []
     # start_teto_all, end_teto_all = [], []
-    # duration_sens_all, duration_trans_all, duration_versao_all, duration_farois_all, duration_jantes_all = [], [], [], [], []
+    duration_sens_all, duration_trans_all, duration_versao_all, duration_farois_all, duration_jantes_all = [], [], [], [], []
     # start_cor_ext_all, end_cor_ext_all = [], []
     # start_cor_int_all, end_cor_int_all = [], []
     # start_int_type_all, end_int_type_all = [], []
@@ -436,13 +432,21 @@ def options_scraping(df):
     pool = Pool(processes=workers)
     results = pool.map(options_scraping_per_line, [(key, group) for (key, group) in df_grouped])
     pool.close()
-    df = pd.concat(results)
+    df = pd.concat([result[0] for result in results])
+    start_nav_all = [start_nav_all.append(result[1]) for result in results]
+    end_nav_all = [end_nav_all.append(result[2]) for result in results]
+    start_barras_all = [start_barras_all.append(result[3]) for result in results]
+    end_barras_all = [end_barras_all.append(result[4]) for result in results]
+    duration_sens_all = [duration_sens_all.append(result[5]) for result in results]
+    duration_trans_all = [duration_trans_all.append(result[6]) for result in results]
 
+    starts_ends = [start_nav_all, end_nav_all, start_barras_all, end_barras_all, duration_sens_all, duration_trans_all]
+    tags = ['start_nav_all', 'end_nav_all', 'start_barras_all', 'end_barras_all', 'duration_sens_all', 'duration_trans_all']
     # starts_ends = [start_nav_all, end_nav_all, start_barras_all, end_barras_all, start_alarme_all, end_alarme_all, start_7_lug_all, end_7_lug_all, start_prot_all, end_prot_all, start_ac_all, end_ac_all,
     #                start_teto_all, end_teto_all, duration_versao_all, duration_trans_all, duration_sens_all, duration_jantes_all, duration_farois_all, start_cor_ext_all, end_cor_ext_all, start_cor_int_all, end_cor_int_all, start_int_type_all, end_int_type_all]
     # tags = ['start_nav_all', 'end_nav_all', 'start_barras_all', 'end_barras_all', 'start_alarme_all', 'end_alarme_all', 'start_7_lug_all', 'end_7_lug_all', 'start_prot_all', 'end_prot_all', 'start_ac_all', 'end_ac_all',
     #         'start_teto_all', 'end_teto_all', 'duration_versao_all', 'duration_trans_all', 'duration_sens_all', 'duration_jantes_all', 'duration_farois_all', 'start_cor_ext_all', 'end_cor_ext_all', 'start_cor_int_all', 'end_cor_int_all', 'start_int_type_all', 'end_int_type_all']
-    # [performance_info_append(start_end, tag) for (start_end, tag) in zip(starts_ends, tags)]
+    [performance_info_append(start_end, tag) for (start_end, tag) in zip(starts_ends, tags)]
 
     # ToDo: move the following code to it's own function?
     # Standard Equipment
@@ -492,22 +496,35 @@ def options_scraping_per_line(args):
                  'bronze', 'beige', 'beje', 'veneto/preto', 'zagora/preto', 'mokka/preto', 'taupe/preto', 'sonoma/preto', 'preto/preto', 'preto/laranja/preto', 'preto/vermelho']
     colors_en = ['black', 'havanna', 'merino', 'walnut', 'chocolate', 'nevada', 'moonstone', 'anthracite/silver', 'white', 'coffee', 'blue', 'red', 'grey', 'silver', 'orange', 'green', 'bluestone', 'aqua', 'burgundy', 'anthrazit', 'truffle', 'brown', 'oyster', 'tobacco', 'jatoba', 'storm', 'champagne', 'cedar', 'silverstone', 'chestnut', 'kaschmirsilber', 'oak', 'mokka']
 
-    # duration_sens, duration_trans, duration_versao, duration_farois, duration_jantes = 0, 0, 0, 0, 0
+    duration_sens, duration_trans, duration_versao, duration_farois, duration_jantes = 0, 0, 0, 0, 0
     line_modelo = group['Modelo'].head(1).values[0]
     tokenized_modelo = nltk.word_tokenize(line_modelo)
     optionals = set(group['Opcional'])
 
+    # start_nav_all, end_nav_all = [], []
+    # start_barras_all, end_barras_all = [], []
+    #     start_alarme_all, end_alarme_all = [], []
+    #     start_7_lug_all, end_7_lug_all = [], []
+    #     start_prot_all, end_prot_all = [], []
+    #     start_ac_all, end_ac_all = [], []
+    #     start_teto_all, end_teto_all = [], []
+    duration_sens_group, duration_trans_group, duration_versao_group, duration_farois_group, duration_jantes_group = [], [], [], [], []
+    #     start_cor_ext_all, end_cor_ext_all = [], []
+    #     start_cor_int_all, end_cor_int_all = [], []
+    #     start_int_type_all, end_int_type_all = [], []
+
     # Navegação
     # start_nav_all.append(time.time())
+    start_nav = time.time()
     if len([x for x in optionals if 'navegação' in x]):
         group.loc[group['Nº Stock'] == key, 'Navegação'] = 1
-    # end_nav_all.append(time.time())
+    end_nav = time.time()
 
     # Barras Tejadilho
-    # start_barras_all.append(time.time())
+    start_barras = time.time()
     if len([x for x in optionals if 'barras' in x]):
         group.loc[group['Nº Stock'] == key, 'Barras_Tej'] = 1
-    # end_barras_all.append(time.time())
+    end_barras = time.time()
 
     # Alarme
     # start_alarme_all.append(time.time())
@@ -543,21 +560,21 @@ def options_scraping_per_line(args):
     for line_options in group['Opcional']:
         tokenized_options = nltk.word_tokenize(line_options)
 
-        # start = time.time()
+        start = time.time()
         if 'pdc-sensores' in tokenized_options:
             for word in tokenized_options:
                 if 'diant' in word:
                     group.loc[group['Nº Stock'] == key, 'Sensores'] = 1
-        # duration = time.time() - start
-        # duration_sens += duration
+        duration = time.time() - start
+        duration_sens += duration
 
-        # start = time.time()
+        start = time.time()
         if 'transmissão' in tokenized_options or 'caixa' in tokenized_options:
             for word in tokenized_options:
                 if 'auto' in word:
                     group.loc[group['Nº Stock'] == key, 'Caixa Auto'] = 1
-        # duration = time.time() - start
-        # duration_trans += duration
+        duration = time.time() - start
+        duration_trans += duration
 
         # Versão
         # start = time.time()
@@ -605,9 +622,11 @@ def options_scraping_per_line(args):
         # duration = time.time() - start
         # duration_jantes += duration
 
+    durations = [duration_sens, duration_trans]
+    durations_all = [duration_sens_group, duration_trans_group]
     # durations = [duration_farois, duration_jantes, duration_sens, duration_trans, duration_versao]
     # durations_all = [duration_versao_all, duration_trans_all, duration_sens_all, duration_jantes_all, duration_farois_all]
-    # [duration_all.append(duration) for (duration_all, duration) in zip(durations_all, durations)]
+    [duration_all.append(duration) for (duration_all, duration) in zip(durations_all, durations)]
 
     # Cor Exterior
     # start_cor_ext_all.append(time.time())
@@ -684,8 +703,7 @@ def options_scraping_per_line(args):
         group.loc[group['Nº Stock'] == key, 'Tipo_Interior'] = 'pele'
     # end_int_type_all.append(time.time())
 
-    # q.put(group)
-    return group
+    return group, start_nav, end_barras, start_barras, end_nav, duration_sens_group, duration_trans_group
 
 
 def column_rename(df, cols_to_replace, new_cols_names):
