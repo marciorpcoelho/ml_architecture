@@ -345,6 +345,6 @@ log_files = {
 regex_dict = {
     'error_full': r'((?:\#[^\#\r\n]*){1})$',  # Catches the error message from the eof up to the unique value #
     'error_only': r'[\n](.*){1}$',
-    'between_quotes': r'"(.*?)"',
+    'between_quotes': r'\s{1}\"(.*?.py)\"',
     'lines_number': r'\s[0-9]{1,}\,',
 }

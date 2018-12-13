@@ -116,7 +116,7 @@ def zero_analysis(df):
     print(tab_info)
 
 
-def value_count_histogram(df, columns, name, output_dir='output/'):
+def value_count_histogram(df, columns, tag, output_dir='output/'):
     for column in columns:
         plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
         # df.loc[df[column] == 0, column] = '0'
@@ -132,7 +132,7 @@ def value_count_histogram(df, columns, name, output_dir='output/'):
         plt.ylabel('Counts')
         plt.title('Distribution for column - ' + column)
         bar_plot_auto_label(rects)
-        save_fig(str(column) + '_' + name, output_dir)
+        save_fig(str(column) + '_' + tag, output_dir)
         # plt.show()
 
 
