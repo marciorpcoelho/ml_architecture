@@ -133,18 +133,3 @@ def sql_age_comparison(database, view, update_frequency):
     else:
         return 0
 
-
-def sql_retrieve_df(database, view, columns):
-    start = time.time()
-    print('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...')
-
-    sel_cols = str(columns)[1:-1].replace('\'', '')
-
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
-
-    query = 'SELECT ' + sel_cols + ' FROM ' + view
-
-    df = pd.read_sql(query, cnxn)
-
-    print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
-    return df

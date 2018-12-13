@@ -1,25 +1,23 @@
 import time
 import sys
-import schedule
 import logging
 import warnings
-import os.path
 import multiprocessing
 import pandas as pd
 import level_2_optionals_baviera_options
-from level_1_a_data_acquisition import read_csv
-from level_1_b_data_processing import lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
+from level_1_a_data_acquisition import read_csv, sql_retrieve_df
+from level_1_b_data_processing import  lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_evaluation
-from level_1_e_deployment import save_csv, sql_inject, sql_age_comparison, sql_retrieve_df
+from level_1_e_deployment import sql_inject, sql_age_comparison
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_parsing
 pd.set_option('display.expand_frame_repr', False)
 warnings.filterwarnings('ignore')  # ToDO: remove this line
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=level_2_optionals_baviera_options.log_files['full_log'], filemode='a')
 logging.Logger('errors')
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
-# logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
+# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
 
 configuration_parameters = ['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Farois_LED', 'Farois_Xenon', 'Jantes_new', 'Modelo_new', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior_new', 'Versao_new']
 performance_list = []
@@ -29,7 +27,8 @@ def main():
     logging.info('Project: Baviera Stock Optimization')
 
     ### Options:
-    input_file = 'dbs/' + 'ENCOMENDA.csv'
+    # input_file = 'dbs/' + 'ENCOMENDA.csv'
+    input_file = 'dbs/' + 'full_data_bmw_top5000.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
 
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
@@ -59,10 +58,15 @@ def data_acquistion(input_file):
     performance_info_append(time.time(), 'start_section_a')
     logging.info('Started Step A...')
 
+    # try:
+    #     df = read_csv(input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    # except UnicodeDecodeError:
+    #     df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    column_renaming = 1
     try:
-        df = read_csv(input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+        df = read_csv(column_renaming, input_file, encoding='utf-8', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
     except UnicodeDecodeError:
-        df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+        df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
 
     logging.info('Finished Step A.')
     performance_info_append(time.time(), 'end_section_a')
@@ -86,7 +90,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
                                    ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
                                    ('Interior', 'mokka'): 'mocha', ('Interior', 'beige'): 'bege', ('Interior', 'dakota\''): 'dakota', ('Interior', 'antracite/cinza/p'): 'antracite/cinza/preto', ('Interior', 'antracite/cinza/pretoreto'): 'antracite/cinza/preto', ('Interior', 'nevada\''): 'nevada',
                                    ('Interior', '"nappa"'): 'nappa', ('Interior', 'anthrazit'): 'antracite', ('Interior', 'antracito'): 'antracite', ('Interior', 'preto/laranja/preto/lara'): 'preto/laranja', ('Interior', 'anthtacite'): 'antracite',
-                                   ('Interior', 'champag'): 'champagne', ('Interior', 'cri'): 'crimson'}
+                                   ('Interior', 'champag'): 'champagne', ('Interior', 'cri'): 'crimson', ('Modelo', 'Enter Model Details'): ''}
 
         df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
         df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed

@@ -52,7 +52,10 @@ def lowercase_column_convertion(df, columns):
 def remove_columns(df, columns):
 
     for column in columns:
-        df.drop([column], axis=1, inplace=True)
+        try:
+            df.drop([column], axis=1, inplace=True)
+        except KeyError:
+            continue
 
     return df
 
@@ -101,21 +104,24 @@ def zero_analysis(df):
     print(tab_info)
 
 
-def value_count_histogram(df, column, name, output_dir='output/'):
-    plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
-    df.loc[df[column] == 0, column] = '0'
-    counts = df[column].value_counts().values
-    values = df[column].value_counts().index
-    rects = plt.bar(values, counts)
+def value_count_histogram(df, columns, name, output_dir='output/'):
+    for column in columns:
+        plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
+        # df.loc[df[column] == 0, column] = '0'
+        # df.loc[df[column] == 1, column] = '1'
 
-    # plt.tight_layout()
-    plt.xlabel('Values')
-    plt.xticks(rotation=30)
-    plt.ylabel('Counts')
-    plt.title('Distribution for column - ' + column)
-    bar_plot_auto_label(rects)
-    save_fig(name, output_dir)
-    # plt.show()
+        counts = df[column].value_counts().values
+        values = df[column].value_counts().index
+        rects = plt.bar(values, counts)
+
+        # plt.tight_layout()
+        plt.xlabel('Values')
+        plt.xticks(rotation=30)
+        plt.ylabel('Counts')
+        plt.title('Distribution for column - ' + column)
+        bar_plot_auto_label(rects)
+        save_fig(str(column) + '_' + name, output_dir)
+        # plt.show()
 
 
 def bar_plot_auto_label(rects):
@@ -404,7 +410,9 @@ def save_fig(name, save_dir='output/'):
 
 
 def options_scraping(df):
+    print('before removing Motos, Z4, MINI and Prov = Demo & Utilização', df.shape)
     df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
+    print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df.shape)
 
     df_grouped = df.groupby('Nº Stock')
     start_nav_all, end_nav_all = [], []

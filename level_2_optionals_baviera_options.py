@@ -173,6 +173,22 @@ classification_models = {
     'voting': [VotingClassifier, [{'voting': ['soft']}]]
 }
 
+sql_to_code_renaming = {
+    'VHE_Number': 'Nº Stock',
+    'Prov_Desc': 'Prov',
+    'Colour_Ext_Desc': 'Cor',
+    'Colour_Int_Desc': 'Interior',
+    'Model_Desc': 'Modelo',
+    'Version_Desc': 'Versão',
+    'Optional_Desc': 'Opcional',
+    'Sell_Location_Desc': 'Local da Venda',
+    'Order_Type_Desc': 'Tipo Encomenda',
+    'Purchase_Date': 'Data Compra',
+    'Sell_Date': 'Data Venda',
+    'Margin': 'Margem',
+    'Estimated_Cost': 'Custo',
+}
+
 column_sql_renaming = {
         'Jantes_new': 'Rims_Size',
         'Caixa Auto': 'Auto_Trans',

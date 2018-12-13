@@ -48,7 +48,7 @@ def error_parsing(log_error_file):
     df_error['File_Loc'] = error_files
     df_error['Line'] = error_line_number
 
-    sql_inject(df_error, sql_info['database'], sql_info['error_log'], list(df_error), time_to_last_update=0, check_date=1, truncate=1)
+    sql_inject(df_error, sql_info['database'], sql_info['error_log'], list(df_error), time_to_last_update=0, check_date=1)
 
 
 def parse_line(file_path):
