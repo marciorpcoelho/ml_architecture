@@ -58,15 +58,16 @@ def data_acquistion(input_file):
     performance_info_append(time.time(), 'start_section_a')
     logging.info('Started Step A...')
 
-    # try:
-    #     df = read_csv(input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
-    # except UnicodeDecodeError:
-    #     df = read_csv(input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
-    column_renaming = 1
+    column_renaming = 0
     try:
-        df = read_csv(column_renaming, input_file, encoding='utf-8', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
+        df = read_csv(column_renaming, input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
     except UnicodeDecodeError:
-        df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
+        df = read_csv(column_renaming, input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
+    # column_renaming = 1
+    # try:
+    #     df = read_csv(column_renaming, input_file, encoding='utf-8', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
+    # except UnicodeDecodeError:
+    #     df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
 
     logging.info('Finished Step A.')
     performance_info_append(time.time(), 'end_section_a')
