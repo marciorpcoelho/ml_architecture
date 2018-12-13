@@ -44,7 +44,8 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
             if time_result:
                 print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
                 for index, row in df.iterrows():
-                    cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+                    continue
+                    # cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
                 upload = 1
             elif not time_result:
                 print('Newer data already exists.')
@@ -52,7 +53,8 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
         if not check_date:
             print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
             for index, row in df.iterrows():
-                cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+                continue
+                # cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
             upload = 1
 
         print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')

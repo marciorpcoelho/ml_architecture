@@ -98,10 +98,10 @@ def inf_analysis(df):
     # Displays the number and percentage of null values in the DF
 
     tab_info = pd.DataFrame(df.dtypes).T.rename(index={0: 'column type'})
-    tab_info = tab_info.append(pd.DataFrame((df == np.inf).astype(int).sum(axis=0)).T.rename(index={0: '#null:'}))
-    tab_info = tab_info.append(pd.DataFrame((df == -np.inf).astype(int).sum(axis=0)).T.rename(index={0: '#null:'}))
-    tab_info = tab_info.append(pd.DataFrame((df == np.inf).astype(int).sum() / df.shape[0] * 100).T.rename(index={0: '%null:'}))
-    tab_info = tab_info.append(pd.DataFrame((df == -np.inf).astype(int).sum() / df.shape[0] * 100).T.rename(index={0: '%null:'}))
+    tab_info = tab_info.append(pd.DataFrame((df == np.inf).astype(int).sum(axis=0)).T.rename(index={0: '#inf:'}))
+    tab_info = tab_info.append(pd.DataFrame((df == -np.inf).astype(int).sum(axis=0)).T.rename(index={0: '#-inf:'}))
+    tab_info = tab_info.append(pd.DataFrame((df == np.inf).astype(int).sum() / df.shape[0] * 100).T.rename(index={0: '%inf:'}))
+    tab_info = tab_info.append(pd.DataFrame((df == -np.inf).astype(int).sum() / df.shape[0] * 100).T.rename(index={0: '%-inf:'}))
 
     print(tab_info)
 
@@ -110,8 +110,8 @@ def zero_analysis(df):
     # Displays the number and percentage of null values in the DF
 
     tab_info = pd.DataFrame(df.dtypes).T.rename(index={0: 'column type'})
-    tab_info = tab_info.append(pd.DataFrame((df == 0).astype(int).sum(axis=0)).T.rename(index={0: '#null:'}))
-    tab_info = tab_info.append(pd.DataFrame((df == 0).astype(int).sum(axis=0) / df.shape[0] * 100).T.rename(index={0: '%null:'}))
+    tab_info = tab_info.append(pd.DataFrame((df == 0).astype(int).sum(axis=0)).T.rename(index={0: '#zero:'}))
+    tab_info = tab_info.append(pd.DataFrame((df == 0).astype(int).sum(axis=0) / df.shape[0] * 100).T.rename(index={0: '%zero:'}))
 
     print(tab_info)
 
@@ -748,6 +748,13 @@ def col_group(df, columns_to_replace, dictionaries):
 
 def total_price(df):
     df['price_total'] = df['Custo'].groupby(df['Nº Stock']).transform('sum')
+
+    return df
+
+
+def remove_zero_price_total_vhe(df):
+    # df.groupby(['case', 'cluster']).filter(lambda x: len(x) > 1)
+    df = df.groupby(['Nº Stock']).filter(lambda x: x.price_total != 0)
 
     return df
 
