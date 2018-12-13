@@ -113,6 +113,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         print('before removing vhe with 0 total price', df.shape)
         df = remove_zero_price_total_vhe(df)  # Removes VHE with a price total of 0; ToDo: keep checking up if this is still necessary
+        df = remove_rows(df, [df.loc[df['Local da Venda'] == 'DCV - Viat.Toy Viseu', :].index])  # Removes the vehicles sold here, as they are from another brand (Toyota)
         print('after removing vhe with 0 total price', df.shape)
 
         df = margin_calculation(df)  # Calculates the margin in percentage of the total price
