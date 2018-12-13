@@ -122,8 +122,9 @@ def value_count_histogram(df, columns, tag, output_dir='output/'):
         # df.loc[df[column] == 0, column] = '0'
         # df.loc[df[column] == 1, column] = '1'
 
-        counts = df[column].value_counts().values
-        values = df[column].value_counts().index
+        df_column_as_str = df[column].astype(str)
+        counts = df_column_as_str.value_counts().values
+        values = df_column_as_str.value_counts().index
         rects = plt.bar(values, counts)
 
         # plt.tight_layout()
