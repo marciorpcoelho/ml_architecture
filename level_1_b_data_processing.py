@@ -423,9 +423,9 @@ def save_fig(name, save_dir='output/'):
 
 
 def options_scraping(df):
-    print('before removing Motos, Z4, MINI and Prov = Demo & Utilização', df.shape)
+    print('before removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
     df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
-    print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df.shape)
+    print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
 
     df_grouped = df.groupby('Nº Stock')
     start_nav_all, end_nav_all = [], []
