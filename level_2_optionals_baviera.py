@@ -6,7 +6,7 @@ import multiprocessing
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
-from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
+from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, pool_workers_count
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
@@ -210,14 +210,20 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
             df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     elif development:
         start = time.time()
-        parent_conn, child_conn = multiprocessing.Pipe()
-        for model_name in models:
-            p = multiprocessing.Process(target=multiprocess_evaluation, args=(child_conn, df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters))
-            p.start()
-            processes_list.append(p)
-        for process in processes_list:
-            df_model = parent_conn.recv()  # Note: .recv() needs to be before .join() because "The subprocess will be blocked in put() waiting for the main process to remove some data from the queue with get(), but the main process is blocked in join() waiting for the subprocess to finish. This results in a deadlock."
-            process.join()  # ToDo: Might need to add a timeout parameter here, in case the code hangs after an error (it's waiting for a process to terminate)
+        # for model_name in models:
+        workers = pool_workers_count
+        pool = multiprocessing.Pool(processes=workers)
+        df_model = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
+        pool.close()
+
+        # parent_conn, child_conn = multiprocessing.Pipe()
+        # for model_name in models:
+        #     p = multiprocessing.Process(target=multiprocess_evaluation, args=(child_conn, df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters))
+        #     p.start()
+        #     processes_list.append(p)
+        # for process in processes_list:
+        #     df_model = parent_conn.recv()  # Note: .recv() needs to be before .join() because "The subprocess will be blocked in put() waiting for the main process to remove some data from the queue with get(), but the main process is blocked in join() waiting for the subprocess to finish. This results in a deadlock."
+        #     process.join()  # ToDo: Might need to add a timeout parameter here, in case the code hangs after an error (it's waiting for a process to terminate)
 
             # start = time.time()
             # print('Evaluating model ' + str(model_name) + '@ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')

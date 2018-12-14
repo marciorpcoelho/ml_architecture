@@ -12,7 +12,7 @@ from multiprocessing import Pool
 from scipy import stats
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
-from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, pool_workers
+from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, pool_workers_count
 from level_2_optionals_baviera_performance_report_info import performance_info_append
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -450,7 +450,7 @@ def options_scraping(df):
             df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
     performance_info_append(time.time(), 'end_modelo')
 
-    workers = pool_workers
+    workers = pool_workers_count
     pool = Pool(processes=workers)
     results = pool.map(options_scraping_per_line, [(key, group) for (key, group) in df_grouped])
     pool.close()

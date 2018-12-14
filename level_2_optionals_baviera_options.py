@@ -17,7 +17,7 @@ update_frequency_days = 15
 DSN = os.getenv('DSN')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
-pool_workers = cpu_count()
+pool_workers_count = cpu_count()
 
 # Dictionaries:
 sql_info = {
