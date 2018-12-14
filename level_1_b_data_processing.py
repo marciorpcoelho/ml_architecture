@@ -423,10 +423,10 @@ def save_fig(name, save_dir='output/'):
 
 
 def options_scraping(df):
-    print('before removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
+    # print('before removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
     df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('i3')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
     df = remove_rows(df, [df[df.Versão.str.contains('Auris')].index, df[df.Versão.str.contains('Yaris')].index, df[df.Versão.str.contains('RAV4')].index, df[df.Versão.str.contains('Prius')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
-    print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
+    # print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
 
     df_grouped = df.groupby('Nº Stock')
     start_nav_all, end_nav_all = [], []
@@ -448,11 +448,6 @@ def options_scraping(df):
         if 'Série' not in model:
             tokenized_modelo = nltk.word_tokenize(model)
             df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
-        # tokenized_modelo = nltk.word_tokenize(model)
-        # if 'Série' not in model and 'X3' not in model and 'Z4' not in model:
-        #     df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
-        # elif 'X3' in model or 'Z4' in model:
-        #     df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:2])
     performance_info_append(time.time(), 'end_modelo')
 
     workers = pool_workers

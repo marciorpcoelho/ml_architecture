@@ -6,7 +6,7 @@ import multiprocessing
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
-from level_1_b_data_processing import value_count_histogram, null_analysis, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
+from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
@@ -28,7 +28,8 @@ def main():
 
     ### Options:
     # input_file = 'dbs/' + 'ENCOMENDA.csv'
-    input_file = 'dbs/' + 'full_data_bmw_top500000.csv'
+    input_file = 'dbs/' + 'full_data_bmw.csv'
+    # input_file = 'dbs/' + 'full_data_bmw_top500000.csv'
     # input_file = 'dbs/' + 'full_data_bmw_last500000.csv'
     output_file = 'output/' + 'db_full_baviera.csv'
 
@@ -85,7 +86,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     if sql_age_comparison(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
         print('Checkpoint not found or too old. Preprocessing data...')
 
-        print('Number of Vehicles at start', df['Nº Stock'].nunique())
+        # print('Number of Vehicles at start', df['Nº Stock'].nunique())
 
         df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
         df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
@@ -98,15 +99,13 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
         df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
-        null_analysis(df)
         df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
         df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
 
         dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
         df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
-        print('Number of Vehicles after filter', df['Nº Stock'].nunique())
-        value_count_histogram(df, ['Modelo', 'Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'], 'top_500k_before_grouping', 'plots/')
+        # print('Number of Vehicles after filter', df['Nº Stock'].nunique())
         df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
         df = color_replacement(df)  # Translates all english colors to portuguese
 
@@ -118,10 +117,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         # df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
         # Removes entries of motorcycles (Série), recent car models (Z4), MINI models (MINI) and those whose order is Demonstração and Em Utilização
 
-        print('before removing vhe with 0 total price', df.shape)
         df = remove_zero_price_total_vhe(df)  # Removes VHE with a price total of 0; ToDo: keep checking up if this is still necessary
         df = remove_rows(df, [df.loc[df['Local da Venda'] == 'DCV - Viat.Toy Viseu', :].index])  # Removes the vehicles sold here, as they are from another brand (Toyota)
-        print('after removing vhe with 0 total price', df.shape)
 
         df = margin_calculation(df)  # Calculates the margin in percentage of the total price
         df = score_calculation(df, level_2_optionals_baviera_options.stock_days_threshold, level_2_optionals_baviera_options.margin_threshold)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
@@ -138,7 +135,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = col_group(df, cols_to_group_layer_2, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
         # groups are shown in level_2_optionals_baviera_options
 
-        value_count_histogram(df, ['Modelo_new', 'Versao_new', 'Navegação', 'Sensores', 'Cor_Interior_new', 'Tipo_Interior_new', 'Caixa Auto', 'Cor_Exterior_new', 'Jantes_new', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'], 'top_500k_after_grouping', 'plots/')
         df = remove_columns(df, ['Prov'])
         df = new_features_optionals_baviera(df, sel_cols=['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Farois_LED', 'Farois_Xenon', 'Prot.Solar', 'Teto_Abrir', 'Tipo_Interior_new', 'Versao_new', 'Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])  # Creates a series of new features, explained in the provided pdf
 
