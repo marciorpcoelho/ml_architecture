@@ -12,7 +12,7 @@ read_dotenv(dotenv_path)
 # Options:
 margin_threshold = 3.5
 stock_days_threshold = 45
-update_frequency_days = 0
+update_frequency_days = 15
 
 DSN = os.getenv('DSN')
 UID = os.getenv('UID')
