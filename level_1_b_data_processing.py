@@ -665,7 +665,8 @@ def options_scraping_per_line(args):
         if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58']:
             color = ['undefined']
         else:
-            sys.exit('Error: Color Not Found')
+            # sys.exit('Error: Color Not Found')
+            raise ValueError('Color Not Found:', color)
     if len(color) > 1:  # Fixes cases such as 'white silver'
         color = [color[0]]
     color = color * group.shape[0]
