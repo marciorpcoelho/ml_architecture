@@ -84,6 +84,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     if sql_age_comparison(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
         print('Checkpoint not found or too old. Preprocessing data...')
 
+        print('Number of Vehicles at start', df['Nº Stock'].nunique())
+
         df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
         df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
 
@@ -101,6 +103,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
         df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
+        print('Number of Vehicles before filter', df['Nº Stock'].nunique())
         df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
         df = color_replacement(df)  # Translates all english colors to portuguese
 
