@@ -666,7 +666,7 @@ def options_scraping_per_line(args):
             color = ['undefined']
         else:
             # sys.exit('Error: Color Not Found')
-            raise ValueError('Color Not Found:', color)
+            raise ValueError('Color Not Found:', tokenized_color)
     if len(color) > 1:  # Fixes cases such as 'white silver'
         color = [color[0]]
     color = color * group.shape[0]
