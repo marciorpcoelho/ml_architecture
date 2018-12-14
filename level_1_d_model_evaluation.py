@@ -312,7 +312,24 @@ def model_comparison(best_model_name, best_model_value, metric):
         return 1
 
 
-def multiprocess_evaluation(conn, df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters):
+# def multiprocess_evaluation(conn, df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters):
+#
+#     start = time.time()
+#     print('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
+#     train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
+#     proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
+#     df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
+#     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
+#     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
+#     conn.send(df_model)
+#     # df_model = pd.DataFrame()
+#     conn.close()
+#     print(model_name + ' - Elapsed time: %f' % (time.time() - start))
+#
+#     return df_model
+
+def multiprocess_evaluation(args):
+    df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters = args
 
     start = time.time()
     print('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
@@ -321,9 +338,6 @@ def multiprocess_evaluation(conn, df, model_name, train_x, train_y, test_x, test
     df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
-    conn.send(df_model)
-    # df_model = pd.DataFrame()
-    conn.close()
     print(model_name + ' - Elapsed time: %f' % (time.time() - start))
 
     return df_model
