@@ -213,8 +213,10 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
         # for model_name in models:
         workers = pool_workers_count
         pool = multiprocessing.Pool(processes=workers)
-        df_model = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
+        results = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
         pool.close()
+
+        df_model = results[0]
 
         # parent_conn, child_conn = multiprocessing.Pipe()
         # for model_name in models:
