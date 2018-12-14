@@ -105,7 +105,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
         df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
-        print('Number of Vehicles before filter', df['Nº Stock'].nunique())
+        print('Number of Vehicles after filter', df['Nº Stock'].nunique())
         df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
         df = color_replacement(df)  # Translates all english colors to portuguese
 
