@@ -444,14 +444,14 @@ def options_scraping(df):
     performance_info_append(time.time(), 'start_modelo')
     unique_models = df['Modelo'].unique()
     for model in unique_models:
-        # if 'Série' not in model:
-        #     tokenized_modelo = nltk.word_tokenize(model)
-        #     df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
-        tokenized_modelo = nltk.word_tokenize(model)
-        if 'Série' not in model and 'X3' not in model and 'Z4' not in model:
+        if 'Série' not in model:
+            tokenized_modelo = nltk.word_tokenize(model)
             df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
-        elif 'X3' in model or 'Z4' in model:
-            df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:2])
+        # tokenized_modelo = nltk.word_tokenize(model)
+        # if 'Série' not in model and 'X3' not in model and 'Z4' not in model:
+        #     df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
+        # elif 'X3' in model or 'Z4' in model:
+        #     df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:2])
     performance_info_append(time.time(), 'end_modelo')
 
     workers = pool_workers
