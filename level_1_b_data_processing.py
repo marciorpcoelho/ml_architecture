@@ -665,7 +665,7 @@ def options_scraping_per_line(args):
         if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58']:
             color = ['undefined']
         else:
-            if tokenized_color == ' ':
+            if len(tokenized_color) == 0:
                 return
             else:
                 raise ValueError('Color Not Found:', tokenized_color)
