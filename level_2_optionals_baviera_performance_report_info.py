@@ -70,7 +70,7 @@ def performance_info(vehicle_count):
 
 
 def error_upload(log_file, error_flag=0):
-    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'Warnings', 'File_Loc', 'Line', 'Error_Flag', 'Warning_Flag'})
+    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Line', 'Error_Flag'})
 
     if error_flag:
         error_full, error_only = parse_line(log_file)
@@ -83,14 +83,14 @@ def error_upload(log_file, error_flag=0):
         error_line_number = [x.replace(',', '').replace(' ', '') for x in error_line_number]
         error_full_series = [error_full[0]] * len(error_files)
         error_only_series = [error_only[0]] * len(error_files)
-    elif not error_flag:
-        error_full_series, error_only_series, error_files, error_line_number = None, None, None, None
 
-    df_error['Error_Full'] = error_full_series
-    df_error['Error_Only'] = error_only_series
-    df_error['File_Loc'] = error_files
-    df_error['Line'] = error_line_number
-    df_error['Error_Flag'] = error_flag
+        df_error['Error_Full'] = error_full_series
+        df_error['Error_Only'] = error_only_series
+        df_error['File_Loc'] = error_files
+        df_error['Line'] = error_line_number
+        df_error['Error_Flag'] = error_flag
+    elif not error_flag:
+        df_error.loc[0, :] = ['', '', '', '', 0]
 
     sql_inject(df_error, sql_info['database'], sql_info['error_log'], list(df_error), time_to_last_update=0, check_date=1)
 
