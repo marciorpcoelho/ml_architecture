@@ -13,7 +13,7 @@ from scipy import stats
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, pool_workers_count
-from level_2_optionals_baviera_performance_report_info import performance_info_append
+from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_warnings_append
 warnings.simplefilter('ignore', FutureWarning)
 
 # Globals Definition
@@ -745,10 +745,10 @@ def col_group(df, columns_to_replace, dictionaries):
         for key in dictionary.keys():
             df.loc[df[columns_to_replace[dictionaries.index(dictionary)]].isin(dictionary[key]), columns_to_replace[dictionaries.index(dictionary)] + '_new'] = key
         if df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull().values.any():
-            # logging.WARNING('NaNs detected on column')
             variable = df.loc[df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull(), columns_to_replace[dictionaries.index(dictionary)]].unique()
-            logging.warning('Column Grouping - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new'))
-            logging.warning('Value(s) not grouped: {}'.format(variable))
+            logging.warning('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)))
+            # logging.warning('Value(s) not grouped: {}'.format(variable))
+            performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)))
         df.drop(columns_to_replace[dictionaries.index(dictionary)], axis=1, inplace=True)
     return df
 
@@ -960,10 +960,10 @@ def reindex(df):
     return df
 
 
-def new_column_creation(df, columns):
+def new_column_creation(df, columns, value):
 
     for column in columns:
-        df.loc[:, column] = 0
+        df.loc[:, column] = value
 
     return df
 

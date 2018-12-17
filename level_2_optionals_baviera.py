@@ -10,7 +10,7 @@ from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_col
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
-from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_parsing
+from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload
 pd.set_option('display.expand_frame_repr', False)
 warnings.filterwarnings('ignore')  # ToDO: remove this line
 
@@ -51,6 +51,7 @@ def main():
     vehicle_count = deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'], output_file)
 
     performance_info(vehicle_count)
+    error_upload(level_2_optionals_baviera_options.log_files['full_log'])
 
     logging.info('Finished - Project: Baviera Stock Optimization\n')
 
@@ -101,7 +102,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
         df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
-        df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'])  # Creates new columns filled with zeros, which will be filled in the future
+        df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'], 0)  # Creates new columns filled with zeros, which will be filled in the future
 
         dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
         df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
@@ -149,7 +150,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_columns(df, ['Date'])
 
     else:
-        print('Checkpoint Found. Retrieving data...')
+        logging.info('Checkpoint Found. Retrieving data...')
         df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))
 
@@ -195,7 +196,6 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     performance_info_append(time.time(), 'start_section_d')
     logging.info('Started Step D...')
-    processes_list = []
 
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
     # in the provided pdf
@@ -210,30 +210,12 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
             df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     elif development:
         start = time.time()
-        # for model_name in models:
         workers = pool_workers_count
         pool = multiprocessing.Pool(processes=workers)
         results = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
         pool.close()
-
         df_model = results[0]
 
-        # parent_conn, child_conn = multiprocessing.Pipe()
-        # for model_name in models:
-        #     p = multiprocessing.Process(target=multiprocess_evaluation, args=(child_conn, df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters))
-        #     p.start()
-        #     processes_list.append(p)
-        # for process in processes_list:
-        #     df_model = parent_conn.recv()  # Note: .recv() needs to be before .join() because "The subprocess will be blocked in put() waiting for the main process to remove some data from the queue with get(), but the main process is blocked in join() waiting for the subprocess to finish. This results in a deadlock."
-        #     process.join()  # ToDo: Might need to add a timeout parameter here, in case the code hangs after an error (it's waiting for a process to terminate)
-
-            # start = time.time()
-            # print('Evaluating model ' + str(model_name) + '@ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
-            # train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
-            # proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
-            # df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
-            # df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
-            # save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
         print('A - Total Elapsed time: %f' % (time.time() - start))
 
     feature_contribution(df_model, configuration_parameters)
@@ -268,4 +250,4 @@ if __name__ == '__main__':
         main()
     except Exception as exception:
         logging.exception('#')
-        error_parsing(level_2_optionals_baviera_options.log_files['full_log'])
+        error_upload(level_2_optionals_baviera_options.log_files['full_log'], error_flag=1)
