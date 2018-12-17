@@ -237,7 +237,7 @@ column_sql_renaming = {
 }
 
 columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
-                   'Model_Code', 'Purchase_Day', 'Purchase_Month', 'Purchase_Year', 'Margin', 'Margin_Percentage',
+                   'Model_Code', 'Margin', 'Margin_Percentage',
                    'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
                    'Score_Class_Pred', 'Sell_Date', 'Seven_Seats', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
                    'Xenon_Lights', 'Solar_Protection', 'Interior_Type', 'Version', 'Average_Margin_Percentage', 'Average_Score_Euros',
