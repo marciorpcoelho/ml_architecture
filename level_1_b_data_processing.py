@@ -809,6 +809,7 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
 
 
 def new_features_optionals_baviera(df, sel_cols):
+    df.dropna(inplace=True)  # This is here for the cases where a value is not grouped. So it doesn't stop the code. Warning will still be uploaded to SQL.
     df_grouped = df.sort_values(by=['Data Venda']).groupby(sel_cols)
     df = df_grouped.apply(previous_sales_info_optionals_baviera)
 

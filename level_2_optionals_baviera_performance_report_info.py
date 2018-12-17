@@ -22,8 +22,6 @@ def performance_warnings_append(warning):
 
     warnings_global.append(warning)
 
-    print(warnings_global)
-
 
 def performance_info(vehicle_count):
 
@@ -107,13 +105,3 @@ def parse_line(file_path):
         error_full = rx.findall(content.replace('\n', ' '))
 
         return error_full, error_only
-
-
-# def warning_checkup(file_path):
-#
-#     with open(file_path, 'r') as file:
-#         content = file.read()
-#         rx = re.compile(regex_dict['warning_full'])
-#         warning_only = rx.findall(content)
-#
-#     return warning_only, 1
