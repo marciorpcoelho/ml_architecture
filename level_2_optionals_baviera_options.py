@@ -22,11 +22,12 @@ pool_workers_count = cpu_count()
 # Dictionaries:
 sql_info = {
     'database': 'BI_MLG',
+    'initial_table': 'VHE_Fact_DW_SalesNew_WithSpecs',
     'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
     'performance_running_time': 'LOG_Performance_Running_Time',
     'performance_algorithm_results': 'LOG_Performance_Algorithms_Results',
-    'final_table': 'VHE_Fact_DW_OrderOptimization',
+    'final_table': 'VHE_Fact_BI_OrderOptimization',
     'error_log': 'LOG_Performance_Errors',
 }
 
