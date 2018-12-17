@@ -189,6 +189,7 @@ sql_to_code_renaming = {
     'Sell_Date': 'Data Venda',
     'Margin': 'Margem',
     'Estimated_Cost': 'Custo',
+    'Registration_Number': 'Registration_Number',
 }
 
 column_sql_renaming = {
