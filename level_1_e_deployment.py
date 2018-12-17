@@ -61,6 +61,7 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
     except pyodbc.ProgrammingError:
         upload = 0
         save_csv([df], ['output/' + view + '_backup'])
+        raise Exception('Error in uploading to database. Saving locally...')
 
     cnxn.commit()
     cursor.close()
