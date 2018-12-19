@@ -245,7 +245,7 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Xenon_Lights', 'Solar_Protection', 'Interior_Type', 'Version', 'Average_Margin_Percentage', 'Average_Score_Euros',
                    'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local',
                    'Average_Margin_Percentage_Local', 'Average_Score_Euros_Local', 'Average_Stock_Days_Local', 'Average_Score_Class_GT_Local',
-                   'Average_Score_Class_Pred_Local']
+                   'Average_Score_Class_Pred_Local', 'Registration_Number']
 
 column_performance_sql_renaming = {
     'start_section_a': 'Section_A_Start',
