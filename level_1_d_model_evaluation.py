@@ -2,11 +2,12 @@ import pandas as pd
 import numpy as np
 import logging
 import os
+import multiprocessing
 import time
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
-from level_1_e_deployment import sql_inject, sql_date_comparison, save_csv
-from level_2_optionals_baviera_options import sql_info
+from level_1_e_deployment import sql_inject, save_csv
+from level_2_optionals_baviera_options import sql_info, pool_workers_count
 pd.set_option('display.expand_frame_repr', False)
 
 my_dpi = 96
@@ -327,6 +328,20 @@ def model_comparison(best_model_name, best_model_value, metric):
 #     print(model_name + ' - Elapsed time: %f' % (time.time() - start))
 #
 #     return df_model
+
+def multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters):
+    start = time.time()
+    workers = pool_workers_count
+    pool = multiprocessing.Pool(processes=workers)
+    results = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
+    pool.close()
+
+    df_model = results[0]
+
+    print('D - Total Elapsed time: %f' % (time.time() - start))
+
+    return df_model
+
 
 def multiprocess_evaluation(args):
     df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters = args

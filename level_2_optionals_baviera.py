@@ -2,13 +2,12 @@ import time
 import sys
 import logging
 import warnings
-import multiprocessing
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
 from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, pool_workers_count
 from level_1_c_data_modelling import model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_evaluation
+from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_model_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload
 pd.set_option('display.expand_frame_repr', False)
@@ -38,6 +37,7 @@ def main():
     metric, metric_threshold = 'roc_auc_curve', 0.75
     # possible_evaluation_metrics: 'roc_auc_curve', 'micro', 'average', 'macro', 'accuracy', 'precision', 'recall', 'classification_report'
     development = 1
+
     ###
 
     number_of_features = 'all'
@@ -199,14 +199,16 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
             df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[best_model_name], train_x, train_y, test_x, test_y, configuration_parameters)
             df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     elif development:
-        start = time.time()
-        workers = pool_workers_count
-        pool = multiprocessing.Pool(processes=workers)
-        results = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
-        pool.close()
-        df_model = results[0]
+        # start = time.time()
+        # workers = pool_workers_count
+        # pool = multiprocessing.Pool(processes=workers)
+        # results = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
+        # pool.close()
+        # df_model = results[0]
 
-        print('A - Total Elapsed time: %f' % (time.time() - start))
+        df_model = multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters)
+
+        # print('A - Total Elapsed time: %f' % (time.time() - start))
 
     feature_contribution(df_model, configuration_parameters)
 
