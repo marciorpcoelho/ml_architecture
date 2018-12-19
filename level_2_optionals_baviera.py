@@ -28,10 +28,7 @@ def main():
 
     ### Options:
     # input_file = 'dbs/' + 'ENCOMENDA.csv'
-    input_file = 'dbs/' + 'full_data_bmw.csv'
-    # input_file = 'dbs/' + 'full_data_bmw_top500000.csv'
-    # input_file = 'dbs/' + 'full_data_bmw_last500000.csv'
-    output_file = 'output/' + 'db_full_baviera.csv'
+    input_file = 'dbs/' + 'full_data_top5000.csv'
 
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
@@ -46,9 +43,9 @@ def main():
     number_of_features = 'all'
     df = data_acquistion(input_file)
     df, train_x, train_y, test_x, test_y = data_processing(df, target_variable, oversample_check, number_of_features)
-    classes, best_models, running_times = data_modelling(df, train_x, train_y, test_x, models, k, gridsearch_score)
+    classes, best_models, running_times = data_modelling(df, train_x, train_y, models, k, gridsearch_score)
     best_model = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features)
-    vehicle_count = deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'], output_file)
+    vehicle_count = deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(vehicle_count)
     error_upload(level_2_optionals_baviera_options.log_files['full_log'])
@@ -87,8 +84,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     if sql_age_comparison(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
         print('Checkpoint not found or too old. Preprocessing data...')
 
-        # print('Number of Vehicles at start', df['Nº Stock'].nunique())
-
         df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
         df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
 
@@ -106,7 +101,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
         df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
-        # print('Number of Vehicles after filter', df['Nº Stock'].nunique())
         df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
         df = color_replacement(df)  # Translates all english colors to portuguese
 
@@ -114,9 +108,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
         df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'A', 'S', 'Custo', 'Versão', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])  # Remove columns not needed atm;
         # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
-
-        # df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
-        # Removes entries of motorcycles (Série), recent car models (Z4), MINI models (MINI) and those whose order is Demonstração and Em Utilização
 
         df = remove_zero_price_total_vhe(df)  # Removes VHE with a price total of 0; ToDo: keep checking up if this is still necessary
         df = remove_rows(df, [df.loc[df['Local da Venda'] == 'DCV - Viat.Toy Viseu', :].index])  # Removes the vehicles sold here, as they are from another brand (Toyota)
@@ -166,7 +157,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
     # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed
 
-    # save_csv([df], ['output/' + 'ENCOMENDA_checkpoint_end_b'])  # Saves a first version of the DF after treatment
     logging.info('Finished Step B.')
 
     performance_info_append(time.time(), 'end_section_b')
@@ -175,7 +165,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     return df, train_x, train_y, test_x, test_y
 
 
-def data_modelling(df, train_x, train_y, test_x, models, k, score):
+def data_modelling(df, train_x, train_y, models, k, score):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
     performance_info_append(time.time(), 'start_section_c')
     logging.info('Started Step C...')
@@ -193,7 +183,7 @@ def data_modelling(df, train_x, train_y, test_x, models, k, score):
 
 
 def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features):
-    print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     performance_info_append(time.time(), 'start_section_d')
     logging.info('Started Step D...')
 
@@ -226,7 +216,7 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     return df_model
 
 
-def deployment(df, db, view, output_file):
+def deployment(df, db, view):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step E...')
     performance_info_append(time.time(), 'start_section_e')
     logging.info('Started Step E...')
@@ -234,7 +224,6 @@ def deployment(df, db, view, output_file):
     df = pd.read_csv('output/' + 'db_final_classification_gc.csv', index_col=0)
 
     df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
-    # sql_truncate(db, view)
 
     sql_inject(df, db, view, level_2_optionals_baviera_options.columns_for_sql, truncate=1)
 

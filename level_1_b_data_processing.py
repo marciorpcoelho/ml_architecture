@@ -55,6 +55,7 @@ def remove_columns(df, columns):
         try:
             df.drop([column], axis=1, inplace=True)
         except KeyError:
+            performance_warnings_append('Column Deletion Warning - Column ' + str(column) + ' not found.')
             continue
 
     return df
