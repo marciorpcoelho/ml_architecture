@@ -3,6 +3,7 @@ import numpy as np
 import datetime
 import pickle
 import time
+import logging
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
@@ -95,7 +96,7 @@ def model_training(models, train_x, train_y, k, score):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
 
     for model in models:
-        print('MODEL:', model)
+        logging.info('MODEL:', model)
         if model != 'voting':
             start = time.time()
             clf = ClassificationTraining(clf=classification_models[model][0])

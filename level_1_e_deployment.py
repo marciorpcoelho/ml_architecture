@@ -1,6 +1,7 @@
 import os
 import time
 import pyodbc
+import logging
 import pandas as pd
 from datetime import datetime
 from level_2_optionals_baviera_options import update_frequency_days, DSN, UID, PWD
@@ -42,19 +43,19 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
         if check_date:
             time_result = sql_date_comparison(df, database, view, 'Date', time_to_last_update)
             if time_result:
-                print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
+                logging.info('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
                 for index, row in df.iterrows():
-                    # continue
-                    cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+                    continue
+                    # cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
                 upload = 1
             elif not time_result:
-                print('Newer data already exists.')
+                logging.info('Newer data already exists.')
                 upload = 0
         if not check_date:
-            print('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
+            logging.info('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
             for index, row in df.iterrows():
-                # continue
-                cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+                continue
+                # cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
             upload = 1
 
         print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
@@ -71,7 +72,7 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
 
 
 def sql_truncate(database, view):
-    print('Truncating view ' + view + ' from DB ' + database)
+    logging.info('Truncating view ' + view + ' from DB ' + database)
     cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
     query = "TRUNCATE TABLE " + view
     cursor = cnxn.cursor()
@@ -112,6 +113,14 @@ def sql_date_checkup(database, view, date_column):
         result_date = datetime.strptime('1960-01-01', '%Y-%m-%d')  # Just in case the database is empty
 
     return result_date
+
+
+def sql_second_highest_date_checkup(database, view, date_column='Date'):
+    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+
+    query = 'with aux as (SELECT MAX([' + str(date_column) + ']) as second_highest_date FROM [' + str(database) + '].dbo.[' + str(view) + '] WHERE [' + str(date_column) + '] < CONVERT(date, GETDATE())) SELECT * FROM [' + str(database) + '].dbo.[' + str(view) + '] cross join aux WHERE [' + str(date_column) + '] = aux.second_highest_date'
+
+    df = pd.read_sql(query, cnxn)
 
 
 def sql_last_update_date(database, view):

@@ -339,6 +339,7 @@ column_checkpoint_sql_renaming = {
     'q1_score_global': 'Q1_Score_Global',
     'q3_score_global': 'Q3_Score_Global',
     'stock_days_class': 'Stock_Days_Class',
+    'Registration_Number': 'Registration_Number',
 }
 
 log_files = {

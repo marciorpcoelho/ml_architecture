@@ -165,7 +165,7 @@ def feature_contribution(df, configuration_parameters):
                         p_c1_f1 = c1_f1 / f1 * 1.
                         p_c1_f0 = c1_f0 / f0 * 1.
                     except ZeroDivisionError:
-                        print('Insufficient data for feature ' + str(feature) + ' and value ' + str(value) + '.')
+                        logging.warning('Insufficient data for feature ' + str(feature) + ' and value ' + str(value) + '.')
                         continue
 
                     differences_non_boolean.append(p_c1_f1 - p_c1_f0)
@@ -252,14 +252,17 @@ def df_decimal_places_rounding(df, dictionary):
 
 def model_choice(df_results, metric, threshold):
 
-    # try:
-    best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'running_time']].idxmax().head(1).values[0]
-    best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'running_time']].max().head(1).values[0]
+    # # try:
+    best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
+    best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].max().head(1).values[0]
     return best_model_name, best_model_value
-    #  ToDo Need to include the try/except conditions again
-    #  ToDO Need to add an exit condition when there's no better model/below minimum threshold
-    # except ValueError:
-    #     logging.info('No models above minimum performance threshold.')
+    # #  ToDo Need to include the try/except conditions again
+    # #  ToDO Need to add an exit condition when there's no better model/below minimum threshold
+    # # except ValueError:
+    # #     logging.info('No models above minimum performance threshold.')
+
+    # try:
+    #     sql_date_checkup(sql_info['database'], sql_info['performance_algorithm_results'], 'Date')
 
 
 def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):
@@ -295,39 +298,23 @@ def save_fig(name, save_dir='output/'):
     plt.savefig(save_dir + str(name) + '.pdf')
 
 
-def model_comparison(best_model_name, best_model_value, metric):
-    # Assumes comparison between the same metrics;
-
-    name = 'place_holder'
-
-    try:
-        old_results = pd.read_csv('output/' + name)  # ToDo: The name of the file should reflect the last time it was ran
-        if old_results[old_results.loc[:, metric].gt(best_model_value)].shape[0]:
-            logging.warning('Previous results are better than current ones - Will maintain.')
-            return 0
-        else:
-            logging.info('Current results are better than previous ones - Will replace.')
-            return 1
-    except FileNotFoundError:
-        logging.info('No previous results found.')
-        return 1
-
-
-# def multiprocess_evaluation(conn, df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters):
+# def model_comparison(best_model_name, best_model_value, metric):
+#     # Assumes comparison between the same metrics;
 #
-#     start = time.time()
-#     print('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
-#     train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
-#     proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
-#     df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
-#     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
-#     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
-#     conn.send(df_model)
-#     # df_model = pd.DataFrame()
-#     conn.close()
-#     print(model_name + ' - Elapsed time: %f' % (time.time() - start))
+#     name = 'place_holder'
 #
-#     return df_model
+#     try:
+#         old_results = pd.read_csv('output/' + name)  # ToDo: The name of the file should reflect the last time it was ran
+#         if old_results[old_results.loc[:, metric].gt(best_model_value)].shape[0]:
+#             logging.warning('Previous results are better than current ones - Will maintain.')
+#             return 0
+#         else:
+#             logging.info('Current results are better than previous ones - Will replace.')
+#             return 1
+#     except FileNotFoundError:
+#         logging.info('No previous results found.')
+#         return 1
+
 
 def multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters):
     start = time.time()
@@ -335,27 +322,26 @@ def multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, 
     pool = multiprocessing.Pool(processes=workers)
     results = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
     pool.close()
-
-    df_model = results[0]
+    df_model_dict = {key: value for (key, value) in results}
 
     print('D - Total Elapsed time: %f' % (time.time() - start))
 
-    return df_model
+    return df_model_dict
 
 
 def multiprocess_evaluation(args):
     df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters = args
 
     start = time.time()
-    print('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
+    logging.info('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
     train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
     proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
     df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
-    print(model_name + ' - Elapsed time: %f' % (time.time() - start))
+    logging.info(model_name + ' - Elapsed time: %f' % (time.time() - start))
 
-    return df_model
+    return model_name, df_model
 
 
 

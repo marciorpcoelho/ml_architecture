@@ -7,7 +7,7 @@ import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
 from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, pool_workers_count
 from level_1_c_data_modelling import model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, model_comparison, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_model_evaluation
+from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_model_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload
 pd.set_option('display.expand_frame_repr', False)
@@ -27,24 +27,22 @@ def main():
 
     ### Options:
     # input_file = 'dbs/' + 'ENCOMENDA.csv'
-    input_file = 'dbs/' + 'full_data_top5000.csv'
+    input_file = 'dbs/' + 'full_data_bmw.csv'
 
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
     models = ['dt', 'rf', 'lr', 'ab', 'gc', 'ann', 'voting']
     k = 10  # Stratified Cross-Validation number of Folds
     gridsearch_score = 'recall'  # Metric on which to optimize GridSearchCV
-    metric, metric_threshold = 'roc_auc_curve', 0.75
-    # possible_evaluation_metrics: 'roc_auc_curve', 'micro', 'average', 'macro', 'accuracy', 'precision', 'recall', 'classification_report'
-    development = 1
-
+    metric, metric_threshold = 'ROC_Curve', 0.70
+    # possible_evaluation_metrics: 'ROC_Curve', 'Micro_F1', 'Average_F1', 'Macro_F1', 'Accuracy', 'Precision'
     ###
 
     number_of_features = 'all'
     df = data_acquistion(input_file)
     df, train_x, train_y, test_x, test_y = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, train_x, train_y, models, k, gridsearch_score)
-    best_model = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features)
+    best_model = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features)
     vehicle_count = deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(vehicle_count)
@@ -82,10 +80,9 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     logging.info('Started Step B...')
 
     if sql_age_comparison(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
-        print('Checkpoint not found or too old. Preprocessing data...')
+        logging.info('Checkpoint not found or too old. Preprocessing data...')
 
         df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
-        df = remove_rows(df, [df.loc[df['Opcional'] == 'preço de venda', :].index])  # Removes the rows with "Preço de Venda"
 
         dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
                                    ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
@@ -94,7 +91,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
                                    ('Interior', 'champag'): 'champagne', ('Interior', 'cri'): 'crimson', ('Modelo', 'Enter Model Details'): ''}
 
         df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
-        df = remove_columns(df, ['CdInt', 'CdCor'])  # Columns that have missing values which are needed
         df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
         df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'], 0)  # Creates new columns filled with zeros, which will be filled in the future
@@ -106,7 +102,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         df = total_price(df)  # Creates a new column with the total cost for each configuration;
         df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
-        df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'A', 'S', 'Custo', 'Versão', 'Vendedor', 'Canal de Venda', 'Tipo Encomenda'])  # Remove columns not needed atm;
+        df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'Custo', 'Versão', 'Tipo Encomenda'])  # Remove columns not needed atm;
         # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
 
         df = remove_zero_price_total_vhe(df)  # Removes VHE with a price total of 0; ToDo: keep checking up if this is still necessary
@@ -182,7 +178,7 @@ def data_modelling(df, train_x, train_y, models, k, score):
     return classes, best_models, running_times
 
 
-def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, development, number_of_features):
+def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     performance_info_append(time.time(), 'start_section_d')
     logging.info('Started Step D...')
@@ -192,13 +188,13 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     # save_csv([results_training, results_test], ['output/' + 'model_performance_train_df_' + str(number_of_features), 'output/' + 'model_performance_test_df_' + str(number_of_features)])
     plot_roc_curve(best_models, models, train_x, train_y, test_x, test_y, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
 
-    if not development:
-        best_model_name, best_model_value = model_choice(results_test, metric, metric_threshold)  # Chooses the best model based a chosen metric/threshold
-        if model_comparison(best_model_name, best_model_value, metric):  # Compares the best model from the previous step with the already existing result - only compares within the same metric
-            proba_training, proba_test = probability_evaluation(best_model_name, best_models, train_x, test_x)
-            df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[best_model_name], train_x, train_y, test_x, test_y, configuration_parameters)
-            df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
-    elif development:
+    # if not development:
+    #     best_model_name, best_model_value = model_choice(results_test, metric, metric_threshold)  # Chooses the best model based a chosen metric/threshold
+    #     if model_comparison(best_model_name, best_model_value, metric):  # Compares the best model from the previous step with the already existing result - only compares within the same metric
+    #         proba_training, proba_test = probability_evaluation(best_model_name, best_models, train_x, test_x)
+    #         df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[best_model_name], train_x, train_y, test_x, test_y, configuration_parameters)
+    #         df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
+    # elif development:
         # start = time.time()
         # workers = pool_workers_count
         # pool = multiprocessing.Pool(processes=workers)
@@ -206,16 +202,20 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
         # pool.close()
         # df_model = results[0]
 
-        df_model = multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters)
+    # print('A - Total Elapsed time: %f' % (time.time() - start))
 
-        # print('A - Total Elapsed time: %f' % (time.time() - start))
+    df_model_dict = multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters)
+    best_model_name, _ = model_choice(results_test, metric, metric_threshold)
+    print(best_model_name)
+    best_model = df_model_dict[best_model_name]
 
-    feature_contribution(df_model, configuration_parameters)
+    feature_contribution(best_model, configuration_parameters)
 
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
     logging.info('Finished Step D.')
+
     performance_info_append(time.time(), 'end_section_d')
-    return df_model
+    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
+    return best_model
 
 
 def deployment(df, db, view):
@@ -223,7 +223,7 @@ def deployment(df, db, view):
     performance_info_append(time.time(), 'start_section_e')
     logging.info('Started Step E...')
 
-    df = pd.read_csv('output/' + 'db_final_classification_gc.csv', index_col=0)
+    # df = pd.read_csv('output/' + 'db_final_classification_gc.csv', index_col=0)
 
     df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
 
