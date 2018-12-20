@@ -25,8 +25,8 @@ def performance_info(vehicle_count):
 
     df_performance, df_warnings = pd.DataFrame(), pd.DataFrame()
     if not len(warnings_global):
-        df_warnings['Warnings'] = 0
-        df_warnings['Warning_Flag'] = 0
+        df_warnings['Warnings'] = [0]
+        df_warnings['Warning_Flag'] = [0]
     else:
         df_warnings['Warnings'] = warnings_global
         df_warnings['Warning_Flag'] = [1] * len(warnings_global)
