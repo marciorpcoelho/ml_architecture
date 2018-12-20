@@ -19,7 +19,7 @@ logging.Logger('errors')
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
 
 configuration_parameters = ['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Farois_LED', 'Farois_Xenon', 'Jantes_new', 'Modelo_new', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior_new', 'Versao_new']
-performance_list = []
+running_times_upload_flag = 1
 
 
 def main():
@@ -46,7 +46,7 @@ def main():
     best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features)
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
-    performance_info(vehicle_count)
+    performance_info(vehicle_count, running_times_upload_flag)
     error_upload(level_2_optionals_baviera_options.log_files['full_log'])
 
     logging.info('Finished - Project: Baviera Stock Optimization\n')
@@ -138,6 +138,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_columns(df, ['Date'])
 
     else:
+        running_times_upload_flag = 0
         logging.info('Checkpoint Found. Retrieving data...')
         df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))

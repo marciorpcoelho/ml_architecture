@@ -21,7 +21,7 @@ def performance_warnings_append(warning):
     warnings_global.append(warning)
 
 
-def performance_info(vehicle_count):
+def performance_info(vehicle_count, running_times_upload_flag):
 
     df_performance, df_warnings = pd.DataFrame(), pd.DataFrame()
     if not len(warnings_global):
@@ -40,7 +40,8 @@ def performance_info(vehicle_count):
 
     df_performance = level_1_b_data_processing.column_rename(df_performance, list(column_performance_sql_renaming.keys()), list(column_performance_sql_renaming.values()))
 
-    sql_inject(df_performance, sql_info['database'], sql_info['performance_running_time'], list(df_performance), time_to_last_update=0, check_date=1)
+    if running_times_upload_flag:
+        sql_inject(df_performance, sql_info['database'], sql_info['performance_running_time'], list(df_performance), time_to_last_update=0, check_date=1)
     sql_inject(df_warnings, sql_info['database'], sql_info['warning_log'], list(df_warnings), time_to_last_update=0, check_date=1)
 
 
