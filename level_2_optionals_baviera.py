@@ -11,7 +11,6 @@ from level_1_d_model_evaluation import performance_evaluation, model_choice, plo
 from level_1_e_deployment import sql_inject, sql_age_comparison
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload
 pd.set_option('display.expand_frame_repr', False)
-warnings.filterwarnings('ignore')  # ToDO: remove this line
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=level_2_optionals_baviera_options.log_files['full_log'], filemode='a')
 logging.Logger('errors')
@@ -191,7 +190,7 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     plot_roc_curve(best_models, models, train_x, train_y, test_x, test_y, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
 
     df_model_dict = multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters)
-    best_model_name, section_e_upload_flag = model_choice(results_test, metric, metric_threshold)
+    best_model_name, _, section_e_upload_flag = model_choice(results_test, metric, metric_threshold)
 
     if not section_e_upload_flag:
         best_model = None

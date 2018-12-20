@@ -30,6 +30,7 @@ sql_info = {
     'final_table': 'VHE_Fact_BI_OrderOptimization',
     'error_log': 'LOG_Performance_Errors',
     'warning_log': 'LOG_Performance_Warnings',
+    'model_choices': 'LOG_Performance_Model_Choices',
 }
 
 # Old Cor_Exterior

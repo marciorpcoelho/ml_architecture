@@ -269,9 +269,28 @@ def model_choice(df_results, metric, threshold):
 
     except ValueError:
         logging.info('No value above minimum threshold (%.3f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.')
-        best_model_name = None
+        best_model_name, best_model_value = None, 0
 
-    return best_model_name, step_e_upload_flag
+    model_choice_upload(best_model_name, best_model_value, metric)
+
+    return best_model_name, best_model_value, step_e_upload_flag
+
+
+def model_choice_upload(name, value, metric):
+    df_model_result = pd.DataFrame(columns={'Chosen_Model', 'Metric', 'Value', 'Message'})
+
+    if name is None:
+        df_model_result['Chosen_Model'] = []
+        df_model_result['Metric'] = []
+        df_model_result['Value'] = []
+        df_model_result['Message'] = ['Previous Model chosen had better performance than current one.']
+    else:
+        df_model_result['Chosen_Model'] = [name]
+        df_model_result['Metric'] = [metric]
+        df_model_result['Value'] = [value]
+        df_model_result['Message'] = ['Last model replaced by new model.']
+
+    sql_inject(df_model_result, sql_info['database'], sql_info['model_choices'], list(df_model_result), check_date=1)
 
 
 def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):
