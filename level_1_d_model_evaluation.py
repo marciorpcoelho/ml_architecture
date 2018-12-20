@@ -296,7 +296,7 @@ def model_choice_upload(name, value, metric):
 def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):
     plt.subplots(figsize=(800 / my_dpi, 800 / my_dpi), dpi=my_dpi)
     for model in models_name:
-        prob_train_init = models[model].fit(train_x, train_y).predict_proba(test_x)
+        prob_train_init = models[model].fit(train_x, train_y[list(train_y)[0]]).predict_proba(test_x)
         prob_test_1 = [x[1] for x in prob_train_init]
         fpr, tpr, _ = roc_curve(test_y, prob_test_1, pos_label=1)
         roc_auc = auc(fpr, tpr)

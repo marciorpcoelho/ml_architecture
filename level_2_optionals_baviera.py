@@ -1,11 +1,10 @@
 import time
 import sys
 import logging
-import warnings
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
-from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, pool_workers_count
+from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
@@ -147,7 +146,10 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     df_ohe = df.copy(deep=True)  # Creates a copy of the original df
     df_ohe = ohe(df_ohe, ohe_cols)  # Creates the OHE for columns in ohe_cols
 
-    sel_columns, removed_columns = feature_selection(df_ohe, configuration_parameters, target_variable, number_of_features)
+    if type(number_of_features) != str:
+        sel_columns, removed_columns = feature_selection(df_ohe, configuration_parameters, target_variable, number_of_features)
+    else:
+        removed_columns = []
 
     df_ohe = remove_columns(df_ohe, removed_columns)
 
