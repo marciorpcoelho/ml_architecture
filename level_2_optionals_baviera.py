@@ -31,7 +31,8 @@ def main():
 
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
-    models = ['dt', 'rf', 'lr', 'ab', 'gc', 'ann', 'voting']
+    models = ['dt', 'rf', 'lr', 'ab', 'gc', 'voting']
+    # models = ['dt', 'rf', 'lr', 'ab', 'gc', 'ann', 'voting']
     k = 10  # Stratified Cross-Validation number of Folds
     gridsearch_score = 'recall'  # Metric on which to optimize GridSearchCV
     metric, metric_threshold = 'ROC_Curve', 0.70

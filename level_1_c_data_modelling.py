@@ -96,7 +96,7 @@ def model_training(models, train_x, train_y, k, score):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
 
     for model in models:
-        logging.info('MODEL:', model)
+        logging.info('MODEL: ' + model)
         if model != 'voting':
             start = time.time()
             clf = ClassificationTraining(clf=classification_models[model][0])
