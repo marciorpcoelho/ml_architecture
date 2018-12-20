@@ -7,7 +7,7 @@ import level_2_optionals_baviera_options
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
 from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, pool_workers_count
 from level_1_c_data_modelling import model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation, probability_evaluation, model_choice, plot_roc_curve, add_new_columns_to_df, df_decimal_places_rounding, feature_contribution, multiprocess_model_evaluation
+from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload
 pd.set_option('display.expand_frame_repr', False)
@@ -32,7 +32,7 @@ def main():
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
     models = ['dt', 'rf', 'lr', 'ab', 'gc', 'voting']
-    # models = ['dt', 'rf', 'lr', 'ab', 'gc', 'ann', 'voting']
+    # models = ['dt', 'rf', 'lr', 'ab', 'gc', 'ann', 'voting']  # ANN is currently removed until I manage to make it converge;
     k = 10  # Stratified Cross-Validation number of Folds
     gridsearch_score = 'recall'  # Metric on which to optimize GridSearchCV
     metric, metric_threshold = 'ROC_Curve', 0.70
@@ -43,8 +43,8 @@ def main():
     df = data_acquistion(input_file)
     df, train_x, train_y, test_x, test_y = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, train_x, train_y, models, k, gridsearch_score)
-    best_model = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features)
-    vehicle_count = deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
+    best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features)
+    deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(vehicle_count)
     error_upload(level_2_optionals_baviera_options.log_files['full_log'])
@@ -189,34 +189,19 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     # save_csv([results_training, results_test], ['output/' + 'model_performance_train_df_' + str(number_of_features), 'output/' + 'model_performance_test_df_' + str(number_of_features)])
     plot_roc_curve(best_models, models, train_x, train_y, test_x, test_y, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
 
-    # if not development:
-    #     best_model_name, best_model_value = model_choice(results_test, metric, metric_threshold)  # Chooses the best model based a chosen metric/threshold
-    #     if model_comparison(best_model_name, best_model_value, metric):  # Compares the best model from the previous step with the already existing result - only compares within the same metric
-    #         proba_training, proba_test = probability_evaluation(best_model_name, best_models, train_x, test_x)
-    #         df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[best_model_name], train_x, train_y, test_x, test_y, configuration_parameters)
-    #         df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
-    # elif development:
-        # start = time.time()
-        # workers = pool_workers_count
-        # pool = multiprocessing.Pool(processes=workers)
-        # results = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
-        # pool.close()
-        # df_model = results[0]
-
-    # print('A - Total Elapsed time: %f' % (time.time() - start))
-
     df_model_dict = multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters)
-    best_model_name, _ = model_choice(results_test, metric, metric_threshold)
-    print(best_model_name)
-    best_model = df_model_dict[best_model_name]
+    best_model_name, section_e_upload_flag = model_choice(results_test, metric, metric_threshold)
 
-    feature_contribution(best_model, configuration_parameters)
+    if not section_e_upload_flag:
+        best_model = None
+    else:
+        best_model = df_model_dict[best_model_name]
+        feature_contribution(best_model, configuration_parameters)
 
     logging.info('Finished Step D.')
-
     performance_info_append(time.time(), 'end_section_d')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
-    return best_model
+    return best_model, df.shape[0]
 
 
 def deployment(df, db, view):
@@ -224,17 +209,14 @@ def deployment(df, db, view):
     performance_info_append(time.time(), 'start_section_e')
     logging.info('Started Step E...')
 
-    # df = pd.read_csv('output/' + 'db_final_classification_gc.csv', index_col=0)
-
-    df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
-
-    sql_inject(df, db, view, level_2_optionals_baviera_options.columns_for_sql, truncate=1)
+    if df is not None:
+        df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
+        sql_inject(df, db, view, level_2_optionals_baviera_options.columns_for_sql, truncate=1)
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step E.')
     logging.info('Finished Step E.')
     performance_info_append(time.time(), 'end_section_e')
-
-    return df.shape[0]
+    return
 
 
 if __name__ == '__main__':

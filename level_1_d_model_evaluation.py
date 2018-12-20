@@ -6,7 +6,7 @@ import multiprocessing
 import time
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
-from level_1_e_deployment import sql_inject, save_csv
+from level_1_e_deployment import sql_inject, save_csv, sql_second_highest_date_checkup
 from level_2_optionals_baviera_options import sql_info, pool_workers_count
 pd.set_option('display.expand_frame_repr', False)
 
@@ -251,18 +251,27 @@ def df_decimal_places_rounding(df, dictionary):
 
 
 def model_choice(df_results, metric, threshold):
+    step_e_upload_flag = 0
 
-    # # try:
-    best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
-    best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].max().head(1).values[0]
-    return best_model_name, best_model_value
-    # #  ToDo Need to include the try/except conditions again
-    # #  ToDO Need to add an exit condition when there's no better model/below minimum threshold
-    # # except ValueError:
-    # #     logging.info('No models above minimum performance threshold.')
+    try:
+        # makes sure there are results above minimum threshold
+        best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
+        best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].max().head(1).values[0]
+        logging.info('There are values (' + str(best_model_value) + ') above minimum threshold (' + str(threshold) + ') from algorithm' + str(best_model_name) + '. Will compare with last result in SQL Server...')
 
-    # try:
-    #     sql_date_checkup(sql_info['database'], sql_info['performance_algorithm_results'], 'Date')
+        df_previous_performance_results = sql_second_highest_date_checkup(sql_info['database'], sql_info['performance_algorithm_results'])
+        print(df_previous_performance_results)
+        if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
+            logging.info('Older values have better results in the same metric: ' + str(df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max()) + ' > ' + str(best_model_value) + 'in model' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + 'so will not upload in section E...')
+        else:
+            step_e_upload_flag = 1
+            logging.info('New value is:' + best_model_value + 'and greater than the last value which was:' + df_previous_performance_results[metric].max() + 'for model' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...')
+
+    except ValueError:
+        logging.info('No value above minimum threshold (' + str(threshold) + ') found. Will maintain previous result - No upload in Section E to SQL Server.')
+        best_model_name = None
+
+    return best_model_name, step_e_upload_flag
 
 
 def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):
@@ -296,24 +305,6 @@ def save_fig(name, save_dir='output/'):
 
     plt.savefig(save_dir + str(name) + '.png')
     plt.savefig(save_dir + str(name) + '.pdf')
-
-
-# def model_comparison(best_model_name, best_model_value, metric):
-#     # Assumes comparison between the same metrics;
-#
-#     name = 'place_holder'
-#
-#     try:
-#         old_results = pd.read_csv('output/' + name)  # ToDo: The name of the file should reflect the last time it was ran
-#         if old_results[old_results.loc[:, metric].gt(best_model_value)].shape[0]:
-#             logging.warning('Previous results are better than current ones - Will maintain.')
-#             return 0
-#         else:
-#             logging.info('Current results are better than previous ones - Will replace.')
-#             return 1
-#     except FileNotFoundError:
-#         logging.info('No previous results found.')
-#         return 1
 
 
 def multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters):

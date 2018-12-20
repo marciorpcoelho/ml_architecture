@@ -118,9 +118,18 @@ def sql_date_checkup(database, view, date_column):
 def sql_second_highest_date_checkup(database, view, date_column='Date'):
     cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
 
-    query = 'with aux as (SELECT MAX([' + str(date_column) + ']) as second_highest_date FROM [' + str(database) + '].dbo.[' + str(view) + '] WHERE [' + str(date_column) + '] < CONVERT(date, GETDATE())) SELECT * FROM [' + str(database) + '].dbo.[' + str(view) + '] cross join aux WHERE [' + str(date_column) + '] = aux.second_highest_date'
+    # query = 'with aux as (SELECT MAX([' + str(date_column) + ']) as second_highest_date FROM [' + str(database) + '].dbo.[' + str(view) + '] WHERE [' + str(date_column) + '] < CONVERT(date, GETDATE())) SELECT * FROM [' + str(database) + '].dbo.[' + str(view) + '] cross join aux WHERE [' + str(date_column) + '] = aux.second_highest_date'
+    query = 'with second_date as (SELECT MAX([' + str(date_column) + ']) as max_date ' \
+            'FROM [' + str(database) + '].[dbo].[' + str(view) + '] ' \
+            'WHERE [' + str(date_column) + '] < CONVERT(date, GETDATE())) ' \
+            'SELECT Error_log.* ' \
+            'FROM [' + str(database) + '].[dbo].[' + str(view) + '] as Error_log ' \
+            'cross join second_date ' \
+            'WHERE second_date.max_date = Error_log.[' + str(date_column) + ']'
 
-    df = pd.read_sql(query, cnxn)
+    df = pd.read_sql(query, cnxn, index_col='Algorithms')
+
+    return df
 
 
 def sql_last_update_date(database, view):
