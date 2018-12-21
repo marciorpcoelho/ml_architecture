@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import logging
 import os
 import multiprocessing
 import time
@@ -319,7 +318,7 @@ def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_n
     plt.tight_layout()
     save_fig(save_name, save_dir=save_dir)
     plt.clf()
-    plt.close()
+    # plt.close()
 
 
 def save_fig(name, save_dir='output/'):
@@ -360,7 +359,3 @@ def multiprocess_evaluation(args):
     log_record(model_name + ' - Elapsed time: %f' % (time.time() - start), sql_info['database'], sql_info['log_record'])
 
     return model_name, df_model
-
-
-
-

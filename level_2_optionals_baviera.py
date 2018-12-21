@@ -53,7 +53,6 @@ def main():
 
 
 def data_acquistion(input_file):
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step A...')
     performance_info_append(time.time(), 'start_section_a')
     # logging.info('Started Step A...')
     log_record('Started Step A...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -73,13 +72,11 @@ def data_acquistion(input_file):
     # logging.info('Finished Step A.')
     log_record('Finished Step A.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_a')
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
 
     return df
 
 
 def data_processing(df, target_variable, oversample_check, number_of_features):
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step B...')
     performance_info_append(time.time(), 'start_section_b')
     # logging.info('Started Step B...')
     log_record('Started Step B...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -169,13 +166,11 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     log_record('Finished Step B.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     performance_info_append(time.time(), 'end_section_b')
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step B.')
 
     return df, train_x, train_y, test_x, test_y
 
 
 def data_modelling(df, train_x, train_y, models, k, score):
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
     performance_info_append(time.time(), 'start_section_c')
     # logging.info('Started Step C...')
     log_record('Started Step C...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -185,7 +180,6 @@ def data_modelling(df, train_x, train_y, models, k, score):
     classes, best_models, running_times = model_training(models, train_x, train_y, k, score)  # Training of each referenced model
     save_model(best_models, models)
 
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step C.')
     # logging.info('Finished Step C.')
     log_record('Finished Step C.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_c')
@@ -194,7 +188,6 @@ def data_modelling(df, train_x, train_y, models, k, score):
 
 
 def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features):
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     performance_info_append(time.time(), 'start_section_d')
     # logging.info('Started Step D...')
     log_record('Started Step D...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -216,12 +209,10 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     # logging.info('Finished Step D.')
     log_record('Finished Step D.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_d')
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
     return best_model, df.shape[0]
 
 
 def deployment(df, db, view):
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step E...')
     performance_info_append(time.time(), 'start_section_e')
     # logging.info('Started Step E...')
     log_record('Started Step E...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -230,7 +221,6 @@ def deployment(df, db, view):
         df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
         sql_inject(df, db, view, level_2_optionals_baviera_options.columns_for_sql, truncate=1)
 
-    # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step E.')
     # logging.info('Finished Step E.')
     log_record('Finished Step E.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_e')

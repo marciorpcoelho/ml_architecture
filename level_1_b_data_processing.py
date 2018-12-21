@@ -1,6 +1,4 @@
 import nltk
-import sys
-import logging
 import time
 import warnings
 import numpy as np
@@ -13,7 +11,6 @@ from scipy import stats
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, pool_workers_count, sql_info
-# from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_warnings_append, log_record
 import level_2_optionals_baviera_performance_report_info
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -34,7 +31,8 @@ my_dpi = 96
 # date_cols - Creates new columns (day, month, year) from dateformat columns
 # duplicate_removal - Removes duplicate rows, based on a subset column
 # reindex - Creates a new index for the data frame
-# new_column_creation - Creates new columns with values equal to 0
+# new_column_creation - Creates new columns with values equal to a chosen value
+
 
 # Project Specific Functions:
 # options_scraping - Scrapes the "Options" field from baviera sales, checking for specific words in order to fill the following fields - Navegação, Caixa Automática, Sensores Dianteiros, Cor Interior and Cor Exterior
@@ -159,14 +157,14 @@ def options_scraping(df):
     # print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
 
     df_grouped = df.groupby('Nº Stock')
-    start_nav_all, end_nav_all = [], []
-    start_barras_all, end_barras_all = [], []
+    # start_nav_all, end_nav_all = [], []
+    # start_barras_all, end_barras_all = [], []
     # start_alarme_all, end_alarme_all = [], []
     # start_7_lug_all, end_7_lug_all = [], []
     # start_prot_all, end_prot_all = [], []
     # start_ac_all, end_ac_all = [], []
     # start_teto_all, end_teto_all = [], []
-    duration_sens_all, duration_trans_all, duration_versao_all, duration_farois_all, duration_jantes_all = [], [], [], [], []
+    # duration_sens_all, duration_trans_all, duration_versao_all, duration_farois_all, duration_jantes_all = [], [], [], [], []
     # start_cor_ext_all, end_cor_ext_all = [], []
     # start_cor_int_all, end_cor_int_all = [], []
     # start_int_type_all, end_int_type_all = [], []
@@ -366,7 +364,7 @@ def options_scraping_per_line(args):
         # duration_farois += duration
 
         # Jantes
-        start = time.time()
+        # start = time.time()
         for value in range(15, 21):
             if str(value) in tokenized_options:
                 jantes_size = [str(value)] * group.shape[0]
@@ -698,6 +696,3 @@ def new_column_creation(df, columns, value):
         df.loc[:, column] = value
 
     return df
-
-
-

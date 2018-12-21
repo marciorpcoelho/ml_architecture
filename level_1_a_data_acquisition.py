@@ -2,7 +2,6 @@ import pandas as pd
 import sys
 import time
 import pyodbc
-import logging
 from level_2_optionals_baviera_performance_report_info import log_record
 from level_2_optionals_baviera_options import DSN, UID, PWD, sql_to_code_renaming, sql_info
 from level_1_b_data_processing import column_rename

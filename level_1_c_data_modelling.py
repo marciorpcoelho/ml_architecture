@@ -3,7 +3,6 @@ import numpy as np
 import datetime
 import pickle
 import time
-import logging
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
@@ -27,16 +26,6 @@ class ClassificationTraining(object):
 
     def predict(self, x):
         self.grid.predict(x)
-
-    # ToDo: Remove following comments?
-    # def grid_performance(self, prediction, y):
-    #     self.micro = f1_score(y, prediction, average='micro', labels=np.unique(prediction))
-    #     # self.average = f1_score(y, prediction, average='weighted', labels=np.unique(prediction))
-    #     self.macro = f1_score(y, prediction, average='macro', labels=np.unique(prediction))
-    #     self.accuracy = accuracy_score(y, prediction)
-    #     # self.precision = precision_score(y, prediction, average=None)
-    #     # self.recall = recall_score(y, prediction, average=None)
-    #     self.class_report = classification_report(y, prediction)
 
     def feature_importance(self):
         return self.clf.feature_importances_
