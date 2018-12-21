@@ -47,7 +47,7 @@ def main():
     performance_info(vehicle_count, running_times_upload_flag)
     error_upload(level_2_optionals_baviera_options.log_files['full_log'])
 
-    logging.info('Finished - Project: Baviera Stock Optimization\n')
+    logging.info('Finished Successfully - Project: Baviera Order Optimization.\n')
 
 
 def data_acquistion(input_file):
@@ -227,3 +227,4 @@ if __name__ == '__main__':
     except Exception as exception:
         logging.exception('#')
         error_upload(level_2_optionals_baviera_options.log_files['full_log'], error_flag=1)
+        logging.info('Failed - Project: Baviera Order Optimization.')

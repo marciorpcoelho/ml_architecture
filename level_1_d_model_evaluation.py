@@ -257,18 +257,18 @@ def model_choice(df_results, metric, threshold):
         # makes sure there are results above minimum threshold
         best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
         best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].max().head(1).values[0]
-        logging.info('There are values (%.3f' % best_model_value + ') above minimum threshold (' + str(threshold) + ') from algorithm ' + str(best_model_name) + '. Will compare with last result in SQL Server...')
+        logging.info('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(threshold) + '). Will compare with last result in SQL Server...')
 
         df_previous_performance_results = sql_second_highest_date_checkup(sql_info['database'], sql_info['performance_algorithm_results'])
         print(df_previous_performance_results)
         if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
-            logging.info('Older values have better results in the same metric: %.3f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.3f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...')
+            logging.info('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...')
         else:
             step_e_upload_flag = 1
-            logging.info('New value is: %.3f' % best_model_value + ' and greater than the last value which was: %.3f' % df_previous_performance_results[metric].max() + 'for model' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...')
+            logging.info('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + 'for model' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...')
 
     except ValueError:
-        logging.info('No value above minimum threshold (%.3f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.')
+        logging.info('No value above minimum threshold (%.4f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.')
         best_model_name, best_model_value = None, 0
 
     model_choice_upload(best_model_name, best_model_value, metric)
@@ -290,7 +290,7 @@ def model_choice_upload(name, value, metric):
         df_model_result['Value'] = [value]
         df_model_result['Message'] = ['Last model replaced by new model.']
 
-    sql_inject(df_model_result, sql_info['database'], sql_info['model_choices'], list(df_model_result), check_date=1)
+    sql_inject(df_model_result, sql_info['database'], sql_info['model_choices'], list(df_model_result), time_to_last_update=0, check_date=1)
 
 
 def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):
