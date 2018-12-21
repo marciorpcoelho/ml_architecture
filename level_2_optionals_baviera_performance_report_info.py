@@ -1,7 +1,10 @@
 import pandas as pd
 import re
-from level_2_optionals_baviera_options import sql_info, column_performance_sql_renaming, regex_dict
-from level_1_e_deployment import sql_inject
+import logging
+# from level_2_optionals_baviera_options import sql_info, column_performance_sql_renaming, regex_dict
+import level_2_optionals_baviera_options
+# from level_1_e_deployment import sql_inject, sql_log_inject
+import level_1_e_deployment
 import level_1_b_data_processing
 pd.set_option('display.expand_frame_repr', False)
 
@@ -38,11 +41,11 @@ def performance_info(vehicle_count, running_times_upload_flag):
         else:
             df_performance[step] = [timings] * vehicle_count
 
-    df_performance = level_1_b_data_processing.column_rename(df_performance, list(column_performance_sql_renaming.keys()), list(column_performance_sql_renaming.values()))
+    df_performance = level_1_b_data_processing.column_rename(df_performance, list(level_2_optionals_baviera_options.column_performance_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_performance_sql_renaming.values()))
 
     if running_times_upload_flag:
-        sql_inject(df_performance, sql_info['database'], sql_info['performance_running_time'], list(df_performance), time_to_last_update=0, check_date=1)
-    sql_inject(df_warnings, sql_info['database'], sql_info['warning_log'], list(df_warnings), time_to_last_update=0, check_date=1)
+        level_1_e_deployment.sql_inject(df_performance, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['performance_running_time'], list(df_performance), time_to_last_update=0, check_date=1)
+    level_1_e_deployment.sql_inject(df_warnings, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['warning_log'], list(df_warnings), time_to_last_update=0, check_date=1)
 
 
 def error_upload(log_file, error_flag=0):
@@ -50,10 +53,10 @@ def error_upload(log_file, error_flag=0):
 
     if error_flag:
         error_full, error_only = parse_line(log_file)
-        rx = re.compile(regex_dict['between_quotes'])
+        rx = re.compile(level_2_optionals_baviera_options.regex_dict['between_quotes'])
         error_files = rx.findall(error_full[0])
 
-        rx = re.compile(regex_dict['lines_number'])
+        rx = re.compile(level_2_optionals_baviera_options.regex_dict['lines_number'])
         error_line_number = rx.findall(error_full[0])
 
         error_line_number = [x.replace(',', '').replace(' ', '') for x in error_line_number]
@@ -68,16 +71,29 @@ def error_upload(log_file, error_flag=0):
     elif not error_flag:
         df_error.loc[0, :] = ['', '', '', '', 0]
 
-    sql_inject(df_error, sql_info['database'], sql_info['error_log'], list(df_error), time_to_last_update=0, check_date=1)
+    level_1_e_deployment.sql_inject(df_error, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['error_log'], list(df_error), time_to_last_update=0, check_date=1)
 
 
 def parse_line(file_path):
     with open(file_path, 'r') as file:
         content = file.read()
-        rx = re.compile(regex_dict['error_only'])
+        rx = re.compile(level_2_optionals_baviera_options.regex_dict['error_only'])
         error_only = rx.findall(content)
 
-        rx = re.compile(regex_dict['error_full'])
+        rx = re.compile(level_2_optionals_baviera_options.regex_dict['error_full'])
         error_full = rx.findall(content.replace('\n', ' '))
 
         return error_full, error_only
+
+
+def log_record(message, database, view, flag=0):
+    # flag code: message: 0, warning: 1, error: 2
+
+    if flag == 0:
+        logging.info(message)
+    elif flag == 1:
+        logging.warning(message)
+    elif flag == 2:
+        logging.exception('#')
+
+    level_1_e_deployment.sql_log_inject(message, flag, database, view)

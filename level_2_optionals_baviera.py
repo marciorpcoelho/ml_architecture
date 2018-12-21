@@ -3,12 +3,12 @@ import sys
 import logging
 import pandas as pd
 import level_2_optionals_baviera_options
+from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload, log_record
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
 from level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
-from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload
 pd.set_option('display.expand_frame_repr', False)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=level_2_optionals_baviera_options.log_files['full_log'], filemode='a')
@@ -21,11 +21,12 @@ running_times_upload_flag = 1
 
 
 def main():
-    logging.info('Project: Baviera Stock Optimization')
+    # logging.info('Project: Baviera Stock Optimization')
+    log_record('Project: Baviera Stock Optimization', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     ### Options:
     # input_file = 'dbs/' + 'ENCOMENDA.csv'
-    input_file = 'dbs/' + 'full_data_bmw.csv'
+    input_file = 'dbs/' + 'full_data_bmw_top500000.csv'
 
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
@@ -47,13 +48,16 @@ def main():
     performance_info(vehicle_count, running_times_upload_flag)
     error_upload(level_2_optionals_baviera_options.log_files['full_log'])
 
-    logging.info('Finished Successfully - Project: Baviera Order Optimization.\n')
+    # logging.info('Finished Successfully - Project: Baviera Order Optimization.\n')
+    log_record('Finished Successfully - Project: Baviera Order Optimization.\n', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
 
 def data_acquistion(input_file):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step A...')
     performance_info_append(time.time(), 'start_section_a')
-    logging.info('Started Step A...')
+    # logging.info('Started Step A...')
+    log_record('Started Step A...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
+
 
     # column_renaming = 0
     # try:
@@ -66,7 +70,8 @@ def data_acquistion(input_file):
     except UnicodeDecodeError:
         df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
 
-    logging.info('Finished Step A.')
+    # logging.info('Finished Step A.')
+    log_record('Finished Step A.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_a')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step A.')
 
@@ -76,10 +81,12 @@ def data_acquistion(input_file):
 def data_processing(df, target_variable, oversample_check, number_of_features):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step B...')
     performance_info_append(time.time(), 'start_section_b')
-    logging.info('Started Step B...')
+    # logging.info('Started Step B...')
+    log_record('Started Step B...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     if sql_age_comparison(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
-        logging.info('Checkpoint not found or too old. Preprocessing data...')
+        # logging.info('Checkpoint not found or too old. Preprocessing data...')
+        log_record('Checkpoint not found or too old. Preprocessing data...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
         df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior'])  # Lowercases the strings of these columns
 
@@ -128,7 +135,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
         # df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])  # Converts all the mentioned columns to their respective Z-Score
 
-        logging.info('Checkpoint B.1...')
+        # logging.info('Checkpoint B.1...')
+        log_record('Checkpoint B.1...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
         performance_info_append(time.time(), 'checkpoint_b1')
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         sql_inject(df, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), truncate=1, check_date=1)
@@ -137,7 +145,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
     else:
         running_times_upload_flag = 0
-        logging.info('Checkpoint Found. Retrieving data...')
+        # logging.info('Checkpoint Found. Retrieving data...')
+        log_record('Checkpoint Found. Retrieving data...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
         df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))
 
@@ -156,7 +165,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
     # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed
 
-    logging.info('Finished Step B.')
+    # logging.info('Finished Step B.')
+    log_record('Finished Step B.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     performance_info_append(time.time(), 'end_section_b')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step B.')
@@ -167,7 +177,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 def data_modelling(df, train_x, train_y, models, k, score):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step C...')
     performance_info_append(time.time(), 'start_section_c')
-    logging.info('Started Step C...')
+    # logging.info('Started Step C...')
+    log_record('Started Step C...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     df.sort_index(inplace=True)
 
@@ -175,7 +186,8 @@ def data_modelling(df, train_x, train_y, models, k, score):
     save_model(best_models, models)
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step C.')
-    logging.info('Finished Step C.')
+    # logging.info('Finished Step C.')
+    log_record('Finished Step C.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_c')
 
     return classes, best_models, running_times
@@ -184,7 +196,8 @@ def data_modelling(df, train_x, train_y, models, k, score):
 def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step D...')
     performance_info_append(time.time(), 'start_section_d')
-    logging.info('Started Step D...')
+    # logging.info('Started Step D...')
+    log_record('Started Step D...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
     # in the provided pdf
@@ -200,7 +213,8 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
         best_model = df_model_dict[best_model_name]
         feature_contribution(best_model, configuration_parameters)
 
-    logging.info('Finished Step D.')
+    # logging.info('Finished Step D.')
+    log_record('Finished Step D.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_d')
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step D.')
     return best_model, df.shape[0]
@@ -209,14 +223,16 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
 def deployment(df, db, view):
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Started Step E...')
     performance_info_append(time.time(), 'start_section_e')
-    logging.info('Started Step E...')
+    # logging.info('Started Step E...')
+    log_record('Started Step E...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     if df is not None:
         df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
         sql_inject(df, db, view, level_2_optionals_baviera_options.columns_for_sql, truncate=1)
 
     # print(time.strftime("%H:%M:%S @ %d/%m/%y"), '- Finished Step E.')
-    logging.info('Finished Step E.')
+    # logging.info('Finished Step E.')
+    log_record('Finished Step E.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_e')
     return
 
@@ -225,6 +241,9 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as exception:
-        logging.exception('#')
+        # logging.exception('#')
+        log_record(exception.args[0], level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'], flag=2)
+
         error_upload(level_2_optionals_baviera_options.log_files['full_log'], error_flag=1)
-        logging.info('Failed - Project: Baviera Order Optimization.')
+        # logging.info('Failed - Project: Baviera Order Optimization.')
+        log_record('Failed - Project: Baviera Order Optimization.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])

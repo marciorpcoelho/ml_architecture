@@ -3,7 +3,8 @@ import sys
 import time
 import pyodbc
 import logging
-from level_2_optionals_baviera_options import DSN, UID, PWD, sql_to_code_renaming
+from level_2_optionals_baviera_performance_report_info import log_record
+from level_2_optionals_baviera_options import DSN, UID, PWD, sql_to_code_renaming, sql_info
 from level_1_b_data_processing import column_rename
 
 
@@ -26,7 +27,8 @@ def log_files(project_name, output_dir='logs/'):
 
 def sql_retrieve_df(database, view, columns='*'):
     start = time.time()
-    logging.info('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...')
+    # logging.info('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...')
+    log_record('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
 
     if columns != '*':
         columns = str(columns)[1:-1].replace('\'', '')

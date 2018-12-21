@@ -4,7 +4,9 @@ import pyodbc
 import logging
 import pandas as pd
 from datetime import datetime
-from level_2_optionals_baviera_options import update_frequency_days, DSN, UID, PWD
+from level_2_optionals_baviera_options import update_frequency_days, DSN, UID, PWD, sql_info
+# from level_2_optionals_baviera_performance_report_info import log_record
+import level_2_optionals_baviera_performance_report_info
 
 
 def save_csv(dfs, names):
@@ -15,6 +17,20 @@ def save_csv(dfs, names):
         if os.path.isfile(name):
             os.remove(name)
         df.to_csv(name)
+
+
+def sql_log_inject(line, flag, database, view):
+
+    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+    cursor = cnxn.cursor()
+    time_tag_date = time.strftime("%Y-%m-%d")
+    time_tag_hour = time.strftime("%H:%M:%S")
+
+    cursor.execute('INSERT INTO [' + str(database) + '].dbo.[' + str(view) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\')')
+
+    cnxn.commit()
+    cursor.close()
+    cnxn.close()
 
 
 def sql_inject(df, database, view, columns, time_to_last_update=update_frequency_days, truncate=0, check_date=0):
@@ -43,19 +59,22 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
         if check_date:
             time_result = sql_date_comparison(df, database, view, 'Date', time_to_last_update)
             if time_result:
-                logging.info('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
+                # logging.info('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
+                level_2_optionals_baviera_performance_report_info.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
                 for index, row in df.iterrows():
-                    # continue
-                    cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+                    continue
+                    # cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
                 upload = 1
             elif not time_result:
-                logging.info('Newer data already exists.')
+                # logging.info('Newer data already exists.')
+                level_2_optionals_baviera_performance_report_info.log_record('Newer data already exists.', sql_info['database'], sql_info['log_record'])
                 upload = 0
         if not check_date:
-            logging.info('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
+            # logging.info('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
+            level_2_optionals_baviera_performance_report_info.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
             for index, row in df.iterrows():
-                # continue
-                cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+                continue
+                # cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
             upload = 1
 
         print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
@@ -72,7 +91,8 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
 
 
 def sql_truncate(database, view):
-    logging.info('Truncating view ' + view + ' from DB ' + database)
+    # logging.info('Truncating view ' + view + ' from DB ' + database)
+    level_2_optionals_baviera_performance_report_info.log_record('Truncating view ' + view + ' from DB ' + database, sql_info['database'], sql_info['log_record'])
     cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
     query = "TRUNCATE TABLE " + view
     cursor = cnxn.cursor()
@@ -112,13 +132,14 @@ def sql_date_checkup(database, view, date_column):
     except TypeError:
         result_date = datetime.strptime('1960-01-01', '%Y-%m-%d')  # Just in case the database is empty
 
+    cursor.close()
+    cnxn.close()
     return result_date
 
 
 def sql_second_highest_date_checkup(database, view, date_column='Date'):
     cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
 
-    # query = 'with aux as (SELECT MAX([' + str(date_column) + ']) as second_highest_date FROM [' + str(database) + '].dbo.[' + str(view) + '] WHERE [' + str(date_column) + '] < CONVERT(date, GETDATE())) SELECT * FROM [' + str(database) + '].dbo.[' + str(view) + '] cross join aux WHERE [' + str(date_column) + '] = aux.second_highest_date'
     query = 'with second_date as (SELECT MAX([' + str(date_column) + ']) as max_date ' \
             'FROM [' + str(database) + '].[dbo].[' + str(view) + '] ' \
             'WHERE [' + str(date_column) + '] < CONVERT(date, GETDATE())) ' \
@@ -129,6 +150,7 @@ def sql_second_highest_date_checkup(database, view, date_column='Date'):
 
     df = pd.read_sql(query, cnxn, index_col='Algorithms')
 
+    cnxn.close()
     return df
 
 
@@ -141,6 +163,7 @@ def sql_last_update_date(database, view):
 
     result = cursor.fetchone()
 
+    cnxn.close()
     return result[1]
 
 

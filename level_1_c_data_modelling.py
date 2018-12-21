@@ -7,7 +7,8 @@ import logging
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
-from level_2_optionals_baviera_options import classification_models
+from level_2_optionals_baviera_performance_report_info import log_record
+from level_2_optionals_baviera_options import classification_models, sql_info
 pd.set_option('display.expand_frame_repr', False)
 
 
@@ -96,7 +97,8 @@ def model_training(models, train_x, train_y, k, score):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
 
     for model in models:
-        logging.info('MODEL: ' + model)
+        # logging.info('MODEL: ' + model)
+        log_record('MODEL: ' + model, sql_info['database'], sql_info['log_record'])
         if model != 'voting':
             start = time.time()
             clf = ClassificationTraining(clf=classification_models[model][0])
