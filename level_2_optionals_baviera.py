@@ -17,7 +17,7 @@ logging.Logger('errors')
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be sesen in the console
 
 # configuration_parameters = ['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Farois_LED', 'Farois_Xenon', 'Jantes_new', 'Modelo_new', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior_new', 'Versao_new']
-configuration_parameters = ['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Farois_LED', 'Farois_Xenon', 'Jantes_new', 'Modelo_new', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior_new']
+configuration_parameters = ['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Farois_LED', 'Farois_Xenon', 'Jantes_new', 'Modelo_new', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior_new']
 running_times_upload_flag = 1
 
 
@@ -98,7 +98,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
         # df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'], 0)  # Creates new columns filled with zeros, which will be filled in the future
-        df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'], 0)  # Creates new columns filled with zeros, which will be filled in the future
+        df = new_column_creation(df, ['Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'AC Auto', 'Teto_Abrir'], 0)  # Creates new columns filled with zeros, which will be filled in the future
 
         dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
         df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
@@ -132,7 +132,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         df = remove_columns(df, ['Prov'])
         # df = new_features_optionals_baviera(df, sel_cols=['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Farois_LED', 'Farois_Xenon', 'Prot.Solar', 'Teto_Abrir', 'Tipo_Interior_new', 'Versao_new', 'Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])  # Creates a series of new features, explained in the provided pdf
-        df = new_features_optionals_baviera(df, sel_cols=['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Farois_LED', 'Farois_Xenon', 'Prot.Solar', 'Teto_Abrir', 'Tipo_Interior_new', 'Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])  # Creates a series of new features, explained in the provided pdf
+        df = new_features_optionals_baviera(df, sel_cols=['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Farois_LED', 'Farois_Xenon', 'Teto_Abrir', 'Tipo_Interior_new', 'Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])  # Creates a series of new features, explained in the provided pdf
 
         global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
         # df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])  # Converts all the mentioned columns to their respective Z-Score
