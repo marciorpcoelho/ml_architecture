@@ -60,8 +60,8 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
                 # logging.info('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
                 level_2_optionals_baviera_performance_report_info.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
                 for index, row in df.iterrows():
-                    # continue
-                    cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+                    continue
+                    # cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
             elif not time_result:
                 # logging.info('Newer data already exists.')
                 level_2_optionals_baviera_performance_report_info.log_record('Newer data already exists.', sql_info['database'], sql_info['log_record'])
@@ -69,8 +69,8 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
             # logging.info('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...')
             level_2_optionals_baviera_performance_report_info.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
             for index, row in df.iterrows():
-                # continue
-                cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+                continue
+                # cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
 
         print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
     except pyodbc.ProgrammingError:
