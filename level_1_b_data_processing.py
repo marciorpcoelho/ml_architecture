@@ -10,6 +10,7 @@ from multiprocessing import Pool
 from scipy import stats
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
+from level_1_e_deployment import sql_string_preparation
 from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, pool_workers_count, sql_info
 import level_2_optionals_baviera_performance_report_info
 warnings.simplefilter('ignore', FutureWarning)
@@ -468,18 +469,49 @@ def column_rename(df, cols_to_replace, new_cols_names):
     return df
 
 
+def constant_columns_removal(df):
+    # print('before --------------------------', df.shape)
+    list_before = list(df)
+    df = df.loc[:, df.apply(pd.Series.nunique) != 1]
+    list_after = list(df)
+    features_removed = [item for item in list_before if item not in list_after]
+    # print('Removed Features', features_removed)
+    columns_string, _ = sql_string_preparation(features_removed)
+    level_2_optionals_baviera_performance_report_info.log_record('Removed the following constant columns: ' + str(), sql_info['database'], sql_info['log_record'], flag=1)
+    level_2_optionals_baviera_performance_report_info.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
+    # print('after --------------------------', df.shape)
+
+    return df[list_after]
+
+
 def col_group(df, columns_to_replace, dictionaries):
     for dictionary in dictionaries:
-        for key in dictionary.keys():
-            df.loc[df[columns_to_replace[dictionaries.index(dictionary)]].isin(dictionary[key]), columns_to_replace[dictionaries.index(dictionary)] + '_new'] = key
-        if df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull().values.any():
-            variable = df.loc[df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull(), columns_to_replace[dictionaries.index(dictionary)]].unique()
-            # logging.warning('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)))
-            level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)), sql_info['database'], sql_info['log_record'], flag=1)
-            # logging.warning('Value(s) not grouped: {}'.format(variable))
-            level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)))
-        df.drop(columns_to_replace[dictionaries.index(dictionary)], axis=1, inplace=True)
+        column = columns_to_replace[dictionaries.index(dictionary)]
+        try:
+            for key in dictionary.keys():
+                df.loc[df[column].isin(dictionary[key]), column + '_new'] = key
+            if df[column + '_new'].isnull().values.any():
+                variable = df.loc[df[column + '_new'].isnull(), column].unique()
+                print('Column Grouping Warning - NaNs detected in: {}'.format(column + '_new, value(s) not grouped: {}'.format(variable)))
+            df.drop(column, axis=1, inplace=True)
+            df.rename(index=str, columns={column + '_new': column}, inplace=True)
+        except KeyError:
+            level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - Column ' + str(column) + ' not found.')
+            level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - Column ' + str(column) + ' not found.', sql_info['database'], sql_info['log_record'], flag=1)
     return df
+
+
+# def col_group(df, columns_to_replace, dictionaries):
+#     for dictionary in dictionaries:
+#         for key in dictionary.keys():
+#             df.loc[df[columns_to_replace[dictionaries.index(dictionary)]].isin(dictionary[key]), columns_to_replace[dictionaries.index(dictionary)] + '_new'] = key
+#         if df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull().values.any():
+#             variable = df.loc[df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull(), columns_to_replace[dictionaries.index(dictionary)]].unique()
+#             level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)), sql_info['database'], sql_info['log_record'], flag=1)
+#             level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)))
+#         df.drop(columns_to_replace[dictionaries.index(dictionary)], axis=1, inplace=True)
+#         df.rename(index=str, columns={columns_to_replace[dictionaries.index(dictionary)] + '_new': columns_to_replace[dictionaries.index(dictionary)]}, inplace=True)
+#     return df
 
 
 def total_price(df):
@@ -503,7 +535,7 @@ def margin_calculation(df):
 
 def prov_replacement(df):
     df.loc[df['Prov'] == 'Viaturas Km 0', 'Prov'] = 'Novos'
-    df.rename({'Prov': 'Prov_new'}, axis=1, inplace=True)
+    # df.rename({'Prov': 'Prov_new'}, axis=1, inplace=True)
 
     return df
 
@@ -668,12 +700,13 @@ def dtype_checkup(train_x_resampled, train_x):
 def ohe(df, cols):
 
     for column in cols:
-        uniques = df[column].unique()
-        for value in uniques:
-            new_column = column + '_' + str(value)
-            df[new_column] = 0
-            df.loc[df[column] == value, new_column] = 1
-        df.drop(column, axis=1, inplace=True)
+        if df[column].nunique() > 2:
+            uniques = df[column].unique()
+            for value in uniques:
+                new_column = column + '_' + str(value)
+                df[new_column] = 0
+                df.loc[df[column] == value, new_column] = 1
+            df.drop(column, axis=1, inplace=True)
 
     return df
 

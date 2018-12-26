@@ -116,13 +116,16 @@ def probability_evaluation(models_name, models, train_x, test_x):
 
 
 def feature_contribution(df, configuration_parameters):
-    configuration_parameters.remove('Modelo_new')
+    # configuration_parameters.remove('Modelo_new')
+    configuration_parameters.remove('Modelo')
     boolean_parameters = [x for x in configuration_parameters if list(df[x].unique()) == [0, 1] or list(df[x].unique()) == [1, 0]]
     non_boolean_parameters = [x for x in configuration_parameters if x not in boolean_parameters]
     df_feature_contribution_total = pd.DataFrame()
 
-    for model in df['Modelo_new'].unique():
-        model_mask = df['Modelo_new'] == model
+    # for model in df['Modelo_new'].unique():
+    for model in df['Modelo'].unique():
+        # model_mask = df['Modelo_new'] == model
+        model_mask = df['Modelo'] == model
         df_model = df.loc[df[model_mask].index, :]
 
         mask_class_1 = df_model['score_class_gt'] == 1
@@ -220,7 +223,8 @@ def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, 
 
     df_grouped = df.groupby(configuration_parameters)
     df = df_grouped.apply(additional_info)
-    df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda_new'])
+    # df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda_new'])
+    df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda'])
     df = df_grouped2.apply(additional_info_local)
 
     return df
