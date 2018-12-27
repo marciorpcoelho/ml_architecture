@@ -491,8 +491,8 @@ def col_group(df, columns_to_replace, dictionaries):
             if df[column + '_new'].isnull().values.any():
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
                 # print('Column Grouping Warning - NaNs detected in: {}'.format(column + '_new, value(s) not grouped: {}'.format(variable)))
-                level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)))
-                level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected from vehicle with VHE_Number' + str(df[df[column + '_new'].isnull()]['Nº Stock']))
+                level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
+                # level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected from vehicle with VHE_Number' + str(df[df[column + '_new'].isnull()]['Nº Stock']))
                 level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)), sql_info['database'], sql_info['log_record'], flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
