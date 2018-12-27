@@ -493,7 +493,7 @@ def col_group(df, columns_to_replace, dictionaries):
                 # print('Column Grouping Warning - NaNs detected in: {}'.format(column + '_new, value(s) not grouped: {}'.format(variable)))
                 level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
                 # level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected from vehicle with VHE_Number' + str(df[df[column + '_new'].isnull()]['Nº Stock']))
-                level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)), sql_info['database'], sql_info['log_record'], flag=1)
+                level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()), sql_info['database'], sql_info['log_record'], flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
         except KeyError:
@@ -701,7 +701,7 @@ def ohe(df, cols):
 
     for column in cols:
         if df[column].nunique() > 2 or df[column].nunique() == 1 and type(df[column].head(1).values[0]) == str:
-            print(column, 'is inside', df[column].head(1).values[0], type(df[column].head(1).values[0]))
+            # print(column, 'is inside', df[column].head(1).values[0], type(df[column].head(1).values[0]))
             uniques = df[column].unique()
             for value in uniques:
                 new_column = column + '_' + str(value)
