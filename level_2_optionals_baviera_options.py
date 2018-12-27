@@ -13,11 +13,14 @@ read_dotenv(dotenv_path)
 margin_threshold = 3.5
 stock_days_threshold = 45
 update_frequency_days = 0
+selected_configuration_parameters = ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+# Full: ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 DSN = os.getenv('DSN')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
 pool_workers_count = cpu_count()
+configuration_parameters_full = ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 # Dictionaries:
 sql_info = {
@@ -192,6 +195,7 @@ sql_to_code_renaming = {
     'Margin': 'Margem',
     'Estimated_Cost': 'Custo',
     'Registration_Number': 'Registration_Number',
+    'Franchise_Code': 'Franchise_Code',
 }
 
 column_sql_renaming = {

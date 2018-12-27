@@ -269,14 +269,13 @@ def model_choice(df_results, metric, threshold):
         log_record('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(threshold) + '). Will compare with last result in SQL Server...', sql_info['database'], sql_info['log_record'])
 
         df_previous_performance_results = sql_second_highest_date_checkup(sql_info['database'], sql_info['performance_algorithm_results'])
-        print(df_previous_performance_results)
         if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
             # logging.info('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...')
             log_record('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...', sql_info['database'], sql_info['log_record'], flag=1)
         else:
             step_e_upload_flag = 1
             # logging.info('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + 'for model' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...')
-            log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + 'for model' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...', sql_info['database'], sql_info['log_record'])
+            log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + ' for model ' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...', sql_info['database'], sql_info['log_record'])
 
     except ValueError:
         # logging.info('No value above minimum threshold (%.4f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.')

@@ -153,8 +153,8 @@ def save_fig(name, save_dir='output/'):
 
 def options_scraping(df):
     # print('before removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
-    df = remove_rows(df, [df[df.Modelo.str.contains('Série')].index, df[df.Modelo.str.contains('Z4')].index, df[df.Modelo.str.contains('i3')].index, df[df.Modelo.str.contains('MINI')].index, df[df['Prov'] == 'Demonstração'].index, df[df['Prov'] == 'Em utilização'].index])
-    df = remove_rows(df, [df[df.Versão.str.contains('Auris')].index, df[df.Versão.str.contains('Yaris')].index, df[df.Versão.str.contains('RAV4')].index, df[df.Versão.str.contains('Prius')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
+    df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index, df[df['Prov'] == 'Demonstração|Em utilização'].index])
+    df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
     # print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
 
     df_grouped = df.groupby('Nº Stock')
@@ -181,7 +181,7 @@ def options_scraping(df):
 
     workers = pool_workers_count
     pool = Pool(processes=workers)
-    results = pool.map(options_scraping_per_line, [(key, group) for (key, group) in df_grouped])
+    results = pool.map(options_scraping_per_group, [(key, group) for (key, group) in df_grouped])
     pool.close()
     df = pd.concat([result for result in results])
     # [start_nav_all.append(result[1]) for result in results]
@@ -241,7 +241,7 @@ def options_scraping(df):
     return df
 
 
-def options_scraping_per_line(args):
+def options_scraping_per_group(args):
     key, group = args
     colors_pt = ['preto', 'branco', 'azul', 'verde', 'tartufo', 'vermelho', 'antracite/vermelho', 'anthtacite/preto', 'preto/laranja/preto/lara', 'prata/cinza', 'cinza', 'preto/silver', 'cinzento', 'prateado', 'prata', 'amarelo', 'laranja', 'castanho', 'dourado', 'antracit', 'antracite/preto', 'antracite/cinza/preto', 'branco/outras', 'antracito', 'antracite', 'antracite/vermelho/preto', 'oyster/preto', 'prata/preto/preto', 'âmbar/preto/pr', 'bege', 'terra', 'preto/laranja', 'cognac/preto',
                  'bronze', 'beige', 'beje', 'veneto/preto', 'zagora/preto', 'mokka/preto', 'taupe/preto', 'sonoma/preto', 'preto/preto', 'preto/laranja/preto', 'preto/vermelho']
@@ -470,16 +470,14 @@ def column_rename(df, cols_to_replace, new_cols_names):
 
 
 def constant_columns_removal(df):
-    # print('before --------------------------', df.shape)
     list_before = list(df)
     df = df.loc[:, df.apply(pd.Series.nunique) != 1]
     list_after = list(df)
     features_removed = [item for item in list_before if item not in list_after]
-    # print('Removed Features', features_removed)
-    columns_string, _ = sql_string_preparation(features_removed)
-    level_2_optionals_baviera_performance_report_info.log_record('Removed the following constant columns: ' + str(), sql_info['database'], sql_info['log_record'], flag=1)
-    level_2_optionals_baviera_performance_report_info.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
-    # print('after --------------------------', df.shape)
+    if len(features_removed):
+        columns_string, _ = sql_string_preparation(features_removed)
+        level_2_optionals_baviera_performance_report_info.log_record('Removed the following constant columns: ' + str(columns_string), sql_info['database'], sql_info['log_record'], flag=1)
+        level_2_optionals_baviera_performance_report_info.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
 
     return df[list_after]
 
@@ -521,7 +519,6 @@ def total_price(df):
 
 
 def remove_zero_price_total_vhe(df):
-    # df.groupby(['case', 'cluster']).filter(lambda x: len(x) > 1)
     df = df.groupby(['Nº Stock']).filter(lambda x: x.price_total != 0)
 
     return df
@@ -700,7 +697,8 @@ def dtype_checkup(train_x_resampled, train_x):
 def ohe(df, cols):
 
     for column in cols:
-        if df[column].nunique() > 2:
+        if df[column].nunique() > 2 or df[column].nunique() == 1 and type(df[column].head(1).values[0]) == str:
+            print(column, 'is inside', df[column].head(1).values[0], type(df[column].head(1).values[0]))
             uniques = df[column].unique()
             for value in uniques:
                 new_column = column + '_' + str(value)
