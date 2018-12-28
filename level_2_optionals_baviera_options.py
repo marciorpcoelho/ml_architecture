@@ -167,18 +167,46 @@ tipo_int_dict = {
     'pele': ['pele'],
     'combinação/interior_m': ['combinação', 'tecido_micro', 0, '0']
 }
+# classification_models = {
+#     'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
+#     'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100, 200, 500, 1000], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
+#     'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear', 'sag', 'saga']}]],
+#     'knn': [neighbors.KNeighborsClassifier, [{'n_neighbors': np.arange(1, 50, 1)}]],
+#     'svm': [svm.SVC, [{'C': np.logspace(-2, 2, 10)}]],
+#     'ab': [AdaBoostClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
+#     'gc': [GradientBoostingClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
+#     'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100]}]],
+#     'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
+#     'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100),  'alpha': [0.0001, 0.001, 0.01, 0.1, 1], 'solver': ['sgd'], 'max_iter': [500]}]],
+#     'voting': [VotingClassifier, [{'voting': ['soft']}]]
+# }
+
 classification_models = {
     'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
     'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100, 200, 500, 1000], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
-    'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear', 'sag', 'saga']}]],
+    'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear']}]],
     'knn': [neighbors.KNeighborsClassifier, [{'n_neighbors': np.arange(1, 50, 1)}]],
     'svm': [svm.SVC, [{'C': np.logspace(-2, 2, 10)}]],
     'ab': [AdaBoostClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
     'gc': [GradientBoostingClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
-    'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100]}]],
+    'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100], 'reg_lambda': [0.0001, 0.001, 0.01, 0.1, 1]}]],
     'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
-    'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100),  'alpha': [0.0001, 0.001, 0.01, 0.1, 1], 'solver': ['sgd'], 'max_iter': [500]}]],
+    'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100), 'solver': ['sgd'], 'max_iter': [1000]}]],
     'voting': [VotingClassifier, [{'voting': ['soft']}]]
+}
+
+dict_models_name_conversion = {
+    'dt': ['Decision Tree'],
+    'rf': ['Random Forest'],
+    'lr': ['Logistic Regression'],
+    'knn': ['KNN'],
+    'svm': ['SVM'],
+    'ab': ['Adaboost'],
+    'xgb': ['XGBoost'],
+    'gc': ['Gradient'],
+    'bayes': ['Bayesian'],
+    'ann': ['ANN'],
+    'voting': ['Voting']
 }
 
 sql_to_code_renaming = {

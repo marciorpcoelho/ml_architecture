@@ -6,24 +6,11 @@ import time
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
 from level_1_e_deployment import sql_inject, save_csv, sql_second_highest_date_checkup
-from level_2_optionals_baviera_options import sql_info, pool_workers_count
+from level_2_optionals_baviera_options import sql_info, pool_workers_count, dict_models_name_conversion
 from level_2_optionals_baviera_performance_report_info import log_record
 pd.set_option('display.expand_frame_repr', False)
 
 my_dpi = 96
-
-dict_models_name_conversion = {
-    'dt': ['Decision Tree'],
-    'rf': ['Random Forest'],
-    'lr': ['Logistic Regression'],
-    'knn': ['KNN'],
-    'svm': ['SVM'],
-    'ab': ['Adaboost'],
-    'gc': ['Gradient'],
-    'bayes': ['Bayesian'],
-    'ann': ['ANN'],
-    'voting': ['Voting']
-}
 
 
 class ClassificationEvaluation(object):

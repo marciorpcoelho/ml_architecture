@@ -57,7 +57,6 @@ def data_acquistion(input_file):
     # logging.info('Started Step A...')
     log_record('Started Step A...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
-
     # column_renaming = 0
     # try:
     #     df = read_csv(column_renaming, input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
