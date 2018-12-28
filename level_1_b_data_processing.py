@@ -700,8 +700,8 @@ def dtype_checkup(train_x_resampled, train_x):
 def ohe(df, cols):
 
     for column in cols:
-        if df[column].nunique() > 2 or df[column].nunique() == 1 and type(df[column].head(1).values[0]) == str:
-            # print(column, 'is inside', df[column].head(1).values[0], type(df[column].head(1).values[0]))
+        if df[column].nunique() > 2 or df[column].nunique() >= 1 and type(df[column].head(1).values[0]) == str:
+            # print(column, 'is inside OHE. Unique count:', df[column].nunique(), type(df[column].head(1).values[0]))
             uniques = df[column].unique()
             for value in uniques:
                 new_column = column + '_' + str(value)

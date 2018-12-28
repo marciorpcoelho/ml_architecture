@@ -6,6 +6,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.naive_bayes import GaussianNB
 from py_dotenv import read_dotenv
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
+import xgboost as xgb
 dotenv_path = 'info.env'
 read_dotenv(dotenv_path)
 
@@ -166,17 +167,17 @@ tipo_int_dict = {
     'pele': ['pele'],
     'combinação/interior_m': ['combinação', 'tecido_micro', 0, '0']
 }
-
 classification_models = {
     'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
-    'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
-    'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear']}]],
+    'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100, 200, 500, 1000], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
+    'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear', 'sag', 'saga']}]],
     'knn': [neighbors.KNeighborsClassifier, [{'n_neighbors': np.arange(1, 50, 1)}]],
     'svm': [svm.SVC, [{'C': np.logspace(-2, 2, 10)}]],
     'ab': [AdaBoostClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
     'gc': [GradientBoostingClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
+    'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100]}]],
     'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
-    'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'alpha': [1e-5], 'solver': ['sgd']}]],
+    'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100),  'alpha': [0.0001, 0.001, 0.01, 0.1, 1], 'solver': ['sgd'], 'max_iter': [500]}]],
     'voting': [VotingClassifier, [{'voting': ['soft']}]]
 }
 
@@ -199,15 +200,10 @@ sql_to_code_renaming = {
 }
 
 column_sql_renaming = {
-        # 'Jantes_new': 'Rims_Size',
         'Jantes': 'Rims_Size',
         'Caixa Auto': 'Auto_Trans',
         'Navegação': 'Navigation',
         'Sensores': 'Park_Front_Sens',
-        # 'Cor_Interior_new': 'Colour_Int',
-        # 'Cor_Exterior_new': 'Colour_Ext',
-        # 'Modelo_new': 'Model_Code',
-        # 'Local da Venda_new': 'Sales_Place',
         'Cor_Interior': 'Colour_Int',
         'Cor_Exterior': 'Colour_Ext',
         'Modelo': 'Model_Code',
@@ -233,8 +229,6 @@ column_sql_renaming = {
         'Farois_LED': 'LED_Lights',
         'Farois_Xenon': 'Xenon_Lights',
         'Prot.Solar': 'Solar_Protection',
-        # 'Tipo_Interior_new': 'Interior_Type',
-        # 'Versao_new': 'Version',
         'Tipo_Interior': 'Interior_Type',
         'Versao': 'Version',
         'average_percentage_margin': 'Average_Margin_Percentage',
@@ -304,15 +298,10 @@ column_performance_sql_renaming = {
 }
 
 column_checkpoint_sql_renaming = {
-    # 'Jantes_new': 'Rims_Size',
     'Jantes': 'Rims_Size',
     'Caixa Auto': 'Auto_Trans',
     'Navegação': 'Navigation',
     'Sensores': 'Park_Front_Sens',
-    # 'Cor_Interior_new': 'Colour_Int',
-    # 'Cor_Exterior_new': 'Colour_Ext',
-    # 'Modelo_new': 'Model_Code',
-    # 'Local da Venda_new': 'Sales_Place',
     'Cor_Interior': 'Colour_Int',
     'Cor_Exterior': 'Colour_Ext',
     'Modelo': 'Model_Code',
@@ -336,8 +325,6 @@ column_checkpoint_sql_renaming = {
     'Farois_LED': 'LED_Lights',
     'Farois_Xenon': 'Xenon_Lights',
     'Prot.Solar': 'Solar_Protection',
-    # 'Tipo_Interior_new': 'Interior_Type',
-    # 'Versao_new': 'Version',
     'Tipo_Interior': 'Interior_Type',
     'Versao': 'Version',
     'Nº Stock': 'Vehicle_Number',

@@ -100,8 +100,8 @@ def performance_evaluation(models, best_models, classes, running_times, train_x,
     df_results_test['Algorithms'] = df_results_test.index
     df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
 
-    df_results_train.to_csv('output/performance_report_wo_versao_protsolar_train.csv')
-    df_results_test.to_csv('output/performance_report_wo_versao_protsolar_test.csv')
+    # df_results_train.to_csv('output/performance_report_wo_versao_protsolar_train.csv')
+    # df_results_test.to_csv('output/performance_report_wo_versao_protsolar_test.csv')
 
     sql_inject(pd.concat([df_results_train, df_results_test]), sql_info['database'], sql_info['performance_algorithm_results'], list(df_results_train), time_to_last_update=0, check_date=1)
 

@@ -31,8 +31,7 @@ def main():
 
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
-    models = ['dt', 'rf', 'lr', 'ab', 'gc', 'voting']
-    # models = ['dt', 'rf', 'lr', 'ab', 'gc', 'ann', 'voting']  # ANN is currently removed until I manage to make it converge;
+    models = ['dt', 'rf', 'lr', 'ab', 'ann', 'gc', 'xgb', 'voting']
     k = 10  # Stratified Cross-Validation number of Folds
     gridsearch_score = 'recall'  # Metric on which to optimize GridSearchCV
     metric, metric_threshold = 'ROC_Curve', 0.70
@@ -169,12 +168,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     log_record('Finished Step B.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     performance_info_append(time.time(), 'end_section_b')
-
-    df.to_csv('output/df.csv')
-    train_x.to_csv('output/train_x.csv')
-    train_y.to_csv('output/train_y.csv')
-    test_x.to_csv('output/test_x.csv')
-    test_y.to_csv('output/test_y.csv')
 
     return df, train_x, train_y, test_x, test_y
 
