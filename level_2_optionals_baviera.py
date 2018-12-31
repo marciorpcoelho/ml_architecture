@@ -42,11 +42,11 @@ def main():
     df = data_acquistion(input_file)
     df, train_x, train_y, test_x, test_y = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, train_x, train_y, models, k, gridsearch_score)
-    best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features)
+    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features)
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
-    performance_info(vehicle_count, running_times_upload_flag)
-    error_upload(level_2_optionals_baviera_options.log_files['full_log'])
+    performance_info(model_choice_message, vehicle_count, running_times_upload_flag)
+    # error_upload(level_2_optionals_baviera_options.log_files['full_log'])
 
     # logging.info('Finished Successfully - Project: Baviera Order Optimization.\n')
     log_record('Finished Successfully - Project: Baviera Order Optimization.\n', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -199,7 +199,7 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     plot_roc_curve(best_models, models, train_x, train_y, test_x, test_y, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
 
     df_model_dict = multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters)
-    best_model_name, _, section_e_upload_flag = model_choice(results_test, metric, metric_threshold)
+    model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(results_test, metric, metric_threshold)
 
     if not section_e_upload_flag:
         best_model = None
@@ -209,8 +209,9 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
 
     # logging.info('Finished Step D.')
     log_record('Finished Step D.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
+
     performance_info_append(time.time(), 'end_section_d')
-    return best_model, df.shape[0]
+    return model_choice_message, best_model, df.shape[0]
 
 
 def deployment(df, db, view):

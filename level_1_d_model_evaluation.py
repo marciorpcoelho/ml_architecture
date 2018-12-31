@@ -259,36 +259,49 @@ def model_choice(df_results, metric, threshold):
         if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
             # logging.info('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...')
             log_record('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...', sql_info['database'], sql_info['log_record'], flag=1)
+            model_choice_flag = 1
         else:
             step_e_upload_flag = 1
             # logging.info('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + 'for model' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...')
             log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + ' for model ' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...', sql_info['database'], sql_info['log_record'])
+            model_choice_flag = 2
 
     except ValueError:
         # logging.info('No value above minimum threshold (%.4f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.')
         log_record('No value above minimum threshold (%.4f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.', sql_info['database'], sql_info['log_record'], flag=1)
-        best_model_name, best_model_value = None, 0
+        model_choice_flag, best_model_name, best_model_value = 0, 0, 0
 
-    model_choice_upload(best_model_name, best_model_value, metric)
+    model_choice_message = model_choice_upload(model_choice_flag, best_model_name, best_model_value, metric)
 
-    return best_model_name, best_model_value, step_e_upload_flag
+    return model_choice_message, best_model_name, best_model_value, step_e_upload_flag
 
 
-def model_choice_upload(name, value, metric):
-    df_model_result = pd.DataFrame(columns={'Chosen_Model', 'Metric', 'Value', 'Message'})
+def model_choice_upload(flag, name, value, metric):
+    df_model_result = pd.DataFrame(columns={'Model_Choice_Flag', 'Chosen_Model', 'Metric', 'Value', 'Message'})
 
-    if name is None:
+    df_model_result['Model_Choice_Flag'] = flag
+    if not flag:
+        message = 'Nenhum dos modelos treinados atinge os valores mínimos definidos.'
         df_model_result['Chosen_Model'] = []
         df_model_result['Metric'] = []
         df_model_result['Value'] = []
-        df_model_result['Message'] = ['Previous Model chosen had better performance than current one.']
-    else:
+        df_model_result['Message'] = [message]
+    elif flag == 1:
+        message = 'Modelo anterior com melhor performance do que o atual.'
         df_model_result['Chosen_Model'] = [name]
         df_model_result['Metric'] = [metric]
         df_model_result['Value'] = [value]
-        df_model_result['Message'] = ['Last model replaced by new model.']
+        df_model_result['Message'] = [message]
+    elif flag == 2:
+        message = 'Modelo anterior substituído pelo atual.'
+        df_model_result['Chosen_Model'] = [name]
+        df_model_result['Metric'] = [metric]
+        df_model_result['Value'] = [value]
+        df_model_result['Message'] = [message]
 
     sql_inject(df_model_result, sql_info['database'], sql_info['model_choices'], list(df_model_result), time_to_last_update=0, check_date=1)
+
+    return message
 
 
 def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):

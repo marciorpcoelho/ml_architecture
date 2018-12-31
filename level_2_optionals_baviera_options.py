@@ -20,6 +20,8 @@ selected_configuration_parameters = ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej',
 DSN = os.getenv('DSN')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
+EMAIL = os.getenv('EMAIL')
+EMAIL_PASS = os.getenv('EMAIL_PASS')
 pool_workers_count = cpu_count()
 configuration_parameters_full = ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
@@ -189,7 +191,8 @@ classification_models = {
     'svm': [svm.SVC, [{'C': np.logspace(-2, 2, 10)}]],
     'ab': [AdaBoostClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
     'gc': [GradientBoostingClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
-    'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100], 'reg_lambda': [0.0001, 0.001, 0.01, 0.1, 1]}]],
+    # 'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50], 'reg_lambda': [0.0001, 0.001, 0.01, 0.1, 1]}]],
+    'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100]}]],
     'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
     'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100), 'solver': ['sgd'], 'max_iter': [1000]}]],
     'voting': [VotingClassifier, [{'voting': ['soft']}]]

@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+import smtplib
 import logging
 import level_2_optionals_baviera_options
 import level_1_e_deployment
@@ -22,15 +23,17 @@ def performance_warnings_append(warning):
     warnings_global.append(warning)
 
 
-def performance_info(vehicle_count, running_times_upload_flag):
+def performance_info(model_choice_message, vehicle_count, running_times_upload_flag):
 
     df_performance, df_warnings = pd.DataFrame(), pd.DataFrame()
     if not len(warnings_global):
         df_warnings['Warnings'] = [0]
         df_warnings['Warning_Flag'] = [0]
+        warning_flag = 0
     else:
         df_warnings['Warnings'] = warnings_global
         df_warnings['Warning_Flag'] = [1] * len(warnings_global)
+        warning_flag = 1
 
     for step in names_global:
         timings = times_global[names_global.index(step)]
@@ -44,6 +47,41 @@ def performance_info(vehicle_count, running_times_upload_flag):
     if running_times_upload_flag:
         level_1_e_deployment.sql_inject(df_performance, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['performance_running_time'], list(df_performance), time_to_last_update=0, check_date=1)
     level_1_e_deployment.sql_inject(df_warnings, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['warning_log'], list(df_warnings), time_to_last_update=0, check_date=1)
+
+    error_flag, error_only = error_upload(level_2_optionals_baviera_options.log_files['full_log'])
+    email_notification(warning_flag=warning_flag, warning_desc=warnings_global, error_desc=error_only, error_flag=error_flag, model_choice_message=model_choice_message)
+
+
+def email_notification(warning_flag, warning_desc, error_desc, error_flag=0, model_choice_message=0):
+    fromaddr = 'mrpc@gruposalvadorcaetano.pt'
+    toaddr = 'marcio.coelho@rigorcg.pt'  # ToDo: Take the emails from the SQL table made by Marlene
+
+    mail_subject = 'Otimização Encomenda - Relatório'
+
+    if error_flag:
+        run_conclusion = 'não terminou devido ao erro: {}.'.format(error_desc)
+        conclusion_message = ''
+    elif not error_flag:
+        run_conclusion = 'terminou com sucesso.'
+        conclusion_message = 'A sua conclusão foi: ' + str(model_choice_message)
+
+    if warning_flag:
+        warning_conclusion = 'Foram encontrados os seguintes alertas: {}'.format([x for x in warning_desc])
+    elif not warning_flag:
+        warning_conclusion = 'Não foram encontrados quaisquer alertas.'
+
+    mail_body = 'Bom dia, \nO projeto Otimização Encomenda (BMW) ' + str(run_conclusion) + ' \n' + str(warning_conclusion) + ' \n' + str(conclusion_message) + ' \n Cumprimentos, \n Relatório Automático Otimização Encomenda (BMW), v1.0'
+    message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
+
+    try:
+        server = smtplib.SMTP('smtp-mail.outlook.com')
+        server.ehlo()
+        server.starttls()
+        server.login(level_2_optionals_baviera_options.EMAIL, level_2_optionals_baviera_options.EMAIL_PASS)
+        server.sendmail(fromaddr, toaddr, message)
+        server.quit()
+    except TimeoutError:
+        return
 
 
 def error_upload(log_file, error_flag=0):
@@ -70,6 +108,11 @@ def error_upload(log_file, error_flag=0):
         df_error.loc[0, :] = ['', '', '', '', 0]
 
     level_1_e_deployment.sql_inject(df_error, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['error_log'], list(df_error), time_to_last_update=0, check_date=1)
+
+    if error_flag:
+        return error_flag, error_only[0]
+    else:
+        return error_flag, 0
 
 
 def parse_line(file_path):
