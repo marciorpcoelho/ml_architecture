@@ -27,11 +27,11 @@ def main():
 
     ### Options:
     # input_file = 'dbs/' + 'ENCOMENDA.csv'
-    input_file = 'dbs/' + 'full_data_bmw_top500000.csv'
+    input_file = 'dbs/' + 'full_data_bmw.csv'
 
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
-    models = ['dt', 'rf', 'lr', 'ab', 'ann', 'gc', 'xgb', 'voting']
+    models = ['dt', 'rf', 'lr', 'ab', 'gc', 'xgb', 'voting']  # ToDo: ANN doesn't converge or takes too long to converge
     k = 10  # Stratified Cross-Validation number of Folds
     gridsearch_score = 'recall'  # Metric on which to optimize GridSearchCV
     metric, metric_threshold = 'ROC_Curve', 0.70
