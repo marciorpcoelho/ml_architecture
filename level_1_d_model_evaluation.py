@@ -279,12 +279,12 @@ def model_choice(df_results, metric, threshold):
 def model_choice_upload(flag, name, value, metric):
     df_model_result = pd.DataFrame(columns={'Model_Choice_Flag', 'Chosen_Model', 'Metric', 'Value', 'Message'})
 
-    df_model_result['Model_Choice_Flag'] = flag
+    df_model_result['Model_Choice_Flag'] = [flag]
     if not flag:
         message = 'Nenhum dos modelos treinados atinge os valores mínimos definidos.'
-        df_model_result['Chosen_Model'] = []
-        df_model_result['Metric'] = []
-        df_model_result['Value'] = []
+        df_model_result['Chosen_Model'] = [0]
+        df_model_result['Metric'] = [0]
+        df_model_result['Value'] = [0]
         df_model_result['Message'] = [message]
     elif flag == 1:
         message = 'Modelo anterior com melhor performance do que o atual.'

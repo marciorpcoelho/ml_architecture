@@ -24,7 +24,7 @@ def log_files(project_name, output_dir='logs/'):
     sys.stderr = open(output_dir + project_name + '.txt', 'a')
 
 
-def sql_retrieve_df(database, view, columns='*'):
+def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0):
     start = time.time()
     # logging.info('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...')
     log_record('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
@@ -34,9 +34,14 @@ def sql_retrieve_df(database, view, columns='*'):
 
     cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
 
-    query = 'SELECT ' + columns + ' FROM ' + view
+    if not nlr_code:
+        query = 'SELECT ' + columns + ' FROM ' + view
+    elif nlr_code:
+        query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE NLR_CODE = ' + '\'' + str(nlr_code) + '\''
 
     df = pd.read_sql(query, cnxn)
+    if column_renaming:
+        column_rename(df, list(sql_to_code_renaming.keys()), list(sql_to_code_renaming.values()))
 
     print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
     return df

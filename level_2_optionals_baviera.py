@@ -35,11 +35,12 @@ def main():
     k = 10  # Stratified Cross-Validation number of Folds
     gridsearch_score = 'recall'  # Metric on which to optimize GridSearchCV
     metric, metric_threshold = 'ROC_Curve', 0.70
+    nlr_code = 701
     # possible_evaluation_metrics: 'ROC_Curve', 'Micro_F1', 'Average_F1', 'Macro_F1', 'Accuracy', 'Precision'
     ###
 
     number_of_features = 'all'
-    df = data_acquistion(input_file)
+    df = data_acquistion(input_file, nlr_code, local=1)
     df, train_x, train_y, test_x, test_y = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, train_x, train_y, models, k, gridsearch_score)
     model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features)
@@ -52,21 +53,18 @@ def main():
     log_record('Finished Successfully - Project: Baviera Order Optimization.\n', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
 
-def data_acquistion(input_file):
+def data_acquistion(input_file, nlr_code, local=1, column_renaming=1):
     performance_info_append(time.time(), 'start_section_a')
     # logging.info('Started Step A...')
     log_record('Started Step A...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
-    # column_renaming = 0
-    # try:
-    #     df = read_csv(column_renaming, input_file, delimiter=';', encoding='utf-8', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
-    # except UnicodeDecodeError:
-    #     df = read_csv(column_renaming, input_file, delimiter=';', encoding='latin-1', parse_dates=['Data Compra', 'Data Venda'], infer_datetime_format=True, decimal=',')
-    column_renaming = 1
-    try:
-        df = read_csv(column_renaming, input_file, encoding='utf-8', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
-    except UnicodeDecodeError:
-        df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
+    if local:
+        try:
+            df = read_csv(column_renaming, input_file, encoding='utf-8', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
+        except UnicodeDecodeError:
+            df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
+    else:
+        df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), nlr_code, column_renaming=1)
 
     # logging.info('Finished Step A.')
     log_record('Finished Step A.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
