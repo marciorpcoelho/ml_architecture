@@ -5,6 +5,7 @@ import logging
 import level_2_optionals_baviera_options
 import level_1_e_deployment
 import level_1_b_data_processing
+import level_1_a_data_acquisition
 pd.set_option('display.expand_frame_repr', False)
 
 times_global = []
@@ -54,7 +55,9 @@ def performance_info(model_choice_message, vehicle_count, running_times_upload_f
 
 def email_notification(warning_flag, warning_desc, error_desc, error_flag=0, model_choice_message=0):
     fromaddr = 'mrpc@gruposalvadorcaetano.pt'
-    toaddr = 'marcio.coelho@rigorcg.pt'  # ToDo: Take the emails from the SQL table made by Marlene
+    df_mail_users = level_1_a_data_acquisition.sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mail_users'])
+    users = df_mail_users['UserName'].unique()
+    toaddrs = df_mail_users['UserEmail'].unique()
 
     mail_subject = 'Otimização Encomenda - Relatório'
 
@@ -70,18 +73,19 @@ def email_notification(warning_flag, warning_desc, error_desc, error_flag=0, mod
     elif not warning_flag:
         warning_conclusion = 'Não foram encontrados quaisquer alertas.'
 
-    mail_body = 'Bom dia, \nO projeto Otimização Encomenda (BMW) ' + str(run_conclusion) + ' \n' + str(warning_conclusion) + ' \n' + str(conclusion_message) + ' \n Cumprimentos, \n Relatório Automático Otimização Encomenda (BMW), v1.0'
-    message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
+    for (user, toaddr) in zip(users, toaddrs):
+        mail_body = 'Bom dia' + str(user) + ', \nO projeto Otimização Encomenda (BMW) ' + str(run_conclusion) + ' \n' + str(warning_conclusion) + ' \n' + str(conclusion_message) + ' \n Cumprimentos, \n Relatório Automático Otimização Encomenda (BMW), v1.0'
+        message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
 
-    try:
-        server = smtplib.SMTP('smtp-mail.outlook.com')
-        server.ehlo()
-        server.starttls()
-        server.login(level_2_optionals_baviera_options.EMAIL, level_2_optionals_baviera_options.EMAIL_PASS)
-        server.sendmail(fromaddr, toaddr, message)
-        server.quit()
-    except TimeoutError:
-        return
+        try:
+            server = smtplib.SMTP('smtp-mail.outlook.com')
+            server.ehlo()
+            server.starttls()
+            server.login(level_2_optionals_baviera_options.EMAIL, level_2_optionals_baviera_options.EMAIL_PASS)
+            server.sendmail(fromaddr, toaddr, message)
+            server.quit()
+        except TimeoutError:
+            return
 
 
 def error_upload(log_file, error_flag=0):

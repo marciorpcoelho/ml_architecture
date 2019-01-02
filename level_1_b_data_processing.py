@@ -155,6 +155,7 @@ def options_scraping(df):
     # print('before removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
     df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index, df[df['Prov'] == 'Demonstração|Em utilização'].index])
     df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
+    # df = remove_rows(df, [df['Registration_Number'].str.contains('/').index, [df['Registration_Number'].str.len() > 8].index])  # This removes vehicles with erroneous registration numbers;
     # print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
 
     df_grouped = df.groupby('Nº Stock')

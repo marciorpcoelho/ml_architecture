@@ -38,6 +38,7 @@ sql_info = {
     'error_log': 'LOG_Performance_Errors',
     'warning_log': 'LOG_Performance_Warnings',
     'model_choices': 'LOG_Performance_Model_Choices',
+    'mail_users': 'LOG_MailUsers',
 }
 
 # Old Cor_Exterior

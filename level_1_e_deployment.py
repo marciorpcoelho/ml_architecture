@@ -24,11 +24,18 @@ def sql_log_inject(line, flag, database, view):
     time_tag_date = time.strftime("%Y-%m-%d")
     time_tag_hour = time.strftime("%H:%M:%S")
 
+    line = apostrophe_escape(line)
+
     cursor.execute('INSERT INTO [' + str(database) + '].dbo.[' + str(view) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\')')
 
     cnxn.commit()
     cursor.close()
     cnxn.close()
+
+
+def apostrophe_escape(line):
+
+    return line.replace('\'', '"')
 
 
 def sql_inject(df, database, view, columns, time_to_last_update=update_frequency_days, truncate=0, check_date=0):
