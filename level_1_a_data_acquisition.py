@@ -24,7 +24,7 @@ def log_files(project_name, output_dir='logs/'):
     sys.stderr = open(output_dir + project_name + '.txt', 'a')
 
 
-def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0):
+def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0, **kwargs):
     start = time.time()
     # logging.info('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...')
     level_2_optionals_baviera_performance_report_info.log_record('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
@@ -39,7 +39,7 @@ def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0):
     elif nlr_code:
         query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE NLR_CODE = ' + '\'' + str(nlr_code) + '\''
 
-    df = pd.read_sql(query, cnxn)
+    df = pd.read_sql(query, cnxn, **kwargs)
     if column_renaming:
         column_rename(df, list(sql_to_code_renaming.keys()), list(sql_to_code_renaming.values()))
 

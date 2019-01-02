@@ -64,7 +64,7 @@ def data_acquistion(input_file, nlr_code, local=1, column_renaming=1):
         except UnicodeDecodeError:
             df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
     else:
-        df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), nlr_code, column_renaming=1)
+        df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), nlr_code, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
 
     # logging.info('Finished Step A.')
     log_record('Finished Step A.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
