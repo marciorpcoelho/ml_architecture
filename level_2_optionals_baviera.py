@@ -5,7 +5,7 @@ import pandas as pd
 import level_2_optionals_baviera_options
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload, log_record
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
-from level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
+from level_1_b_data_processing import datasets_dictionary_function, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison
@@ -39,9 +39,9 @@ def main():
 
     number_of_features = 'all'
     df = data_acquistion(input_file, nlr_code, local=1)
-    df, train_x, train_y, test_x, test_y = data_processing(df, target_variable, oversample_check, number_of_features)
-    classes, best_models, running_times = data_modelling(df, train_x, train_y, models, k, gridsearch_score)
-    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features)
+    df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
+    classes, best_models, running_times = data_modelling(df, datasets, models, k, gridsearch_score)
+    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, datasets, number_of_features)
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(model_choice_message, vehicle_count, running_times_upload_flag)
@@ -86,7 +86,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
         df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
 
-        # df = new_column_creation(df, ['Versao', 'Navegação', 'Sensores', 'Cor_Interior', 'Tipo_Interior', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Farois_LED', 'Farois_Xenon', 'Barras_Tej', '7_Lug', 'Alarme', 'Prot.Solar', 'AC Auto', 'Teto_Abrir'], 0)  # Creates new columns filled with zeros, which will be filled in the future
         df = new_column_creation(df, [x for x in level_2_optionals_baviera_options.configuration_parameters_full if x != 'Modelo'], 0)  # Creates new columns filled with zeros, which will be filled in the future
 
         dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
@@ -117,10 +116,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         df = remove_columns(df, ['Prov'])
         df = new_features_optionals_baviera(df, sel_cols=configuration_parameters)  # Creates a series of new features, explained in the provided pdf
-        # df = new_features_optionals_baviera(df, sel_cols=['7_Lug', 'AC Auto', 'Alarme', 'Barras_Tej', 'Farois_LED', 'Farois_Xenon', 'Teto_Abrir', 'Tipo_Interior_new', 'Navegação', 'Sensores', 'Caixa Auto', 'Cor_Exterior_new', 'Cor_Interior_new', 'Jantes_new', 'Modelo_new'])  # Creates a series of new features, explained in the provided pdf
 
         global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
-        # df = z_scores_function(df, cols_to_normalize=['price_total', 'number_prev_sales', 'last_margin', 'last_stock_days'])  # Converts all the mentioned columns to their respective Z-Score
 
         log_record('Checkpoint B.1...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
         performance_info_append(time.time(), 'checkpoint_b1')
@@ -151,20 +148,22 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
     # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed
 
+    datasets = datasets_dictionary_function(train_x, train_y, test_x, test_y)
+
     log_record('Finished Step B.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     performance_info_append(time.time(), 'end_section_b')
 
-    return df, train_x, train_y, test_x, test_y
+    return df, datasets
 
 
-def data_modelling(df, train_x, train_y, models, k, score):
+def data_modelling(df, datasets, models, k, score):
     performance_info_append(time.time(), 'start_section_c')
     log_record('Started Step C...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     df.sort_index(inplace=True)
 
-    classes, best_models, running_times = model_training(models, train_x, train_y, k, score)  # Training of each referenced model
+    classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'], k, score)  # Training of each referenced model
     save_model(best_models, models)
 
     log_record('Finished Step C.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -173,16 +172,16 @@ def data_modelling(df, train_x, train_y, models, k, score):
     return classes, best_models, running_times
 
 
-def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, train_x, train_y, test_x, test_y, number_of_features):
+def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, datasets, number_of_features):
     performance_info_append(time.time(), 'start_section_d')
     log_record('Started Step D...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
-    results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y)  # Creates a df with the performance of each model evaluated in various metrics, explained
+    results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets)  # Creates a df with the performance of each model evaluated in various metrics, explained
     # in the provided pdf
     # save_csv([results_training, results_test], ['output/' + 'model_performance_train_df_' + str(number_of_features), 'output/' + 'model_performance_test_df_' + str(number_of_features)])
-    plot_roc_curve(best_models, models, train_x, train_y, test_x, test_y, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
+    plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
 
-    df_model_dict = multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters)
+    df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters)
     model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(results_test, metric, metric_threshold)
 
     if not section_e_upload_flag:

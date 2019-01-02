@@ -460,6 +460,12 @@ def options_scraping_per_group(args):
     return group
 
 
+def datasets_dictionary_function(train_x, train_y, test_x, test_y):
+    dataset_dict = {'train_x': train_x, 'train_y': train_y, 'test_x': test_x, 'test_y': test_y}
+
+    return dataset_dict
+
+
 def column_rename(df, cols_to_replace, new_cols_names):
     for column in cols_to_replace:
         df.rename(index=str, columns={cols_to_replace[cols_to_replace.index(column)]: new_cols_names[cols_to_replace.index(column)]}, inplace=True)

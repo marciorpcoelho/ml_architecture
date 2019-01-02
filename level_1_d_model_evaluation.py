@@ -38,15 +38,15 @@ class RegressionEvaluation(object):
         self.score = r2_score(groundtruth, prediction)
 
 
-def performance_evaluation(models, best_models, classes, running_times, train_x, train_y, test_x, test_y):
+def performance_evaluation(models, best_models, classes, running_times, datasets):
 
     results_train, results_test = [], []
-    predictions, feat_importance = {}, pd.DataFrame(index=list(train_x), columns={'Importance'})
+    predictions, feat_importance = {}, pd.DataFrame(index=list(datasets['train_x']), columns={'Importance'})
     for model in models:
-        prediction_train = best_models[model].predict(train_x)
-        prediction_test = best_models[model].predict(test_x)
-        evaluation_training = ClassificationEvaluation(groundtruth=train_y, prediction=prediction_train)
-        evaluation_test = ClassificationEvaluation(groundtruth=test_y, prediction=prediction_test)
+        prediction_train = best_models[model].predict(datasets['train_x'])
+        prediction_test = best_models[model].predict(datasets['test_x'])
+        evaluation_training = ClassificationEvaluation(groundtruth=datasets['train_y'], prediction=prediction_train)
+        evaluation_test = ClassificationEvaluation(groundtruth=datasets['test_y'], prediction=prediction_test)
         predictions[model] = [prediction_train.astype(int, copy=False), prediction_test.astype(int, copy=False)]
         try:
             feat_importance['Importance'] = best_models[model].feature_importances_
@@ -293,12 +293,12 @@ def model_choice_upload(flag, name, value, metric):
     return message
 
 
-def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_name, save_dir):
+def plot_roc_curve(models, models_name, datasets, save_name, save_dir):
     plt.subplots(figsize=(800 / my_dpi, 800 / my_dpi), dpi=my_dpi)
     for model in models_name:
-        prob_train_init = models[model].fit(train_x, train_y[list(train_y)[0]]).predict_proba(test_x)
+        prob_train_init = models[model].fit(datasets['train_x'], datasets['train_y'][list(datasets['train_y'])[0]]).predict_proba(datasets['test_x'])
         prob_test_1 = [x[1] for x in prob_train_init]
-        fpr, tpr, _ = roc_curve(test_y, prob_test_1, pos_label=1)
+        fpr, tpr, _ = roc_curve(datasets['test_y'], prob_test_1, pos_label=1)
         roc_auc = auc(fpr, tpr)
         plt.plot(fpr, tpr, lw=2, label='ROC curve (area = %0.2f)' % roc_auc + ' ' + str(dict_models_name_conversion[model][0]))
 
@@ -325,11 +325,11 @@ def save_fig(name, save_dir='output/'):
     plt.savefig(save_dir + str(name) + '.pdf')
 
 
-def multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters):
+def multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters):
     start = time.time()
     workers = pool_workers_count
     pool = multiprocessing.Pool(processes=workers)
-    results = pool.map(multiprocess_evaluation, [(df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters) for model_name in models])
+    results = pool.map(multiprocess_evaluation, [(df, model_name, datasets, best_models, predictions, configuration_parameters) for model_name in models])
     pool.close()
     df_model_dict = {key: value for (key, value) in results}
 
@@ -339,13 +339,13 @@ def multiprocess_model_evaluation(df, models, train_x, train_y, test_x, test_y, 
 
 
 def multiprocess_evaluation(args):
-    df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters = args
+    df, model_name, datasets, best_models, predictions, configuration_parameters = args
 
     start = time.time()
     log_record('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...', sql_info['database'], sql_info['log_record'])
-    train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
+    train_x_copy, test_x_copy = datasets['train_x'].copy(deep=True), datasets['test_x'].copy(deep=True)
     proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
-    df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
+    df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, datasets['train_y'], test_x_copy, datasets['test_y'], configuration_parameters)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
     log_record(model_name + ' - Elapsed time: %f' % (time.time() - start), sql_info['database'], sql_info['log_record'])
