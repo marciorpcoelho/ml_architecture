@@ -1,6 +1,7 @@
 import os
 import time
 import pyodbc
+import logging
 import pandas as pd
 from datetime import datetime
 from level_2_optionals_baviera_options import update_frequency_days, DSN, UID, PWD, sql_info
@@ -26,7 +27,10 @@ def sql_log_inject(line, flag, database, view):
 
     line = apostrophe_escape(line)
 
-    cursor.execute('INSERT INTO [' + str(database) + '].dbo.[' + str(view) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\')')
+    try:
+        cursor.execute('INSERT INTO [' + str(database) + '].dbo.[' + str(view) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\')')
+    except pyodbc.ProgrammingError:
+        logging.warning('Unable to access SQL Server.')
 
     cnxn.commit()
     cursor.close()
