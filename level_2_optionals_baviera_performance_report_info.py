@@ -74,7 +74,7 @@ def email_notification(warning_flag, warning_desc, error_desc, error_flag=0, mod
         warning_conclusion = 'Não foram encontrados quaisquer alertas.'
 
     for (user, toaddr) in zip(users, toaddrs):
-        mail_body = 'Bom dia' + str(user) + ', \nO projeto Otimização Encomenda (BMW) ' + str(run_conclusion) + ' \n' + str(warning_conclusion) + ' \n' + str(conclusion_message) + ' \n Cumprimentos, \n Relatório Automático Otimização Encomenda (BMW), v1.0'
+        mail_body = 'Bom dia ' + str(user) + ', \nO projeto Otimização Encomenda (BMW) ' + str(run_conclusion) + ' \n' + str(warning_conclusion) + ' \n' + str(conclusion_message) + ' \n\n Cumprimentos, \n Relatório Automático Otimização Encomenda (BMW), v1.0'
         message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
 
         try:

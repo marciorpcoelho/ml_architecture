@@ -87,9 +87,6 @@ def performance_evaluation(models, best_models, classes, running_times, train_x,
     df_results_test['Algorithms'] = df_results_test.index
     df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
 
-    # df_results_train.to_csv('output/performance_report_wo_versao_protsolar_train.csv')
-    # df_results_test.to_csv('output/performance_report_wo_versao_protsolar_test.csv')
-
     sql_inject(pd.concat([df_results_train, df_results_test]), sql_info['database'], sql_info['performance_algorithm_results'], list(df_results_train), time_to_last_update=0, check_date=1)
 
     return df_results_train, df_results_test, predictions
@@ -109,9 +106,7 @@ def feature_contribution(df, configuration_parameters):
     non_boolean_parameters = [x for x in configuration_parameters if x not in boolean_parameters]
     df_feature_contribution_total = pd.DataFrame()
 
-    # for model in df['Modelo_new'].unique():
     for model in df['Modelo'].unique():
-        # model_mask = df['Modelo_new'] == model
         model_mask = df['Modelo'] == model
         df_model = df.loc[df[model_mask].index, :]
 
@@ -158,7 +153,6 @@ def feature_contribution(df, configuration_parameters):
                         p_c1_f1 = c1_f1 / f1 * 1.
                         p_c1_f0 = c1_f0 / f0 * 1.
                     except ZeroDivisionError:
-                        # logging.warning('Insufficient data for feature ' + str(feature) + ' and value ' + str(value) + '.')
                         log_record('Insufficient data for feature ' + str(feature) + ' and value ' + str(value) + '.', sql_info['database'], sql_info['log_record'], flag=1)
                         continue
 
@@ -210,7 +204,6 @@ def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, 
 
     df_grouped = df.groupby(configuration_parameters)
     df = df_grouped.apply(additional_info)
-    # df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda_new'])
     df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda'])
     df = df_grouped2.apply(additional_info_local)
 
@@ -252,22 +245,18 @@ def model_choice(df_results, metric, threshold):
         # makes sure there are results above minimum threshold
         best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
         best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].max().head(1).values[0]
-        # logging.info('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(threshold) + '). Will compare with last result in SQL Server...')
         log_record('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(threshold) + '). Will compare with last result in SQL Server...', sql_info['database'], sql_info['log_record'])
 
         df_previous_performance_results = sql_second_highest_date_checkup(sql_info['database'], sql_info['performance_algorithm_results'])
         if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
-            # logging.info('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...')
             log_record('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...', sql_info['database'], sql_info['log_record'], flag=1)
             model_choice_flag = 1
         else:
             step_e_upload_flag = 1
-            # logging.info('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + 'for model' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...')
             log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + ' for model ' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...', sql_info['database'], sql_info['log_record'])
             model_choice_flag = 2
 
     except ValueError:
-        # logging.info('No value above minimum threshold (%.4f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.')
         log_record('No value above minimum threshold (%.4f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.', sql_info['database'], sql_info['log_record'], flag=1)
         model_choice_flag, best_model_name, best_model_value = 0, 0, 0
 
@@ -324,11 +313,10 @@ def plot_roc_curve(models, models_name, train_x, train_y, test_x, test_y, save_n
     plt.tight_layout()
     save_fig(save_name, save_dir=save_dir)
     plt.clf()
-    # plt.close()
 
 
 def save_fig(name, save_dir='output/'):
-    # Saves plot in at least two formats, png and pdf
+    # Saves plot in at least two formats, .png and .pdf
 
     if os.path.exists(save_dir + str(name) + '.png'):
         os.remove(save_dir + str(name) + '.png')
@@ -354,14 +342,12 @@ def multiprocess_evaluation(args):
     df, model_name, train_x, train_y, test_x, test_y, best_models, predictions, configuration_parameters = args
 
     start = time.time()
-    # logging.info('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...')
     log_record('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...', sql_info['database'], sql_info['log_record'])
     train_x_copy, test_x_copy = train_x.copy(deep=True), test_x.copy(deep=True)
     proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
     df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, train_y, test_x_copy, test_y, configuration_parameters)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
-    # logging.info(model_name + ' - Elapsed time: %f' % (time.time() - start))
     log_record(model_name + ' - Elapsed time: %f' % (time.time() - start), sql_info['database'], sql_info['log_record'])
 
     return model_name, df_model

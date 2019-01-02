@@ -63,7 +63,6 @@ color_ext_dict_layer_1 = {
     'outros': ['undefined', 'castanho', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
 }
 
-
 # New Cor_Exterior (v2)
 # color_ext_dict_layer_1 = {
 #     'preto': ['preto'],
@@ -85,7 +84,6 @@ nappa_colors = ['preto', 'white', 'ivory', 'ivory/branco', 'bege', 'mocha', 'cas
 vernasca_colors = ['canberra', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac', 'azuis/preto', 'anthracite/preto']
 nevada_colors = ['terra', 'brown', 'preto/preto', 'bege', 'oyster', 'oyster/leather', 'preto', 'branco', 'mocha']
 merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'taupe/preto', 'vermelho']
-
 
 # New Cor_Interior v2
 color_int_dict_layer_1 = {
@@ -154,7 +152,6 @@ model_dict = {
     'outros': ['S2 Cabrio', 'S2 Coupé', 'S3 Gran Turismo', 'S4 Coupé', 'S4 Cabrio', 'S5 Gran Turismo', 'S6 Cabrio', 'S6 Gran Turismo', 'S6 Gran Coupe', 'S6 Coupé', 'S7 Berlina', 'S7 L Berlina', 'X2 SAC', 'X4 SUV', 'X5 SUV', 'X5 M', 'X6', 'X6 M', 'Z4 Roadster', 'M2 Coupé', 'M3 Berlina', 'M4 Cabrio', 'M4 Coupé', 'M5 Berlina', 'S6 Gran Turismo', 'S6 Cabrio', 'S6 Coupé', 'S6 Gran Coupe', 'S7 Berlina', 'S7 L Berlina']
 }
 
-
 versao_dict = {
     'advantage': ['advantage'],
     'sport': ['line_sport'],
@@ -170,6 +167,7 @@ tipo_int_dict = {
     'pele': ['pele'],
     'combinação/interior_m': ['combinação', 'tecido_micro', 0, '0']
 }
+
 # classification_models = {
 #     'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
 #     'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100, 200, 500, 1000], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],

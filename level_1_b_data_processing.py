@@ -20,8 +20,6 @@ MEAN_TOTAL_PRICE = 0  # optionals_baviera
 STD_TOTAL_PRICE = 0  # optionals_baviera
 my_dpi = 96
 
-# logging.basicConfig(level=logging.WARN, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename='logs/optionals_baviera.txt', filemode='a')
-
 # List of Functions available:
 
 # Generic:
@@ -152,11 +150,9 @@ def save_fig(name, save_dir='output/'):
 
 
 def options_scraping(df):
-    # print('before removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
     df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index, df[df['Prov'] == 'Demonstração|Em utilização'].index])
     df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
     # df = remove_rows(df, [df['Registration_Number'].str.contains('/').index, [df['Registration_Number'].str.len() > 8].index])  # This removes vehicles with erroneous registration numbers;
-    # print('after removing Motos, Z4, MINI and Prov = Demo & Utilização', df['Nº Stock'].nunique())
 
     df_grouped = df.groupby('Nº Stock')
     # start_nav_all, end_nav_all = [], []
@@ -503,19 +499,6 @@ def col_group(df, columns_to_replace, dictionaries):
     return df
 
 
-# def col_group(df, columns_to_replace, dictionaries):
-#     for dictionary in dictionaries:
-#         for key in dictionary.keys():
-#             df.loc[df[columns_to_replace[dictionaries.index(dictionary)]].isin(dictionary[key]), columns_to_replace[dictionaries.index(dictionary)] + '_new'] = key
-#         if df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull().values.any():
-#             variable = df.loc[df[columns_to_replace[dictionaries.index(dictionary)] + '_new'].isnull(), columns_to_replace[dictionaries.index(dictionary)]].unique()
-#             level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)), sql_info['database'], sql_info['log_record'], flag=1)
-#             level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)] + '_new, value(s) not grouped: {}'.format(variable)))
-#         df.drop(columns_to_replace[dictionaries.index(dictionary)], axis=1, inplace=True)
-#         df.rename(index=str, columns={columns_to_replace[dictionaries.index(dictionary)] + '_new': columns_to_replace[dictionaries.index(dictionary)]}, inplace=True)
-#     return df
-
-
 def total_price(df):
     df['price_total'] = df['Custo'].groupby(df['Nº Stock']).transform('sum')
 
@@ -702,7 +685,6 @@ def ohe(df, cols):
 
     for column in cols:
         if df[column].nunique() > 2 or df[column].nunique() >= 1 and type(df[column].head(1).values[0]) == str:
-            # print(column, 'is inside OHE. Unique count:', df[column].nunique(), type(df[column].head(1).values[0]))
             uniques = df[column].unique()
             for value in uniques:
                 new_column = column + '_' + str(value)

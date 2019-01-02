@@ -86,19 +86,7 @@ def model_training(models, train_x, train_y, k, score):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
 
     for model in models:
-        # logging.info('MODEL: ' + model)
         log_record('MODEL: ' + model, sql_info['database'], sql_info['log_record'])
-        # if model != 'voting':
-        #     start = time.time()
-        #     clf = ClassificationTraining(clf=classification_models[model][0])
-        #     clf.grid_search(parameters=classification_models[model][1], k=k, score=score)
-        #     clf.clf_fit(x=train_x, y=train_y.values.ravel())
-        #     clf_best = clf.grid.best_estimator_
-        #
-        #     best_models_pre_fit[model] = clf_best
-        #     clf_best.fit(train_x, train_y.values.ravel())
-        #     best_models_pos_fit[model] = clf_best
-
         if model == 'voting':
             start = time.time()
             parameters = {'estimators': [(x, y) for x, y in zip(best_models_pre_fit.keys(), best_models_pre_fit.values())]}
