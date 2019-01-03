@@ -40,9 +40,7 @@ my_dpi = 96
 
 
 def lowercase_column_convertion(df, columns):
-
-    for column in columns:
-        df.loc[:, column] = df[column].str.lower()
+    df[columns] = df[columns].apply(lambda x: x.str.lower())
 
     return df
 
@@ -155,17 +153,10 @@ def options_scraping(df):
     # df = remove_rows(df, [df['Registration_Number'].str.contains('/').index, [df['Registration_Number'].str.len() > 8].index])  # This removes vehicles with erroneous registration numbers;
 
     df_grouped = df.groupby('Nº Stock')
-    # start_nav_all, end_nav_all = [], []
-    # start_barras_all, end_barras_all = [], []
-    # start_alarme_all, end_alarme_all = [], []
-    # start_7_lug_all, end_7_lug_all = [], []
-    # start_prot_all, end_prot_all = [], []
-    # start_ac_all, end_ac_all = [], []
-    # start_teto_all, end_teto_all = [], []
-    # duration_sens_all, duration_trans_all, duration_versao_all, duration_farois_all, duration_jantes_all = [], [], [], [], []
-    # start_cor_ext_all, end_cor_ext_all = [], []
-    # start_cor_int_all, end_cor_int_all = [], []
-    # start_int_type_all, end_int_type_all = [], []
+    nav_all, barras_all, alarme_all = [], [], []
+    seven_lug_all, prot_all, ac_all = [], [], []
+    teto_all, cor_ext_all, cor_int_all, int_type_all = [], [], [], []
+    sens_all, trans_all, versao_all, farois_all, jantes_all = [], [], [], [], []
 
     # Modelo
     level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'start_modelo')
@@ -180,21 +171,28 @@ def options_scraping(df):
     pool = Pool(processes=workers)
     results = pool.map(options_scraping_per_group, [(key, group) for (key, group) in df_grouped])
     pool.close()
-    df = pd.concat([result for result in results])
-    # [start_nav_all.append(result[1]) for result in results]
-    # [end_nav_all.append(result[2]) for result in results]
-    # [start_barras_all.append(result[3]) for result in results]
-    # [end_barras_all.append(result[4]) for result in results]
-    # [duration_sens_all.append(result[5]) for result in results]
-    # [duration_trans_all.append(result[6]) for result in results]
+    df = pd.concat([result[0] for result in results])
+    durations_times = [nav_all, barras_all, alarme_all, seven_lug_all, prot_all, ac_all, teto_all, cor_ext_all, cor_int_all, int_type_all, sens_all, trans_all, versao_all, farois_all, jantes_all]
+    durations_names = ['nav_all', 'barras_all', 'alarme_all', 'seven_lug_all', 'prot_all', 'ac_all', 'teto_all', 'cor_ext_all', 'cor_int_all', 'int_type_all', 'sens_all', 'trans_all', 'versao_all', 'farois_all', 'jantes_all']
 
-    # starts_ends = [start_nav_all, end_nav_all, start_barras_all, end_barras_all, duration_sens_all, duration_trans_all]
-    # tags = ['start_nav_all', 'end_nav_all', 'start_barras_all', 'end_barras_all', 'duration_sens_all', 'duration_trans_all']
-    # starts_ends = [start_nav_all, end_nav_all, start_barras_all, end_barras_all, start_alarme_all, end_alarme_all, start_7_lug_all, end_7_lug_all, start_prot_all, end_prot_all, start_ac_all, end_ac_all,
-    #                start_teto_all, end_teto_all, duration_versao_all, duration_trans_all, duration_sens_all, duration_jantes_all, duration_farois_all, start_cor_ext_all, end_cor_ext_all, start_cor_int_all, end_cor_int_all, start_int_type_all, end_int_type_all]
-    # tags = ['start_nav_all', 'end_nav_all', 'start_barras_all', 'end_barras_all', 'start_alarme_all', 'end_alarme_all', 'start_7_lug_all', 'end_7_lug_all', 'start_prot_all', 'end_prot_all', 'start_ac_all', 'end_ac_all',
-    #         'start_teto_all', 'end_teto_all', 'duration_versao_all', 'duration_trans_all', 'duration_sens_all', 'duration_jantes_all', 'duration_farois_all', 'start_cor_ext_all', 'end_cor_ext_all', 'start_cor_int_all', 'end_cor_int_all', 'start_int_type_all', 'end_int_type_all']
-    # [performance_info_append(start_end, tag) for (start_end, tag) in zip(starts_ends, tags)]
+    [nav_all.append(result[1]) for result in results]
+    [barras_all.append(result[2]) for result in results]
+    [alarme_all.append(result[3]) for result in results]
+    [seven_lug_all.append(result[4]) for result in results]
+    [prot_all.append(result[5]) for result in results]
+    [ac_all.append(result[6]) for result in results]
+    [teto_all.append(result[7]) for result in results]
+    [cor_ext_all.append(result[8]) for result in results]
+    [cor_int_all.append(result[9]) for result in results]
+    [int_type_all.append(result[10]) for result in results]
+    [trans_all.append(result[11]) for result in results]
+    [sens_all.append(result[12]) for result in results]
+    [versao_all.append(result[13]) for result in results]
+    [farois_all.append(result[14]) for result in results]
+    [jantes_all.append(result[15]) for result in results]
+    # [durations[i-1].append(result[i] for result in results) for i in range(1, 16)]
+
+    [level_2_optionals_baviera_performance_report_info.performance_info_append(duration, tag) for (duration, tag) in zip(durations_times, durations_names)]
 
     # ToDo: move the following code to it's own function?
     # Standard Equipment
@@ -244,140 +242,122 @@ def options_scraping_per_group(args):
                  'bronze', 'beige', 'beje', 'veneto/preto', 'zagora/preto', 'mokka/preto', 'taupe/preto', 'sonoma/preto', 'preto/preto', 'preto/laranja/preto', 'preto/vermelho']
     colors_en = ['black', 'havanna', 'merino', 'walnut', 'chocolate', 'nevada', 'moonstone', 'anthracite/silver', 'white', 'coffee', 'blue', 'red', 'grey', 'silver', 'orange', 'green', 'bluestone', 'aqua', 'burgundy', 'anthrazit', 'truffle', 'brown', 'oyster', 'tobacco', 'jatoba', 'storm', 'champagne', 'cedar', 'silverstone', 'chestnut', 'kaschmirsilber', 'oak', 'mokka']
 
-    # duration_sens, duration_trans, duration_versao, duration_farois, duration_jantes = 0, 0, 0, 0, 0
+    duration_sens, duration_trans, duration_versao, duration_farois, duration_jantes = 0, 0, 0, 0, 0
     line_modelo = group['Modelo'].head(1).values[0]
     tokenized_modelo = nltk.word_tokenize(line_modelo)
     optionals = set(group['Opcional'])
-
-    # start_nav_all, end_nav_all = [], []
-    # start_barras_all, end_barras_all = [], []
-    #     start_alarme_all, end_alarme_all = [], []
-    #     start_7_lug_all, end_7_lug_all = [], []
-    #     start_prot_all, end_prot_all = [], []
-    #     start_ac_all, end_ac_all = [], []
-    #     start_teto_all, end_teto_all = [], []
-    # duration_sens_group, duration_trans_group, duration_versao_group, duration_farois_group, duration_jantes_group = [], [], [], [], []
-    #     start_cor_ext_all, end_cor_ext_all = [], []
-    #     start_cor_int_all, end_cor_int_all = [], []
-    #     start_int_type_all, end_int_type_all = [], []
+    local_time = time.time
 
     # Navegação
-    # start_nav_all.append(time.time())
-    # start_nav = time.time()
+    start_nav = local_time()
     if len([x for x in optionals if 'navegação' in x]):
-        group.loc[group['Nº Stock'] == key, 'Navegação'] = 1
-    # end_nav = time.time()
+        group['Navegação'] = 1
+    end_nav = local_time()
 
     # Barras Tejadilho
-    # start_barras = time.time()
+    start_barras = local_time()
     if len([x for x in optionals if 'barras' in x]):
-        group.loc[group['Nº Stock'] == key, 'Barras_Tej'] = 1
-    # end_barras = time.time()
+        group['Barras_Tej'] = 1
+    end_barras = local_time()
 
     # Alarme
-    # start_alarme_all.append(time.time())
+    start_alarme = local_time()
     if len([x for x in optionals if 'alarme' in x]):
-        group.loc[group['Nº Stock'] == key, 'Alarme'] = 1
-    # end_alarme_all.append(time.time())
+        group['Alarme'] = 1
+    end_alarme = local_time()
 
     # 7 Lugares
-    # start_7_lug_all.append(time.time())
+    start_7_lug = local_time()
     if len([x for x in optionals if 'terceira' in x]):
-        group.loc[group['Nº Stock'] == key, '7_Lug'] = 1
-    # end_7_lug_all.append(time.time())
+        group['7_Lug'] = 1
+    end_7_lug = local_time()
 
     # Vidros com Proteção Solar
-    # start_prot_all.append(time.time())
+    start_prot = local_time()
     if len([x for x in optionals if 'proteção' in x and 'solar' in x]):
-        group.loc[group['Nº Stock'] == key, 'Prot.Solar'] = 1
-    # end_prot_all.append(time.time())
+        group['Prot.Solar'] = 1
+    end_prot = local_time()
 
     # AC Auto
-    # start_ac_all.append(time.time())
+    start_ac = local_time()
     if len([x for x in optionals if 'ar' in x and 'condicionado' in x]):
-        group.loc[group['Nº Stock'] == key, 'AC Auto'] = 1
-    # end_ac_all.append(time.time())
+        group['AC Auto'] = 1
+    end_ac = local_time()
 
     # Teto Abrir
-    # start_teto_all.append(time.time())
+    start_teto = local_time()
     if len([x for x in optionals if 'teto' in x and 'abrir' in x]):
-        group.loc[group['Nº Stock'] == key, 'Teto_Abrir'] = 1
-    # end_teto_all.append(time.time())
+        group['Teto_Abrir'] = 1
+    end_teto = local_time()
 
     # Sensor/Transmissão/Versão/Jantes
     for line_options in group['Opcional']:
         tokenized_options = nltk.word_tokenize(line_options)
 
-        # start = time.time()
+        start = local_time()
         if 'pdc-sensores' in tokenized_options:
             for word in tokenized_options:
                 if 'diant' in word:
-                    group.loc[group['Nº Stock'] == key, 'Sensores'] = 1
-        # duration = time.time() - start
-        # duration_sens += duration
+                    group['Sensores'] = 1
+        duration = local_time() - start
+        duration_sens += duration
 
-        # start = time.time()
+        start = local_time()
         if 'transmissão' in tokenized_options or 'caixa' in tokenized_options:
             for word in tokenized_options:
                 if 'auto' in word:
-                    group.loc[group['Nº Stock'] == key, 'Caixa Auto'] = 1
-        # duration = time.time() - start
-        # duration_trans += duration
+                    group['Caixa Auto'] = 1
+        duration = local_time() - start
+        duration_trans += duration
 
         # Versão
-        # start = time.time()
+        start = local_time()
         if 'advantage' in tokenized_options:
-            group.loc[group['Nº Stock'] == key, 'Versao'] = 'advantage'
+            group['Versao'] = 'advantage'
         elif 'versão' in tokenized_options or 'bmw' in tokenized_options:
             if 'line' in tokenized_options and 'sport' in tokenized_options:
-                group.loc[group['Nº Stock'] == key, 'Versao'] = 'line_sport'
+                group['Versao'] = 'line_sport'
             if 'line' in tokenized_options and 'urban' in tokenized_options:
-                group.loc[group['Nº Stock'] == key, 'Versao'] = 'line_urban'
+                group['Versao'] = 'line_urban'
             if 'desportiva' in tokenized_options and 'm' in tokenized_options:
-                group.loc[group['Nº Stock'] == key, 'Versao'] = 'desportiva_m'
+                group['Versao'] = 'desportiva_m'
             if 'line' in tokenized_options and 'luxury' in tokenized_options:
-                group.loc[group['Nº Stock'] == key, 'Versao'] = 'line_luxury'
+                group['Versao'] = 'line_luxury'
         if 'pack' in tokenized_options and 'desportivo' in tokenized_options and 'm' in tokenized_options:
             if 'S1' in tokenized_modelo:
-                group.loc[group['Nº Stock'] == key, 'Versao'] = 'desportiva_m'
+                group['Versao'] = 'desportiva_m'
             elif 'S5' in tokenized_modelo or 'S3' in tokenized_modelo or 'S2' in tokenized_modelo:
-                group.loc[group['Nº Stock'] == key, 'Versao'] = 'pack_desportivo_m'
+                group['Versao'] = 'pack_desportivo_m'
         if 'bmw' in tokenized_options and 'modern' in tokenized_options:  # no need to search for string line, there are no bmw modern without line;
             if 'S5' in tokenized_modelo:
-                group.loc[group['Nº Stock'] == key, 'Versao'] = 'line_luxury'
+                group['Versao'] = 'line_luxury'
             else:
-                group.loc[group['Nº Stock'] == key, 'Versao'] = 'line_urban'
+                group['Versao'] = 'line_urban'
         if 'xline' in tokenized_options:
-            group.loc[group['Nº Stock'] == key, 'Versao'] = 'xline'
-        # duration = time.time() - start
-        # duration_versao += duration
+            group['Versao'] = 'xline'
+        duration = local_time() - start
+        duration_versao += duration
 
         # Faróis
-        # start = time.time()
+        start = local_time()
         if "xénon" in tokenized_options or 'bixénon' in tokenized_options:
-            group.loc[group['Nº Stock'] == key, 'Farois_Xenon'] = 1
+            group['Farois_Xenon'] = 1
         elif "luzes" in tokenized_options and "led" in tokenized_options and 'nevoeiro' not in tokenized_options or 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
-            group.loc[group['Nº Stock'] == key, 'Farois_LED'] = 1
-        # duration = time.time() - start
-        # duration_farois += duration
+            group['Farois_LED'] = 1
+        duration = local_time() - start
+        duration_farois += duration
 
         # Jantes
-        # start = time.time()
+        start = local_time()
         for value in range(15, 21):
             if str(value) in tokenized_options:
                 jantes_size = [str(value)] * group.shape[0]
-                group.loc[group['Nº Stock'] == key, 'Jantes'] = jantes_size
-        # duration = time.time() - start
-        # duration_jantes += duration
-
-    # durations = [duration_sens, duration_trans]
-    # durations_all = [duration_sens_group, duration_trans_group]
-    # durations = [duration_farois, duration_jantes, duration_sens, duration_trans, duration_versao]
-    # durations_all = [duration_versao_all, duration_trans_all, duration_sens_all, duration_jantes_all, duration_farois_all]
-    # [duration_all.append(duration) for (duration_all, duration) in zip(durations_all, durations)]
+                group['Jantes'] = jantes_size
+        duration = local_time() - start
+        duration_jantes += duration
 
     # Cor Exterior
-    # start_cor_ext_all.append(time.time())
+    start_cor_ext = local_time()
     line_color = group['Cor'].head(1).values[0]
     tokenized_color = nltk.word_tokenize(line_color)
     color = [x for x in colors_pt if x in tokenized_color]
@@ -397,67 +377,66 @@ def options_scraping_per_group(args):
         color = [color[0]]
     color = color * group.shape[0]
     try:
-        group.loc[group['Nº Stock'] == key, 'Cor_Exterior'] = color
+        group['Cor_Exterior'] = color
     except ValueError:
         print(color)
-    # end_cor_ext_all.append(time.time())
+    end_cor_ext = local_time()
 
     # Cor Interior
-    # start_cor_int_all.append(time.time())
+    start_cor_int = local_time()
     line_interior = group['Interior'].head(1).values[0]
     tokenized_interior = nltk.word_tokenize(line_interior)
 
     if 'dakota' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in dakota_colors]
         if color_int:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'dakota_' + color_int[0]
+            group['Cor_Interior'] = 'dakota_' + color_int[0]
     elif 'nappa' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in nappa_colors]
         if color_int:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'nappa_' + color_int[0]
+            group['Cor_Interior'] = 'nappa_' + color_int[0]
     elif 'vernasca' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in vernasca_colors]
         if color_int:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'vernasca_' + color_int[0]
+            group['Cor_Interior'] = 'vernasca_' + color_int[0]
     elif 'nevada' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in nevada_colors]
         if color_int:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'nevada_' + color_int[0]
+            group['Cor_Interior'] = 'nevada_' + color_int[0]
     elif 'merino' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in merino_colors]
         if color_int:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'merino_' + color_int[0]
+            group['Cor_Interior'] = 'merino_' + color_int[0]
     else:
         if 'antraci' in tokenized_interior or 'antracit' in tokenized_interior or 'anthracite/silver' in tokenized_interior or 'preto/laranja' in tokenized_interior or 'preto/silver' in tokenized_interior or 'preto/preto' in tokenized_interior or 'confort' in tokenized_interior or 'standard' in tokenized_interior or 'preto' in tokenized_interior or 'antracite' in tokenized_interior or 'antracite/laranja' in tokenized_interior or 'antracite/preto' in tokenized_interior or 'antracite/cinza/preto' in tokenized_interior or 'antracite/vermelho/preto' in tokenized_interior or 'antracite/vermelho' in tokenized_interior or 'interiores' in tokenized_interior:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'preto'
+            group['Cor_Interior'] = 'preto'
         elif 'oyster/preto' in tokenized_interior:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'oyster'
+            group['Cor_Interior'] = 'oyster'
         elif 'platinu' in tokenized_interior or 'grey' in tokenized_interior or 'prata/preto/preto' in tokenized_interior or 'prata/cinza' in tokenized_interior:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'cinzento'
+            group['Cor_Interior'] = 'cinzento'
         elif 'castanho' in tokenized_interior or 'walnut' in tokenized_interior:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'castanho'
+            group['Cor_Interior'] = 'castanho'
         elif 'âmbar/preto/pr' in tokenized_interior:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'amarelo'
+            group['Cor_Interior'] = 'amarelo'
         elif 'champagne' in tokenized_interior:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'bege'
+            group['Cor_Interior'] = 'bege'
         elif 'crimson' in tokenized_interior:
-            group.loc[group['Nº Stock'] == key, 'Cor_Interior'] = 'vermelho'
-    # end_cor_int_all.append(time.time())
+            group['Cor_Interior'] = 'vermelho'
+    end_cor_int = local_time()
 
     # Tipo Interior
-    # start_int_type_all.append(time.time())
+    start_int_type = local_time()
     if 'comb' in tokenized_interior or 'combin' in tokenized_interior or 'combinação' in tokenized_interior or 'tecido/pele' in tokenized_interior:
-        group.loc[group['Nº Stock'] == key, 'Tipo_Interior'] = 'combinação'
+        group['Tipo_Interior'] = 'combinação'
     elif 'hexagon\'' in tokenized_interior or 'hexagon/alcantara' in tokenized_interior:
-        group.loc[group['Nº Stock'] == key, 'Tipo_Interior'] = 'tecido_micro'
+        group['Tipo_Interior'] = 'tecido_micro'
     elif 'tecido' in tokenized_interior or 'cloth' in tokenized_interior:
-        group.loc[group['Nº Stock'] == key, 'Tipo_Interior'] = 'tecido'
+        group['Tipo_Interior'] = 'tecido'
     elif 'pele' in tokenized_interior or 'leather' in tokenized_interior or 'dakota\'' in tokenized_interior or 'couro' in tokenized_interior:
-        group.loc[group['Nº Stock'] == key, 'Tipo_Interior'] = 'pele'
-    # end_int_type_all.append(time.time())
+        group['Tipo_Interior'] = 'pele'
+    end_int_type = local_time()
 
-    # return group, start_nav, end_barras, start_barras, end_nav, duration_sens_group, duration_trans_group
-    return group
+    return group, (end_nav - start_nav), (end_barras - start_barras), (end_alarme - start_alarme), (end_7_lug - start_7_lug), (end_prot - start_prot), (end_ac - start_ac), (end_teto - start_teto), (end_cor_ext - start_cor_ext), (end_cor_int - start_cor_int), (end_int_type - start_int_type), duration_trans, duration_sens, duration_versao, duration_farois, duration_jantes
 
 
 def datasets_dictionary_function(train_x, train_y, test_x, test_y):

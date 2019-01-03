@@ -26,6 +26,7 @@ def log_files(project_name, output_dir='logs/'):
 
 def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0, **kwargs):
     start = time.time()
+    query = None
     level_2_optionals_baviera_performance_report_info.log_record('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
 
     if columns != '*':

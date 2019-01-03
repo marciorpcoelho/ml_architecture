@@ -7,7 +7,7 @@ from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
 from level_2_optionals_baviera_performance_report_info import log_record
-from level_2_optionals_baviera_options import classification_models, sql_info
+from level_2_optionals_baviera_options import classification_models, sql_info, k, gridsearch_score
 pd.set_option('display.expand_frame_repr', False)
 
 
@@ -82,7 +82,7 @@ class RegressionTraining(object):
         self.clf.fit(x, y)
 
 
-def model_training(models, train_x, train_y, k, score):
+def model_training(models, train_x, train_y):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
 
     for model in models:
@@ -91,7 +91,7 @@ def model_training(models, train_x, train_y, k, score):
             start = time.time()
             parameters = {'estimators': [(x, y) for x, y in zip(best_models_pre_fit.keys(), best_models_pre_fit.values())]}
             vote_clf = ClassificationTraining(clf=classification_models['voting'][0], params=parameters)
-            vote_clf.grid_search(parameters=classification_models['voting'][1], k=k, score=score)
+            vote_clf.grid_search(parameters=classification_models['voting'][1], k=k, score=gridsearch_score)
             vote_clf.clf_fit(x=train_x, y=train_y.values.ravel())
             vote_clf_best = vote_clf.grid.best_estimator_
             vote_clf_best.fit(train_x, train_y.values.ravel())
@@ -100,7 +100,7 @@ def model_training(models, train_x, train_y, k, score):
         else:
             start = time.time()
             clf = ClassificationTraining(clf=classification_models[model][0])
-            clf.grid_search(parameters=classification_models[model][1], k=k, score=score)
+            clf.grid_search(parameters=classification_models[model][1], k=k, score=gridsearch_score)
             clf.clf_fit(x=train_x, y=train_y.values.ravel())
             clf_best = clf.grid.best_estimator_
 

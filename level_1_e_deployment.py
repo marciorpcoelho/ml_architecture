@@ -86,15 +86,10 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
 
 
 def sql_string_preparation(values_list):
-    columns_string = str()
-    values_string = 'values ('
+    columns_string = '[%s]' % "], [".join(values_list)
 
-    for item in values_list:
-        columns_string += '[' + item + '], '
-        values_string += '?, '
-
-    columns_string = columns_string[:-2] + '' + columns_string[-1:]
-    values_string = values_string[:-2] + ')' + values_string[-1:]
+    values_string = ['?'] * len(values_list)
+    values_string = 'values (%s)' % ', '.join(values_string)
 
     return columns_string, values_string
 

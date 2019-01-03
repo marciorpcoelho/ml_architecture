@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
 from level_1_e_deployment import sql_inject, save_csv, sql_second_highest_date_checkup
-from level_2_optionals_baviera_options import sql_info, pool_workers_count, dict_models_name_conversion
+from level_2_optionals_baviera_options import sql_info, pool_workers_count, dict_models_name_conversion, metric, metric_threshold
 from level_2_optionals_baviera_performance_report_info import log_record
 pd.set_option('display.expand_frame_repr', False)
 
@@ -93,14 +93,12 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
 
 
 def probability_evaluation(models_name, models, train_x, test_x):
-    proba_train = models[models_name].predict_proba(train_x)
-    proba_test = models[models_name].predict_proba(test_x)
+    probabilities = {'proba_train': models[models_name].predict_proba(train_x), 'proba_test': models[models_name].predict_proba(test_x)}
 
-    return proba_train, proba_test
+    return probabilities
 
 
 def feature_contribution(df, configuration_parameters):
-    # configuration_parameters.remove('Modelo_new')
     configuration_parameters.remove('Modelo')
     boolean_parameters = [x for x in configuration_parameters if list(df[x].unique()) == [0, 1] or list(df[x].unique()) == [1, 0]]
     non_boolean_parameters = [x for x in configuration_parameters if x not in boolean_parameters]
@@ -183,15 +181,15 @@ def feature_contribution(df, configuration_parameters):
     sql_inject(df_feature_contribution_total, sql_info['database'], sql_info['feature_contribution'], list(df_feature_contribution_total), truncate=1)
 
 
-def add_new_columns_to_df(df, proba_training, proba_test, predictions, train_x, train_y, test_x, test_y, configuration_parameters):
-    train_x['proba_0'] = [x[0] for x in proba_training]
-    train_x['proba_1'] = [x[1] for x in proba_training]
-    train_x['score_class_gt'] = train_y
+def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datasets, configuration_parameters):
+    train_x['proba_0'] = [x[0] for x in probabilities['proba_training']]
+    train_x['proba_1'] = [x[1] for x in probabilities['proba_training']]
+    train_x['score_class_gt'] = datasets['train_y']
     train_x['score_class_pred'] = predictions[0]
 
-    test_x['proba_0'] = [x[0] for x in proba_test]
-    test_x['proba_1'] = [x[1] for x in proba_test]
-    test_x['score_class_gt'] = test_y
+    test_x['proba_0'] = [x[0] for x in probabilities['proba_test']]
+    test_x['proba_1'] = [x[1] for x in probabilities['proba_test']]
+    test_x['score_class_gt'] = datasets['test_y']
     test_x['score_class_pred'] = predictions[1]
 
     train_test_datasets = pd.concat([train_x, test_x])
@@ -238,14 +236,14 @@ def df_decimal_places_rounding(df, dictionary):
     return df
 
 
-def model_choice(df_results, metric, threshold):
+def model_choice(df_results):
     step_e_upload_flag = 0
 
     try:
         # makes sure there are results above minimum threshold
-        best_model_name = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
-        best_model_value = df_results[df_results.loc[:, metric].gt(threshold)][[metric, 'Running_Time']].max().head(1).values[0]
-        log_record('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(threshold) + '). Will compare with last result in SQL Server...', sql_info['database'], sql_info['log_record'])
+        best_model_name = df_results[df_results.loc[:, metric].gt(metric_threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
+        best_model_value = df_results[df_results.loc[:, metric].gt(metric_threshold)][[metric, 'Running_Time']].max().head(1).values[0]
+        log_record('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(metric_threshold) + '). Will compare with last result in SQL Server...', sql_info['database'], sql_info['log_record'])
 
         df_previous_performance_results = sql_second_highest_date_checkup(sql_info['database'], sql_info['performance_algorithm_results'])
         if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
@@ -257,16 +255,17 @@ def model_choice(df_results, metric, threshold):
             model_choice_flag = 2
 
     except ValueError:
-        log_record('No value above minimum threshold (%.4f' % threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.', sql_info['database'], sql_info['log_record'], flag=1)
+        log_record('No value above minimum threshold (%.4f' % metric_threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.', sql_info['database'], sql_info['log_record'], flag=1)
         model_choice_flag, best_model_name, best_model_value = 0, 0, 0
 
-    model_choice_message = model_choice_upload(model_choice_flag, best_model_name, best_model_value, metric)
+    model_choice_message = model_choice_upload(model_choice_flag, best_model_name, best_model_value)
 
     return model_choice_message, best_model_name, best_model_value, step_e_upload_flag
 
 
-def model_choice_upload(flag, name, value, metric):
+def model_choice_upload(flag, name, value):
     df_model_result = pd.DataFrame(columns={'Model_Choice_Flag', 'Chosen_Model', 'Metric', 'Value', 'Message'})
+    message = None
 
     df_model_result['Model_Choice_Flag'] = [flag]
     if not flag:
@@ -344,8 +343,8 @@ def multiprocess_evaluation(args):
     start = time.time()
     log_record('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...', sql_info['database'], sql_info['log_record'])
     train_x_copy, test_x_copy = datasets['train_x'].copy(deep=True), datasets['test_x'].copy(deep=True)
-    proba_training, proba_test = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
-    df_model = add_new_columns_to_df(df, proba_training, proba_test, predictions[model_name], train_x_copy, datasets['train_y'], test_x_copy, datasets['test_y'], configuration_parameters)
+    probabilities = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
+    df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], train_x_copy, test_x_copy, datasets, configuration_parameters)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
     log_record(model_name + ' - Elapsed time: %f' % (time.time() - start), sql_info['database'], sql_info['log_record'])

@@ -1,6 +1,7 @@
 import time
 import sys
 import logging
+import timeit
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload, log_record
@@ -30,9 +31,6 @@ def main():
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
     models = ['dt', 'rf', 'lr', 'ab', 'gc', 'xgb', 'voting']  # ToDo: ANN doesn't converge or takes too long to converge
-    k = 10  # Stratified Cross-Validation number of Folds
-    gridsearch_score = 'recall'  # Metric on which to optimize GridSearchCV
-    metric, metric_threshold = 'ROC_Curve', 0.70
     nlr_code = 701
     # possible_evaluation_metrics: 'ROC_Curve', 'Micro_F1', 'Average_F1', 'Macro_F1', 'Accuracy', 'Precision'
     ###
@@ -40,8 +38,8 @@ def main():
     number_of_features = 'all'
     df = data_acquistion(input_file, nlr_code, local=1)
     df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
-    classes, best_models, running_times = data_modelling(df, datasets, models, k, gridsearch_score)
-    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, datasets, number_of_features)
+    classes, best_models, running_times = data_modelling(df, datasets, models)
+    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features)
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(model_choice_message, vehicle_count, running_times_upload_flag)
@@ -127,7 +125,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_columns(df, ['Date'])
 
     else:
-        running_times_upload_flag = 0
         log_record('Checkpoint Found. Retrieving data...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
         df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))
@@ -157,13 +154,13 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     return df, datasets
 
 
-def data_modelling(df, datasets, models, k, score):
+def data_modelling(df, datasets, models):
     performance_info_append(time.time(), 'start_section_c')
     log_record('Started Step C...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
     df.sort_index(inplace=True)
 
-    classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'], k, score)  # Training of each referenced model
+    classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'])  # Training of each referenced model
     save_model(best_models, models)
 
     log_record('Finished Step C.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -172,7 +169,7 @@ def data_modelling(df, datasets, models, k, score):
     return classes, best_models, running_times
 
 
-def model_evaluation(df, models, best_models, running_times, classes, metric, metric_threshold, datasets, number_of_features):
+def model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features):
     performance_info_append(time.time(), 'start_section_d')
     log_record('Started Step D...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
@@ -182,7 +179,7 @@ def model_evaluation(df, models, best_models, running_times, classes, metric, me
     plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
 
     df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters)
-    model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(results_test, metric, metric_threshold)
+    model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(results_test)
 
     if not section_e_upload_flag:
         best_model = None

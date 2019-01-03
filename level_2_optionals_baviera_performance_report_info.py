@@ -54,6 +54,7 @@ def performance_info(model_choice_message, vehicle_count, running_times_upload_f
 
 
 def email_notification(warning_flag, warning_desc, error_desc, error_flag=0, model_choice_message=0):
+    run_conclusion, warning_conclusion, conclusion_message = None, None, None
     fromaddr = 'mrpc@gruposalvadorcaetano.pt'
     df_mail_users = level_1_a_data_acquisition.sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mail_users'])
     users = df_mail_users['UserName'].unique()
@@ -94,6 +95,7 @@ def email_notification(warning_flag, warning_desc, error_desc, error_flag=0, mod
 
 def error_upload(log_file, error_flag=0):
     df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Line', 'Error_Flag'})
+    error_only = None
 
     if error_flag:
         error_full, error_only = parse_line(log_file)
