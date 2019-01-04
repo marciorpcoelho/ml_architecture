@@ -182,8 +182,8 @@ def feature_contribution(df, configuration_parameters):
 
 
 def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datasets, configuration_parameters):
-    train_x['proba_0'] = [x[0] for x in probabilities['proba_training']]
-    train_x['proba_1'] = [x[1] for x in probabilities['proba_training']]
+    train_x['proba_0'] = [x[0] for x in probabilities['proba_train']]
+    train_x['proba_1'] = [x[1] for x in probabilities['proba_train']]
     train_x['score_class_gt'] = datasets['train_y']
     train_x['score_class_pred'] = predictions[0]
 
