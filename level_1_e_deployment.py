@@ -20,21 +20,22 @@ def save_csv(dfs, names):
 
 def sql_log_inject(line, flag, database, view):
 
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
-    cursor = cnxn.cursor()
-    time_tag_date = time.strftime("%Y-%m-%d")
-    time_tag_hour = time.strftime("%H:%M:%S")
-
-    line = apostrophe_escape(line)
-
     try:
-        cursor.execute('INSERT INTO [' + str(database) + '].dbo.[' + str(view) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\')')
-    except pyodbc.ProgrammingError:
-        logging.warning('Unable to access SQL Server.')
+        cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+        cursor = cnxn.cursor()
+        time_tag_date = time.strftime("%Y-%m-%d")
+        time_tag_hour = time.strftime("%H:%M:%S")
 
-    cnxn.commit()
-    cursor.close()
-    cnxn.close()
+        line = apostrophe_escape(line)
+
+        cursor.execute('INSERT INTO [' + str(database) + '].dbo.[' + str(view) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\')')
+
+        cnxn.commit()
+        cursor.close()
+        cnxn.close()
+    except (pyodbc.ProgrammingError, pyodbc.OperationalError):
+        logging.warning('Unable to access SQL Server.')
+        return
 
 
 def apostrophe_escape(line):
@@ -123,20 +124,20 @@ def sql_date_comparison(df, database, view, date_column, time_to_last_update):
 
 def sql_date_checkup(database, view, date_column):
 
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
-    cursor = cnxn.cursor()
-
-    cursor.execute('SELECT MAX(' + '[' + date_column + ']' + ') FROM ' + database + '.dbo.' + view)
-
-    result = cursor.fetchone()
-
     try:
+        cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+        cursor = cnxn.cursor()
+
+        cursor.execute('SELECT MAX(' + '[' + date_column + ']' + ') FROM ' + database + '.dbo.' + view)
+
+        result = cursor.fetchone()
         result_date = datetime.strptime(result[0], '%Y-%m-%d')
-    except TypeError:
+
+        cursor.close()
+        cnxn.close()
+    except (pyodbc.ProgrammingError, pyodbc.OperationalError, TypeError):
         result_date = datetime.strptime('1960-01-01', '%Y-%m-%d')  # Just in case the database is empty
 
-    cursor.close()
-    cnxn.close()
     return result_date
 
 

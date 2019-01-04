@@ -32,16 +32,23 @@ def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0, 
     if columns != '*':
         columns = str(columns)[1:-1].replace('\'', '')
 
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+    try:
+        cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
 
-    if not nlr_code:
-        query = 'SELECT ' + columns + ' FROM ' + view
-    elif nlr_code:
-        query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE NLR_CODE = ' + '\'' + str(nlr_code) + '\''
+        if not nlr_code:
+            query = 'SELECT ' + columns + ' FROM ' + view
+        elif nlr_code:
+            query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE NLR_CODE = ' + '\'' + str(nlr_code) + '\''
 
-    df = pd.read_sql(query, cnxn, **kwargs)
-    if column_renaming:
-        column_rename(df, list(sql_to_code_renaming.keys()), list(sql_to_code_renaming.values()))
+        df = pd.read_sql(query, cnxn, **kwargs)
+        if column_renaming:
+            column_rename(df, list(sql_to_code_renaming.keys()), list(sql_to_code_renaming.values()))
 
-    print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
-    return df
+        cnxn.close()
+
+        print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
+        return df
+
+    except (pyodbc.ProgrammingError, pyodbc.OperationalError):
+        return  # ToDo need to figure a better way of handling these errors
+

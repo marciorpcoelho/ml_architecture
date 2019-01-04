@@ -149,7 +149,7 @@ def save_fig(name, save_dir='output/'):
 
 def options_scraping(df):
     df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index, df[df['Prov'] == 'Demonstração|Em utilização'].index])
-    df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
+    df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
     # df = remove_rows(df, [df['Registration_Number'].str.contains('/').index, [df['Registration_Number'].str.len() > 8].index])  # This removes vehicles with erroneous registration numbers;
 
     df_grouped = df.groupby('Nº Stock')
@@ -171,25 +171,25 @@ def options_scraping(df):
     pool = Pool(processes=workers)
     results = pool.map(options_scraping_per_group, [(key, group) for (key, group) in df_grouped])
     pool.close()
-    df = pd.concat([result[0] for result in results])
+    df = pd.concat([result[0] for result in results if result is not None])
     durations_times = [nav_all, barras_all, alarme_all, seven_lug_all, prot_all, ac_all, teto_all, cor_ext_all, cor_int_all, int_type_all, sens_all, trans_all, versao_all, farois_all, jantes_all]
     durations_names = ['nav_all', 'barras_all', 'alarme_all', 'seven_lug_all', 'prot_all', 'ac_all', 'teto_all', 'cor_ext_all', 'cor_int_all', 'int_type_all', 'sens_all', 'trans_all', 'versao_all', 'farois_all', 'jantes_all']
 
-    [nav_all.append(result[1]) for result in results]
-    [barras_all.append(result[2]) for result in results]
-    [alarme_all.append(result[3]) for result in results]
-    [seven_lug_all.append(result[4]) for result in results]
-    [prot_all.append(result[5]) for result in results]
-    [ac_all.append(result[6]) for result in results]
-    [teto_all.append(result[7]) for result in results]
-    [cor_ext_all.append(result[8]) for result in results]
-    [cor_int_all.append(result[9]) for result in results]
-    [int_type_all.append(result[10]) for result in results]
-    [trans_all.append(result[11]) for result in results]
-    [sens_all.append(result[12]) for result in results]
-    [versao_all.append(result[13]) for result in results]
-    [farois_all.append(result[14]) for result in results]
-    [jantes_all.append(result[15]) for result in results]
+    [nav_all.append(result[1]) for result in results if result is not None]
+    [barras_all.append(result[2]) for result in results if result is not None]
+    [alarme_all.append(result[3]) for result in results if result is not None]
+    [seven_lug_all.append(result[4]) for result in results if result is not None]
+    [prot_all.append(result[5]) for result in results if result is not None]
+    [ac_all.append(result[6]) for result in results if result is not None]
+    [teto_all.append(result[7]) for result in results if result is not None]
+    [cor_ext_all.append(result[8]) for result in results if result is not None]
+    [cor_int_all.append(result[9]) for result in results if result is not None]
+    [int_type_all.append(result[10]) for result in results if result is not None]
+    [trans_all.append(result[11]) for result in results if result is not None]
+    [sens_all.append(result[12]) for result in results if result is not None]
+    [versao_all.append(result[13]) for result in results if result is not None]
+    [farois_all.append(result[14]) for result in results if result is not None]
+    [jantes_all.append(result[15]) for result in results if result is not None]
     # [durations[i-1].append(result[i] for result in results) for i in range(1, 16)]
 
     [level_2_optionals_baviera_performance_report_info.performance_info_append(duration, tag) for (duration, tag) in zip(durations_times, durations_names)]
@@ -364,7 +364,7 @@ def options_scraping_per_group(args):
     if not color:
         color = [x for x in colors_en if x in tokenized_color]
     if not color:
-        if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58']:
+        if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58'] or tokenized_color == [' ']:
             color = ['undefined']
         elif tokenized_color == ['verm', 'tk', 'mmm']:
             color = ['vermelho']
