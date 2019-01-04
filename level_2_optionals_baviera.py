@@ -118,7 +118,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
 
         log_record('Checkpoint B.1...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
-        performance_info_append(time.time(), 'checkpoint_b1')
+        # performance_info_append(time.time(), 'checkpoint_b1')
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         sql_inject(df, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), truncate=1, check_date=1)
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))
