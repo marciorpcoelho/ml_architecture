@@ -1,11 +1,10 @@
 import time
 import sys
 import logging
-import timeit
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_2_optionals_baviera_performance_report_info import performance_info_append, performance_info, error_upload, log_record
-from level_1_a_data_acquisition import read_csv, sql_retrieve_df
+from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df
 from level_1_b_data_processing import datasets_dictionary_function, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
@@ -59,6 +58,7 @@ def data_acquistion(input_file, nlr_code, local=1, column_renaming=1):
             df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
     else:
         df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), nlr_code, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
+        vehicle_count_checkup(df)
 
     log_record('Finished Step A.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
     performance_info_append(time.time(), 'end_section_a')

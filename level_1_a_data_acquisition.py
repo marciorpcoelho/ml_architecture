@@ -17,6 +17,12 @@ def read_csv(column_renaming=0, *args, **kwargs):
     return df
 
 
+def vehicle_count_checkup(df):
+    vehicle_count = df['Nº Stock'].nunique()
+    if vehicle_count < 1000:
+        raise ValueError('Apenas ' + str(vehicle_count) + ' foram encontrados. Por favor verificar os dados na base de dados.')
+
+
 # This function works really well for one single function on scheduler (provided i had sys.stdout.flush() to the end of each file). But if more than one functions are running at the same time (different threads) the stdout
 # saved is all mixed and saved on the file of the last function; - trying now with logging module
 def log_files(project_name, output_dir='logs/'):
