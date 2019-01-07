@@ -19,7 +19,7 @@ def read_csv(column_renaming=0, *args, **kwargs):
 
 def vehicle_count_checkup(df):
     vehicle_count = df['Nº Stock'].nunique()
-    if vehicle_count < 1000:
+    if vehicle_count < 5000:
         raise ValueError('Apenas ' + str(vehicle_count) + ' foram encontrados. Por favor verificar os dados na base de dados.')
 
 

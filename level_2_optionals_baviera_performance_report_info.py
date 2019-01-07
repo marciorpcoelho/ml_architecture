@@ -85,7 +85,7 @@ def email_notification(warning_flag, warning_desc, error_desc, error_flag=0, mod
         message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
 
         try:
-            server = smtplib.SMTP('smtp-mail.outlook.com')
+            server = smtplib.SMTP('smtp.gmail.com')
             server.ehlo()
             server.starttls()
             server.login(level_2_optionals_baviera_options.EMAIL, level_2_optionals_baviera_options.EMAIL_PASS)

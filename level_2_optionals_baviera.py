@@ -35,7 +35,7 @@ def main():
     ###
 
     number_of_features = 'all'
-    df = data_acquistion(input_file, nlr_code, local=1)
+    df = data_acquistion(input_file, nlr_code)
     df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, datasets, models)
     model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features)
@@ -47,7 +47,7 @@ def main():
     log_record('Finished Successfully - Project: Baviera Order Optimization.\n', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
 
-def data_acquistion(input_file, nlr_code, local=1, column_renaming=1):
+def data_acquistion(input_file, nlr_code, local=0, column_renaming=1):
     performance_info_append(time.time(), 'start_section_a')
     log_record('Started Step A...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
