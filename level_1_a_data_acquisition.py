@@ -30,25 +30,59 @@ def log_files(project_name, output_dir='logs/'):
     sys.stderr = open(output_dir + project_name + '.txt', 'a')
 
 
-def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0, **kwargs):
+# def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0, **kwargs):
+#     start = time.time()
+#     query = None
+#     # level_2_optionals_baviera_performance_report_info.log_record('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
+#
+#     if columns != '*':
+#         columns = str(columns)[1:-1].replace('\'', '')
+#
+#     try:
+#         cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+#
+#         if not nlr_code:
+#             query = 'SELECT ' + columns + ' FROM ' + view
+#         elif nlr_code:
+#             query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE NLR_CODE = ' + '\'' + str(nlr_code) + '\''
+#
+#         df = pd.read_sql(query, cnxn, **kwargs)
+#         if column_renaming:
+#             column_rename(df, list(sql_to_code_renaming.keys()), list(sql_to_code_renaming.values()))
+#
+#         cnxn.close()
+#
+#         print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
+#         return df
+#
+#     except (pyodbc.ProgrammingError, pyodbc.OperationalError):
+#         return  # ToDo need to figure a better way of handling these errors
+
+
+def sql_retrieve_df(options_file, view, columns='*', query_filters=0, column_renaming=0, **kwargs):
     start = time.time()
-    query = None
-    level_2_optionals_baviera_performance_report_info.log_record('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
+    query, query_filters_string_list = None, []
 
     if columns != '*':
         columns = str(columns)[1:-1].replace('\'', '')
 
     try:
-        cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+        cnxn = pyodbc.connect('DSN=' + options_file.DSN + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + options_file.sql_info['database'])
 
-        if not nlr_code:
+        if type(query_filters) == int:
             query = 'SELECT ' + columns + ' FROM ' + view
-        elif nlr_code:
-            query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE NLR_CODE = ' + '\'' + str(nlr_code) + '\''
+        elif type(query_filters) == dict:
+            for key in query_filters:
+                if type(query_filters[key]) == list:
+                    testing_string = '\'%s\'' % "\', \'".join(query_filters[key])
+                    query_filters_string_list.append(key + ' in (' + testing_string + ')')
+                else:
+                    query_filters_string_list.append(key + ' = \'%s\'' % str(query_filters[key]))
+            query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE ' + ' and '.join(query_filters_string_list)
 
         df = pd.read_sql(query, cnxn, **kwargs)
         if column_renaming:
-            column_rename(df, list(sql_to_code_renaming.keys()), list(sql_to_code_renaming.values()))
+            column_rename(df, list(options_file.sql_to_code_renaming.keys()), list(options_file.sql_to_code_renaming.values()))
 
         cnxn.close()
 
@@ -57,4 +91,3 @@ def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0, 
 
     except (pyodbc.ProgrammingError, pyodbc.OperationalError):
         return  # ToDo need to figure a better way of handling these errors
-

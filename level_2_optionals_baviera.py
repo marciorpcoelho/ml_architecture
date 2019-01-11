@@ -30,12 +30,12 @@ def main():
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
     models = ['dt', 'rf', 'lr', 'ab', 'gc', 'xgb', 'voting']  # ToDo: ANN doesn't converge or takes too long to converge
-    nlr_code = 701
+    query_filters = {'NLR_CODE': '701'}
     # possible_evaluation_metrics: 'ROC_Curve', 'Micro_F1', 'Average_F1', 'Macro_F1', 'Accuracy', 'Precision'
     ###
 
     number_of_features = 'all'
-    df = data_acquistion(input_file, nlr_code)
+    df = data_acquistion(input_file, query_filters, local=1)
     df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, datasets, models)
     model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features)
@@ -47,7 +47,7 @@ def main():
     log_record('Finished Successfully - Project: Baviera Order Optimization.\n', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
 
-def data_acquistion(input_file, nlr_code, local=0, column_renaming=1):
+def data_acquistion(input_file, query_filters, local=0, column_renaming=1):
     performance_info_append(time.time(), 'start_section_a')
     log_record('Started Step A...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
 
@@ -57,7 +57,8 @@ def data_acquistion(input_file, nlr_code, local=0, column_renaming=1):
         except UnicodeDecodeError:
             df = read_csv(column_renaming, input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
     else:
-        df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), nlr_code, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
+        # df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), nlr_code, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
+        df = sql_retrieve_df(level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['initial_table'], list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), query_filters, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
         vehicle_count_checkup(df)
 
     log_record('Finished Step A.', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
@@ -126,7 +127,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
     else:
         log_record('Checkpoint Found. Retrieving data...', level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['log_record'])
-        df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
+        # df = sql_retrieve_df(level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
+        df = sql_retrieve_df(level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))
 
     ohe_cols = configuration_parameters + ['Local da Venda', 'buy_day', 'buy_month', 'buy_year']

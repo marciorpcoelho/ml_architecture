@@ -268,19 +268,19 @@ def options_scraping_per_group(args):
 
     # 7 Lugares
     start_7_lug = local_time()
-    if len([x for x in optionals if 'terceira' in x]):
-        group['7_Lug'] = 1
+    # if len([x for x in optionals if 'terceira' in x]):
+    #     group['7_Lug'] = 1
     end_7_lug = local_time()
 
     # Vidros com Proteção Solar
     start_prot = local_time()
-    if len([x for x in optionals if 'proteção' in x and 'solar' in x]):
-        group['Prot.Solar'] = 1
+    # if len([x for x in optionals if 'proteção' in x and 'solar' in x]):
+    #     group['Prot.Solar'] = 1
     end_prot = local_time()
 
     # AC Auto
     start_ac = local_time()
-    if len([x for x in optionals if 'ar' in x and 'condicionado' in x]):
+    if len([x for x in optionals if 'ar' in x and 'condicionado' in x and 'automático' in x]):
         group['AC Auto'] = 1
     end_ac = local_time()
 
@@ -534,6 +534,20 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
 
     df['days_stock_price'] = (0.05/360) * df['price_total'] * df['stock_days']
     df['score_euros'] = df['Margem'] - df['days_stock_price']
+
+    return df
+
+
+def value_replacement(df, col1, col2, values1, values2):
+
+    for value in values1:
+        df.loc[df[col1[values1.index(value)]] == value, col2[values1.index(value)]] = values2[values1.index(value)]
+
+    return df
+
+
+def date_replacement(df):
+    df.loc[df['Resolve_Date'].isnull() & ~df['Close_Date'].isnull(), 'Resolve_Date'] = df.loc[df['Resolve_Date'].isnull() & ~df['Close_Date'].isnull(), 'Close_Date']
 
     return df
 

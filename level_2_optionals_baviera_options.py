@@ -16,16 +16,16 @@ stock_days_threshold = 45
 update_frequency_days = 0
 metric, metric_threshold = 'ROC_Curve', 0.70  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 10, 'recall'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
-selected_configuration_parameters = ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+selected_configuration_parameters = ['Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 # Full: ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
-DSN = os.getenv('DSN')
+DSN = os.getenv('DSN_MLG')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
 EMAIL = os.getenv('EMAIL')
 EMAIL_PASS = os.getenv('EMAIL_PASS')
 pool_workers_count = cpu_count()
-configuration_parameters_full = ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+configuration_parameters_full = ['Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 # Dictionaries:
 sql_info = {
@@ -127,9 +127,17 @@ jantes_dict = {
     'stand/19/20': ['standard', '19', '20']
 }
 
+# sales_place_dict = {
+#     'centro': ['DCV - Coimbrões', 'DCC - Aveiro'],
+#     'norte': ['DCC - Feira', 'DCG - Gaia', 'DCN-Porto', 'DCN-Porto Mini', 'DCG - Gaia Mini', 'DCN-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCC - Aveiro Usados', 'DCC - Viseu Usados', 'DCN-Maia', 'DCV - Viseu Usados'],
+#     'sul': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
+#     'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
+#     'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
+# }
+
 sales_place_dict = {
-    'centro': ['DCV - Coimbrões', 'DCC - Aveiro'],
-    'norte': ['DCC - Feira', 'DCG - Gaia', 'DCN-Porto', 'DCN-Porto Mini', 'DCG - Gaia Mini', 'DCN-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCC - Aveiro Usados', 'DCC - Viseu Usados', 'DCN-Maia', 'DCV - Viseu Usados'],
+    'centro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
+    'norte': ['DCC - Feira', 'DCG - Gaia', 'DCN-Porto', 'DCN-Porto Mini', 'DCG - Gaia Mini', 'DCN-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCN-Maia'],
     'sul': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
     'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
     'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
@@ -159,8 +167,9 @@ versao_dict = {
     'sport': ['line_sport'],
     'base': ['base'],
     'luxury': ['line_luxury'],
-    'xline': ['xline'],
-    'urban/desportiva': ['line_urban', 'desportiva_m', 'pack_desportivo_m']
+    'xline/urban': ['xline', 'line_urban'],
+    # 'urban/desportiva': ['line_urban', 'desportiva_m', 'pack_desportivo_m']
+    'desportiva': ['desportiva_m', 'pack_desportivo_m'],
 }
 
 # v2
