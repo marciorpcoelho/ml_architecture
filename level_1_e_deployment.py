@@ -77,7 +77,7 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
         print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
     except pyodbc.ProgrammingError:
         save_csv([df], ['output/' + view + '_backup'])
-        raise Exception('Error in uploading to database. Saving locally...')
+        level_2_optionals_baviera_performance_report_info.log_record('Error in uploading to database. Saving locally...', sql_info['database'], sql_info['log_record'], flag=1)
 
     cnxn.commit()
     cursor.close()

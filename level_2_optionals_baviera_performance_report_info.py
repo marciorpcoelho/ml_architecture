@@ -57,10 +57,10 @@ def email_notification(warning_flag, warning_desc, error_desc, error_flag=0, mod
     run_conclusion, warning_conclusion, conclusion_message = None, None, None
     fromaddr = 'mrpc@gruposalvadorcaetano.pt'
     df_mail_users = level_1_a_data_acquisition.sql_retrieve_df(level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['mail_users'])
-    # users = df_mail_users['UserName'].unique()
-    # toaddrs = df_mail_users['UserEmail'].unique()
-    users = ['Marcio']
-    toaddrs = ['marcio.coelho@rigorcg.pt']
+    users = df_mail_users['UserName'].unique()
+    toaddrs = df_mail_users['UserEmail'].unique()
+    # users = ['Marcio']
+    # toaddrs = ['marcio.coelho@rigorcg.pt']
 
     mail_subject = 'Otimização Encomenda - Relatório'
 

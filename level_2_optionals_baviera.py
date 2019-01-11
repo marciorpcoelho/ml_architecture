@@ -35,7 +35,7 @@ def main():
     ###
 
     number_of_features = 'all'
-    df = data_acquistion(input_file, query_filters, local=1)
+    df = data_acquistion(input_file, query_filters, local=0)
     df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, datasets, models)
     model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features)
