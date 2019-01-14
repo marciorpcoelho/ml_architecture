@@ -1,6 +1,7 @@
 import nltk
 import time
 import warnings
+from langdetect import detect
 import numpy as np
 import pandas as pd
 from sklearn.feature_selection import SelectKBest
@@ -156,16 +157,30 @@ def options_scraping(df):
     nav_all, barras_all, alarme_all = [], [], []
     seven_lug_all, prot_all, ac_all = [], [], []
     teto_all, cor_ext_all, cor_int_all, int_type_all = [], [], [], []
-    sens_all, trans_all, versao_all, farois_all, jantes_all = [], [], [], [], []
+    sens_all, trans_all, versao_all, farois_all, jantes_all, motor_all = [], [], [], [], [], []
 
     # Modelo
     level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'start_modelo')
     unique_models = df['Modelo'].unique()
     for model in unique_models:
-        if 'Série' not in model:
-            tokenized_modelo = nltk.word_tokenize(model)
-            df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
+        # if 'Série' not in model:
+        tokenized_modelo = nltk.word_tokenize(model)
+        df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
     level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'end_modelo')
+
+    # Motorização
+    level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'start_motor')
+    unique_versions = df['Versão'].unique()
+    for version in unique_versions:
+        mask_version = df['Versão'] == version
+        if 'x1 ' in version or 'x2 ' in version or 'x3 ' in version or 'x4 ' in version or 'x5 ' in version or 'x6 ' in version:  # The extra free space in the X models, is because there are references next to the version description that match the searching criteria. Ex: 420D Coupé (4X31) matches when searched by X333
+            df.loc[mask_version, 'Motor'] = [x.split(' ')[1] for x in df[mask_version]['Versão']]
+        else:
+            df.loc[mask_version, 'Motor'] = [x.split(' ')[0] for x in df[mask_version]['Versão']]
+    # df.loc[df['Modelo'] != 'X1', 'Motor'] = [x.split(' ')[0] for x in df['Versão']]
+    level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'end_motor')
+
+    # print(df['Motor'].unique())
 
     workers = pool_workers_count
     pool = Pool(processes=workers)
@@ -710,5 +725,11 @@ def new_column_creation(df, columns, value):
 
     for column in columns:
         df.loc[:, column] = value
+
+    return df
+
+
+def language_detection(df, column_to_detect, new_column):
+    df[new_column] = df[column_to_detect].apply(detect)
 
     return df

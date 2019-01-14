@@ -16,7 +16,7 @@ stock_days_threshold = 45
 update_frequency_days = 0
 metric, metric_threshold = 'ROC_Curve', 0.70  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 10, 'recall'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
-selected_configuration_parameters = ['Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+selected_configuration_parameters = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 # Full: ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 DSN = os.getenv('DSN_MLG')
@@ -25,7 +25,7 @@ PWD = os.getenv('PWD')
 EMAIL = os.getenv('EMAIL')
 EMAIL_PASS = os.getenv('EMAIL_PASS')
 pool_workers_count = cpu_count()
-configuration_parameters_full = ['Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+configuration_parameters_full = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 # Dictionaries:
 sql_info = {
@@ -179,6 +179,48 @@ tipo_int_dict = {
     'combinação/interior_m': ['combinação', 'tecido_micro', 0, '0']
 }
 
+# Motor v1
+motor_dict_v1 = {
+    '16d': ['114d', '116d', '214d', '216d', '316d', 'sdrive16d'],
+    '16i': ['114i', '116i', '216i'],
+    '18d': ['118d', '218d', '318d', '418d', '518d', 'sdrive18d', 'xdrive18d'],
+    '18i': ['118i', '218i', 'sdrive18i'],
+    '20d': ['120d', '125d', '220d', '320d', '420d', '520d', '620d', 'sdrive20d', 'xdrive20d', 'sdrive'],
+    '20i': ['125i', 'M235i', '320i', '420i', '520i', 'sdrive20i', 'xdrive20i'],
+    '25d': ['225d', '325d', '425d', '525d', '725d', 'xdrive25d', 'sdrive25d'],
+    '25i': ['xdrive25i'],
+    '28i': ['228i', '428i', '528i'],
+    '30d': ['330d', '430d', '530d', '630d', '730d', '730ld', 'xdrive30d', 'xdrive'],
+    '30i': ['m235i', '230i', '330i', '430i', '530i', 'xdrive30i'],
+    '35d': ['335d', '435d', '535d', 'xdrive35d'],
+    '35i': ['335i', '435i', 'xdrive35i'],
+    '40d': ['540d', '640d', '740ld', '740d', 'xdrive40d'],
+    '40i': ['m140i', '340i', '440i', '540i', '640i', '740i', '740li', 'm40i'],
+    '50d': ['m550d', '750d', '750ld', 'm50d'],
+    '50i': ['750li'],
+    'Híbrido': ['225xe', '330e', 'activehybrid', '530e', '740e', '740le', 'xdrive40e'],
+    'M2': ['m2'],
+    'M3': ['m3'],
+    'M4': ['m4'],
+    'M5': ['m5'],
+    'M6': ['m6'],
+    'M': ['m'],
+}
+
+
+# Motor v2
+motor_dict_v2 = {
+    '1.5d': ['114d', '116d', '214d', '216d', '316d', 'sdrive16d'],
+    '1.5i': ['114i', '116i', '118i', '216i', '218i', 'sdrive18i'],
+    '2.0d': ['118d', '120d', '125d', '218d', '220d', '225d', '318d', '320d', '325d', '418d', '420d', '425d', '518d', '520d', '525d', '620d', '725d', 'sdrive', 'sdrive18d', 'sdrive20d', 'sdrive25d', 'xdrive18d', 'xdrive20d', 'xdrive25d', 'xdrive25d'],
+    '2.0i': ['125i', '220d', '228i', '230i', '320i', '330i', '420i', '428i', '430i', '520i', '528i', '530i', 'm235i', 'sdrive20i', 'xdrive20i', 'xdrive25i', 'xdrive30i'],
+    '3.0d': ['330d', '335d', '430d', '435d', '530d', '535d', '540d', '630d', '640d', '730d', '730ld', '740d', '740ld', '750d', '750ld', 'm550d', 'xdrive30d', 'xdrive35d', 'm50d', 'xdrive', 'xdrive40d'],
+    '3.0i': ['335i', '340i', '435i', '440i', '540i', '640i', '740i', 'm140i', 'm2', 'm3', 'm4', 'm40i', 'xdrive35i'],
+    '4.0i': ['750li', 'm5', 'm6', 'm'],
+    'Híbrido': ['225xe', '330e', '530e', '740e', '740le', 'activehybrid', 'xdrive40e'],
+}
+
+
 classification_models = {
     'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
     'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100, 200, 500, 1000], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
@@ -234,6 +276,7 @@ column_sql_renaming = {
         'Cor_Interior': 'Colour_Int',
         'Cor_Exterior': 'Colour_Ext',
         'Modelo': 'Model_Code',
+        'Motor': 'Motor_Desc',
         'Local da Venda': 'Sales_Place',
         'Margem': 'Margin', 'margem_percentagem':
         'Margin_Percentage',
@@ -277,7 +320,7 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Model_Code', 'Margin', 'Margin_Percentage',
                    'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
                    'Score_Class_Pred', 'Sell_Date', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
-                   'Xenon_Lights', 'Interior_Type', 'Version', 'Average_Margin_Percentage', 'Average_Score_Euros',
+                   'Xenon_Lights', 'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
                    'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local',
                    'Average_Margin_Percentage_Local', 'Average_Score_Euros_Local', 'Average_Stock_Days_Local', 'Average_Score_Class_GT_Local',
                    'Average_Score_Class_Pred_Local', 'Registration_Number', 'VHE_Number']
@@ -295,6 +338,8 @@ column_performance_sql_renaming = {
     'end_section_e': 'Section_E_End',
     'start_modelo': 'Model_Code_Start',
     'end_modelo': 'Model_Code_End',
+    'start_motor': 'Motor_Desc_Start',
+    'end_motor': 'Motor_Desc_End',
     'nav_all': 'Navigation_Duration',
     'barras_all': 'Roof_Bars_Duration',
     'alarme_all': 'Alarm_Duration',
@@ -344,6 +389,7 @@ column_checkpoint_sql_renaming = {
     # 'Prot.Solar': 'Solar_Protection',
     'Tipo_Interior': 'Interior_Type',
     'Versao': 'Version',
+    'Motor': 'Motor_Desc',
     'Nº Stock': 'Vehicle_Number',
     'average_score_dynamic': 'Average_Score_Dynamic',
     'average_score_dynamic_std': 'Average_Score_Dynamic_STD',
