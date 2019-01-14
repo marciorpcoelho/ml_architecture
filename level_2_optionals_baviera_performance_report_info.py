@@ -119,7 +119,14 @@ def error_upload(log_file, error_flag=0):
         df_error['Line'] = error_line_number
         df_error['Error_Flag'] = error_flag
 
-        email_notification(warning_flag=0, warning_desc=0, error_desc=error_only, error_flag=1, model_choice_message=0)
+        if not len(warnings_global):
+            warning_flag = 0
+            warning_desc = 0
+        else:
+            warning_flag = 1
+            warning_desc = warnings_global
+
+        email_notification(warning_flag=warning_flag, warning_desc=warning_desc, error_desc=error_only, error_flag=1, model_choice_message=0)
     elif not error_flag:
         df_error.loc[0, :] = ['', '', '', '', 0]
 
