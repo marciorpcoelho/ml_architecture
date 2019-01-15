@@ -220,11 +220,17 @@ motor_dict_v2 = {
     'Híbrido': ['225xe', '330e', '530e', '740e', '740le', 'activehybrid', 'xdrive40e'],
 }
 
+# motor_dict_v2_layer_2 = {
+#     '1.5': ['1.5d', '1.5i'],
+#     '2.0': ['2.0d', '2.0i'],
+#     '3.0': ['3.0d', '3.0i'],
+#     'Hybrid/4.0': ['Híbrido', '4.0i'],
+# }
+
 motor_dict_v2_layer_2 = {
-    '1.5': ['1.5d', '1.5i'],
-    '2.0': ['2.0d', '2.0di'],
-    '3.0': ['3.0d', '3.0i'],
-    'Hybrid/4.0': ['Híbrido', '4.0i'],
+    'gasoline': ['1.5d', '2.0d', '3.0d'],
+    'diesel': ['1.5i', '2.0i', '3.0i', '4.0i'],
+    'hybrid': ['Híbrido'],
 }
 
 

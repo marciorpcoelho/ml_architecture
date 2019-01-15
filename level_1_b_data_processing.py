@@ -731,6 +731,14 @@ def new_column_creation(df, columns, value):
 
 
 def language_detection(df, column_to_detect, new_column):
-    df[new_column] = df[column_to_detect].apply(detect)
+    # df[new_column] = df[column_to_detect].apply(detect)
+
+    rows = []
+    for key, row in df.iterrows():
+        try:
+            row[new_column] = detect(row[column_to_detect])
+            rows.append(row)
+        except:
+            print('Problematic value:', row[column_to_detect])
 
     return df
