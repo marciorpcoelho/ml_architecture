@@ -104,12 +104,12 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = score_calculation(df, level_2_optionals_baviera_options.stock_days_threshold, level_2_optionals_baviera_options.margin_threshold)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
         # where only configurations with 1 in both dimension, have 1 as new_score
 
-        cols_to_group_layer_1 = ['Cor_Exterior', 'Cor_Interior', 'Motor']
-        dictionaries_layer_1 = [level_2_optionals_baviera_options.color_ext_dict_layer_1, level_2_optionals_baviera_options.color_int_dict_layer_1, level_2_optionals_baviera_options.motor_dict_v2]
+        cols_to_group_layer_1 = ['Cor_Exterior', 'Cor_Interior']
+        dictionaries_layer_1 = [level_2_optionals_baviera_options.color_ext_dict_layer_1, level_2_optionals_baviera_options.color_int_dict_layer_1]
         df = col_group(df, cols_to_group_layer_1, dictionaries_layer_1)
 
         cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Interior', 'Motor']
-        dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_int_dict_layer_2, level_2_optionals_baviera_options.motor_dict_v2_layer_2]
+        dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_int_dict_layer_2, level_2_optionals_baviera_options.motor_dict_v2]
         df = col_group(df, cols_to_group_layer_2, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
         # groups are shown in level_2_optionals_baviera_options
 
