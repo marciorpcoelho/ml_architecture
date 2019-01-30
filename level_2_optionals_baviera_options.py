@@ -159,7 +159,7 @@ model_dict = {
     'mini_country': ['MINI COUNTRYMAN'],
     'mini': ['MINI 5p', 'MINI 3p'],
     'motos': ['Série C', 'Série F', 'Série K', 'Série R'],
-    'outros': ['S2 Cabrio', 'S2 Coupé', 'S3 Gran Turismo', 'S4 Coupé', 'S4 Cabrio', 'S5 Gran Turismo', 'S6 Cabrio', 'S6 Gran Turismo', 'S6 Gran Coupe', 'S6 Coupé', 'S7 Berlina', 'S7 L Berlina', 'X2 SAC', 'X4 SUV', 'X5 SUV', 'X5 M', 'X6', 'X6 M', 'Z4 Roadster', 'M2 Coupé', 'M3 Berlina', 'M4 Cabrio', 'M4 Coupé', 'M5 Berlina', 'S6 Gran Turismo', 'S6 Cabrio', 'S6 Coupé', 'S6 Gran Coupe', 'S7 Berlina', 'S7 L Berlina']
+    'outros': ['S8 Coupe', 'S2 Cabrio', 'S2 Coupé', 'S3 Gran Turismo', 'S4 Coupé', 'S4 Cabrio', 'S5 Gran Turismo', 'S6 Cabrio', 'S6 Gran Turismo', 'S6 Gran Coupe', 'S6 Coupé', 'S7 Berlina', 'S7 L Berlina', 'X2 SAC', 'X4 SUV', 'X5 SUV', 'X5 M', 'X6', 'X6 M', 'Z4 Roadster', 'M2 Coupé', 'M3 Berlina', 'M4 Cabrio', 'M4 Coupé', 'M5 Berlina', 'S6 Gran Turismo', 'S6 Cabrio', 'S6 Coupé', 'S6 Gran Coupe', 'S7 Berlina', 'S7 L Berlina']
 }
 
 versao_dict = {
@@ -194,10 +194,10 @@ motor_dict_v1 = {
     '30i': ['m235i', '230i', '330i', '430i', '530i', 'xdrive30i'],
     '35d': ['335d', '435d', '535d', 'xdrive35d'],
     '35i': ['335i', '435i', 'xdrive35i'],
-    '40d': ['540d', '640d', '740ld', '740d', 'xdrive40d'],
+    '40d': ['540d', '640d', '740ld', '740d', 'xdrive40d', '840d'],
     '40i': ['m140i', '340i', '440i', '540i', '640i', '740i', '740li', 'm40i'],
     '50d': ['m550d', '750d', '750ld', 'm50d'],
-    '50i': ['750li'],
+    '50i': ['750li', 'm850i'],
     'Híbrido': ['225xe', '330e', 'activehybrid', '530e', '740e', '740le', 'xdrive40e'],
     'M2': ['m2'],
     'M3': ['m3'],
@@ -214,9 +214,9 @@ motor_dict_v2 = {
     '1.5i': ['114i', '116i', '118i', '216i', '218i', 'sdrive18i'],
     '2.0d': ['118d', '120d', '125d', '218d', '220d', '225d', '318d', '320d', '325d', '418d', '420d', '425d', '518d', '520d', '525d', '620d', '725d', 'sdrive', 'sdrive18d', 'sdrive20d', 'sdrive25d', 'xdrive18d', 'xdrive20d', 'xdrive25d', 'xdrive25d'],
     '2.0i': ['125i', '228i', '230i', '320i', '330i', '420i', '428i', '430i', '520i', '528i', '530i', 'sdrive20i', 'xdrive20i', 'xdrive25i', 'xdrive30i'],
-    '3.0d': ['330d', '335d', '430d', '435d', '530d', '535d', '540d', '630d', '640d', '730d', '730ld', '740d', '740ld', '750d', '750ld', 'm550d', 'xdrive30d', 'xdrive35d', 'm50d', 'xdrive', 'xdrive40d'],
+    '3.0d': ['330d', '335d', '430d', '435d', '530d', '535d', '540d', '630d', '640d', '730d', '730ld', '740d', '740ld', '750d', '750ld', 'm550d', 'xdrive30d', 'xdrive35d', 'm50d', 'xdrive', 'xdrive40d', '840d'],
     '3.0i': ['335i', '340i', '435i', '440i', '540i', '640i', '740i', '740li', 'm140i', 'm2', 'm3', 'm4', 'm40i', 'xdrive35i', 'm235i'],
-    '4.0i': ['750li', 'm5', 'm6', 'm'],
+    '4.0i': ['750li', 'm5', 'm6', 'm', 'm850i'],
     'Híbrido': ['225xe', '330e', '530e', '740e', '740le', 'activehybrid', 'xdrive40e'],
 }
 

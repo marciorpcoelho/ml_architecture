@@ -554,7 +554,6 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
 
 
 def value_replacement(df, col1, col2, values1, values2):
-
     for value in values1:
         df.loc[df[col1[values1.index(value)]] == value, col2[values1.index(value)]] = values2[values1.index(value)]
 
@@ -736,9 +735,13 @@ def language_detection(df, column_to_detect, new_column):
     rows = []
     for key, row in df.iterrows():
         try:
-            row[new_column] = detect(row[column_to_detect])
-            rows.append(row)
+            # row[new_column] = detect(row[column_to_detect])
+            rows.append(detect(row[column_to_detect]))
+            # print(row)
         except:
-            print('Problematic value:', row[column_to_detect])
+            rows.append('Undefined')
+            pass
+            # print('Problematic value:', row[column_to_detect])
 
+    df[new_column] = rows
     return df
