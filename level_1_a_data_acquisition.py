@@ -2,17 +2,12 @@ import pandas as pd
 import sys
 import time
 import pyodbc
-import level_2_optionals_baviera_performance_report_info
-from level_2_optionals_baviera_options import DSN, UID, PWD, sql_to_code_renaming, sql_info
 from level_1_b_data_processing import column_rename
 
 
-def read_csv(column_renaming=0, *args, **kwargs):
+def read_csv(*args, **kwargs):
 
     df = pd.read_csv(*args, **kwargs)
-
-    if column_renaming:
-        column_rename(df, list(sql_to_code_renaming.keys()), list(sql_to_code_renaming.values()))
 
     return df
 
@@ -30,36 +25,7 @@ def log_files(project_name, output_dir='logs/'):
     sys.stderr = open(output_dir + project_name + '.txt', 'a')
 
 
-# def sql_retrieve_df(database, view, columns='*', nlr_code=0, column_renaming=0, **kwargs):
-#     start = time.time()
-#     query = None
-#     # level_2_optionals_baviera_performance_report_info.log_record('Retrieving data from SQL Server, DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
-#
-#     if columns != '*':
-#         columns = str(columns)[1:-1].replace('\'', '')
-#
-#     try:
-#         cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
-#
-#         if not nlr_code:
-#             query = 'SELECT ' + columns + ' FROM ' + view
-#         elif nlr_code:
-#             query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE NLR_CODE = ' + '\'' + str(nlr_code) + '\''
-#
-#         df = pd.read_sql(query, cnxn, **kwargs)
-#         if column_renaming:
-#             column_rename(df, list(sql_to_code_renaming.keys()), list(sql_to_code_renaming.values()))
-#
-#         cnxn.close()
-#
-#         print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
-#         return df
-#
-#     except (pyodbc.ProgrammingError, pyodbc.OperationalError):
-#         return  # ToDo need to figure a better way of handling these errors
-
-
-def sql_retrieve_df(options_file, view, columns='*', query_filters=0, column_renaming=0, **kwargs):
+def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, column_renaming=0, **kwargs):
     start = time.time()
     query, query_filters_string_list = None, []
 
@@ -67,7 +33,7 @@ def sql_retrieve_df(options_file, view, columns='*', query_filters=0, column_ren
         columns = str(columns)[1:-1].replace('\'', '')
 
     try:
-        cnxn = pyodbc.connect('DSN=' + options_file.DSN + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + options_file.sql_info['database'])
+        cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + db)
 
         if type(query_filters) == int:
             query = 'SELECT ' + columns + ' FROM ' + view
@@ -79,7 +45,6 @@ def sql_retrieve_df(options_file, view, columns='*', query_filters=0, column_ren
                 else:
                     query_filters_string_list.append(key + ' = \'%s\'' % str(query_filters[key]))
             query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE ' + ' and '.join(query_filters_string_list)
-
         df = pd.read_sql(query, cnxn, **kwargs)
         if column_renaming:
             column_rename(df, list(options_file.sql_to_code_renaming.keys()), list(options_file.sql_to_code_renaming.values()))

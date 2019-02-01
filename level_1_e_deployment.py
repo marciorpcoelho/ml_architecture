@@ -4,8 +4,7 @@ import pyodbc
 import logging
 import pandas as pd
 from datetime import datetime
-from level_2_optionals_baviera_options import update_frequency_days, DSN, UID, PWD, sql_info
-import level_2_optionals_baviera_performance_report_info
+import level_0_performance_report
 
 
 def save_csv(dfs, names):
@@ -18,17 +17,16 @@ def save_csv(dfs, names):
         df.to_csv(name)
 
 
-def sql_log_inject(line, flag, database, view):
+def sql_log_inject(line, project_id, flag, performance_info_dict):
 
     try:
-        cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+        cnxn = pyodbc.connect('DSN=' + performance_info_dict['DSN'] + ';UID=' + performance_info_dict['UID'] + ';PWD=' + performance_info_dict['PWD'] + ';DATABASE=' + performance_info_dict['DB'])
         cursor = cnxn.cursor()
         time_tag_date = time.strftime("%Y-%m-%d")
         time_tag_hour = time.strftime("%H:%M:%S")
 
         line = apostrophe_escape(line)
-
-        cursor.execute('INSERT INTO [' + str(database) + '].dbo.[' + str(view) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\')')
+        cursor.execute('INSERT INTO [' + str(performance_info_dict['DB']) + '].dbo.[' + str(performance_info_dict['log_view']) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\', ' + str(project_id) + ')')
 
         cnxn.commit()
         cursor.close()
@@ -43,14 +41,15 @@ def apostrophe_escape(line):
     return line.replace('\'', '"')
 
 
-def sql_inject(df, database, view, columns, time_to_last_update=update_frequency_days, truncate=0, check_date=0):
+def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check_date=0):
+    time_to_last_update = options_file.update_frequency_days
 
     start = time.time()
 
     if truncate:
-        sql_truncate(database, view)
+        sql_truncate(dsn, options_file, database, view)
 
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
     cursor = cnxn.cursor()
 
     if check_date:
@@ -60,16 +59,16 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
 
     try:
         if check_date:
-            time_result = sql_date_comparison(df, database, view, 'Date', time_to_last_update)
+            time_result = sql_date_comparison(df, dsn, options_file, database, view, 'Date', time_to_last_update)
             if time_result:
-                level_2_optionals_baviera_performance_report_info.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
+                level_0_performance_report.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', options_file.project_id)
                 for index, row in df.iterrows():
                     # continue
                     cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
             elif not time_result:
-                level_2_optionals_baviera_performance_report_info.log_record('Newer data already exists.', sql_info['database'], sql_info['log_record'])
+                level_0_performance_report.log_record('Newer data already exists.', options_file.project_id)
         if not check_date:
-            level_2_optionals_baviera_performance_report_info.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', sql_info['database'], sql_info['log_record'])
+            level_0_performance_report.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', options_file.project_id)
             for index, row in df.iterrows():
                 # continue
                 cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
@@ -77,7 +76,7 @@ def sql_inject(df, database, view, columns, time_to_last_update=update_frequency
         print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
     except pyodbc.ProgrammingError:
         save_csv([df], ['output/' + view + '_backup'])
-        level_2_optionals_baviera_performance_report_info.log_record('Error in uploading to database. Saving locally...', sql_info['database'], sql_info['log_record'], flag=1)
+        level_0_performance_report.log_record('Error in uploading to database. Saving locally...', options_file.project_id, flag=1)
 
     cnxn.commit()
     cursor.close()
@@ -95,9 +94,9 @@ def sql_string_preparation(values_list):
     return columns_string, values_string
 
 
-def sql_truncate(database, view):
-    level_2_optionals_baviera_performance_report_info.log_record('Truncating view ' + view + ' from DB ' + database, sql_info['database'], sql_info['log_record'])
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+def sql_truncate(dsn, options_file, database, view):
+    level_0_performance_report.log_record('Truncating view ' + view + ' from DB ' + database, options_file.project_id)
+    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
     query = "TRUNCATE TABLE " + view
     cursor = cnxn.cursor()
     cursor.execute(query)
@@ -107,14 +106,14 @@ def sql_truncate(database, view):
     cnxn.close()
 
 
-def sql_date_comparison(df, database, view, date_column, time_to_last_update):
+def sql_date_comparison(df, dsn, options_file, database, view, date_column, time_to_last_update):
     time_tag = time.strftime("%d/%m/%y")
     current_date = datetime.strptime(time_tag, '%d/%m/%y')
 
     df['Date'] = [time_tag] * df.shape[0]
     df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
 
-    last_date = sql_date_checkup(database, view, date_column)
+    last_date = sql_date_checkup(dsn, options_file, database, view, date_column)
 
     if (current_date - last_date).days >= time_to_last_update:
         return 1
@@ -122,10 +121,10 @@ def sql_date_comparison(df, database, view, date_column, time_to_last_update):
         return 0
 
 
-def sql_date_checkup(database, view, date_column):
+def sql_date_checkup(dsn, options_file, database, view, date_column):
 
     try:
-        cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+        cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
         cursor = cnxn.cursor()
 
         cursor.execute('SELECT MAX(' + '[' + date_column + ']' + ') FROM ' + database + '.dbo.' + view)
@@ -141,12 +140,12 @@ def sql_date_checkup(database, view, date_column):
     return result_date
 
 
-def sql_second_highest_date_checkup(database, view, date_column='Date'):
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
+def sql_second_highest_date_checkup(dsn, options_file, database, view, date_column='Date'):
+    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
 
     query = 'with second_date as (SELECT MAX([' + str(date_column) + ']) as max_date ' \
             'FROM [' + str(database) + '].[dbo].[' + str(view) + '] ' \
-            'WHERE [' + str(date_column) + '] < CONVERT(date, GETDATE())) ' \
+            'WHERE [' + str(date_column) + '] < CONVERT(date, GETDATE()) and Project_Id = \'' + str(options_file.project_id) + '\') ' \
             'SELECT Error_log.* ' \
             'FROM [' + str(database) + '].[dbo].[' + str(view) + '] as Error_log ' \
             'cross join second_date ' \
@@ -158,23 +157,10 @@ def sql_second_highest_date_checkup(database, view, date_column='Date'):
     return df
 
 
-def sql_last_update_date(database, view):
-
-    cnxn = pyodbc.connect('DSN=' + DSN + ';UID=' + UID + ';PWD=' + PWD + ';DATABASE=' + database)
-    cursor = cnxn.cursor()
-
-    cursor.execute('SELECT OBJECT_NAME(OBJECT_ID) AS TableName, last_user_update FROM sys.dm_db_index_usage_stats WHERE OBJECT_ID=OBJECT_ID(\'' + view + '\')')
-
-    result = cursor.fetchone()
-
-    cnxn.close()
-    return result[1]
-
-
-def sql_age_comparison(database, view, update_frequency):
+def sql_age_comparison(dsn, options_file, database, view, update_frequency):
     time_tag = time.strftime("%d/%m/%y")
     current_date = datetime.strptime(time_tag, '%d/%m/%y')
-    last_date = sql_date_checkup(database, view, 'Date')
+    last_date = sql_date_checkup(dsn, options_file, database, view, 'Date')
 
     if (current_date - last_date).days >= update_frequency:
         return 1

@@ -1,6 +1,5 @@
 import numpy as np
 import os
-from multiprocessing import cpu_count
 from sklearn import tree, linear_model, neighbors, svm
 from sklearn.neural_network import MLPClassifier
 from sklearn.naive_bayes import GaussianNB
@@ -19,29 +18,31 @@ k, gridsearch_score = 10, 'recall'  # Stratified Cross-Validation number of Fold
 selected_configuration_parameters = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 # Full: ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
-DSN = os.getenv('DSN_MLG')
+DSN_MLG = os.getenv('DSN_MLG')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
-EMAIL = os.getenv('EMAIL')
-EMAIL_PASS = os.getenv('EMAIL_PASS')
-pool_workers_count = cpu_count()
+# EMAIL = os.getenv('EMAIL')
+# EMAIL_PASS = os.getenv('EMAIL_PASS')
 configuration_parameters_full = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 # Dictionaries:
 sql_info = {
     'database': 'BI_MLG',
-    'log_record': 'LOG_OrderOptimization',
+    'database_final': 'BI_MLG',
+    # 'log_record': 'LOG_OrderOptimization',
     'initial_table': 'VHE_Fact_DW_SalesNew_WithSpecs',
     'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
-    'performance_running_time': 'LOG_Performance_Running_Time',
-    'performance_algorithm_results': 'LOG_Performance_Algorithms_Results',
+    # 'performance_running_time': 'LOG_Performance_Running_Time',
+    # 'performance_algorithm_results': 'LOG_Performance_Algorithms_Results',
     'final_table': 'VHE_Fact_BI_OrderOptimization',
-    'error_log': 'LOG_Performance_Errors',
-    'warning_log': 'LOG_Performance_Warnings',
-    'model_choices': 'LOG_Performance_Model_Choices',
-    'mail_users': 'LOG_MailUsers',
+    # 'error_log': 'LOG_Performance_Errors',
+    # 'warning_log': 'LOG_Performance_Warnings',
+    # 'model_choices': 'LOG_Performance_Model_Choices',
+    # 'mail_users': 'LOG_MailUsers',
 }
+
+project_id = 2162
 
 # Old Cor_Exterior
 color_ext_dict = {
@@ -142,6 +143,14 @@ sales_place_dict = {
     'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
     'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
 }
+
+# dict = {'porto': ['DCN-Porto', 'DCN-Porto Mini', 'DCN-Porto Usados',  'DCN-Maia'],
+#         'gaia': ['DCC - Feira', 'DCG - Gaia', 'DCG - Gaia Mini' , 'DCG - Gaia Usados', 'DCC - Feira Usados'],
+#         'aveiro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
+#         'lisboa': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
+#         'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
+#         'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
+# }
 
 model_dict = {
     's2_gran': ['S2 Gran Tourer'],
@@ -427,11 +436,4 @@ column_checkpoint_sql_renaming = {
 
 log_files = {
     'full_log': 'logs/optionals_baviera.txt'
-}
-
-regex_dict = {
-    'error_full': r'((?:\#[^\#\r\n]*){1})$',  # Catches the error message from the eof up to the unique value #
-    'error_only': r'[\n](.*){1}$',
-    'between_quotes': r'\s{1}\"(.*?.py|.*?.pyx)\"',
-    'lines_number': r'\s[0-9]{1,}\,',
 }

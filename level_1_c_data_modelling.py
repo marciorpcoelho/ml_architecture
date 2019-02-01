@@ -6,8 +6,8 @@ import time
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
-from level_2_optionals_baviera_performance_report_info import log_record
-from level_2_optionals_baviera_options import classification_models, sql_info, k, gridsearch_score
+from level_0_performance_report import log_record
+from level_2_optionals_baviera_options import classification_models, sql_info, k, gridsearch_score, project_id
 pd.set_option('display.expand_frame_repr', False)
 
 
@@ -86,7 +86,7 @@ def model_training(models, train_x, train_y):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
 
     for model in models:
-        log_record('MODEL: ' + model, sql_info['database'], sql_info['log_record'])
+        log_record('MODEL: ' + model, project_id)
         if model == 'voting':
             start = time.time()
             parameters = {'estimators': [(x, y) for x, y in zip(best_models_pre_fit.keys(), best_models_pre_fit.values())]}

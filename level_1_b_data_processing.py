@@ -12,8 +12,8 @@ from scipy import stats
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import RandomOverSampler
 from level_1_e_deployment import sql_string_preparation
-from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, pool_workers_count, sql_info
-import level_2_optionals_baviera_performance_report_info
+import level_0_performance_report
+from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, project_id
 warnings.simplefilter('ignore', FutureWarning)
 
 # Globals Definition
@@ -52,7 +52,7 @@ def remove_columns(df, columns):
         try:
             df.drop([column], axis=1, inplace=True)
         except KeyError:
-            level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Deletion Warning - Column ' + str(column) + ' not found.')
+            level_0_performance_report.performance_warnings_append('Column Deletion Warning - Column ' + str(column) + ' not found.')
             continue
 
     return df
@@ -117,8 +117,6 @@ def zero_analysis(df):
 def value_count_histogram(df, columns, tag, output_dir='output/'):
     for column in columns:
         plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
-        # df.loc[df[column] == 0, column] = '0'
-        # df.loc[df[column] == 1, column] = '1'
 
         df_column_as_str = df[column].astype(str)
         counts = df_column_as_str.value_counts().values
@@ -160,16 +158,16 @@ def options_scraping(df):
     sens_all, trans_all, versao_all, farois_all, jantes_all, motor_all = [], [], [], [], [], []
 
     # Modelo
-    level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'start_modelo')
+    level_0_performance_report.performance_info_append(time.time(), 'start_modelo')
     unique_models = df['Modelo'].unique()
     for model in unique_models:
         # if 'Série' not in model:
         tokenized_modelo = nltk.word_tokenize(model)
         df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
-    level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'end_modelo')
+    level_0_performance_report.performance_info_append(time.time(), 'end_modelo')
 
     # Motorização
-    level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'start_motor')
+    level_0_performance_report.performance_info_append(time.time(), 'start_motor')
     unique_versions = df['Versão'].unique()
     for version in unique_versions:
         mask_version = df['Versão'] == version
@@ -177,12 +175,11 @@ def options_scraping(df):
             df.loc[mask_version, 'Motor'] = [x.split(' ')[1] for x in df[mask_version]['Versão']]
         else:
             df.loc[mask_version, 'Motor'] = [x.split(' ')[0] for x in df[mask_version]['Versão']]
-    # df.loc[df['Modelo'] != 'X1', 'Motor'] = [x.split(' ')[0] for x in df['Versão']]
-    level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'end_motor')
+    level_0_performance_report.performance_info_append(time.time(), 'end_motor')
 
     # print(df['Motor'].unique())
 
-    workers = pool_workers_count
+    workers = level_0_performance_report.pool_workers_count
     pool = Pool(processes=workers)
     results = pool.map(options_scraping_per_group, [(key, group) for (key, group) in df_grouped])
     pool.close()
@@ -207,11 +204,11 @@ def options_scraping(df):
     [jantes_all.append(result[15]) for result in results if result is not None]
     # [durations[i-1].append(result[i] for result in results) for i in range(1, 16)]
 
-    [level_2_optionals_baviera_performance_report_info.performance_info_append(duration, tag) for (duration, tag) in zip(durations_times, durations_names)]
+    [level_0_performance_report.performance_info_append(duration, tag) for (duration, tag) in zip(durations_times, durations_names)]
 
     # ToDo: move the following code to it's own function?
     # Standard Equipment
-    level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'start_standard')
+    level_0_performance_report.performance_info_append(time.time(), 'start_standard')
     criteria_model_s1 = df['Modelo'].str.contains('S1')
     criteria_model_s2 = df['Modelo'].str.contains('S2')
     criteria_model_s3 = df['Modelo'].str.contains('S3')
@@ -246,7 +243,7 @@ def options_scraping(df):
     df.loc[df[criteria_model_x3].index, 'Caixa Auto'] = 1
     df.loc[df['Versao'] == 0, 'Versao'] = 'base'
     df.loc[df['Jantes'] == 0, 'Jantes'] = 'standard'
-    level_2_optionals_baviera_performance_report_info.performance_info_append(time.time(), 'end_standard')
+    level_0_performance_report.performance_info_append(time.time(), 'end_standard')
 
     return df
 
@@ -473,8 +470,8 @@ def constant_columns_removal(df):
     features_removed = [item for item in list_before if item not in list_after]
     if len(features_removed):
         columns_string, _ = sql_string_preparation(features_removed)
-        level_2_optionals_baviera_performance_report_info.log_record('Removed the following constant columns: ' + str(columns_string), sql_info['database'], sql_info['log_record'], flag=1)
-        level_2_optionals_baviera_performance_report_info.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
+        level_0_performance_report.log_record('Removed the following constant columns: ' + str(columns_string), project_id, flag=1)
+        level_0_performance_report.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
 
     return df[list_after]
 
@@ -488,14 +485,13 @@ def col_group(df, columns_to_replace, dictionaries):
             if df[column + '_new'].isnull().values.any():
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
                 # print('Column Grouping Warning - NaNs detected in: {}'.format(column + '_new, value(s) not grouped: {}'.format(variable)))
-                level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
-                # level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - NaNs detected from vehicle with VHE_Number' + str(df[df[column + '_new'].isnull()]['Nº Stock']))
-                level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()), sql_info['database'], sql_info['log_record'], flag=1)
+                level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
+                level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
         except KeyError:
-            level_2_optionals_baviera_performance_report_info.performance_warnings_append('Column Grouping Warning - Column ' + str(column) + ' not found.')
-            level_2_optionals_baviera_performance_report_info.log_record('Column Grouping Warning - Column ' + str(column) + ' not found.', sql_info['database'], sql_info['log_record'], flag=1)
+            level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column ' + str(column) + ' not found.')
+            level_0_performance_report.log_record('Column Grouping Warning - Column ' + str(column) + ' not found.', project_id, flag=1)
     return df
 
 
@@ -506,8 +502,11 @@ def total_price(df):
 
 
 def remove_zero_price_total_vhe(df):
-    df = df.groupby(['Nº Stock']).filter(lambda x: x.price_total != 0)
+    old_count = df['Nº Stock'].nunique()
+    remove_rows(df, [df.loc[df.price_total == 0, :].index])
+    new_count = df['Nº Stock'].nunique()
 
+    level_0_performance_report.log_record('Removed ' + str(old_count - new_count) + ' vehicles with price total of 0.', project_id, flag=1)
     return df
 
 
@@ -730,18 +729,15 @@ def new_column_creation(df, columns, value):
 
 
 def language_detection(df, column_to_detect, new_column):
-    # df[new_column] = df[column_to_detect].apply(detect)
 
     rows = []
     for key, row in df.iterrows():
         try:
-            # row[new_column] = detect(row[column_to_detect])
             rows.append(detect(row[column_to_detect]))
             # print(row)
         except:
             rows.append('Undefined')
-            pass
-            # print('Problematic value:', row[column_to_detect])
+            continue
 
     df[new_column] = rows
     return df

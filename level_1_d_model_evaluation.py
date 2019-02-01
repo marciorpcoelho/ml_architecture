@@ -6,8 +6,8 @@ import time
 import matplotlib.pyplot as plt
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
 from level_1_e_deployment import sql_inject, save_csv, sql_second_highest_date_checkup
-from level_2_optionals_baviera_options import sql_info, pool_workers_count, dict_models_name_conversion, metric, metric_threshold
-from level_2_optionals_baviera_performance_report_info import log_record
+from level_2_optionals_baviera_options import metric, metric_threshold, dict_models_name_conversion
+from level_0_performance_report import log_record, performance_sql_info, pool_workers_count
 pd.set_option('display.expand_frame_repr', False)
 
 my_dpi = 96
@@ -38,7 +38,7 @@ class RegressionEvaluation(object):
         self.score = r2_score(groundtruth, prediction)
 
 
-def performance_evaluation(models, best_models, classes, running_times, datasets):
+def performance_evaluation(models, best_models, classes, running_times, datasets, options_file, project_id):
 
     results_train, results_test = [], []
     predictions, feat_importance = {}, pd.DataFrame(index=list(datasets['train_x']), columns={'Importance'})
@@ -83,11 +83,13 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
     df_results_train = pd.DataFrame(results_train, index=models)
     df_results_train['Algorithms'] = df_results_train.index
     df_results_train['Dataset'] = ['Train'] * df_results_train.shape[0]
+    df_results_train['Project_Id'] = [project_id] * df_results_train.shape[0]
     df_results_test = pd.DataFrame(results_test, index=models)
     df_results_test['Algorithms'] = df_results_test.index
     df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
+    df_results_test['Project_Id'] = [project_id] * df_results_train.shape[0]
 
-    sql_inject(pd.concat([df_results_train, df_results_test]), sql_info['database'], sql_info['performance_algorithm_results'], list(df_results_train), time_to_last_update=0, check_date=1)
+    sql_inject(pd.concat([df_results_train, df_results_test]), performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
 
     return df_results_train, df_results_test, predictions
 
@@ -98,7 +100,7 @@ def probability_evaluation(models_name, models, train_x, test_x):
     return probabilities
 
 
-def feature_contribution(df, configuration_parameters):
+def feature_contribution(df, configuration_parameters, options_file, project_id):
     configuration_parameters.remove('Modelo')
     boolean_parameters = [x for x in configuration_parameters if list(df[x].unique()) == [0, 1] or list(df[x].unique()) == [1, 0]]
     non_boolean_parameters = [x for x in configuration_parameters if x not in boolean_parameters]
@@ -151,7 +153,7 @@ def feature_contribution(df, configuration_parameters):
                         p_c1_f1 = c1_f1 / f1 * 1.
                         p_c1_f0 = c1_f0 / f0 * 1.
                     except ZeroDivisionError:
-                        log_record('Insufficient data for feature ' + str(feature) + ' and value ' + str(value) + '.', sql_info['database'], sql_info['log_record'], flag=1)
+                        log_record('Insufficient data for feature ' + str(feature) + ' and value ' + str(value) + '.', project_id, flag=1)
                         continue
 
                     differences_non_boolean.append(p_c1_f1 - p_c1_f0)
@@ -178,7 +180,7 @@ def feature_contribution(df, configuration_parameters):
 
         df_feature_contribution_total = pd.concat([df_feature_contribution_total, df_feature_contribution])
 
-    sql_inject(df_feature_contribution_total, sql_info['database'], sql_info['feature_contribution'], list(df_feature_contribution_total), truncate=1)
+    sql_inject(df_feature_contribution_total, options_file.DSN_MLG, options_file.sql_info['database'], options_file.sql_info['feature_contribution'], options_file, list(df_feature_contribution_total), truncate=1)
 
 
 def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datasets, configuration_parameters):
@@ -236,34 +238,37 @@ def df_decimal_places_rounding(df, dictionary):
     return df
 
 
-def model_choice(df_results):
+def model_choice(dsn, options_file, df_results):
     step_e_upload_flag = 0
 
     try:
         # makes sure there are results above minimum threshold
         best_model_name = df_results[df_results.loc[:, metric].gt(metric_threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
         best_model_value = df_results[df_results.loc[:, metric].gt(metric_threshold)][[metric, 'Running_Time']].max().head(1).values[0]
-        log_record('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(metric_threshold) + '). Will compare with last result in SQL Server...', sql_info['database'], sql_info['log_record'])
+        log_record('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(metric_threshold) + '). Will compare with last result in SQL Server...', options_file.project_id)
 
-        df_previous_performance_results = sql_second_highest_date_checkup(sql_info['database'], sql_info['performance_algorithm_results'])
+        df_previous_performance_results = sql_second_highest_date_checkup(dsn, options_file, performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'])
         if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
-            log_record('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...', sql_info['database'], sql_info['log_record'], flag=1)
+            log_record('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...', options_file.project_id, flag=1)
             model_choice_flag = 1
         else:
             step_e_upload_flag = 1
-            log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + ' for model ' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...', sql_info['database'], sql_info['log_record'])
+            try:
+                log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + ' for model ' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...', options_file.project_id)
+            except TypeError:
+                log_record('New value is: %.4f' % best_model_value + ' and no previous result was found, so will upload in section E...', options_file.project_id)
             model_choice_flag = 2
 
     except ValueError:
-        log_record('No value above minimum threshold (%.4f' % metric_threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.', sql_info['database'], sql_info['log_record'], flag=1)
+        log_record('No value above minimum threshold (%.4f' % metric_threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.', options_file.project_id, flag=1)
         model_choice_flag, best_model_name, best_model_value = 0, 0, 0
 
-    model_choice_message = model_choice_upload(model_choice_flag, best_model_name, best_model_value)
+    model_choice_message = model_choice_upload(model_choice_flag, best_model_name, best_model_value, options_file)
 
     return model_choice_message, best_model_name, best_model_value, step_e_upload_flag
 
 
-def model_choice_upload(flag, name, value):
+def model_choice_upload(flag, name, value, options_file):
     df_model_result = pd.DataFrame(columns={'Model_Choice_Flag', 'Chosen_Model', 'Metric', 'Value', 'Message'})
     message = None
 
@@ -274,20 +279,23 @@ def model_choice_upload(flag, name, value):
         df_model_result['Metric'] = [0]
         df_model_result['Value'] = [0]
         df_model_result['Message'] = [message]
+        df_model_result['Project_Id'] = [options_file.project_id]
     elif flag == 1:
         message = 'Modelo anterior com melhor performance do que o atual.'
         df_model_result['Chosen_Model'] = [name]
         df_model_result['Metric'] = [metric]
         df_model_result['Value'] = [value]
         df_model_result['Message'] = [message]
+        df_model_result['Project_Id'] = [options_file.project_id]
     elif flag == 2:
         message = 'Modelo anterior substituído pelo atual.'
         df_model_result['Chosen_Model'] = [name]
         df_model_result['Metric'] = [metric]
         df_model_result['Value'] = [value]
         df_model_result['Message'] = [message]
+        df_model_result['Project_Id'] = [options_file.project_id]
 
-    sql_inject(df_model_result, sql_info['database'], sql_info['model_choices'], list(df_model_result), time_to_last_update=0, check_date=1)
+    sql_inject(df_model_result, options_file.DSN_MLG, performance_sql_info['DB'], performance_sql_info['model_choices'], options_file, list(df_model_result), check_date=1)
 
     return message
 
@@ -324,11 +332,11 @@ def save_fig(name, save_dir='output/'):
     plt.savefig(save_dir + str(name) + '.pdf')
 
 
-def multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters):
+def multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, project_id):
     start = time.time()
     workers = pool_workers_count
     pool = multiprocessing.Pool(processes=workers)
-    results = pool.map(multiprocess_evaluation, [(df, model_name, datasets, best_models, predictions, configuration_parameters) for model_name in models])
+    results = pool.map(multiprocess_evaluation, [(df, model_name, datasets, best_models, predictions, configuration_parameters, project_id) for model_name in models])
     pool.close()
     df_model_dict = {key: value for (key, value) in results}
 
@@ -338,15 +346,15 @@ def multiprocess_model_evaluation(df, models, datasets, best_models, predictions
 
 
 def multiprocess_evaluation(args):
-    df, model_name, datasets, best_models, predictions, configuration_parameters = args
+    df, model_name, datasets, best_models, predictions, configuration_parameters, project_id = args
 
     start = time.time()
-    log_record('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...', sql_info['database'], sql_info['log_record'])
+    log_record('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...', project_id)
     train_x_copy, test_x_copy = datasets['train_x'].copy(deep=True), datasets['test_x'].copy(deep=True)
     probabilities = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
     df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], train_x_copy, test_x_copy, datasets, configuration_parameters)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
-    log_record(model_name + ' - Elapsed time: %f' % (time.time() - start), sql_info['database'], sql_info['log_record'])
+    log_record(model_name + ' - Elapsed time: %f' % (time.time() - start), project_id)
 
     return model_name, df_model
