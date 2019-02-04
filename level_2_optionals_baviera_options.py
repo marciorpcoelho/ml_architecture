@@ -342,9 +342,10 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
                    'Score_Class_Pred', 'Sell_Date', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
                    'Xenon_Lights', 'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
-                   'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local',
-                   'Average_Margin_Percentage_Local', 'Average_Score_Euros_Local', 'Average_Stock_Days_Local', 'Average_Score_Class_GT_Local',
-                   'Average_Score_Class_Pred_Local', 'Registration_Number', 'VHE_Number']
+                   'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
+                   'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
+                   'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2',
+                   'Average_Score_Class_Pred_Local', 'Average_Score_Class_Pred_Local_v2', 'Registration_Number', 'VHE_Number']
 
 column_performance_sql_renaming = {
     'start_section_a': 'Section_A_Start',
