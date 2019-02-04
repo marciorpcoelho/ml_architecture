@@ -128,14 +128,6 @@ jantes_dict = {
     'stand/19/20': ['standard', '19', '20']
 }
 
-# sales_place_dict = {
-#     'centro': ['DCV - Coimbrões', 'DCC - Aveiro'],
-#     'norte': ['DCC - Feira', 'DCG - Gaia', 'DCN-Porto', 'DCN-Porto Mini', 'DCG - Gaia Mini', 'DCN-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCC - Aveiro Usados', 'DCC - Viseu Usados', 'DCN-Maia', 'DCV - Viseu Usados'],
-#     'sul': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
-#     'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
-#     'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
-# }
-
 sales_place_dict = {
     'centro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
     'norte': ['DCC - Feira', 'DCG - Gaia', 'DCN-Porto', 'DCN-Porto Mini', 'DCG - Gaia Mini', 'DCN-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCN-Maia'],
@@ -144,13 +136,13 @@ sales_place_dict = {
     'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
 }
 
-# dict = {'porto': ['DCN-Porto', 'DCN-Porto Mini', 'DCN-Porto Usados',  'DCN-Maia'],
-#         'gaia': ['DCC - Feira', 'DCG - Gaia', 'DCG - Gaia Mini' , 'DCG - Gaia Usados', 'DCC - Feira Usados'],
-#         'aveiro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
-#         'lisboa': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
-#         'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
-#         'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
-# }
+sales_place_dict_v2 = {'porto': ['DCN-Porto', 'DCN-Porto Mini', 'DCN-Porto Usados',  'DCN-Maia'],
+                       'gaia': ['DCC - Feira', 'DCG - Gaia', 'DCG - Gaia Mini' , 'DCG - Gaia Usados', 'DCC - Feira Usados'],
+                       'aveiro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
+                       'lisboa': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
+                       'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
+                       'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
+}
 
 model_dict = {
     's2_gran': ['S2 Gran Tourer'],
@@ -326,20 +318,26 @@ column_sql_renaming = {
         'Nº Stock': 'VHE_Number',
         'average_percentage_margin': 'Average_Margin_Percentage',
         'average_percentage_margin_local': 'Average_Margin_Percentage_Local',
+        'average_percentage_margin_local_v2': 'Average_Margin_Percentage_Local_v2',
         'average_score_euros': 'Average_Score_Euros',
         'average_score_euros_local': 'Average_Score_Euros_Local',
+        'average_score_euros_local_v2': 'Average_Score_Euros_Local_v2',
         'average_stock_days': 'Average_Stock_Days',
         'average_stock_days_local': 'Average_Stock_Days_Local',
+        'average_stock_days_local_v2': 'Average_Stock_Days_Local_v2',
         'average_score': 'Average_Score_Class_GT',
         'average_score_local': 'Average_Score_Class_GT_Local',
+        'average_score_local_v2': 'Average_Score_Class_GT_Local_v2',
         'average_score_pred': 'Average_Score_Class_Pred',
         'average_score_pred_local': 'Average_Score_Class_Pred_Local',
+        'average_score_pred_local_v2': 'Average_Score_Class_Pred_Local_v2',
         'nr_cars_sold': 'Number_Cars_Sold',
-        'nr_cars_sold_local': 'Number_Cars_Sold_Local'
+        'nr_cars_sold_local': 'Number_Cars_Sold_Local',
+        'nr_cars_sold_local_v2': 'Number_Cars_Sold_Local_v2',
 }
 
 columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
-                   'Model_Code', 'Margin', 'Margin_Percentage',
+                   'Sales_Place_v2', 'Model_Code', 'Margin', 'Margin_Percentage',
                    'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
                    'Score_Class_Pred', 'Sell_Date', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
                    'Xenon_Lights', 'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
@@ -390,6 +388,7 @@ column_checkpoint_sql_renaming = {
     'Cor_Exterior': 'Colour_Ext',
     'Modelo': 'Model_Code',
     'Local da Venda': 'Sales_Place',
+    'Local da Venda v2': 'Sales_Place_v2',
     'Margem': 'Margin',
     'margem_percentagem': 'Margin_Percentage',
     'price_total': 'Sell_Value',

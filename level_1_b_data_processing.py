@@ -506,7 +506,9 @@ def remove_zero_price_total_vhe(df):
     remove_rows(df, [df.loc[df.price_total == 0, :].index])
     new_count = df['Nº Stock'].nunique()
 
-    level_0_performance_report.log_record('Removed ' + str(old_count - new_count) + ' vehicles with price total of 0.', project_id, flag=1)
+    removed_vehicles = old_count - new_count
+    if removed_vehicles:
+        level_0_performance_report.log_record('Removed ' + str(old_count - new_count) + ' vehicles with price total of 0.', project_id, flag=1)
     return df
 
 

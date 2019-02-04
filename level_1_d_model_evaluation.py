@@ -203,31 +203,45 @@ def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datas
     df['score_class_pred'] = train_test_datasets['score_class_pred']
 
     df_grouped = df.groupby(configuration_parameters)
-    df = df_grouped.apply(additional_info)
+    df = df_grouped.apply(additional_info, args=(''))
     df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda'])
-    df = df_grouped2.apply(additional_info_local)
+    # df = df_grouped2.apply(additional_info_local)
+    df = df_grouped2.apply(additional_info, args=('_local'))
+    df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda v2'])
+    df = df_grouped3.apply(additional_info, args=('_local_v2'))
 
     return df
 
 
-def additional_info_local(x):
-    x['nr_cars_sold_local'] = len(x)
-    x['average_percentage_margin_local'] = x['margem_percentagem'].mean()
-    x['average_stock_days_local'] = x['stock_days'].mean()
-    x['average_score_local'] = x['score_class_gt'].mean()
-    x['average_score_pred_local'] = x['score_class_pred'].mean()
-    x['average_score_euros_local'] = x['score_euros'].mean()
+# def additional_info_local(x):
+#     x['nr_cars_sold_local'] = len(x)
+#     x['average_percentage_margin_local'] = x['margem_percentagem'].mean()
+#     x['average_stock_days_local'] = x['stock_days'].mean()
+#     x['average_score_local'] = x['score_class_gt'].mean()
+#     x['average_score_pred_local'] = x['score_class_pred'].mean()
+#     x['average_score_euros_local'] = x['score_euros'].mean()
+#
+#     return x
 
-    return x
+
+# def additional_info(x):
+#     x['nr_cars_sold'] = len(x)
+#     x['average_percentage_margin'] = x['margem_percentagem'].mean()
+#     x['average_stock_days'] = x['stock_days'].mean()
+#     x['average_score'] = x['score_class_gt'].mean()
+#     x['average_score_pred'] = x['score_class_pred'].mean()
+#     x['average_score_euros'] = x['score_euros'].mean()
+#
+#     return x
 
 
-def additional_info(x):
-    x['nr_cars_sold'] = len(x)
-    x['average_percentage_margin'] = x['margem_percentagem'].mean()
-    x['average_stock_days'] = x['stock_days'].mean()
-    x['average_score'] = x['score_class_gt'].mean()
-    x['average_score_pred'] = x['score_class_pred'].mean()
-    x['average_score_euros'] = x['score_euros'].mean()
+def additional_info(x, tag):
+    x['nr_cars_sold' + str(tag)] = len(x)
+    x['average_percentage_margin' + str(tag)] = x['margem_percentagem'].mean()
+    x['average_stock_days' + str(tag)] = x['stock_days'].mean()
+    x['average_score' + str(tag)] = x['score_class_gt'].mean()
+    x['average_score_pred' + str(tag)] = x['score_class_pred'].mean()
+    x['average_score_euros' + str(tag)] = x['score_euros'].mean()
     return x
 
 
@@ -254,7 +268,7 @@ def model_choice(dsn, options_file, df_results):
         else:
             step_e_upload_flag = 1
             try:
-                log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + ' for model ' + df_previous_performance_results[metric].idxmax() + 'so will upload in section E...', options_file.project_id)
+                log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + ' for model ' + df_previous_performance_results[metric].idxmax() + ' so will upload in section E...', options_file.project_id)
             except TypeError:
                 log_record('New value is: %.4f' % best_model_value + ' and no previous result was found, so will upload in section E...', options_file.project_id)
             model_choice_flag = 2
