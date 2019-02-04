@@ -203,12 +203,12 @@ def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datas
     df['score_class_pred'] = train_test_datasets['score_class_pred']
 
     df_grouped = df.groupby(configuration_parameters)
-    df = df_grouped.apply(additional_info, args=(''))
+    df = df_grouped.apply(additional_info, ('',))
     df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda'])
     # df = df_grouped2.apply(additional_info_local)
-    df = df_grouped2.apply(additional_info, args=('_local'))
-    df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda v2'])
-    df = df_grouped3.apply(additional_info, args=('_local_v2'))
+    df = df_grouped2.apply(additional_info, ('_local',))
+    df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda_v2'])
+    df = df_grouped3.apply(additional_info, ('_local_v2',))
 
     return df
 
