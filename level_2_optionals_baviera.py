@@ -106,13 +106,13 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = margin_calculation(df)  # Calculates the margin in percentage of the total price
         df = score_calculation(df, level_2_optionals_baviera_options.stock_days_threshold, level_2_optionals_baviera_options.margin_threshold)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
         # where only configurations with 1 in both dimension, have 1 as new_score
-        df = new_column_creation(df, ['Local da Venda'], ['Local da Venda v2'])
+        df = new_column_creation(df, ['Local da Venda_v2'], df['Local da Venda'])
 
         cols_to_group_layer_1 = ['Cor_Exterior', 'Cor_Interior']
         dictionaries_layer_1 = [level_2_optionals_baviera_options.color_ext_dict_layer_1, level_2_optionals_baviera_options.color_int_dict_layer_1]
         df = col_group(df, cols_to_group_layer_1, dictionaries_layer_1)
 
-        cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Interior', 'Motor']
+        cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Interior', 'Motor']
         dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.sales_place_dict_v2, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_int_dict_layer_2, level_2_optionals_baviera_options.motor_dict_v2]
         df = col_group(df, cols_to_group_layer_2, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
         # groups are shown in level_2_optionals_baviera_options
@@ -149,7 +149,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     df_ohe = remove_columns(df_ohe, removed_columns)
     df_ohe = constant_columns_removal(df_ohe)
 
-    train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Local da Venda v2', 'Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
+    train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Local da Venda_v2', 'Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
     # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed
 
     datasets = datasets_dictionary_function(train_x, train_y, test_x, test_y)

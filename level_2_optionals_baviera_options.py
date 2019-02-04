@@ -137,7 +137,7 @@ sales_place_dict = {
 }
 
 sales_place_dict_v2 = {'porto': ['DCN-Porto', 'DCN-Porto Mini', 'DCN-Porto Usados',  'DCN-Maia'],
-                       'gaia': ['DCC - Feira', 'DCG - Gaia', 'DCG - Gaia Mini' , 'DCG - Gaia Usados', 'DCC - Feira Usados'],
+                       'gaia': ['DCC - Feira', 'DCG - Gaia', 'DCG - Gaia Mini', 'DCG - Gaia Usados', 'DCC - Feira Usados'],
                        'aveiro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
                        'lisboa': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
                        'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
@@ -388,7 +388,7 @@ column_checkpoint_sql_renaming = {
     'Cor_Exterior': 'Colour_Ext',
     'Modelo': 'Model_Code',
     'Local da Venda': 'Sales_Place',
-    'Local da Venda v2': 'Sales_Place_v2',
+    'Local da Venda_v2': 'Sales_Place_v2',
     'Margem': 'Margin',
     'margem_percentagem': 'Margin_Percentage',
     'price_total': 'Sell_Value',
