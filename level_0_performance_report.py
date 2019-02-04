@@ -132,7 +132,7 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
 
 
 def error_upload(options_file, project_id, log_file, error_flag=0):
-    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Line', 'Error_Flag'})
+    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Line', 'Error_Flag', 'Project_Id'})
     error_only = None
 
     if error_flag:
@@ -164,7 +164,7 @@ def error_upload(options_file, project_id, log_file, error_flag=0):
 
         email_notification(options_file, project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_desc=error_only, error_flag=1, model_choice_message=0)
     elif not error_flag:
-        df_error.loc[0, :] = ['', '', '', '', 0]
+        df_error.loc[0, :] = [None, None, None, None, 0, project_id]
 
     level_1_e_deployment.sql_inject(df_error, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['error_log'], options_file, list(df_error), check_date=1)
 
