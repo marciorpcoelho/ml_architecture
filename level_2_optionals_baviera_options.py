@@ -292,8 +292,9 @@ column_sql_renaming = {
         'Modelo': 'Model_Code',
         'Motor': 'Motor_Desc',
         'Local da Venda': 'Sales_Place',
-        'Margem': 'Margin', 'margem_percentagem':
-        'Margin_Percentage',
+        'Local da Venda_v2': 'Sales_Place_v2',
+        'Margem': 'Margin',
+        'margem_percentagem': 'Margin_Percentage',
         'price_total': 'Sell_Value',
         'Data Venda': 'Sell_Date',
         'buy_day': 'Purchase_Day',

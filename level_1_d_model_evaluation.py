@@ -236,12 +236,12 @@ def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datas
 
 
 def additional_info(x, tag):
-    x['nr_cars_sold' + str(tag)] = len(x)
-    x['average_percentage_margin' + str(tag)] = x['margem_percentagem'].mean()
-    x['average_stock_days' + str(tag)] = x['stock_days'].mean()
-    x['average_score' + str(tag)] = x['score_class_gt'].mean()
-    x['average_score_pred' + str(tag)] = x['score_class_pred'].mean()
-    x['average_score_euros' + str(tag)] = x['score_euros'].mean()
+    x['nr_cars_sold' + str(tag[0])] = len(x)
+    x['average_percentage_margin' + str(tag[0])] = x['margem_percentagem'].mean()
+    x['average_stock_days' + str(tag[0])] = x['stock_days'].mean()
+    x['average_score' + str(tag[0])] = x['score_class_gt'].mean()
+    x['average_score_pred' + str(tag[0])] = x['score_class_pred'].mean()
+    x['average_score_euros' + str(tag[0])] = x['score_euros'].mean()
     return x
 
 
