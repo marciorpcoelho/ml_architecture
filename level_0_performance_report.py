@@ -93,8 +93,9 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
     df_mail_users = level_1_a_data_acquisition.sql_retrieve_df(performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['mail_users'], options_file)
     users = df_mail_users['UserName'].unique()
     toaddrs = df_mail_users['UserEmail'].unique()
-    # users = ['Marcio']
-    # toaddrs = ['marcio.coelho@rigorcg.pt']
+    if project_id == 2244:
+        users = ['Márcio']
+        toaddrs = ['marcio.coelho@rigorcg.pt']
 
     mail_subject = 'Otimização Encomenda - Relatório'
 
