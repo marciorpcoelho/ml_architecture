@@ -4,7 +4,7 @@ import logging
 import pandas as pd
 import level_2_optionals_baviera_options
 from level_2_optionals_baviera_options import project_id
-from level_0_performance_report import performance_info_append, performance_info, error_upload, log_record
+from level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
 from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df
 from level_1_b_data_processing import value_count_histogram, datasets_dictionary_function, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
@@ -219,4 +219,4 @@ if __name__ == '__main__':
         project_identifier = 2162
         log_record(exception.args[0], project_identifier, flag=2)
         error_upload(level_2_optionals_baviera_options, project_identifier, level_2_optionals_baviera_options.log_files['full_log'], error_flag=1)
-        log_record('Failed - Project: Baviera Order Optimization.', project_identifier)
+        log_record('Failed - Project: ' + str(project_dict[project_identifier]) + '.', project_identifier)
