@@ -45,6 +45,10 @@ project_dict = {2244: 'PA@Service Desk',
                 2162: 'Otimização Encomenda Baviera (BMW)',
                 }
 
+project_sql_dict = {2244: 'Project_SD',
+                    2162: 'Project_VHE_BMW',
+                    }
+
 
 def performance_info_append(timings, name):
 
@@ -93,11 +97,9 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
     df_mail_users = level_1_a_data_acquisition.sql_retrieve_df(performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['mail_users'], options_file)
     users = df_mail_users['UserName'].unique()
     toaddrs = df_mail_users['UserEmail'].unique()
-    if project_id == 2244:
-        users = ['Márcio']
-        toaddrs = ['marcio.coelho@rigorcg.pt']
+    flags_to_send = df_mail_users[project_sql_dict[project_id]].values
 
-    mail_subject = 'Otimização Encomenda - Relatório'
+    mail_subject = str(project_dict[project_id]) + ' - Relatório'
 
     if error_flag:
         run_conclusion = 'não terminou devido ao erro: {}.'.format(error_desc)
@@ -111,25 +113,26 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
     elif not warning_flag:
         warning_conclusion = 'Não foram encontrados quaisquer alertas.'
 
-    for (user, toaddr) in zip(users, toaddrs):
-        mail_body = 'Bom dia ' + str(user) + \
-                    ', \nO projeto ' + str(project_dict[project_id]) + ' ' + str(run_conclusion) + \
-                    ' \n' + str(warning_conclusion) + \
-                    ' \n' + str(conclusion_message) + \
-                    '\n Para mais informações, por favor consulta o seguinte relatório: ' + \
-                    str('https://app.powerbi.com/groups/3d13efce-f4f6-4bb1-bf1f-f8a1076f1c0b/reports/a5dcce26-9b8d-4d83-9781-092685ca4385?ctid=cc1c517a-b933-41da-8549-2d5c307156fb') + \
-                    ' \n\n Cumprimentos, \n Relatório Automático Otimização Encomenda (BMW), v1.2'
-        message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
+    for (flag, user, toaddr) in zip(flags_to_send, users, toaddrs):
+        if flag:
+            mail_body = 'Bom dia ' + str(user) + \
+                        ', \nO projeto ' + str(project_dict[project_id]) + ' ' + str(run_conclusion) + \
+                        ' \n' + str(warning_conclusion) + \
+                        ' \n' + str(conclusion_message) + \
+                        '\n Para mais informações, por favor consulta o seguinte relatório: ' + \
+                        str('https://app.powerbi.com/groups/3d13efce-f4f6-4bb1-bf1f-f8a1076f1c0b/reports/a5dcce26-9b8d-4d83-9781-092685ca4385?ctid=cc1c517a-b933-41da-8549-2d5c307156fb') + \
+                        ' \n\n Cumprimentos, \n Relatório Automático Otimização Encomenda (BMW), v1.2'
+            message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
 
-        try:
-            server = smtplib.SMTP('smtp.gmail.com')
-            server.ehlo()
-            server.starttls()
-            server.login(EMAIL, EMAIL_PASS)
-            server.sendmail(fromaddr, toaddr, message)
-            server.quit()
-        except TimeoutError:
-            return
+            try:
+                server = smtplib.SMTP('smtp.gmail.com')
+                server.ehlo()
+                server.starttls()
+                server.login(EMAIL, EMAIL_PASS)
+                server.sendmail(fromaddr, toaddr, message)
+                server.quit()
+            except TimeoutError:
+                return
 
 
 def error_upload(options_file, project_id, log_file, error_flag=0):
@@ -165,7 +168,7 @@ def error_upload(options_file, project_id, log_file, error_flag=0):
 
         email_notification(options_file, project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_desc=error_only, error_flag=1, model_choice_message=0)
     elif not error_flag:
-        df_error.loc[0, :] = [None, None, None, None, 0, project_id]
+        df_error.loc[0, ['Error_Full', 'Error_Only', 'File_Loc', 'Line', 'Error_Flag', 'Project_Id']] = [None, None, None, None, 0, project_id]
 
     level_1_e_deployment.sql_inject(df_error, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['error_log'], options_file, list(df_error), check_date=1)
 
