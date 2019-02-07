@@ -81,7 +81,7 @@ regex_dict = {
     'url': r'http(.*)',
 }
 
-words_to_remove_from_description = ['felisbel', 'felisbela', 'paul', 'manuel', 'fernando', 'rui', 'brito', 'lui', 'maia', 'lc', 'joao', 'miguel', 'marlene', 'maria'
+words_to_remove_from_description = ['felisbel', 'felisbela', 'susana', 'paul', 'manuel', 'fernando', 'rui', 'brito', 'lui', 'maia', 'lc', 'joao', 'miguel', 'marlene', 'maria'
                                     'boa', 'tard', 'jlopez', 'buen', 'de', 'a', 'o', 'que', 'no', 'e', 'em', 'do', 'com', 'da', 'os',
                                     'ao', 'dos', 'um', 'se', 'das', 'uma', 'obrig', 'a', 'p.f', 'na', 'as', 'por', 'dia', 'é', 'agradeco', 'cumprimento', 'para',
                                     'en', 'el', 'la', 'y', 'lo', 'un', 'una', 'k', 'v', 'gracia', 'me', 'obrigado', 'cp', 'estar', 'entr', 'le', 'seja', 'foi', 'dr',
