@@ -67,10 +67,12 @@ def performance_info(project_id, options_file, model_choice_message, unit_count,
     if not len(warnings_global):
         df_warnings['Warnings'] = [0]
         df_warnings['Warning_Flag'] = [0]
+        df_warnings['Project_Id'] = [project_id]
         warning_flag = 0
     else:
         df_warnings['Warnings'] = warnings_global
         df_warnings['Warning_Flag'] = [1] * len(warnings_global)
+        df_warnings['Project_Id'] = [project_id] * len(warnings_global)
         warning_flag = 1
 
     if project_id == 2162:
