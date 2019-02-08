@@ -61,7 +61,7 @@ def performance_warnings_append(warning):
     warnings_global.append(warning)
 
 
-def performance_info(project_id, dsn, options_file, model_choice_message, vehicle_count, running_times_upload_flag):
+def performance_info(project_id, options_file, model_choice_message, unit_count, running_times_upload_flag):
 
     df_performance, df_warnings = pd.DataFrame(), pd.DataFrame()
     if not len(warnings_global):
@@ -73,19 +73,22 @@ def performance_info(project_id, dsn, options_file, model_choice_message, vehicl
         df_warnings['Warning_Flag'] = [1] * len(warnings_global)
         warning_flag = 1
 
-    for step in names_global:
-        timings = times_global[names_global.index(step)]
-        if type(timings) == list:
-            df_performance[step] = timings
-        else:
-            df_performance[step] = [timings] * vehicle_count
-
     if project_id == 2162:
+        for step in names_global:
+            timings = times_global[names_global.index(step)]
+            if type(timings) == list:
+                df_performance[step] = timings
+            else:
+                df_performance[step] = [timings] * unit_count
+
         df_performance = level_1_b_data_processing.column_rename(df_performance, list(options_file.column_performance_sql_renaming.keys()), list(options_file.column_performance_sql_renaming.values()))
 
         if running_times_upload_flag:
-            level_1_e_deployment.sql_inject(df_performance, dsn, performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance), check_date=1)
-        level_1_e_deployment.sql_inject(df_warnings, dsn, performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings), check_date=1)
+            level_1_e_deployment.sql_inject(df_performance, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance), check_date=1)
+        level_1_e_deployment.sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings), check_date=1)
+
+    if project_id == 2244:
+        level_1_e_deployment.sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings), check_date=1)
 
     error_flag, error_only = error_upload(options_file, project_id, options_file.log_files['full_log'])
     email_notification(options_file, project_id, warning_flag=warning_flag, warning_desc=warnings_global, error_desc=error_only, error_flag=error_flag, model_choice_message=model_choice_message)

@@ -42,7 +42,7 @@ def main():
     model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, project_id)
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
-    performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, model_choice_message, vehicle_count, running_times_upload_flag)
+    performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options, model_choice_message, vehicle_count, running_times_upload_flag)
     # error_upload(level_2_optionals_baviera_options.log_files['full_log'])
 
     log_record('Finished Successfully - Project: Baviera Order Optimization.\n', project_id)

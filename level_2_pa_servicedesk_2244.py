@@ -9,7 +9,7 @@ import level_2_pa_servicedesk_2244_options as options_file
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
 from level_1_b_data_processing import lowercase_column_convertion, null_analysis, zero_analysis, inf_analysis, remove_rows, value_replacement, date_replacement, duplicate_removal, language_detection
 from level_1_e_deployment import save_csv, sql_inject
-from level_0_performance_report import error_upload, log_record, project_dict
+from level_0_performance_report import error_upload, log_record, project_dict, performance_info
 pd.set_option('display.expand_frame_repr', False)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
@@ -25,6 +25,8 @@ def main():
     df_facts, df_facts_duration, df_clients, df_pbi_categories = data_acquisition([input_file_facts, input_file_durations, input_file_clients, pbi_categories], query_filters, local=0)
     df = data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories)
     deployment(df)
+
+    performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df.shape[0], running_times_upload_flag=0)
 
 
 def data_acquisition(input_files, query_filters, local=0):
