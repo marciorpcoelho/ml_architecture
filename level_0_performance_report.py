@@ -126,7 +126,7 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
                         ' \n' + str(conclusion_message) + \
                         '\n Para mais informações, por favor consulta o seguinte relatório: ' + \
                         str('https://app.powerbi.com/groups/3d13efce-f4f6-4bb1-bf1f-f8a1076f1c0b/reports/a5dcce26-9b8d-4d83-9781-092685ca4385?ctid=cc1c517a-b933-41da-8549-2d5c307156fb') + \
-                        ' \n\n Cumprimentos, \n Relatório Automático Otimização Encomenda (BMW), v1.2'
+                        ' \n\n Cumprimentos, \n Relatório Automático, v1.3'
             message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
 
             try:
