@@ -62,7 +62,7 @@ sql_pbi_categories_columns = {
     'Category_Name',
 }
 
-sql_facts_durations = {
+sql_facts_durations_columns = {
     'Request_Num',
     'Status_Id',
     'Contact_Assignee_Id',
@@ -70,6 +70,20 @@ sql_facts_durations = {
     'SLA_Resolution_Minutes',
     'WaitingTime_Resolution_Minutes',
     'WaitingTime_Assignee_Minutes',
+}
+
+sql_dim_contacts_columns = {
+        'Contact_Id',
+        'Name',
+        'Login_Name',
+        'Contact_Type',
+        'Location_Id',
+        'Location_Name',
+        'Comments',
+        'Site_Id',
+        'Site_Name',
+        'Company_Group',
+        'Company_Group_Name',
 }
 
 cols_with_characteristic = ['Category_Id', 'Category_Id', 'Category_Id', 'Category_Id', 'Category_Id']

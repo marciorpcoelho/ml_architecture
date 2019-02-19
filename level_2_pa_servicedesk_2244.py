@@ -39,8 +39,8 @@ def data_acquisition(input_files, query_filters, local=0):
         df_pbi_categories = read_csv(input_files[3], index_col=0)
     elif not local:
         df_facts = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'],  options_file.sql_info['initial_table_facts'], options_file,  options_file.sql_fact_columns, query_filters=query_filters[0], parse_dates=options_file.date_columns)
-        df_facts_duration = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts_durations'], options_file, options_file.sql_facts_durations, query_filters=query_filters[1])
-        df_clients = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_clients'], options_file)
+        df_facts_duration = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts_durations'], options_file, options_file.sql_facts_durations_columns, query_filters=query_filters[1])
+        df_clients = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_clients'], options_file, options_file.sql_dim_contacts_columns)
         df_pbi_categories = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_pbi_categories'], options_file, options_file.sql_pbi_categories_columns, query_filters=query_filters[1])
 
         save_csv([df_facts, df_facts_duration, df_clients, df_pbi_categories], ['dbs/db_facts_initial', 'dbs/db_facts_duration', 'dbs/db_clients_initial', 'dbs/db_pbi_categories_initial'])

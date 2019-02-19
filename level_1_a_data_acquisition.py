@@ -2,7 +2,7 @@ import pandas as pd
 import sys
 import time
 import pyodbc
-from level_1_b_data_processing import column_rename
+import level_1_b_data_processing as level_b
 
 
 def read_csv(*args, **kwargs):
@@ -47,7 +47,7 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
             query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE ' + ' and '.join(query_filters_string_list)
         df = pd.read_sql(query, cnxn, **kwargs)
         if column_renaming:
-            column_rename(df, list(options_file.sql_to_code_renaming.keys()), list(options_file.sql_to_code_renaming.values()))
+            level_b.column_rename(df, list(options_file.sql_to_code_renaming.keys()), list(options_file.sql_to_code_renaming.values()))
 
         cnxn.close()
 
