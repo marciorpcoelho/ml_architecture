@@ -254,6 +254,7 @@ def df_decimal_places_rounding(df, dictionary):
 
 def model_choice(dsn, options_file, df_results):
     step_e_upload_flag = 0
+    performance_threshold_interval = 0.02
 
     try:
         # makes sure there are results above minimum threshold
@@ -263,8 +264,11 @@ def model_choice(dsn, options_file, df_results):
 
         df_previous_performance_results = sql_second_highest_date_checkup(dsn, options_file, performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'])
         if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
-            log_record('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax() + ' so will not upload in section E...', options_file.project_id, flag=1)
+            log_record('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax(), options_file.project_id, flag=1)
             model_choice_flag = 1
+            if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() - best_model_value < performance_threshold_interval:
+                log_record('Even though older results are better, the difference is too small (<2%), so will upload the data in SQL.', options_file.project_id)
+                model_choice_flag = 3
         else:
             step_e_upload_flag = 1
             try:
@@ -303,6 +307,13 @@ def model_choice_upload(flag, name, value, options_file):
         df_model_result['Project_Id'] = [options_file.project_id]
     elif flag == 2:
         message = 'Modelo anterior substituído pelo atual.'
+        df_model_result['Chosen_Model'] = [name]
+        df_model_result['Metric'] = [metric]
+        df_model_result['Value'] = [value]
+        df_model_result['Message'] = [message]
+        df_model_result['Project_Id'] = [options_file.project_id]
+    elif flag == 3:
+        message = 'Modelo anterior substituído pelo atual, com pequenas variações de performance.'
         df_model_result['Chosen_Model'] = [name]
         df_model_result['Metric'] = [metric]
         df_model_result['Value'] = [value]

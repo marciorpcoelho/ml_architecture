@@ -43,7 +43,6 @@ def main():
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options, model_choice_message, vehicle_count, running_times_upload_flag)
-    # error_upload(level_2_optionals_baviera_options.log_files['full_log'])
 
     log_record('Finished Successfully - Project: Baviera Order Optimization.\n', project_id)
 

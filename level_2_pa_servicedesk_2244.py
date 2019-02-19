@@ -28,6 +28,8 @@ def main():
 
     performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df.shape[0], running_times_upload_flag=0)
 
+    log_record('Finished Successfully - Project: PA @ Service Desk.\n', options_file.project_id)
+
 
 def data_acquisition(input_files, query_filters, local=0):
     log_record('Started Step A...', options_file.project_id)
