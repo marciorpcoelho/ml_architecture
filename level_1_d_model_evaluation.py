@@ -291,34 +291,23 @@ def model_choice_upload(flag, name, value, options_file):
     message = None
 
     df_model_result['Model_Choice_Flag'] = [flag]
+    df_model_result['Project_Id'] = [options_file.project_id]
     if not flag:
         message = 'Nenhum dos modelos treinados atinge os valores mínimos definidos.'
         df_model_result['Chosen_Model'] = [0]
         df_model_result['Metric'] = [0]
         df_model_result['Value'] = [0]
-        df_model_result['Message'] = [message]
-        df_model_result['Project_Id'] = [options_file.project_id]
-    elif flag == 1:
-        message = 'Modelo anterior com melhor performance do que o atual.'
+    elif flag:
+        if flag == 1:
+            message = 'Modelo anterior com melhor performance do que o atual.'
+        if flag == 2:
+            message = 'Modelo anterior substituído pelo atual.'
+        if flag == 3:
+            message = 'Modelo anterior substituído pelo atual, com pequenas variações de performance.'
         df_model_result['Chosen_Model'] = [name]
         df_model_result['Metric'] = [metric]
         df_model_result['Value'] = [value]
-        df_model_result['Message'] = [message]
-        df_model_result['Project_Id'] = [options_file.project_id]
-    elif flag == 2:
-        message = 'Modelo anterior substituído pelo atual.'
-        df_model_result['Chosen_Model'] = [name]
-        df_model_result['Metric'] = [metric]
-        df_model_result['Value'] = [value]
-        df_model_result['Message'] = [message]
-        df_model_result['Project_Id'] = [options_file.project_id]
-    elif flag == 3:
-        message = 'Modelo anterior substituído pelo atual, com pequenas variações de performance.'
-        df_model_result['Chosen_Model'] = [name]
-        df_model_result['Metric'] = [metric]
-        df_model_result['Value'] = [value]
-        df_model_result['Message'] = [message]
-        df_model_result['Project_Id'] = [options_file.project_id]
+    df_model_result['Message'] = [message]
 
     sql_inject(df_model_result, options_file.DSN_MLG, performance_sql_info['DB'], performance_sql_info['model_choices'], options_file, list(df_model_result), check_date=1)
 
