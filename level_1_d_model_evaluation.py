@@ -270,6 +270,10 @@ def model_choice(dsn, options_file, df_results):
                 log_record('Even though older results are better, the difference is too small (<2%), so will upload the data in SQL.', options_file.project_id)
                 step_e_upload_flag = 1
                 model_choice_flag = 3
+        elif df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() == best_model_value:
+            log_record('New values have the same performance as the old values (%.4f) ' % best_model_value + ' in the same metric. Will upload the data in SQL to update for the latest sales.', options_file.project_id)
+            step_e_upload_flag = 1
+            model_choice_flag = 4
         else:
             step_e_upload_flag = 1
             try:
@@ -305,6 +309,8 @@ def model_choice_upload(flag, name, value, options_file):
             message = 'Modelo anterior substituído pelo atual.'
         if flag == 3:
             message = 'Modelo anterior substituído pelo atual, com pequenas variações de performance.'
+        if flag == 4:
+            message = 'Novo modelo com performance igual ao anterior.'
         df_model_result['Chosen_Model'] = [name]
         df_model_result['Metric'] = [metric]
         df_model_result['Value'] = [value]
