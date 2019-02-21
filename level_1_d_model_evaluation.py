@@ -270,7 +270,7 @@ def model_choice(dsn, options_file, df_results):
                 log_record('Even though older results are better, the difference is too small (<2%), so will upload the data in SQL.', options_file.project_id)
                 step_e_upload_flag = 1
                 model_choice_flag = 3
-        elif df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() == best_model_value:
+        elif df_previous_performance_results.loc[df_previous_performance_results[metric].eq(best_model_value)].shape[0]:
             log_record('New values have the same performance as the old values (%.4f) ' % best_model_value + ' in the same metric. Will upload the data in SQL to update for the latest sales.', options_file.project_id)
             step_e_upload_flag = 1
             model_choice_flag = 4
