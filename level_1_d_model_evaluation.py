@@ -268,6 +268,7 @@ def model_choice(dsn, options_file, df_results):
             model_choice_flag = 1
             if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() - best_model_value < performance_threshold_interval:
                 log_record('Even though older results are better, the difference is too small (<2%), so will upload the data in SQL.', options_file.project_id)
+                step_e_upload_flag = 1
                 model_choice_flag = 3
         else:
             step_e_upload_flag = 1
