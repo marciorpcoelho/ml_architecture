@@ -59,7 +59,7 @@ dakota_colors = ['oyster/cinza', 'black/contrast', 'preto/preto', 'preto/vermelh
 nappa_colors = ['preto', 'white', 'ivory', 'ivory/branco', 'bege', 'mocha', 'castanho', 'cognac/preto', 'antracite']
 vernasca_colors = ['canberra', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac', 'azuis/preto', 'anthracite/preto']
 nevada_colors = ['terra', 'brown', 'preto/preto', 'bege', 'oyster', 'oyster/leather', 'preto', 'branco', 'mocha']
-merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'taupe/preto', 'vermelho']
+merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'orange', 'taupe/preto', 'vermelho']
 
 # New Cor_Interior v2
 color_int_dict_layer_1 = {
