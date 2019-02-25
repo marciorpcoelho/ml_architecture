@@ -56,3 +56,16 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
 
     except (pyodbc.ProgrammingError, pyodbc.OperationalError):
         return  # ToDo need to figure a better way of handling these errors
+
+
+def sql_mapping_retrieval(mapping_tables, options_file):
+    dictionary_list = []
+
+    for mapping_table in mapping_tables:
+        parameter_dict = {}
+        df = sql_retrieve_df(options_file.BI_MLG, 'BI_MLG', mapping_table, options_file)
+        for key in df['Mapped_Value'].unique():
+            parameter_dict[key] = list(df[df['Mapped_Value'] == key]['Original_Value'].values)
+        dictionary_list.append(parameter_dict)
+
+    return dictionary_list

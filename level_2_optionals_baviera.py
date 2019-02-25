@@ -5,7 +5,7 @@ import pandas as pd
 import level_2_optionals_baviera_options
 from level_2_optionals_baviera_options import project_id
 from level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
-from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df
+from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
 from level_1_b_data_processing import value_count_histogram, datasets_dictionary_function, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
@@ -107,12 +107,13 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         # where only configurations with 1 in both dimension, have 1 as new_score
         df = new_column_creation(df, ['Local da Venda_v2'], df['Local da Venda'])
 
-        cols_to_group_layer_1 = ['Cor_Exterior', 'Cor_Interior']
-        dictionaries_layer_1 = [level_2_optionals_baviera_options.color_ext_dict_layer_1, level_2_optionals_baviera_options.color_int_dict_layer_1]
-        df = col_group(df, cols_to_group_layer_1, dictionaries_layer_1)
+        # cols_to_group_layer_1 = ['Cor_Exterior', 'Cor_Interior']
+        # dictionaries_layer_1 = [level_2_optionals_baviera_options.color_ext_dict_layer_1, level_2_optionals_baviera_options.color_int_dict_layer_1]
+        # df = col_group(df, cols_to_group_layer_1, dictionaries_layer_1)
 
-        cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Interior', 'Motor']
-        dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.sales_place_dict_v2, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_int_dict_layer_2, level_2_optionals_baviera_options.motor_dict_v2]
+        cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Exterior', 'Cor_Interior', 'Motor']
+        # dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.sales_place_dict_v2, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.motor_dict_v2]
+        dictionaries = sql_mapping_retrieval(level_2_optionals_baviera_options.sql_info['mappings'], level_2_optionals_baviera_options)
         df = col_group(df, cols_to_group_layer_2, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
         # groups are shown in level_2_optionals_baviera_options
 
