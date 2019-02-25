@@ -434,6 +434,8 @@ def options_scraping_per_group(args):
             group['Cor_Interior'] = 'bege'
         elif 'crimson' in tokenized_interior:
             group['Cor_Interior'] = 'vermelho'
+        else:
+            group['Cor_Interior'] = ['0']
     end_cor_int = local_time()
 
     # Tipo Interior
@@ -446,6 +448,8 @@ def options_scraping_per_group(args):
         group['Tipo_Interior'] = 'tecido'
     elif 'pele' in tokenized_interior or 'leather' in tokenized_interior or 'dakota\'' in tokenized_interior or 'couro' in tokenized_interior:
         group['Tipo_Interior'] = 'pele'
+    else:
+        group['Tipo_Interior'] = ['0']
     end_int_type = local_time()
 
     return group, (end_nav - start_nav), (end_barras - start_barras), (end_alarme - start_alarme), (end_7_lug - start_7_lug), (end_prot - start_prot), (end_ac - start_ac), (end_teto - start_teto), (end_cor_ext - start_cor_ext), (end_cor_int - start_cor_int), (end_int_type - start_int_type), duration_trans, duration_sens, duration_versao, duration_farois, duration_jantes
