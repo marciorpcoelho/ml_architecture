@@ -166,3 +166,47 @@ def sql_age_comparison(dsn, options_file, database, view, update_frequency):
         return 1
     else:
         return 0
+
+
+# Uploads parameter's mappings to SQL
+def sql_mapping_upload(dsn, options_file, dictionaries):
+    # dictionaries = [options_file.jantes_dict, options_file.sales_place_dict, options_file.sales_place_dict_v2, options_file.model_dict, options_file.versao_dict, options_file.tipo_int_dict, options_file.color_ext_dict, options_file.color_int_dict, options_file.motor_dict_v2]
+    parameters_name = ['Rims_Size', 'Sales_Place', 'Sales_Place_v2', 'Model', 'Version', 'Interior_Type', 'Color_Ext', 'Color_Int', 'Motor_Desc']
+    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + 'BI_MLG')
+    cursor = cnxn.cursor()
+
+    for (parameter, dictionary) in zip(parameters_name, dictionaries):
+        df_map = pd.DataFrame(columns=['Original_Value', 'Mapped_Value'])
+        view = 'VHE_MapBI_' + str(parameter)
+
+        all_values, all_keys = [], []
+
+        all_values, all_keys = key_and_value_generator(dictionary, all_values, all_keys)  # Will use this method, as the time gains are marginal (if any) when compared to an item comprehension approach and it is more readable;
+
+        all_values = [item for sublist in all_values for item in sublist]
+        all_keys = [item for sublist in all_keys for item in sublist]
+
+        df_map['Original_Value'] = all_values
+        df_map['Mapped_Value'] = all_keys
+
+        columns_string, values_string = sql_string_preparation(list(df_map))
+
+        sql_truncate(dsn, options_file, 'BI_MLG', view)
+        print('Uploading to SQL Server to DB ' + 'BI_MLG' + ' and view ' + view + '...')
+        for index, row in df_map.iterrows():
+            cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in list(df_map)])
+
+    cnxn.commit()
+    cursor.close()
+    cnxn.close()
+
+
+def key_and_value_generator(dictionary, all_values, all_keys):
+
+    for key in dictionary.keys():
+        values = dictionary[key]
+        all_values.append(values)
+        all_keys.append([key] * len(values))
+
+    return all_values, all_keys
+
