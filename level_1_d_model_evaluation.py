@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from math import pi
 import os
 import multiprocessing
 import time
@@ -15,14 +16,14 @@ my_dpi = 96
 
 class ClassificationEvaluation(object):
     def __init__(self, groundtruth, prediction):
-        self.micro = f1_score(groundtruth, prediction, average='micro', labels=np.unique(prediction))
-        self.average = f1_score(groundtruth, prediction, average='weighted', labels=np.unique(prediction))
-        self.macro = f1_score(groundtruth, prediction, average='macro', labels=np.unique(prediction))
-        self.accuracy = accuracy_score(groundtruth, prediction)
-        self.precision = precision_score(groundtruth, prediction, average=None)
-        self.recall = recall_score(groundtruth, prediction, average=None)
-        self.classification_report = classification_report(groundtruth, prediction)
-        self.roc_auc_curve = roc_auc_score(groundtruth, prediction)
+        self.micro = f1_score(groundtruth, np.round(prediction), average='micro', labels=np.unique(np.round(prediction)))
+        self.average = f1_score(groundtruth, np.round(prediction), average='weighted', labels=np.unique(np.round(prediction)))
+        self.macro = f1_score(groundtruth, np.round(prediction), average='macro', labels=np.unique(np.round(prediction)))
+        self.accuracy = accuracy_score(groundtruth, np.round(prediction))
+        self.precision = precision_score(groundtruth, np.round(prediction), average=None)
+        self.recall = recall_score(groundtruth, np.round(prediction), average=None)
+        self.classification_report = classification_report(groundtruth, np.round(prediction))
+        self.roc_auc_curve = roc_auc_score(groundtruth, np.round(prediction))
 
 
 class ClusterEvaluation(object):
@@ -379,3 +380,66 @@ def multiprocess_evaluation(args):
     log_record(model_name + ' - Elapsed time: %f' % (time.time() - start), project_id)
 
     return model_name, df_model
+
+
+def cluster_metrics_plots(number_of_models_trained, scores, score_names):
+
+    fig, ax = plt.subplots(2, 2, figsize=(18, 12))
+    plt.setp(ax, xticks=range(0, number_of_models_trained), xticklabels=range(2, number_of_models_trained + 2))
+
+    ax[0, 0].plot(scores[0])
+    ax[0, 0].set_title(score_names[0])
+    ax[0, 0].grid()
+
+    ax[1, 0].plot(scores[1])
+    ax[1, 0].set_title(score_names[1])
+    ax[1, 0].grid()
+
+    ax[0, 1].plot(scores[2])
+    ax[0, 1].set_title(score_names[2])
+    ax[0, 1].grid()
+
+    ax[1, 1].plot(scores[3])
+    ax[1, 1].set_title(score_names[3])
+    ax[1, 1].grid()
+
+    plt.show()
+
+
+def make_spider(df, row, title, color):
+    categories = list(df)
+    N = len(categories)
+
+    angles = [n / float(N) * 2 * pi for n in range(N)]
+    angles += angles[:1]
+
+    ax = plt.subplot(2, 2, row + 1, polar=True, )
+
+    ax.set_theta_offset(pi / 2)
+    ax.set_theta_direction(-1)
+
+    # plt.xticks(angles[:-1], categories, color='grey', size=8)
+    # plt.xticks(angles[:-1], list(string.ascii_uppercase)[:N], color='grey', size=8)
+    plt.xticks(angles[:-1], list(range(0, N)), color='grey', size=8)
+
+    ax.set_rlabel_position(0)
+    # plt.yticks([0.1, 0.5, 0.9], ["0.1", "0.5", "0.9"], color="grey", size=7)
+    # plt.ylim(0, 1)
+
+    values = df.loc[row].values.flatten().tolist()
+    values += values[:1]
+    # print(categories)
+    # print(angles)
+    print(values)
+    ax.plot(angles, values, color=color, linewidth=2, linestyle='solid')
+    ax.fill(angles, values, color=color, alpha=0.4)
+
+    plt.title(title, size=11, color=color, y=1.1)
+
+
+def radial_chart_preprocess(df, model):
+    df_cluster_center = pd.DataFrame(index=np.unique(model.labels_), columns=list(df)[:-1])
+    for label in np.unique(model.labels_):
+        df_cluster_center.loc[label, :] = model.cluster_centers_[label]
+
+    return df_cluster_center

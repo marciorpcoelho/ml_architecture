@@ -3,6 +3,9 @@ import numpy as np
 import datetime
 import pickle
 import time
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, calinski_harabaz_score
+from scipy.spatial.distance import cdist, pdist
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
@@ -84,6 +87,7 @@ class RegressionTraining(object):
 
 def model_training(models, train_x, train_y):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
+    clf, classes = None, None
 
     for model in models:
         log_record('MODEL: ' + model, project_id)
@@ -113,6 +117,47 @@ def model_training(models, train_x, train_y):
         classes = clf.grid.classes_
 
     return classes, best_models_pos_fit, running_times
+
+
+def clustering_training(df, max_n_clusters):
+    print('Testing different numbers of clusters...')
+
+    silhouette_scores, calinski_scores, inertia_scores, elbow_scores, centroids = [], [], [], [], []
+
+    models = [KMeans(n_clusters=n, init='k-means++', max_iter=10, n_init=100, n_jobs=-1).fit(df) for n in range(2, max_n_clusters+1)]
+
+    for m in models:
+        print('Evaluating for {} clusters...'.format(len(np.unique(list(m.labels_)))))
+        centroids.append(m.cluster_centers_)
+
+        s = silhouette_score(df, m.labels_, random_state=42)
+        ch = calinski_harabaz_score(df, m.labels_)
+        elbow = between_clusters_distance(df, m.cluster_centers_)
+
+        inertia_scores.append(m.inertia_)
+        silhouette_scores.append(s)
+        calinski_scores.append(ch)
+        elbow_scores.append(elbow)
+
+    # dist = [np.min(cdist(df, c, 'euclidean'), axis=1) for c in centroids]
+    # totss = sum(pdist(df) ** 2) / df.shape[0]
+    # totwithinss = [sum(d ** 2) for d in dist]
+    # between_clusters = (totss - totwithinss) / totss * 100
+
+    scores = [silhouette_scores, calinski_scores, inertia_scores, elbow_scores]
+    score_names = ['Silhouette Scores', 'Calinski Scores', 'Inertia Scores', 'Elbow Method']
+
+    return models, scores, score_names
+
+
+def between_clusters_distance(df, centroid):
+
+    dist = np.min(cdist(df, centroid, 'euclidean'), axis=1)
+    totss = sum(pdist(df) ** 2) / df.shape[0]
+    totwithinss = sum(dist ** 2)
+    between_clusters = (totss - totwithinss) / totss * 100
+
+    return between_clusters
 
 
 def save_model(clfs, model_name):

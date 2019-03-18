@@ -30,7 +30,7 @@ def main():
 
     target_variable = ['new_score']  # possible targets = ['stock_class1', 'stock_class2', 'margem_class1', 'score_class', 'new_score']
     oversample_check = 0
-    models = ['dt', 'rf', 'lr', 'ab', 'gc', 'xgb', 'voting']  # ToDo: ANN doesn't converge or takes too long to converge
+    models = ['xgb', 'lgb']
     query_filters = {'NLR_CODE': '701'}
     # possible_evaluation_metrics: 'ROC_Curve', 'Micro_F1', 'Average_F1', 'Macro_F1', 'Accuracy', 'Precision'
     ###
@@ -77,8 +77,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior', 'Versão'])  # Lowercases the strings of these columns
 
-        dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather', ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada',
-                                   ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
+        dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather',
+                                   ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada', ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
                                    ('Interior', 'mokka'): 'mocha', ('Interior', 'beige'): 'bege', ('Interior', 'dakota\''): 'dakota', ('Interior', 'antracite/cinza/p'): 'antracite/cinza/preto', ('Interior', 'antracite/cinza/pretoreto'): 'antracite/cinza/preto', ('Interior', 'nevada\''): 'nevada',
                                    ('Interior', '"nappa"'): 'nappa', ('Interior', 'anthrazit'): 'antracite', ('Interior', 'antracito'): 'antracite', ('Interior', 'preto/laranja/preto/lara'): 'preto/laranja', ('Interior', 'anthtacite'): 'antracite',
                                    ('Interior', 'champag'): 'champagne', ('Interior', 'cri'): 'crimson', ('Modelo', 'Enter Model Details'): '', ('Registration_Number', '\.'): '', ('Interior', 'preto/m '): 'preto ', ('Interior', 'congnac/preto'): 'cognac/preto'}
@@ -107,12 +107,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         # where only configurations with 1 in both dimension, have 1 as new_score
         df = new_column_creation(df, ['Local da Venda_v2'], df['Local da Venda'])
 
-        # cols_to_group_layer_1 = ['Cor_Exterior', 'Cor_Interior']
-        # dictionaries_layer_1 = [level_2_optionals_baviera_options.color_ext_dict_layer_1, level_2_optionals_baviera_options.color_int_dict_layer_1]
-        # df = col_group(df, cols_to_group_layer_1, dictionaries_layer_1)
-
         cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Exterior', 'Cor_Interior', 'Motor']
-        # dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.sales_place_dict_v2, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.motor_dict_v2]
         dictionaries = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings'], level_2_optionals_baviera_options)
         df = col_group(df, cols_to_group_layer_2, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
         # groups are shown in level_2_optionals_baviera_options
@@ -176,24 +171,24 @@ def data_modelling(df, datasets, models):
     return classes, best_models, running_times
 
 
-def model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, options_file, project_id):
+def model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, options_file, proj_id):
     performance_info_append(time.time(), 'start_section_d')
-    log_record('Started Step D...', project_id)
+    log_record('Started Step D...', proj_id)
 
-    results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, options_file, project_id)  # Creates a df with the performance of each model evaluated in various metrics, explained
+    results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, options_file, proj_id)  # Creates a df with the performance of each model evaluated in various metrics, explained
     # in the provided pdf
     plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
 
-    df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, project_id)
+    df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, proj_id)
     model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)
 
     if not section_e_upload_flag:
         best_model = None
     else:
         best_model = df_model_dict[best_model_name]
-        feature_contribution(best_model, configuration_parameters, options_file, project_id)
+        feature_contribution(best_model, configuration_parameters, options_file, proj_id)
 
-    log_record('Finished Step D.', project_id)
+    log_record('Finished Step D.', proj_id)
 
     performance_info_append(time.time(), 'end_section_d')
     return model_choice_message, best_model, df.shape[0]

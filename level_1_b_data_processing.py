@@ -1,18 +1,22 @@
 import nltk
 import time
+import string
 import warnings
-from langdetect import detect
+import operator
+import unidecode
 import numpy as np
 import pandas as pd
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import f_classif
+from scipy import stats
+from langdetect import detect
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
-from scipy import stats
+from nltk.stem.snowball import SnowballStemmer
+from sklearn.feature_selection import f_classif, SelectKBest
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 from imblearn.over_sampling import RandomOverSampler
-from level_1_e_deployment import sql_string_preparation
 import level_0_performance_report
+from level_1_e_deployment import sql_string_preparation
 from level_2_optionals_baviera_options import dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, project_id
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -93,7 +97,7 @@ def null_analysis(df):
 
 
 def inf_analysis(df):
-    # Displays the number and percentage of null values in the DF
+    # Displays the number and percentage of infinite values in the DF
 
     tab_info = pd.DataFrame(df.dtypes).T.rename(index={0: 'column type'})
     tab_info = tab_info.append(pd.DataFrame((df == np.inf).astype(int).sum(axis=0)).T.rename(index={0: '#inf:'}))
@@ -105,7 +109,7 @@ def inf_analysis(df):
 
 
 def zero_analysis(df):
-    # Displays the number and percentage of null values in the DF
+    # Displays the number and percentage of zero values in the DF
 
     tab_info = pd.DataFrame(df.dtypes).T.rename(index={0: 'column type'})
     tab_info = tab_info.append(pd.DataFrame((df == 0).astype(int).sum(axis=0)).T.rename(index={0: '#zero:'}))
@@ -130,7 +134,7 @@ def value_count_histogram(df, columns, tag, output_dir='output/'):
         plt.title('Distribution for column - ' + column)
         bar_plot_auto_label(rects)
         save_fig(str(column) + '_' + tag, output_dir)
-        # plt.show()
+        plt.show()
 
 
 def bar_plot_auto_label(rects):
@@ -469,11 +473,37 @@ def column_rename(df, cols_to_replace, new_cols_names):
     return df
 
 
-def constant_columns_removal(df):
+# def constant_columns_removal(df):
+#     list_before = list(df)
+#     df = df.loc[:, df.apply(pd.Series.nunique) != 1]
+#     list_after = list(df)
+#     features_removed = [item for item in list_before if item not in list_after]
+#     if len(features_removed):
+#         columns_string, _ = sql_string_preparation(features_removed)
+#         level_0_performance_report.log_record('Removed the following constant columns: ' + str(columns_string), project_id, flag=1)
+#         level_0_performance_report.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
+#
+#     return df[list_after]
+
+
+def constant_columns_removal(df, value=None):
+    features_removed, list_after = [], []
+
     list_before = list(df)
-    df = df.loc[:, df.apply(pd.Series.nunique) != 1]
-    list_after = list(df)
-    features_removed = [item for item in list_before if item not in list_after]
+    if value is None:
+        df = df.loc[:, df.apply(pd.Series.nunique) != 1]
+
+        list_after = list(df)
+
+        features_removed = [item for item in list_before if item not in list_after]
+    elif value is not None:
+        for column in list(df):
+            if df[column].nunique() == 1 and df[column].unique() == value:
+                print('constant column {}'.format(column))
+                features_removed.append(column)
+            else:
+                list_after.append(column)
+
     if len(features_removed):
         columns_string, _ = sql_string_preparation(features_removed)
         level_0_performance_report.log_record('Removed the following constant columns: ' + str(columns_string), project_id, flag=1)
@@ -556,13 +586,6 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
 
     df['days_stock_price'] = (0.05/360) * df['price_total'] * df['stock_days']
     df['score_euros'] = df['Margem'] - df['days_stock_price']
-
-    return df
-
-
-def value_replacement(df, col1, col2, values1, values2):
-    for value in values1:
-        df.loc[df[col1[values1.index(value)]] == value, col2[values1.index(value)]] = values2[values1.index(value)]
 
     return df
 
@@ -749,3 +772,226 @@ def language_detection(df, column_to_detect, new_column):
 
     df[new_column] = rows
     return df
+
+
+# Converts a column of a data frame with only strings to a list with all the unique strings
+def string_to_list(df, column):
+
+    lower_case_strings = lowercase_column_convertion(df, columns=column)[column[0]].values
+    strings = ' '.join(lower_case_strings).split()
+
+    strings = unidecode_function(strings)
+
+    return np.unique(strings)
+
+
+def string_to_list(strings_list):
+    decoded_strings = []
+
+    for single_string in strings_list:
+        new_string = unidecode.unidecode(single_string)
+        decoded_strings.append(new_string)
+
+    return decoded_strings
+
+
+def string_to_list(df_a, df_b, **kwargs):
+
+    df_a = df_a.join(df_b, **kwargs)
+
+    return df_a
+
+
+def null_handling(df, handling_approach):
+
+    if type(handling_approach) == dict and len(handling_approach.keys()) == 1:
+        column_to_fix = list(handling_approach.keys())[0]
+        value_to_replace_by = handling_approach[column_to_fix]
+        df.loc[df[column_to_fix].isnull(), column_to_fix] = value_to_replace_by
+
+    return df
+
+
+def literal_removal(df, column):
+
+    df.loc[~df[column].isnull(), column] = df[~df[column].isnull()][column].map(lambda s: s.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('\\u', ' '))
+
+    return df
+
+
+def value_replacement(df, replace_approach):
+
+    # ToDo: there might not be a need for the type checkup
+    if type(replace_approach) == dict and len(replace_approach.keys()) == 2:
+        col1, col2 = list(replace_approach.keys())[0], list(replace_approach.keys())[1]
+        values1, values2 = replace_approach[col1], replace_approach[col2]
+
+        for value in values1:
+            df.loc[df[col1] == value, col2] = values2[values1.index(value)]
+
+    elif type(replace_approach) == dict and len(replace_approach.keys()) == 1:
+        col1 = list(replace_approach.keys())[0]
+        regex = replace_approach[col1]
+
+        df.loc[~df[col1].isnull(), col1] = df[~df[col1].isnull()][col1].str.replace(regex, ' ')
+
+    return df
+
+
+def text_preprocess(df, unique_clients_names_decoded, options_file):
+    stemmer_pt = SnowballStemmer('porter')
+    # stemmer_es = SnowballStemmer('spanish')
+
+    # Punctuation Removal
+    for key, row in df.iterrows():
+        description, stemmed_words = row['Description'], []
+        digit_remover = str.maketrans('', '', string.digits)
+        punctuation_remover = str.maketrans('', '', string.punctuation)
+        try:
+            tokenized = nltk.tokenize.word_tokenize(description)
+            for word in tokenized:
+                word = word.translate(digit_remover).translate(punctuation_remover)
+                word = unidecode.unidecode(word)
+                if word in unique_clients_names_decoded or word in ['\'\'', '``', '“', '”', '', '\'', ',']:
+                    continue
+                else:
+                    stemmed_word = stemmer_pt.stem(word)
+                    if len(stemmed_word) >= 2:
+                        stemmed_words.append(stemmed_word)
+                    else:
+                        continue
+                # else:
+                #     if language == 'pt':
+                #         stemmed_word.append(stemmer_pt.stem(word))
+                #     elif language == 'es':
+                #         stemmed_word.append(stemmer_pt.stem(word))
+        except TypeError:
+            pass
+        df.at[key, 'StemmedDescription'] = ' '.join([x for x in stemmed_words if x not in options_file.words_to_remove_from_description])
+
+    return df
+
+
+def word_frequency(df, threshold=0):
+    word_dict = {}
+    word_dict_ticket = {}
+    word_dict_ticket_count = {}
+
+    for ticket, row in df.iterrows():
+        try:
+            description = nltk.tokenize.word_tokenize(row['StemmedDescription'])
+            for word in description:
+                if word in word_dict.keys():
+                    word_dict[word] += 1
+                    if row['Request_Num'] not in word_dict_ticket[word]:
+                        word_dict_ticket[word].append(row['Request_Num'])
+                else:
+                    word_dict[word] = 1
+                    word_dict_ticket[word] = [row['Request_Num']]
+
+        except TypeError:
+            pass
+
+    for key in word_dict_ticket.keys():
+        word_dict_ticket_count[key] = len(word_dict_ticket[key])
+
+    # The following two lines convert the dictionaries to lists with ascending order of the values
+    # sorted_word_dict = sorted(word_dict.items(), key=operator.itemgetter(1))
+    # sorted_word_dict_ticket = sorted(word_dict_ticket_count.items(), key=operator.itemgetter(1))
+
+    filtered_dict = {k: v for k, v in word_dict_ticket_count.items() if v > threshold}
+    filtered_dict_tickets = {k: v for k, v in word_dict_ticket_count.items() if v > threshold}
+
+    # word_histogram(sorted(filtered_dict.items(), key=operator.itemgetter(1)))
+    # cdf(sorted(filtered_dict.items(), key=operator.itemgetter(1)), '#tickets')
+
+    return filtered_dict, filtered_dict_tickets
+
+
+def words_dataframe_creation(df, top_words_dict):
+    print('Creating a new cleaned data frame...')
+
+    words_list = sorted(top_words_dict.items(), key=operator.itemgetter(1))
+    x = pd.DataFrame()
+
+    unique_stemmed_descriptions_non_nan = df[~df['StemmedDescription'].isnull()]['StemmedDescription'].unique()
+    unique_requests = df.dropna(axis=0, subset=['StemmedDescription']).drop_duplicates(subset=['StemmedDescription'])['Request_Num'].unique()
+
+    # request_types = df.dropna(axis=0, subset=['StemmedDescription']).drop_duplicates(subset=['StemmedDescription'])['Request_Type']
+
+    cleaned_df = df.dropna(axis=0, subset=['StemmedDescription']).drop_duplicates(subset=['StemmedDescription'])
+
+    for key, occurrence in words_list:
+        result = map(lambda y: int(key in y), unique_stemmed_descriptions_non_nan)
+        x.loc[:, key] = list(result)
+
+    # for request_type in df['Request_Type'].unique():
+    #     result = map(lambda x: int(request_type == x), request_types)
+    #     x.loc[:, 'Request_Type_{}'.format(request_type)] = list(result)
+
+    x.index = unique_requests
+    return x, cleaned_df
+
+
+def object_column_removal(df):
+
+    g = df.columns.to_series().groupby(df.dtypes).groups
+    dtype_dict = {k.name: v for k, v in g.items()}
+
+    object_columns = list(dtype_dict['object'].values)
+    non_object_columns = list(dtype_dict['int64'].values) + list(dtype_dict['float64'].values)
+
+    df_inter = df[non_object_columns].dropna(axis=0)
+
+    # df_inter.dropna(axis=0, inplace=True)
+    print('Categorical Columns: {}'.format(object_columns))
+    return df_inter, object_columns, non_object_columns
+
+
+def close_and_resolve_date_replacements(x):
+
+    if len(x) > 1 and len(x) > sum(x['Assignee_Date'].isnull()) >= 1:
+        x.dropna(subset=['Assignee_Date'], axis=0, inplace=True)
+
+    if len(x) > 1 and len(x) > sum(x['Close_Date'].isnull()) >= 1:
+        x.dropna(subset=['Close_Date'], axis=0, inplace=True)
+
+    if len(x) > 1 and len(x) > sum(x['Resolve_Date'].isnull()) >= 1:
+        x.dropna(subset=['Resolve_Date'], axis=0, inplace=True)
+
+    return x
+
+
+def min_max_scaling(df):
+    scaler = MinMaxScaler()
+    df_scaled = scaler.fit_transform(df)
+
+    df_scaled = pd.DataFrame(df_scaled, columns=list(df))
+
+    return df_scaled, scaler
+
+
+def min_max_scaling_reverse(df, scaler):
+    reversed_df = scaler.inverse_transform(df)
+
+    return reversed_df
+
+
+def data_type_conversion(df, type):
+
+    df = df.astype(type)
+    # for column in columns:
+    #     try:
+    #         df[column] = pd.to_numeric(df[column])
+    #     except:
+    #         raise Exception
+
+    return df
+
+
+def threshold_grouping(x, column, value, threshold=0):
+
+    if x.shape[0] < threshold:
+        x[column] = value
+
+    return x
