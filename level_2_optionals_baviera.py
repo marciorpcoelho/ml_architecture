@@ -198,7 +198,7 @@ def deployment(df, db, view):
 
     if df is not None:
         df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
-        sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql, truncate=1)
+        sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql, truncate=1, check_date=1)
 
     log_record('Finished Step E.', project_id)
     performance_info_append(time.time(), 'end_section_e')

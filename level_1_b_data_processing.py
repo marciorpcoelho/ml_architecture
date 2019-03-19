@@ -151,7 +151,7 @@ def save_fig(name, save_dir='output/'):
 
 
 def options_scraping(df):
-    df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index, df[df['Prov'] == 'Demonstração|Em utilização'].index])
+    df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index])  # No need for Prov filtering, as it is already filtered in the data source;
     df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
     # df = remove_rows(df, [df['Registration_Number'].str.contains('/').index, [df['Registration_Number'].str.len() > 8].index])  # This removes vehicles with erroneous registration numbers;
 

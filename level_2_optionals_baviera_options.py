@@ -236,7 +236,6 @@ dict_models_name_conversion = {
 
 sql_to_code_renaming = {
     'VHE_Number': 'Nº Stock',
-    'Prov_Desc': 'Prov',
     'Colour_Ext_Desc': 'Cor',
     'Colour_Int_Desc': 'Interior',
     'Model_Desc': 'Modelo',

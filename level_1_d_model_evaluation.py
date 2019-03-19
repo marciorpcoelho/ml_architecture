@@ -370,14 +370,13 @@ def multiprocess_model_evaluation(df, models, datasets, best_models, predictions
 def multiprocess_evaluation(args):
     df, model_name, datasets, best_models, predictions, configuration_parameters, project_id = args
 
-    start = time.time()
     log_record('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...', project_id)
     train_x_copy, test_x_copy = datasets['train_x'].copy(deep=True), datasets['test_x'].copy(deep=True)
     probabilities = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
     df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], train_x_copy, test_x_copy, datasets, configuration_parameters)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
-    log_record(model_name + ' - Elapsed time: %f' % (time.time() - start), project_id)
+    log_record('Model ' + str(model_name) + ' finished @ ' + time.strftime("%H:%M:%S @ %d/%m/%y"), project_id)
 
     return model_name, df_model
 
