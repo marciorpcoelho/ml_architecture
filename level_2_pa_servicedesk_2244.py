@@ -1,34 +1,84 @@
 import sys
 import pandas as pd
+import numpy as np
 import logging
-import nltk
-import string
-import unidecode
-from nltk.stem.snowball import SnowballStemmer
+import matplotlib.pyplot as plt
 import level_2_pa_servicedesk_2244_options as options_file
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df
-from level_1_b_data_processing import lowercase_column_convertion, null_analysis, zero_analysis, inf_analysis, remove_rows, value_replacement, date_replacement, duplicate_removal, language_detection
+from level_1_b_data_processing import threshold_grouping, value_count_histogram, date_cols, ohe, data_type_conversion, min_max_scaling, min_max_scaling_reverse, constant_columns_removal, remove_columns, object_column_removal, words_dataframe_creation, word_frequency, text_preprocess, literal_removal, string_to_list, df_join_function, null_handling, lowercase_column_convertion, null_analysis, remove_rows, value_replacement, date_replacement, duplicate_removal, language_detection, string_replacer, close_and_resolve_date_replacements
+from level_1_c_data_modelling import clustering_training
+from level_1_d_model_evaluation import cluster_metrics_plots, radial_chart_preprocess, make_spider
 from level_1_e_deployment import save_csv, sql_inject
 from level_0_performance_report import error_upload, log_record, project_dict, performance_info
+from wordcloud import WordCloud
+from sklearn.decomposition import PCA
+import string
+import matplotlib.patches as mpatches
+from mpl_toolkits.mplot3d import Axes3D
+my_dpi = 96
 pd.set_option('display.expand_frame_repr', False)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
 logging.Logger('errors')
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
+### Options
+max_number_of_clusters = 10
+clustering = 0
+
 
 def main():
-    log_record('Project: PA @ Service Desk', options_file.project_id)
+    # log_record('Project: PA @ Service Desk', options_file.project_id)
     input_file_facts, input_file_durations, input_file_clients, pbi_categories = 'dbs/db_facts_initial.csv', 'dbs/db_facts_duration.csv', 'dbs/db_clients_initial.csv', 'dbs/db_pbi_categories_initial.csv'
     query_filters = [{'Cost_Centre': '6825', 'Record_Type': ['1', '2']}, {'Cost_Centre': '6825'}]
 
     df_facts, df_facts_duration, df_clients, df_pbi_categories = data_acquisition([input_file_facts, input_file_durations, input_file_clients, pbi_categories], query_filters, local=0)
     df = data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories)
+
+    if clustering:
+        df_clustered, df_cluster_centers = data_modelling(df, max_number_of_clusters)
+        # df_clustered = pd.read_csv('output/df_clustered.csv', index_col=0)
+        # df_cluster_centers = pd.read_csv('output/df_cluster_centers.csv', index_col=0)
+        df_cluster_centers_scaled = pd.read_csv('output/df_cluster_centers_scaled.csv', index_col=0)
+        model_evaluation(df_clustered, df_cluster_centers, df_cluster_centers_scaled)
+
+    # pca_analysis()
     deployment(df)
 
     performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df.shape[0], running_times_upload_flag=0)
 
     log_record('Finished Successfully - Project: PA @ Service Desk.\n', options_file.project_id)
+
+
+def pca_analysis():
+    df_cleaned = pd.read_csv('output/df_clustered.csv', index_col=0)
+    df_top_words = pd.read_csv('output/df_top_words_clustered.csv', index_col=0)
+
+    g = df_cleaned.columns.to_series().groupby(df_cleaned.dtypes).groups
+    dtype_dict = {k.name: v for k, v in g.items()}
+
+    non_object_columns = list(dtype_dict['int64'].values) + list(dtype_dict['float64'].values)
+
+    df_non_object_columns = df_cleaned[non_object_columns]
+
+    df_non_object_columns_cleaned = df_non_object_columns.dropna(axis=0)
+
+    pca = PCA(n_components=10)
+    pca.fit(df_non_object_columns_cleaned)
+    x = pca.transform(df_non_object_columns_cleaned)
+    eigenvalues = pca.explained_variance_ratio_
+
+    eigenvalues_sum = [eigenvalues[0:i+1].sum() for i in range(len(eigenvalues))]
+    # plt.plot(range(1, len(eigenvalues)+1), eigenvalues_sum)
+    plt.scatter(x[:, 1], x[:, 2], c=df_non_object_columns_cleaned['labels'])
+    # plt.xlabel('Nº of Principal Components')
+    # plt.ylabel('Variance Covered')
+    # plt.title('PCA Analysis')
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(x[:, 0], x[:, 1], x[:, 3], c=df_non_object_columns_cleaned['labels'])
+    plt.show()
 
 
 def data_acquisition(input_files, query_filters, local=0):
@@ -54,111 +104,356 @@ def data_acquisition(input_files, query_filters, local=0):
 def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
     log_record('Started Step B...', options_file.project_id)
 
+    dict_strings_to_replace = {('Description', 'filesibmcognoscbindatacqertmodelsfdfdeeacebedeabeeabbedrtm'): 'files ibm cognos', ('Description', 'cognosapv'): 'cognos apv', ('Description', 'caetanoautopt'): 'caetano auto pt',
+                               ('Description', 'autolinecognos'): 'autoline cognos'}
+
     print('Total Initial Requests:', df_facts['Request_Num'].nunique())
-    pbi_categories = remove_rows(df_pbi_categories, [df_pbi_categories[~df_pbi_categories['Category_Name'].str.contains('Power BI')].index])['Category_Id'].values  # Selects the Category ID's which belong to PBI
+    pbi_categories = remove_rows(df_pbi_categories.copy(), [df_pbi_categories[~df_pbi_categories['Category_Name'].str.contains('Power BI')].index])['Category_Id'].values  # Selects the Category ID's which belong to PBI
     print('The number of PBI requests are:', df_facts[df_facts['Category_Id'].isin(pbi_categories)]['Request_Num'].nunique())
     df_facts = remove_rows(df_facts, [df_facts.loc[df_facts['Category_Id'].isin(pbi_categories)].index])  # Removes the rows which belong to PBI;
-    # print('After PBI Filtering, the number of requests for this year is:', df_facts[df_facts['Open_Date'] > '2019-01-01']['Request_Num'].nunique())
     print('After PBI Filtering, the number of requests is:', df_facts['Request_Num'].nunique())
     df_facts = lowercase_column_convertion(df_facts, columns=['Summary', 'Description'])
-    # df_facts = remove_rows(df_facts, [df_facts[df_facts.Description.isnull() | df_facts.Summary.isnull()].index])  # Removes rows without summary or description (there are no requests with Description without Summary)
-    print('Total Requests after Treatment:', df_facts['Request_Num'].nunique())
+    # print('Total Requests after Treatment:', df_facts['Request_Num'].nunique())
 
-    df_facts = df_facts.join(df_facts_duration.set_index('Request_Num'), on='Request_Num')
-    df_facts = df_facts.join(df_clients.set_index('Contact_Id'), on='Contact_Customer_Id')
-    df_facts = value_replacement(df_facts, ['Request_Num', 'Request_Num', 'Request_Num', 'Request_Num', 'Request_Num', 'Request_Num', 'Request_Num', 'Request_Num'], ['Contact_Assignee_Id', 'Contact_Assignee_Id', 'Contact_Assignee_Id', 'Contact_Assignee_Id', 'Contact_Assignee_Id', 'Contact_Assignee_Id', 'Contact_Assignee_Id', 'Contact_Assignee_Id'], ['RE-107512', 'RE-114012', 'RE-175076', 'RE-191719', 'RE-74793', 'RE-80676', 'RE-84389', 'RE-157518'], [-107178583, -107178583, 1746469363, 129950480, 1912342313, 1912342313, 1912342313, -172602144])
-    df_facts = df_facts.join(df_clients.set_index('Contact_Id'), on='Contact_Assignee_Id', lsuffix='_Customer', rsuffix='_Assignee')
+    unique_clients_names_decoded = string_to_list(df_clients, ['Name'])
 
-    df_facts = value_replacement(df_facts, options_file.cols_with_characteristic, options_file.cols_to_replace, options_file.category_id, options_file.values_to_replace_by)  #
-    # df_facts = value_replacement(df_facts, ['Request_Num', 'Request_Num', 'Request_Num'], ['Contact_Assignee_Id', 'Contact_Assignee_Id', 'Contact_Assignee_Id'], ['RE-74793', 'RE-84389', 'RE-80676', 'RE-191719', 'RE-74793', 'RE-80676', 'RE-84389'], ['Felisbela Lopes', 'Felisbela Lopes', 'Susana Silveira', 'Paulo Alves', 'António Fonseca', 'António Fonseca', 'António Fonseca'])
-    df_facts.loc[df_facts['Name_Assignee'].isnull(), 'Name_Assignee'] = 'Fechados pelo Cliente'
-    df_facts = date_replacement(df_facts)
+    df_facts = df_join_function(df_facts, df_facts_duration.set_index('Request_Num'), on='Request_Num')
+    df_facts = df_join_function(df_facts, df_clients.set_index('Contact_Id'), on='Contact_Customer_Id')
+    df_facts = value_replacement(df_facts, options_file.assignee_id_replacements)
+    df_facts = df_join_function(df_facts, df_clients.set_index('Contact_Id'), on='Contact_Assignee_Id', lsuffix='_Customer', rsuffix='_Assignee')
+    df_facts = value_replacement(df_facts, options_file.sla_resolution_hours_replacements)
+
+    df_facts = null_handling(df_facts, {'Name_Assignee': 'Fechados pelo Cliente'})
+
+    df_facts = date_replacement(df_facts)  # Replaces resolve date by close date when the first is null and second exists
 
     # df_facts = df_facts.groupby('Request_Num').apply(close_and_resolve_date_replacements)  # Currently doing nothing, hence why it's commented
 
-    # print('Open Requests:', df_facts.loc[df_facts['Resolve_Date'].isnull()]['Request_Num'].nunique())
-    # print('Open Requests:', df_facts.loc[df_facts['Resolve_Date'].isnull()]['Request_Num'].unique())
-
     df_facts = duplicate_removal(df_facts, ['Request_Num'])
 
-    url_pattern = r'http://(.*)'
-    df_facts.loc[~df_facts['Description'].isnull(), 'Description'] = df_facts[~df_facts['Description'].isnull()]['Description'].map(lambda s: s.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('\\u', ' '))
-    df_facts.loc[~df_facts['Description'].isnull(), 'Description'] = df_facts[~df_facts['Description'].isnull()]['Description'].str.replace(url_pattern, ' ')  # Finds and replaces the pattern defined by pattern
+    df_facts = literal_removal(df_facts, 'Description')
+    df_facts = value_replacement(df_facts, {'Description': options_file.regex_dict['url']})
 
-    # df_facts[~df_facts['Description'].isnull()]['Description'] = df_facts[~df_facts['Description'].isnull()]['Description'].map(lambda s: s.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('\\u', ' '))
-    # df_facts[~df_facts['Description'].isnull()]['Description'] = df_facts[~df_facts['Description'].isnull()]['Description'].str.replace(url_pattern, ' ')  # Finds and replaces the pattern defined by pattern
+    df_facts = string_replacer(df_facts, dict_strings_to_replace)
 
-    # df_facts['Description'] = df_facts['Description'].map(lambda s: s.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('\\u', ' '))
-    # df_facts['Description'] = df_facts['Description'].str.replace(url_pattern, ' ')  # Finds and replaces the pattern defined by pattern
-    # print('After', df_facts.shape)
-
-    print('Total Requests:', df_facts['Request_Num'].nunique(), ', Row Count:', df_facts.shape[0])
-    stemmer_pt = SnowballStemmer('porter')
-    # stemmer_es = SnowballStemmer('spanish')
+    # print('Total Requests:', df_facts['Request_Num'].nunique(), ', Row Count:', df_facts.shape[0])
 
     df_facts = language_detection(df_facts, 'Description', 'Language')
+    df_facts = string_replacer(df_facts, {('Language', 'ca'): 'es', ('Category_Id', 'pcat:'): ''})
     df_facts['StemmedDescription'] = str()
-    df_facts = value_replacement(df_facts, ['Language'], ['Language'], ['ca'], ['es'])
 
-    # Punctuation Removal
-    for key, row in df_facts.iterrows():
-        description, stemmed_word = row['Description'], []
-        digit_remover = str.maketrans('', '', string.digits)
-        punctuation_remover = str.maketrans('', '', string.punctuation)
-        try:
-            tokenized = nltk.tokenize.word_tokenize(description)
-            for word in tokenized:
-                word = word.translate(digit_remover).translate(punctuation_remover)
-                word = unidecode.unidecode(word)
-                if ',' in word:
-                    print(word)
-                if word in ['\'\'', '``', '“', '”', '']:
-                    continue
-                else:
-                    stemmed_word.append(stemmer_pt.stem(word))
-                # else:
-                #     if language == 'pt':
-                #         stemmed_word.append(stemmer_pt.stem(word))
-                #     elif language == 'es':
-                #         stemmed_word.append(stemmer_pt.stem(word))
-        except TypeError:
-            pass
-        df_facts.at[key, 'StemmedDescription'] = ' '.join([x for x in stemmed_word if x not in options_file.words_to_remove_from_description])
+    print('Number of requests is:', df_facts['Request_Num'].nunique())
+    df_facts = text_preprocess(df_facts, unique_clients_names_decoded, options_file)
 
-    df_facts.loc[df_facts['Name_Assignee'].isnull(), 'Name_Assignee'] = 'Fechados pelo Cliente'
-    df_facts.loc[(df_facts['Contact_Customer_Id'] == 1316563093) | (df_facts['Contact_Customer_Id'] == -650110013) | (df_facts['Contact_Customer_Id'] == 1191100018) | (df_facts['Contact_Customer_Id'] == -849867232) |
-                 (df_facts['Contact_Customer_Id'] == 80794334) | (df_facts['Contact_Customer_Id'] == -1511754133) | (df_facts['Contact_Customer_Id'] == 1566878955) | (df_facts['Contact_Customer_Id'] == -250410311) |
-                 (df_facts['Contact_Customer_Id'] == 1959237887), 'Language'] = 'es'  # Javier Soria, 'Juan Fernandez', 'Juan Gomez', 'Juan Sanchez', 'Cesar Malvido', 'Eduardo Ruiz', 'Ignacio Bravo', 'Marc Illa', 'Toni Silva'
-    print('Total Requests:', df_facts['Request_Num'].nunique(), ', Row Count:', df_facts.shape[0])
+    df_facts = value_replacement(df_facts, options_file.language_replacements)
+
+    # print('Total Requests:', df_facts['Request_Num'].nunique(), ', Row Count:', df_facts.shape[0])
     df_facts.to_csv('output/df_facts.csv')
+
+    # Checkpoint B.1 - Key Words data frame creation
+    # df_cleaned = clustering_preprocessing(df_facts)
 
     log_record('Finished Step B.', options_file.project_id)
     return df_facts
 
 
-def close_and_resolve_date_replacements(x):
+def clustering_preprocessing(df_facts):
+    _, top_words_frequency = word_frequency(df_facts, threshold=30)
+    df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_frequency)
 
-    if len(x) > 1 and len(x) > sum(x['Assignee_Date'].isnull()) >= 1:
-        x.dropna(subset=['Assignee_Date'], axis=0, inplace=True)
+    try:
+        df_top_words.drop(['\''], axis=1, inplace=True)  # ToDo: will need to deal with this before it reaches this section of the code
+    except KeyError:
+        pass
 
-    if len(x) > 1 and len(x) > sum(x['Close_Date'].isnull()) >= 1:
-        x.dropna(subset=['Close_Date'], axis=0, inplace=True)
+    df_cleaned = df_join_function(df_cleaned, df_top_words, on='Request_Num')
 
-    if len(x) > 1 and len(x) > sum(x['Resolve_Date'].isnull()) >= 1:
-        x.dropna(subset=['Resolve_Date'], axis=0, inplace=True)
+    _, object_columns, non_object_columns = object_column_removal(df_cleaned)
 
-    return x
+    # Checkpoint B.2 - Category Column treatment
+    datetime_columns_to_create = {'close_': 'Close_Date', 'open_': 'Open_Date', 'resolve_': 'Resolve_Date', 'assignee_': 'Assignee_Date'}
+    df_cleaned = date_cols(df_cleaned, datetime_columns_to_create)
+
+    df_cleaned = df_cleaned.groupby('Login_Name_Customer').apply(threshold_grouping, column='Login_Name_Customer', value='Outros', threshold=50)
+    df_cleaned = df_cleaned.groupby('Login_Name_Assignee').apply(threshold_grouping, column='Login_Name_Assignee', value='Outros', threshold=50)
+    df_cleaned = df_cleaned.groupby('Location_Name_Customer').apply(threshold_grouping, column='Location_Name_Customer', value='Outros', threshold=50)
+    df_cleaned = df_cleaned.groupby('Site_Name_Customer').apply(threshold_grouping, column='Site_Name_Customer', value='Outros', threshold=50)
+    df_cleaned = df_cleaned.groupby('Company_Group_Name_Customer').apply(threshold_grouping, column='Company_Group_Name_Customer', value='Outros', threshold=50)
+
+    # df_cleaned = remove_columns(df_cleaned, ['Location_Id_Customer', 'Contact_Customer_Id', 'Category_Id', 'Close_Date', 'Open_Date', 'Resolve_Date', 'Assignee_Date', 'Request_Num', 'Request_Id', 'Status_Id', 'Site_Name', 'Comments', 'Description', 'Summary',
+    #                                          'SLA_Resolution_Flag', 'Location_Id_Assignee', 'Company_Group_Customer', 'Contact_Type_Customer', 'Site_Id_Customer', 'Name_Customer', 'Comments_Customer', 'Name_Assignee', 'Comments_Assignee', 'Location_Name_Assignee', 'Company_Group_Name_Assignee',
+    #                                          'Contact_Assignee_Id', 'Site_Id_Assignee', 'Contact_Type_Assignee', 'Company_Group_Assignee', 'Site_Name_Assignee', 'StemmedDescription', 'SLA_StdTime_Resolution_Hours', 'SLA_StdTime_Assignee_Hours'])  # First Attempt
+
+    # df_cleaned = remove_columns(df_cleaned, ['Language', 'Location_Id_Customer', 'Contact_Customer_Id', 'Category_Id', 'Close_Date', 'Open_Date', 'Resolve_Date', 'Assignee_Date', 'Request_Num', 'Request_Id', 'Status_Id', 'Site_Name', 'Comments', 'Description', 'Summary',
+    #                                          'SLA_Resolution_Flag', 'Location_Id_Assignee', 'Company_Group_Customer', 'Contact_Type_Customer', 'Site_Id_Customer', 'Name_Customer', 'Comments_Customer', 'Name_Assignee', 'Comments_Assignee', 'Location_Name_Assignee', 'Company_Group_Name_Assignee',
+    #                                          'Contact_Assignee_Id', 'Site_Id_Assignee', 'Contact_Type_Assignee', 'Company_Group_Assignee', 'Site_Name_Assignee', 'StemmedDescription', 'SLA_StdTime_Resolution_Hours', 'SLA_StdTime_Assignee_Hours'])  # Second Attempt
+
+    df_cleaned = remove_columns(df_cleaned, ['Site_Name_Customer', 'Location_Name_Customer', 'Language', 'Location_Id_Customer', 'Contact_Customer_Id', 'Category_Id', 'Close_Date', 'Open_Date', 'Resolve_Date', 'Assignee_Date', 'Request_Num', 'Request_Id', 'Status_Id', 'Site_Name', 'Comments', 'Description', 'Summary',
+                                             'SLA_Resolution_Flag', 'Location_Id_Assignee', 'Company_Group_Customer', 'Contact_Type_Customer', 'Site_Id_Customer', 'Name_Customer', 'Comments_Customer', 'Name_Assignee', 'Comments_Assignee', 'Location_Name_Assignee', 'Company_Group_Name_Assignee',
+                                             'Contact_Assignee_Id', 'Site_Id_Assignee', 'Contact_Type_Assignee', 'Company_Group_Assignee', 'Site_Name_Assignee', 'StemmedDescription', 'SLA_StdTime_Resolution_Hours', 'SLA_StdTime_Assignee_Hours'])  # Third Attempt
+
+    df_cleaned = constant_columns_removal(df_cleaned)
+
+    non_keyword_columns = ['Contact_Assignee_Id', 'Login_Name_Assignee', 'Login_Name_Customer', 'SLA_Id', 'SLA_Resolution_Flag', 'WeekDay_Id', 'Request_Type', 'Priority_Id',
+                           'Contact_Assignee_Id', 'Site_Name_Customer', 'WaitingTime_Resolution_Minutes', 'SLA_Resolution_Minutes', 'WaitingTime_Assignee_Minutes', 'SLA_Assignee_Minutes', 'Location_Id_Customer', 'Site_Id_Customer',
+                           'Contact_Type_Customer', 'Company_Group_Customer', 'Location_Id_Assignee', 'Site_Id_Assignee', 'Contact_Type_Assignee', 'Company_Group_Assignee']
+
+    # for column in non_keyword_columns:
+    #     try:
+    #         print(column, df_cleaned[column].nunique())
+    #     except KeyError:
+    #         print('Column not found: {}'.format(column))
+
+    df_cleaned.dropna(axis=0, inplace=True)
+
+    # df_cleaned = ohe(df_cleaned, ['Language', 'WeekDay_Id', 'Login_Name_Customer', 'Login_Name_Assignee', 'Location_Name_Customer', 'Site_Name_Customer', 'Company_Group_Name_Customer'])  # First Attempt, with which the clusters were separated by language (PT/ES) and Location and Company (both CA/Ibericar)
+    # df_cleaned = ohe(df_cleaned, ['WeekDay_Id', 'Login_Name_Customer', 'Login_Name_Assignee', 'Location_Name_Customer', 'Site_Name_Customer', 'Company_Group_Name_Customer'])  # Second Attempt, removing Language;
+    df_cleaned = ohe(df_cleaned, ['WeekDay_Id', 'Login_Name_Customer', 'Login_Name_Assignee', 'Company_Group_Name_Customer'])  # Third Attempt, removing Location and Site Name;
+
+    df_cleaned['Resolution_Duration'] = df_cleaned['SLA_Resolution_Minutes'] - df_cleaned['WaitingTime_Resolution_Minutes']
+    df_cleaned['Assignee_Duration'] = df_cleaned['SLA_Assignee_Minutes'] - df_cleaned['WaitingTime_Assignee_Minutes']
+
+    data_type_conversion(df_cleaned, 'int64')
+
+    print(df_cleaned.head(10))
+
+
+def data_modelling(df, max_number_of_clusters):
+    # df = pd.read_csv('output/df_facts.csv', index_col=0)
+    #
+    # _, top_words_frequency = word_frequency(df, threshold=30)
+    # df_top_words, df_cleaned = words_dataframe_creation(df, top_words_frequency)
+    #
+    # # df_top_words.to_csv('output/service_desk_df_cleaned_top_words.csv')
+    # # df_top_words = pd.read_csv('output/service_desk_df_cleaned_top_words.csv', index_col=0)
+    # df_top_words.drop(['\''], axis=1, inplace=True)
+    #
+    # df_cleaned = df_cleaned.join(df_top_words, on='Request_Num')
+
+    # g = df.columns.to_series().groupby(df.dtypes).groups
+    # dtype_dict = {k.name: v for k, v in g.items()}
+    #
+    # non_object_columns = list(dtype_dict['int64'].values) + list(dtype_dict['float64'].values)
+    #
+    # df_inter = df[non_object_columns]
+    #
+    # df_non_object_columns = df_inter.dropna(axis=0)
+
+    df_scaled, scaler = min_max_scaling(df)
+
+    models, scores, score_names = clustering_training(df_scaled, max_number_of_clusters)
+    cluster_metrics_plots(len(models), scores, score_names)
+
+    # Choosing model with 3 clusters:
+    # df_top_words['labels'] = models[1].labels_
+    df['labels'] = models[1].labels_
+    df_cluster_center = radial_chart_preprocess(df, models[1])
+    df_cluster_center.to_csv('output/df_cluster_centers_scaled.csv')
+
+    array_cluster_center_converted = min_max_scaling_reverse(df_cluster_center, scaler)
+
+    df.to_csv('output/df_clustered.csv')
+    pd.DataFrame(array_cluster_center_converted, columns=list(df)[:-1]).to_csv('output/df_cluster_centers.csv')
+
+    # df_cleaned['labels'] = models[1].labels_
+    # df_cleaned.to_csv('output/df_clustered.csv')
+
+    # print(df_top_words.head())
+    # print(df_cleaned.head())
+
+    # df_top_words = pd.read_csv('output/df_top_words_clustered.csv', index_col=0)
+    # print(df_top_words.head())
+    # print(df_top_words['labels'].value_counts())
+
+    # cluster_word_cloud(df_top_words)
+
+    return df, df_cluster_center
+
+
+def model_evaluation(df, df_cluster_center, df_cluster_center_scaled):
+    # print(df.head())
+    # print(df_cluster_center_scaled.head())
+    # print(df_cluster_center.head())
+
+    # non_keyword_columns = ['Contact_Customer_Id', 'SLA_Id', 'SLA_Resolution_Flag', 'WeekDay_Id', 'Request_Type', 'Category_Id', 'Priority_Id',
+    #  'Contact_Assignee_Id', 'WaitingTime_Resolution_Minutes', 'SLA_Resolution_Minutes', 'WaitingTime_Assignee_Minutes', 'SLA_Assignee_Minutes', 'Location_Id_Customer', 'Site_Id_Customer',
+    #  'Contact_Type_Customer', 'Company_Group_Customer', 'Location_Id_Assignee', 'Site_Id_Assignee', 'Contact_Type_Assignee', 'Company_Group_Assignee']
+    print(list(df))
+
+    # non_keyword_columns = ['Contact_Customer_Id', 'SLA_Id', 'SLA_Resolution_Flag', 'WeekDay_Id', 'Request_Type', 'Category_Id', 'Priority_Id',
+    #  'Contact_Assignee_Id', 'WaitingTime_Resolution_Minutes', 'SLA_Resolution_Minutes', 'WaitingTime_Assignee_Minutes', 'SLA_Assignee_Minutes', 'Location_Id_Customer', 'Site_Id_Customer',
+    #  'Contact_Type_Customer', 'Company_Group_Customer', 'Location_Id_Assignee', 'Site_Id_Assignee', 'Contact_Type_Assignee', 'Company_Group_Assignee']
+
+    non_keyword_columns_v1 = ['Priority_Id', 'SLA_Id', 'Request_Type', 'SLA_Resolution_Minutes', 'SLA_Assignee_Minutes', 'WaitingTime_Assignee_Minutes', 'WaitingTime_Resolution_Minutes', 'close_day', 'close_month', 'close_year', 'open_day', 'open_month', 'open_year', 'resolve_day', 'resolve_month', 'resolve_year', 'assignee_day', 'assignee_month', 'assignee_year',
+     'Language_pt', 'Language_es', 'Language_da', 'Language_fr', 'Language_en', 'Language_ro', 'Language_it', 'Language_no', 'Language_lt', 'Language_sq', 'Language_et', 'Language_so', 'Language_id', 'WeekDay_Id_4.0', 'WeekDay_Id_5.0', 'WeekDay_Id_6.0', 'WeekDay_Id_2.0', 'WeekDay_Id_3.0', 'WeekDay_Id_1.0', 'WeekDay_Id_7.0', 'Login_Name_Customer_scga6301', 'Login_Name_Customer_jfer', 'Login_Name_Customer_losbc', 'Login_Name_Customer_Outros', 'Login_Name_Customer_scnp',
+     'Login_Name_Customer_rfoveb', 'Login_Name_Customer_fgro', 'Login_Name_Customer_jafa', 'Login_Name_Customer_jrga', 'Login_Name_Customer_paur', 'Login_Name_Customer_jsor', 'Login_Name_Customer_ibra', 'Login_Name_Customer_jcoe', 'Login_Name_Customer_rfssc', 'Login_Name_Customer_ajsco', 'Login_Name_Customer_lmrm', 'Login_Name_Customer_erui', 'Login_Name_Customer_tpfs', 'Login_Name_Customer_jagme', 'Login_Name_Customer_ccmmp', 'Login_Name_Customer_lflbf', 'Login_Name_Customer_hjma',
+     'Login_Name_Customer_apcp', 'Login_Name_Customer_acmc', 'Login_Name_Customer_mlpglc', 'Login_Name_Customer_mjsdms', 'Login_Name_Customer_fdapc', 'Login_Name_Customer_srja', 'Login_Name_Customer_maal', 'Login_Name_Assignee_mimp', 'Login_Name_Assignee_fplo', 'Login_Name_Assignee_algs', 'Login_Name_Assignee_aasf', 'Login_Name_Assignee_safs', 'Login_Name_Assignee_Outros', 'Login_Name_Assignee_pjaca', 'Login_Name_Assignee_fpfb', 'Login_Name_Assignee_accma', 'Login_Name_Assignee_tmsm',
+     'Location_Name_Customer_PORTIANGA-COMERCIO INTERNAC PARTI', 'Location_Name_Customer_IBERICAR HOLDING ANDALUCIA, SL', 'Location_Name_Customer_Outros', 'Location_Name_Customer_CAETANO-AUTO', 'Location_Name_Customer_CAETANO RETAIL SGPS', 'Location_Name_Customer_IBERICAR REICOMSA', 'Location_Name_Customer_IBERICAR CENTRO Y CATALUNA', 'Location_Name_Customer_CAETANO BAVIERA', 'Location_Name_Customer_IBERICAR GALICIA', 'Location_Name_Customer_HYUNDAI PORTUGAL, SA.',
+     'Location_Name_Customer_RIGOR', 'Location_Name_Customer_CAETANO DRIVE, SPORT E URBAN', 'Location_Name_Customer_TOYOTA CAETANO', 'Location_Name_Customer_CAETANOBUS', 'Site_Name_Customer_PORTIANGA-COMERCIO INTERNAC PARTI', 'Site_Name_Customer_IBERICAR HOLDING ANDALUCIA, SL', 'Site_Name_Customer_Outros', 'Site_Name_Customer_CAETANO-AUTO', 'Site_Name_Customer_CAETANO RETAIL SGPS', 'Site_Name_Customer_IBERICAR REICOMSA', 'Site_Name_Customer_IBERICAR CENTRO Y CATALUNA ',
+     'Site_Name_Customer_CAETANO BAVIERA', 'Site_Name_Customer_IBERICAR GALICIA', 'Site_Name_Customer_HYUNDAI PORTUGAL, SA.', 'Site_Name_Customer_RIGOR', 'Site_Name_Customer_CAETANO DRIVE, SPORT E URBAN', 'Site_Name_Customer_TOYOTA CAETANO', 'Site_Name_Customer_CAETANOBUS', 'Company_Group_Name_Customer_Grupo SC', 'Company_Group_Name_Customer_Grupo Ibericar', 'Company_Group_Name_Customer_Grupo Caetano-Auto', 'Company_Group_Name_Customer_Grupo Caetano Retail Portugal',
+     'Company_Group_Name_Customer_Outros', 'Company_Group_Name_Customer_Grupo Baviera', 'Company_Group_Name_Customer_Grupo Rigor', 'Company_Group_Name_Customer_Grupo Caetanobus', 'Resolution_Duration', 'Assignee_Duration']
+
+    non_keyword_columns = [x for x in list(df) if x in non_keyword_columns_v1]
+    # legends, patches_first_half, patches_second_half = [], [], []
+    # length = int(len(non_keyword_columns) / 2)
+    # for i in range(0, length):
+    #     # legends.append('{} - {}'.format(list(string.ascii_uppercase)[i], non_keyword_columns[i]))
+    #     patches_first_half.append(mpatches.Patch(color='red', label='{} - {}'.format(list(string.ascii_uppercase)[i], non_keyword_columns[i])))
+    # for i in range(length, len(non_keyword_columns)):
+    #     patches_second_half.append(mpatches.Patch(color='red', label='{} - {}'.format(list(string.ascii_uppercase)[i], non_keyword_columns[i])))
+
+    # plt.figure(figsize=(1000 / my_dpi, 1000 / my_dpi), dpi=my_dpi)
+
+    my_palette = plt.cm.get_cmap("Set2", len(df_cluster_center.index))
+
+    for row in range(df_cluster_center_scaled.shape[0]):
+        make_spider(df_cluster_center_scaled[non_keyword_columns], row=row, title='Group {} - {} Requests'.format(df_cluster_center_scaled.index[row], df[df['labels'] == df_cluster_center_scaled.index[row]].shape[0]), color=my_palette(row))
+
+    # plt.gca().add_artist(plt.legend(handles=patches_second_half, bbox_to_anchor=(3.5, 1), loc='best'))
+    # plt.legend(handles=patches_first_half, bbox_to_anchor=(2, 1), loc='best')
+    plt.show()
+
+
+def cluster_word_cloud(df):
+    occurrences = [dict() for _ in range(4)]
+
+    for i in range(4):
+        df_label = df[df['labels'] == i]
+        df_label = constant_columns_removal(df_label, value=0)
+
+        list_words = list(df_label)[:-1]
+        # print(i, '\n', df_label.describe().T)
+        for word in list_words:
+            occurrences[i][word] = df_label.loc[:, word].sum(axis=0)
+
+    def random_color_func(word=None, font_size=None, position=None,
+                          orientation=None, font_path=None, random_state=None):
+        h = int(360.0 * tone / 255.0)
+        s = int(100.0 * 255.0 / 255.0)
+        l = int(100.0 * float(random_state.randint(70, 120)) / 255.0)
+        return "hsl({}, {}%, {}%)".format(h, s, l)
+
+    def make_wordcloud(listing, increment):
+        ax1 = fig.add_subplot(4, 2, increment)
+        words = dict()
+        trunc_occurrences = listing
+        for s in trunc_occurrences:
+            words[s[0]] = s[1]
+        # ________________________________________________________
+        wordcloud = WordCloud(width=1000, height=400, background_color='lightgrey',
+                              max_words=1628, relative_scaling=1,
+                              color_func=random_color_func,
+                              normalize_plurals=False)
+        wordcloud.generate_from_frequencies(words)
+        ax1.imshow(wordcloud, interpolation="bilinear")
+        ax1.axis('off')
+        plt.title('cluster nº{}'.format(increment - 1))
+
+    fig = plt.figure(1, figsize=(14, 14))
+    color = [0, 160, 130, 95, 280, 40, 330, 110, 25]
+    for i in range(4):
+        list_cluster_occurrences = occurrences[i]
+
+        tone = color[i]
+        listing = []
+        for key, value in list_cluster_occurrences.items():
+            listing.append([key, value])
+        listing.sort(key=lambda x: x[1], reverse=True)
+        make_wordcloud(listing, i+1)
+
+    plt.show()
+
+
+# def clustering_application(df, n_clusters_max):
+#     silhouette_scores, calinski_scores, inertia_scores, centroids = [], [], [], []
+#     print('Calculating plots with different number of clusters...')
+#     models = [KMeans(n_clusters=n, init='k-means++', max_iter=10, n_init=100, n_jobs=-1).fit(df) for n in range(2, n_clusters_max)]
+#
+#     for m in models:
+#         print('Evaluating {} clusters...'.format(len(np.unique(list(m.labels_)))))
+#         s = silhouette_score(df, m.labels_, random_state=42)
+#         ch = calinski_harabaz_score(df, m.labels_)
+#         centroids.append(m.cluster_centers_)
+#         inertia_scores.append(m.inertia_)
+#         silhouette_scores.append(s)
+#         calinski_scores.append(ch)
+#
+#     dist = [np.min(cdist(df, c, 'euclidean'), axis=1) for c in centroids]
+#     totss = sum(pdist(df) ** 2) / df.shape[0]
+#     totwithinss = [sum(d ** 2) for d in dist]
+#     between_clusters = (totss - totwithinss) / totss * 100
+#     scores = [silhouette_scores, calinski_scores, inertia_scores, between_clusters]
+#     score_names = ['Silhouette Scores', 'Calinski Scores', 'Inertia Scores', 'Elbow Method']
+#
+#     return models, scores, score_names
+
+
+# def cluster_metrics_plots(number_of_models_trained, scores, score_names):
+#
+#     fig, ax = plt.subplots(2, 2, figsize=(18, 12))
+#     plt.setp(ax, xticks=range(0, number_of_models_trained), xticklabels=range(2, number_of_models_trained + 2))
+#
+#     ax[0, 0].plot(scores[0])
+#     ax[0, 0].set_title(score_names[0])
+#     ax[0, 0].grid()
+#
+#     ax[1, 0].plot(scores[1])
+#     ax[1, 0].set_title(score_names[1])
+#     ax[1, 0].grid()
+#
+#     ax[0, 1].plot(scores[2])
+#     ax[0, 1].set_title(score_names[2])
+#     ax[0, 1].grid()
+#
+#     ax[1, 1].plot(scores[3])
+#     ax[1, 1].set_title(score_names[3])
+#     ax[1, 1].grid()
+#
+#     plt.show()
+
+
+def word_histogram(listing):
+
+    listing = sorted(listing, key=lambda x: x[1], reverse=True)
+    number_of_words = 125
+    plt.rc('font', weight='normal')
+    fig, ax = plt.subplots(figsize=(7, 25))
+    y_axis = [i[1] for i in listing[:number_of_words]]
+    x_axis = [k for k, i in enumerate(listing[:number_of_words])]
+    x_label = [i[0] for i in listing[:number_of_words]]
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=7)
+    plt.yticks(x_axis, x_label)
+    plt.xlabel("#Tickets", fontsize=18, labelpad=10)
+    ax.barh(x_axis, y_axis, align='center')
+    ax = plt.gca()
+    ax.invert_yaxis()
+    plt.grid()
+    plt.title("Word's Frequency", bbox={'facecolor': 'k', 'pad': 5}, color='w', fontsize=25)
+    plt.show()
 
 
 def deployment(df):
     log_record('Started Step E...', options_file.project_id)
-    null_analysis(df)
     df = df.astype(object).where(pd.notnull(df), None)
 
     sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, list(df), truncate=1)
 
     log_record('Finished Step E.', options_file.project_id)
     return
+
+
+def cdf(listing, name):
+    listing = sorted(listing, key=lambda x: x[1], reverse=True)
+
+    ser = pd.Series(np.sort([i[1] for i in listing]))
+    cum_dist = np.linspace(0., 1., len(ser))
+    ser_cdf = pd.Series(cum_dist, index=ser.sort_values())
+    ser_cdf.plot()
+    plt.xlabel(name)
+    plt.ylabel('CDF')
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == '__main__':

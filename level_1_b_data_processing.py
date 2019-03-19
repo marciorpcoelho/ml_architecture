@@ -785,7 +785,7 @@ def string_to_list(df, column):
     return np.unique(strings)
 
 
-def string_to_list(strings_list):
+def unidecode_function(strings_list):
     decoded_strings = []
 
     for single_string in strings_list:
@@ -795,7 +795,7 @@ def string_to_list(strings_list):
     return decoded_strings
 
 
-def string_to_list(df_a, df_b, **kwargs):
+def df_join_function(df_a, df_b, **kwargs):
 
     df_a = df_a.join(df_b, **kwargs)
 
@@ -977,9 +977,9 @@ def min_max_scaling_reverse(df, scaler):
     return reversed_df
 
 
-def data_type_conversion(df, type):
+def data_type_conversion(df, type_string):
 
-    df = df.astype(type)
+    df = df.astype(type_string)
     # for column in columns:
     #     try:
     #         df[column] = pd.to_numeric(df[column])

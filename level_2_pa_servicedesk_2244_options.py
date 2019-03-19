@@ -12,6 +12,7 @@ pool_workers_count = cpu_count()
 
 # Options:
 update_frequency_days = 0
+max_number_of_clusters = 11
 
 
 sql_info = {
@@ -86,18 +87,31 @@ sql_dim_contacts_columns = {
         'Company_Group_Name',
 }
 
-cols_with_characteristic = ['Category_Id', 'Category_Id', 'Category_Id', 'Category_Id', 'Category_Id']
-cols_to_replace = ['SLA_StdTime_Resolution_Hours', 'SLA_StdTime_Resolution_Hours', 'SLA_StdTime_Resolution_Hours', 'SLA_StdTime_Resolution_Hours', 'SLA_StdTime_Resolution_Hours']
-category_id = ['pcat:1246020', 'pcat:1246021', 'pcat:1246019', 'pcat:1246354', 'pcat:1246353']
-values_to_replace_by = [24.0, 16.0, 8.0, 8.0, 16.0]
-
-regex_dict = {
-    'url': r'http(.*)',
+sla_resolution_hours_replacements = {
+    'Category_Id': ['pcat:1246020', 'pcat:1246021', 'pcat:1246019', 'pcat:1246354', 'pcat:1246353'],
+    'SLA_StdTime_Resolution_Hours': [24.0, 16.0, 8.0, 8.0, 16.0]
 }
 
-words_to_remove_from_description = ['felisbel', 'felisbela', 'susana', 'paul', 'manuel', 'fernando', 'rui', 'brito', 'lui', 'maia', 'lc', 'joao', 'miguel', 'marlene', 'maria'
-                                    'boa', 'tard', 'jlopez', 'buen', 'de', 'a', 'o', 'que', 'no', 'e', 'em', 'do', 'com', 'da', 'os',
-                                    'ao', 'dos', 'um', 'se', 'das', 'uma', 'obrig', 'a', 'p.f', 'na', 'as', 'por', 'dia', 'é', 'agradeco', 'cumprimento', 'para',
-                                    'en', 'el', 'la', 'y', 'lo', 'un', 'una', 'k', 'v', 'gracia', 'me', 'obrigado', 'cp', 'estar', 'entr', 'le', 'seja', 'foi', 'dr',
-                                    'hay', 'es', 'ma', 'saludo', 'del', 'al', 'tengo', 'tenho', 'ja', 'cmpt', 'n', 's', 'r', 'c', 'obg', 'favor', 'ou', 'poi', 'agradecia',
-                                    'est', 'obrigada', 'bueno', 'bom', 'con', 'ter', 'bon', 'boa', 'esta', 'pelo', 'tenemos', 'como', 'sao', 'fazer', 'ver', 'estamo']
+assignee_id_replacements = {
+    'Request_Num': ['RE-107512', 'RE-114012', 'RE-175076', 'RE-191719', 'RE-74793', 'RE-80676', 'RE-84389', 'RE-157518'],
+    'Contact_Assignee_Id': [-107178583, -107178583, 1746469363, 129950480, 1912342313, 1912342313, 1912342313, -172602144]
+}
+
+language_replacements = {
+    'Contact_Customer_Id': [1316563093, -650110013, 1191100018, -849867232, 80794334, -1511754133, 1566878955, -250410311, 1959237887],
+    # Javier Soria, 'Juan Fernandez', 'Juan Gomez', 'Juan Sanchez', 'Cesar Malvido', 'Eduardo Ruiz', 'Ignacio Bravo', 'Marc Illa', 'Toni Silva'
+    'Language': ['es'] * 9
+}
+
+
+regex_dict = {
+    'url': r'http://(.*)',
+}
+
+
+words_to_remove_from_description = ['felisbel', 'felisbela', 'susana', 'paul', 'manuel', 'fernando', 'rui', 'brito', 'lui', 'maia', 'lc', 'joao', 'miguel', 'marlene', 'maria', 'boa',
+                                    'tard', 'jlopez', 'buen', 'de', 'a', 'o', 'que', 'no', 'e', 'em', 'do', 'com', 'da', 'os', 'ao', 'dos', 'um', 'se', 'das', 'uma', 'obrig', 'a', 'p.f',
+                                    'na', 'as', 'por', 'dia', 'é', 'agradeco', 'cumprimento', 'para', 'en', 'el', 'la', 'y', 'lo', 'un', 'una', 'k', 'v', 'gracia', 'me', 'obrigado', 'cp',
+                                    'estar', 'entr', 'le', 'seja', 'foi', 'dr', 'hay', 'es', 'ma', 'saludo', 'del', 'al', 'tengo', 'tenho', 'ja', 'cmpt', 'n', 's', 'r', 'c', 'obg', 'favor',
+                                    'ou', 'poi', 'agradecia', 'est', 'obrigada', 'bueno', 'bom', 'con', 'ter', 'bon', 'boa', 'esta', 'pelo', 'tenemos', 'como', 'sao', 'fazer', 'ver', 'estamo',
+                                    'azevedo', 'oliveira', '-', '\'', 'tpsilva']
