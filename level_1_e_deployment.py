@@ -17,16 +17,44 @@ def save_csv(dfs, names):
         df.to_csv(name)
 
 
-def sql_log_inject(line, project_id, flag, performance_info_dict):
+# def sql_log_inject(line, project_id, flag, performance_info_dict):
+#
+#     try:
+#         cnxn = pyodbc.connect('DSN=' + performance_info_dict['DSN'] + ';UID=' + performance_info_dict['UID'] + ';PWD=' + performance_info_dict['PWD'] + ';DATABASE=' + performance_info_dict['DB'])
+#         cursor = cnxn.cursor()
+#         time_tag_date = time.strftime("%Y-%m-%d")
+#         time_tag_hour = time.strftime("%H:%M:%S")
+#
+#         line = apostrophe_escape(line)
+#         cursor.execute('INSERT INTO [' + str(performance_info_dict['DB']) + '].dbo.[' + str(performance_info_dict['log_view']) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\', ' + str(project_id) + ')')
+#
+#         cnxn.commit()
+#         cursor.close()
+#         cnxn.close()
+#     except (pyodbc.ProgrammingError, pyodbc.OperationalError):
+#         logging.warning('Unable to access SQL Server.')
+#         return
+
+
+def log_inject(line, project_id, flag, performance_info_dict):
+
+    time_tag_date = time.strftime("%Y-%m-%d")
+    time_tag_hour = time.strftime("%H:%M:%S")
+    line = apostrophe_escape(line)
+
+    values = [str(line), str(flag), time_tag_hour, time_tag_date, str(project_id)]
+
+    sql_inject_single_line(performance_info_dict['DSN'], performance_info_dict['UID'], performance_info_dict['PWD'], performance_info_dict['DB'], performance_info_dict['log_view'], values)
+
+
+def sql_inject_single_line(dsn, uid, pwd, database, view, values):
+    values_string = '\'%s\'' % '\', \''.join(values)
 
     try:
-        cnxn = pyodbc.connect('DSN=' + performance_info_dict['DSN'] + ';UID=' + performance_info_dict['UID'] + ';PWD=' + performance_info_dict['PWD'] + ';DATABASE=' + performance_info_dict['DB'])
+        cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + uid + ';PWD=' + pwd + ';DATABASE=' + database)
         cursor = cnxn.cursor()
-        time_tag_date = time.strftime("%Y-%m-%d")
-        time_tag_hour = time.strftime("%H:%M:%S")
 
-        line = apostrophe_escape(line)
-        cursor.execute('INSERT INTO [' + str(performance_info_dict['DB']) + '].dbo.[' + str(performance_info_dict['log_view']) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\', ' + str(project_id) + ')')
+        cursor.execute('INSERT INTO [' + database + '].dbo.[' + view + '] VALUES (' + values_string + ')')
 
         cnxn.commit()
         cursor.close()
@@ -209,4 +237,20 @@ def key_and_value_generator(dictionary, all_values, all_keys):
         all_keys.append([key] * len(values))
 
     return all_values, all_keys
+
+
+def sql_get_last_vehicle_count(dsn, options_file, database, view, date_column='Date'):
+    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
+    crsr = cnxn.cursor()
+
+    query = 'SELECT TOP (1) *' \
+            'FROM [' + str(database) + '].[dbo].[' + str(view) + ']' \
+            'ORDER BY [' + str(date_column) + '] DESC'
+
+    crsr.execute(query)
+    result = crsr.fetchone()[0]
+
+    cnxn.close()
+    return result
+
 

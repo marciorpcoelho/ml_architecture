@@ -207,4 +207,4 @@ def log_record(message, project_id, flag=0):
     elif flag == 2:
         logging.exception('#')
 
-    level_1_e_deployment.sql_log_inject(message, project_id, flag, performance_sql_info)
+    level_1_e_deployment.log_inject(message, project_id, flag, performance_sql_info)

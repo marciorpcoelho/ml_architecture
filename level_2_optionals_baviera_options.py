@@ -31,6 +31,7 @@ sql_info = {
     'database': 'BI_MLG',
     'database_final': 'BI_MLG',
     'initial_table': 'VHE_Fact_DW_SalesNew_WithSpecs',
+    'vhe_number_history': 'VHE_NrVehicles_History',
     'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
     'final_table': 'VHE_Fact_BI_OrderOptimization',
