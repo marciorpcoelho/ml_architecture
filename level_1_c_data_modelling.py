@@ -90,7 +90,7 @@ def model_training(models, train_x, train_y):
     clf, classes = None, None
 
     for model in models:
-        log_record('MODEL: {}',format(model), project_id)
+        log_record('MODEL: {}'.format(model), project_id)
         if model == 'voting':
             start = time.time()
             parameters = {'estimators': [(x, y) for x, y in zip(best_models_pre_fit.keys(), best_models_pre_fit.values())]}
