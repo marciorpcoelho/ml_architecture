@@ -44,7 +44,7 @@ class ClusterTraining(object):
     def cluster_optimal_number(self, matrix):
         optimalk = OptimalK(parallel_backend='joblib')
         k = optimalk(matrix, cluster_array=np.arange(1, 30))
-        print('\nOptimal number of clusters is:', k)
+        print('\nOptimal number of clusters is: {}'.format(k))
         self.optimal_cluster_nb = k
         return self.optimal_cluster_nb
 
@@ -90,7 +90,7 @@ def model_training(models, train_x, train_y):
     clf, classes = None, None
 
     for model in models:
-        log_record('MODEL: ' + model, project_id)
+        log_record('MODEL: {}',format(model), project_id)
         if model == 'voting':
             start = time.time()
             parameters = {'estimators': [(x, y) for x, y in zip(best_models_pre_fit.keys(), best_models_pre_fit.values())]}

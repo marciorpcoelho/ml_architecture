@@ -30,7 +30,7 @@ def vehicle_count_checkup(df, options_file, sql_check=0):
             time_tag_date = time.strftime("%Y-%m-%d")
             values = [str(current_vehicle_count), time_tag_date]
             sql_inject_single_line(options_file.DSN_MLG, options_file.UID, options_file.PWD, options_file.sql_info['database'], options_file.sql_info['vhe_number_history'], values)
-            log_record('Contagem de veículos atualizada: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
+            log_record('Updating vehicle count: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
     return
 
 
@@ -67,7 +67,8 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
 
         cnxn.close()
 
-        print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
+        # print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
+        print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
         return df
 
     except (pyodbc.ProgrammingError, pyodbc.OperationalError):

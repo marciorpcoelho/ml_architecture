@@ -181,8 +181,6 @@ def options_scraping(df):
             df.loc[mask_version, 'Motor'] = [x.split(' ')[0] for x in df[mask_version]['Versão']]
     level_0_performance_report.performance_info_append(time.time(), 'end_motor')
 
-    # print(df['Motor'].unique())
-
     workers = level_0_performance_report.pool_workers_count
     pool = Pool(processes=workers)
     results = pool.map(options_scraping_per_group, [(key, group) for (key, group) in df_grouped])
@@ -388,6 +386,7 @@ def options_scraping_per_group(args):
             color = ['vermelho']
         else:
             if len(tokenized_color) == 0:
+                level_0_performance_report.log_record('The vehicle with VHE_Number {} and Color {} had no Exterior Color found.'.format(key, line_color), project_id, flag=1)
                 return
             else:
                 raise ValueError('Color Not Found:', tokenized_color)
@@ -521,13 +520,17 @@ def col_group(df, columns_to_replace, dictionaries):
             if df[column + '_new'].isnull().values.any():
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
                 # print('Column Grouping Warning - NaNs detected in: {}'.format(column + '_new, value(s) not grouped: {}'.format(variable)))
-                level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
-                level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
+                # level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
+                level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}_new, value(s) not grouped: {} in Vehicle(s) with VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
+                # level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
+                level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}_new, value(s) not grouped: {} in Vehicle(s) with VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
         except KeyError:
-            level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column ' + str(column) + ' not found.')
-            level_0_performance_report.log_record('Column Grouping Warning - Column ' + str(column) + ' not found.', project_id, flag=1)
+            # level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column ' + str(column) + ' not found.')
+            # level_0_performance_report.log_record('Column Grouping Warning - Column ' + str(column) + ' not found.', project_id, flag=1)
+            level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column {} not found.'.format(column))
+            level_0_performance_report.log_record('Column Grouping Warning - Column {} not found.'.format(column), project_id, flag=1)
     return df
 
 
@@ -544,7 +547,7 @@ def remove_zero_price_total_vhe(df):
 
     removed_vehicles = old_count - new_count
     if removed_vehicles:
-        level_0_performance_report.log_record('Removed ' + str(old_count - new_count) + ' vehicles with price total of 0.', project_id, flag=1)
+        level_0_performance_report.log_record('Removed {} vehicles with price total of 0.'.format(old_count - new_count), project_id, flag=1)
     return df
 
 
@@ -599,7 +602,7 @@ def date_replacement(df):
 def new_features_optionals_baviera(df, sel_cols):
     df.dropna(inplace=True)  # This is here for the cases where a value is not grouped. So it doesn't stop the code. Warning will still be uploaded to SQL.
     df_grouped = df.sort_values(by=['Data Venda']).groupby(sel_cols)
-    print('Number of Configurations:', len(df_grouped))
+    print('Number of Configurations: {}'.format(len(df_grouped)))
     df = df_grouped.apply(previous_sales_info_optionals_baviera)
 
     return df.fillna(0)
@@ -702,7 +705,6 @@ def oversample_data(train_x, train_y):
 
     train_x['oversample_flag'] = range(train_x.shape[0])
     train_x['original_index'] = train_x.index
-    # print(train_x.shape, '\n', train_y['new_score'].value_counts())
 
     print(train_x, train_y)
 
@@ -765,7 +767,6 @@ def language_detection(df, column_to_detect, new_column):
     for key, row in df.iterrows():
         try:
             rows.append(detect(row[column_to_detect]))
-            # print(row)
         except:
             rows.append('Undefined')
             continue
