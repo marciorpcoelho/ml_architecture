@@ -96,6 +96,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
 
         df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+        df = remove_columns(df, ['Colour_Ext_Code'])  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;
 
         vehicle_count_checkup(df, level_2_optionals_baviera_options, sql_check=1)
 

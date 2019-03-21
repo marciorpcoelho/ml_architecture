@@ -385,7 +385,10 @@ def options_scraping_per_group(args):
         elif tokenized_color == ['verm', 'tk', 'mmm']:
             color = ['vermelho']
         else:
-            if len(tokenized_color) == 0:
+            line_color_ext_code = group['Colour_Ext_Code'].head(1).values[0]
+            if line_color_ext_code == 'P0X13':
+                color = ['castanho']
+            elif len(tokenized_color) == 0:
                 level_0_performance_report.log_record('The vehicle with VHE_Number {} and Color {} had no Exterior Color found.'.format(key, line_color), project_id, flag=1)
                 return
             else:
