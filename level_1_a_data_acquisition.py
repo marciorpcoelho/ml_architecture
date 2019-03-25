@@ -3,8 +3,8 @@ import sys
 import time
 import pyodbc
 import level_1_b_data_processing as level_b
+import level_0_performance_report
 from level_1_e_deployment import sql_get_last_vehicle_count, sql_inject_single_line
-from level_0_performance_report import log_record
 
 
 def read_csv(*args, **kwargs):
@@ -25,12 +25,12 @@ def vehicle_count_checkup(df, options_file, sql_check=0):
         if current_vehicle_count < last_vehicle_count:
             raise ValueError('Atual contagem de veículos ({}) é inferior à ultima contagem ({}). Por favor verificar na base de dados.'.format(current_vehicle_count, last_vehicle_count))
         elif current_vehicle_count == last_vehicle_count:
-            log_record('Atual contagem de veículos ({}) sem incrementos desde a última vez que o modelo foi treinado ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count), options_file.project_id, flag=1)
+            level_0_performance_report.log_record('Atual contagem de veículos ({}) sem incrementos desde a última vez que o modelo foi treinado ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count), options_file.project_id, flag=1)
         else:
             time_tag_date = time.strftime("%Y-%m-%d")
             values = [str(current_vehicle_count), time_tag_date]
             sql_inject_single_line(options_file.DSN_MLG, options_file.UID, options_file.PWD, options_file.sql_info['database'], options_file.sql_info['vhe_number_history'], values)
-            log_record('Updating vehicle count: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
+            level_0_performance_report.log_record('Updating vehicle count: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
     return
 
 

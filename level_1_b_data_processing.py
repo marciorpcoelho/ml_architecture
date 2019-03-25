@@ -307,6 +307,7 @@ def options_scraping_per_group(args):
     end_teto = local_time()
 
     # Sensor/Transmissão/Versão/Jantes
+    jantes_size = [0]
     for line_options in group['Opcional']:
         tokenized_options = nltk.word_tokenize(line_options)
 
@@ -366,7 +367,7 @@ def options_scraping_per_group(args):
         # Jantes
         start = local_time()
         for value in range(15, 21):
-            if str(value) in tokenized_options:
+            if str(value) in tokenized_options and value > int(jantes_size[0]):
                 jantes_size = [str(value)] * group.shape[0]
                 group['Jantes'] = jantes_size
         duration = local_time() - start
