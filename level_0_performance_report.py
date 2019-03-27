@@ -107,7 +107,7 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
     flags_to_send = df_mail_users[project_sql_dict[project_id]].values
 
     mail_subject = str(project_dict[project_id]) + ' - Relatório'
-    link = 'https://app.powerbi.com/groups/3d13efce-f4f6-4bb1-bf1f-f8a1076f1c0b/reports/a5dcce26-9b8d-4d83-9781-092685ca4385?ctid=cc1c517a-b933-41da-8549-2d5c307156fb'
+    link = 'https://bit.ly/2U1dznN'
 
     if error_flag:
         run_conclusion = 'não terminou devido ao erro: {}.'.format(error_desc)
