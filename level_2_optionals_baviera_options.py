@@ -93,7 +93,7 @@ color_int_dict = {
               'vernasca_preto/preto', 'preto', 'dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto',
               'dakota_preta', 'dakota_black/contrast', 'nappa_preto'],
     'castanho/mocha': ['merino_tartufo/preto', 'merino_coffee/preto', 'mocha', 'dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha', 'nappa_mocha', 'nevada_mocha',
-                       'castanho', 'merino_castanho', 'nevada_terra', 'nevada_brown', 'vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac', 'nappa_castanho', 'nappa_cognac/preto',
+                       'castanho', 'merino_castanho', 'nevada_terra', 'nevada_brown', 'vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac', 'vernasca_cognac/preto', 'nappa_castanho', 'nappa_cognac/preto',
                        'dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
     'bege/oyster/branco': ['merino_bege', 'dakota_bege', 'nappa_bege', 'vernasca_canberra', 'nevada_bege', 'bege', 'dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza', 'vernasca_oyster',
                            'nevada_oyster', 'nevada_oyster/leather', 'oyster', 'nevada_branco', 'merino_branco', 'dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white',
