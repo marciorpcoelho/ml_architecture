@@ -56,7 +56,8 @@ def remove_columns(df, columns):
         try:
             df.drop([column], axis=1, inplace=True)
         except KeyError:
-            level_0_performance_report.performance_warnings_append('Column Deletion Warning - Column ' + str(column) + ' not found.')
+            level_0_performance_report.log_record('Column Deletion Warning - Column {} not found.'.format(column), project_id, flag=1)
+            # level_0_performance_report.performance_warnings_append('Column Deletion Warning - Column ' + str(column) + ' not found.')
             continue
 
     return df
@@ -510,7 +511,7 @@ def constant_columns_removal(df, value=None):
     if len(features_removed):
         columns_string, _ = sql_string_preparation(features_removed)
         level_0_performance_report.log_record('Removed the following constant columns: ' + str(columns_string), project_id, flag=1)
-        level_0_performance_report.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
+        # level_0_performance_report.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
 
     return df[list_after]
 
@@ -525,15 +526,13 @@ def col_group(df, columns_to_replace, dictionaries):
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
                 # print('Column Grouping Warning - NaNs detected in: {}'.format(column + '_new, value(s) not grouped: {}'.format(variable)))
                 # level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
-                level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}_new, value(s) not grouped: {} in Vehicle(s) with VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
+                # level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}_new, value(s) not grouped: {} in Vehicle(s) with VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
                 # level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
                 level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}_new, value(s) not grouped: {} in Vehicle(s) with VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
         except KeyError:
-            # level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column ' + str(column) + ' not found.')
-            # level_0_performance_report.log_record('Column Grouping Warning - Column ' + str(column) + ' not found.', project_id, flag=1)
-            level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column {} not found.'.format(column))
+            # level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column {} not found.'.format(column))
             level_0_performance_report.log_record('Column Grouping Warning - Column {} not found.'.format(column), project_id, flag=1)
     return df
 

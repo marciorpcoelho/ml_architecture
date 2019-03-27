@@ -204,6 +204,7 @@ def log_record(message, project_id, flag=0):
         logging.info(message)
     elif flag == 1:
         logging.warning(message)
+        performance_warnings_append(message)
     elif flag == 2:
         logging.exception('#')
 

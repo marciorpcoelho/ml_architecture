@@ -25,11 +25,13 @@ def vehicle_count_checkup(df, options_file, sql_check=0):
         if current_vehicle_count < last_vehicle_count:
             raise ValueError('Atual contagem de veículos ({}) é inferior à ultima contagem ({}). Por favor verificar na base de dados.'.format(current_vehicle_count, last_vehicle_count))
         elif current_vehicle_count == last_vehicle_count:
+            # level_0_performance_report.performance_warnings_append('Atual contagem de veículos ({}) sem incrementos desde a última vez que o modelo foi treinado ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count))
             level_0_performance_report.log_record('Atual contagem de veículos ({}) sem incrementos desde a última vez que o modelo foi treinado ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count), options_file.project_id, flag=1)
         else:
             time_tag_date = time.strftime("%Y-%m-%d")
             values = [str(current_vehicle_count), time_tag_date]
             sql_inject_single_line(options_file.DSN_MLG, options_file.UID, options_file.PWD, options_file.sql_info['database'], options_file.sql_info['vhe_number_history'], values)
+            # level_0_performance_report.performance_warnings_append('Updating vehicle count: {}.'.format(current_vehicle_count))
             level_0_performance_report.log_record('Updating vehicle count: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
     return
 
