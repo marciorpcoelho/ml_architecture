@@ -1025,3 +1025,14 @@ def threshold_grouping(x, column, value, threshold=0):
         x[column] = value
 
     return x
+
+
+def top_words_processing(df_facts):
+    top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts)
+    df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency)
+
+    # These actually take to longer than a re-run, hence they are commented
+    # df_top_words.to_csv('output/df_top_words.csv')
+    # df_cleaned.to_csv('output/df_cleaned.csv')
+
+    return df_cleaned, df_top_words

@@ -2,19 +2,16 @@ import sys
 import pandas as pd
 import numpy as np
 import logging
-import nltk
 import matplotlib.pyplot as plt
-from nltk.stem.snowball import SnowballStemmer
 import level_2_pa_servicedesk_2244_options as options_file
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df, sql_mapping_retrieval
-from level_1_b_data_processing import summary_description_null_checkup, threshold_grouping, value_count_histogram, date_cols, ohe, data_type_conversion, min_max_scaling, min_max_scaling_reverse, constant_columns_removal, remove_columns, object_column_removal, words_dataframe_creation, word_frequency, text_preprocess, literal_removal, string_to_list, df_join_function, null_handling, lowercase_column_convertion, null_analysis, remove_rows, value_replacement, value_substitution, duplicate_removal, language_detection, string_replacer, close_and_resolve_date_replacements
-from level_1_c_data_modelling import clustering_training
+from level_1_b_data_processing import summary_description_null_checkup, top_words_processing, threshold_grouping, value_count_histogram, date_cols, ohe, data_type_conversion, min_max_scaling, min_max_scaling_reverse, constant_columns_removal, remove_columns, object_column_removal, text_preprocess, literal_removal, string_to_list, df_join_function, null_handling, lowercase_column_convertion, null_analysis, remove_rows, value_replacement, value_substitution, duplicate_removal, language_detection, string_replacer, close_and_resolve_date_replacements
+from level_1_c_data_modelling import clustering_training, new_request_type
 from level_1_d_model_evaluation import cluster_metrics_plots, radial_chart_preprocess, make_spider
 from level_1_e_deployment import save_csv, sql_inject
 from level_0_performance_report import error_upload, log_record, project_dict, performance_info
 from wordcloud import WordCloud
 from sklearn.decomposition import PCA
-import string
 import matplotlib.patches as mpatches
 from mpl_toolkits.mplot3d import Axes3D
 my_dpi = 96
@@ -35,15 +32,13 @@ def main():
     query_filters = [{'Cost_Centre': '6825', 'Record_Type': ['1', '2']}, {'Cost_Centre': '6825'}]
 
     df_facts, df_facts_duration, df_clients, df_pbi_categories = data_acquisition([input_file_facts, input_file_durations, input_file_clients, pbi_categories], query_filters, local=0)
-    df = data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories)
-    df, df_top_words = top_words_processing(df)
+    df, df_top_words = data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories)
 
     # df, df_top_words = pd.read_csv('output/df_cleaned.csv', index_col=0), pd.read_csv('output/df_top_words.csv', index_col=0)
-    key_word_dict = sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database_final'], ['SDK_Setup_Keywords'], 'Keyword_Group', options_file, multiple_columns=1)
-    new_request_type(df, df_top_words, key_word_dict[0])
+    df = data_modelling(df, df_top_words)
 
     if clustering:
-        df_clustered, df_cluster_centers = data_modelling(df, max_number_of_clusters)
+        df_clustered, df_cluster_centers = data_modelling_cluster(df, max_number_of_clusters)
         # df_clustered = pd.read_csv('output/df_clustered.csv', index_col=0)
         # df_cluster_centers = pd.read_csv('output/df_cluster_centers.csv', index_col=0)
         df_cluster_centers_scaled = pd.read_csv('output/df_cluster_centers_scaled.csv', index_col=0)
@@ -56,149 +51,13 @@ def main():
     log_record('Finished Successfully - Project: PA @ Service Desk.', options_file.project_id)
 
 
-def new_request_type(df, df_top_words, keyword_dict):
-    stemmer_pt = SnowballStemmer('porter')
-    user_dict = {}
+def data_modelling(df, df_top_words):
+    log_record('Started Step C...', options_file.project_id)
 
-    df_top_words['Label'] = 'Não Definido'
-    for label in keyword_dict.keys():
-        # print('Label: {}'.format(label))
-        for keywords in keyword_dict[label]:
-            # print('Keywords: {}'.format(keywords))
-            consecutive_flag = 1
-            # multiple words not consecutive
-            if ';' in keywords:
-                keywords = keywords.replace(';', ' ')
-                consecutive_flag = 0
+    df = new_request_type(df, df_top_words, options_file)
 
-            if 'User:' in keywords:
-                user_id = keywords.replace('User:', '')
-                user_dict[label] = user_id
-                continue
-
-            if ' ' in keywords:
-                tokenized_key_word = nltk.tokenize.word_tokenize(keywords)
-                try:
-                    selected_cols = df_top_words[tokenized_key_word]
-                except KeyError:
-                    tokenized_key_word = [stemmer_pt.stem(x) for x in tokenized_key_word]
-                    selected_cols = df_top_words[tokenized_key_word]
-
-                matched_index = selected_cols[selected_cols == 1].dropna(axis=0).index.values  # returns the requests with the keyword present
-                if consecutive_flag:
-                    matched_index = consecutive_keyword_testing(df, matched_index, tokenized_key_word)  # out of all the requests with the keywords present, searches them for those where they keywords are consecutive
-
-                if matched_index is not None:
-                    if len(matched_index):
-                        df_top_words.loc[df_top_words.index.isin(matched_index), 'Label'] = label
-                else:
-                    log_record('Keywords {} which were stemmed to {} were not found consecutive.', options_file.project_id, flag=1)
-
-            # Single word
-            elif ' ' not in keywords:
-                try:
-                    df_top_words.loc[df_top_words[keywords] == 1, 'Label'] = label
-                except KeyError:
-                    df_top_words.loc[df_top_words[stemmer_pt.stem(keywords)] == 1, 'Label'] = label
-
-    user_label_assignment(df, df_top_words, user_dict)
-
-    df.sort_values(by='Request_Num', inplace=True)
-    df_top_words.sort_index(inplace=True)
-
-    if [(x, y) for (x, y) in zip(df['Request_Num'].values, df_top_words.index.values) if x != y]:
-        unique_requests_df = df['Request_Num'].unique()
-        unique_requests_df_top_words = df_top_words.index.values
-        log_record('Requests have missing Labels!', options_file.project_id, flag=1)
-        log_record('Missing requests in the original dataset: {}'.format([x for x in unique_requests_df if x not in unique_requests_df_top_words]), options_file.project_id, flag=1)
-        log_record('Missing requests in the top words dataset: {}'.format([x for x in unique_requests_df_top_words if x not in unique_requests_df]), options_file.project_id, flag=1)
-        raise ValueError('Requests have missing Labels!')
-
-    df.loc[:, 'Label'] = df_top_words['Label'].values
-
-    print(df['Label'].value_counts())
-    print('{:.2f}% de Pedidos Não Definidos'.format((df[df['Label'] == 'Não Definido'].shape[0] / df['Request_Num'].nunique()) * 100))
-
-
-def user_label_assignment(df, df_top_words, user_dict):
-    for key in user_dict.keys():
-        matched_requests = df[df['Contact_Customer_Id'] == int(user_dict[key])]['Request_Num']
-        # print(len(matched_requests))
-        df_top_words.loc[df_top_words.index.isin(matched_requests), 'Label'] = key
-    return df_top_words
-
-
-# The goal of this function is to check for consecutive presence of keywords, by comparing their index position;
-def consecutive_keyword_testing(df, matched_index, keywords):
-
-    matched_requests = []
-    for request in matched_index:
-        # print('testing request: {}'.format(request))
-        description = nltk.tokenize.word_tokenize(df[df['Request_Num'] == request]['StemmedDescription'].values[0])  # Note: this line will raise and IndexError when a request present in the matched index (from df_top_words) is not present in the df
-        # print(description)
-        keyword_idxs_total = []
-        # print('1 - description: {} and keywords: {}'.format(description, keywords))
-
-        # for keyword in keywords:
-        #     try:
-        #         keyword_idxs.append(description.index(keyword))
-        #         # print('\'{}\' found with index {}'.format(keyword, description.index(keyword)))
-        #     except ValueError:
-        #         # print('\'{}\' does not appear on the description: {}'.format(keyword, description))
-        #         break
-        #         # return 0
-        # # print('after all keywords, this is their index: {}'.format(keyword_idxs))
-
-        for keyword in keywords:
-            keyword_idxs = [i for i, x in enumerate(description) if x == keyword]
-            keyword_idxs_total.append(keyword_idxs)
-
-        control_value = 1
-        for i in range(len(keyword_idxs_total)):
-            for value in keyword_idxs_total[i]:
-                try:
-                    if value + 1 in keyword_idxs_total[i + 1]:
-                        # print('original value was {} and i found {}'.format(value, value + 1))
-                        control_value += 1
-                    # else:
-                        # print('original value was {} and i did NOT found {}'.format(value, value + 1))
-                except IndexError:
-                    # print('Last List')
-                    continue
-
-        # print(control_value, len(keyword_idxs_total))
-        # if len(keyword_idxs):
-        #     keyword_idxs_diffs = np.diff(keyword_idxs)
-        #     # print(keyword_idxs_diffs)
-        #     if len(set(keyword_idxs_diffs)) == 1 and np.unique(keyword_idxs_diffs) == 1:
-        #         matched_requests.append(request)
-        #         # print('{} IS consecutive and these are the diffs: {}'.format(keyword_idxs, keyword_idxs_diffs))
-        #     # else:
-        #     #     print('{} IS NOT consecutive and these are the diffs {}'.format(keyword_idxs, keyword_idxs_diffs))
-        #     # break
-
-        # print('Control value is {}'.format(control_value))
-        if control_value >= len(keyword_idxs_total):
-            # print('Sequence Found')
-            matched_requests.append(request)
-        else:
-            # print('Sequence Not Found')
-            continue
-
-    if len(matched_requests):
-        return matched_requests
-    else:
-        return None
-
-
-def top_words_processing(df_facts):
-    top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts)
-    df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency)
-
-    df_top_words.to_csv('output/df_top_words.csv')
-    df_cleaned.to_csv('output/df_cleaned.csv')
-
-    return df_cleaned, df_top_words
+    log_record('Finished Step C.', options_file.project_id)
+    return df
 
 
 def pca_analysis():
@@ -259,7 +118,7 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
                                ('Description', 'autolinecognos'): 'autoline cognos', ('Description', 'realnao'): 'real nao', ('Description', 'booksytner'): 'book sytner'}  # ('Description', 'http://'): 'http://www.', ('Summary', 'http://'): 'http://www.'
 
     # Remove PBI's categories requests
-    log_record('Total Initial Requests: {}', options_file.project_id)
+    log_record('Total Initial Requests: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
     pbi_categories = remove_rows(df_pbi_categories.copy(), [df_pbi_categories[~df_pbi_categories['Category_Name'].str.contains('Power BI')].index])['Category_Id'].values  # Selects the Category ID's which belong to PBI
     log_record('The number of PBI requests are: {}'.format(df_facts[df_facts['Category_Id'].isin(pbi_categories)]['Request_Num'].nunique()), options_file.project_id)
     df_facts = remove_rows(df_facts, [df_facts.loc[df_facts['Category_Id'].isin(pbi_categories)].index])  # Removes the rows which belong to PBI;
@@ -307,14 +166,17 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
 
     df_facts = value_replacement(df_facts, options_file.language_replacements)
 
-    df_facts.to_csv('output/df_facts.csv')
+    # df_facts.to_csv('output/df_facts.csv')
+    save_csv([df_facts], ['output/df_facts'])
 
     # Checkpoint B.1 - Key Words data frame creation
     # df_cleaned = clustering_preprocessing(df_facts)
 
+    df_facts, df_top_words = top_words_processing(df_facts)
+
     log_record('After preprocessing the number of requests is: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
     log_record('Finished Step B.', options_file.project_id)
-    return df_facts
+    return df_facts, df_top_words
 
 
 # def clustering_preprocessing(df_facts):
@@ -378,7 +240,7 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
 #     print(df_cleaned.head(10))
 
 
-def data_modelling(df, max_number_of_clusters):
+def data_modelling_cluster(df, max_number_of_clusters):
     # df = pd.read_csv('output/df_facts.csv', index_col=0)
     #
     # _, top_words_frequency = word_frequency(df, threshold=30)
