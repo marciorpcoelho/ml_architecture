@@ -176,7 +176,7 @@ def options_scraping(df):
     unique_versions = df['Versão'].unique()
     for version in unique_versions:
         mask_version = df['Versão'] == version
-        if 'x1 ' in version or 'x2 ' in version or 'x3 ' in version or 'x4 ' in version or 'x5 ' in version or 'x6 ' in version:  # The extra free space in the X models, is because there are references next to the version description that match the searching criteria. Ex: 420D Coupé (4X31) matches when searched by X333
+        if 'x1 ' in version or 'x2 ' in version or 'x3 ' in version or 'x4 ' in version or 'x5 ' in version or 'x6 ' in version:  # The extra free space in the X models is because there are references next to the version description that match the searching criteria. Ex: 420D Coupé (4X31) matches when searched by X3
             df.loc[mask_version, 'Motor'] = [x.split(' ')[1] for x in df[mask_version]['Versão']]
         else:
             df.loc[mask_version, 'Motor'] = [x.split(' ')[0] for x in df[mask_version]['Versão']]
@@ -596,8 +596,9 @@ def score_calculation(df, stockdays_threshold, margin_threshold):
     return df
 
 
-def date_replacement(df):
-    df.loc[df['Resolve_Date'].isnull() & ~df['Close_Date'].isnull(), 'Resolve_Date'] = df.loc[df['Resolve_Date'].isnull() & ~df['Close_Date'].isnull(), 'Close_Date']
+def value_substitution(df, non_null_column=None, null_column=None):
+    if non_null_column is not None and null_column is not None:
+        df.loc[df[null_column].isnull() & ~df[non_null_column].isnull(), null_column] = df.loc[df[null_column].isnull() & ~df[non_null_column].isnull(), non_null_column]
 
     return df
 
@@ -781,12 +782,12 @@ def language_detection(df, column_to_detect, new_column):
 # Converts a column of a data frame with only strings to a list with all the unique strings
 def string_to_list(df, column):
 
-    lower_case_strings = lowercase_column_convertion(df, columns=column)[column[0]].values
+    lower_case_strings = lowercase_column_convertion(df, columns=column)[column[0]].dropna(axis=0).values
     strings = ' '.join(lower_case_strings).split()
 
     strings = unidecode_function(strings)
 
-    return np.unique(strings)
+    return list(np.unique(strings))
 
 
 def unidecode_function(strings_list):
@@ -837,12 +838,20 @@ def value_replacement(df, replace_approach):
         col1 = list(replace_approach.keys())[0]
         regex = replace_approach[col1]
 
-        df.loc[~df[col1].isnull(), col1] = df[~df[col1].isnull()][col1].str.replace(regex, ' ')
+        df.loc[~df[col1].isnull(), col1] = df[~df[col1].isnull()][col1].replace(regex, '', regex=True)
 
     return df
 
 
-def text_preprocess(df, unique_clients_names_decoded, options_file):
+def summary_description_null_checkup(df):
+    # Cleans requests which have the Summary and Description null
+    df = df[(~df['Summary'].isnull()) & (~df['Description'].isnull())]
+
+    return df
+
+
+def text_preprocess(df, unique_clients_decoded, options_file):
+    df['StemmedDescription'] = str()
     stemmer_pt = SnowballStemmer('porter')
     # stemmer_es = SnowballStemmer('spanish')
 
@@ -850,13 +859,15 @@ def text_preprocess(df, unique_clients_names_decoded, options_file):
     for key, row in df.iterrows():
         description, stemmed_words = row['Description'], []
         digit_remover = str.maketrans('', '', string.digits)
-        punctuation_remover = str.maketrans('', '', string.punctuation)
+        punctuation_remover = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
+
+        description = description.translate(digit_remover).translate(punctuation_remover)
+        description = unidecode.unidecode(description)
+
         try:
             tokenized = nltk.tokenize.word_tokenize(description)
             for word in tokenized:
-                word = word.translate(digit_remover).translate(punctuation_remover)
-                word = unidecode.unidecode(word)
-                if word in unique_clients_names_decoded or word in ['\'\'', '``', '“', '”', '', '\'', ',']:
+                if word in unique_clients_decoded or word in ['\'\'', '``', '“', '”', '', '\'', ',']:
                     continue
                 else:
                     stemmed_word = stemmer_pt.stem(word)
@@ -913,28 +924,43 @@ def word_frequency(df, threshold=0):
 
 
 def words_dataframe_creation(df, top_words_dict):
-    print('Creating a new cleaned data frame...')
-
+    start = time.time()
     words_list = sorted(top_words_dict.items(), key=operator.itemgetter(1))
+    # x = pd.DataFrame()
+    df_total = pd.DataFrame(index=range(df.shape[0]))
+
+    # print('Number of null Stemmed Descriptions: {}'.format(df[df['StemmedDescription'].isnull()]['StemmedDescription']))
+
+    unique_stemmed_descriptions_non_nan = df[~df['StemmedDescription'].isnull()]['StemmedDescription']
+    unique_requests = df.dropna(axis=0, subset=['StemmedDescription'])['Request_Num']
+
+    cleaned_df = df.dropna(axis=0, subset=['StemmedDescription'])
+
+    # for key, occurrence in words_list:
+    #     result = map(lambda y: int(key in y), unique_stemmed_descriptions_non_nan)
+    #     x.loc[:, key] = list(result)
+    #
+    # x.index = unique_requests
+
+    workers = level_0_performance_report.pool_workers_count
+    pool = Pool(processes=workers)
+    results = pool.map(keyword_detection, [(key, occurrence, unique_stemmed_descriptions_non_nan) for (key, occurrence) in words_list])
+    pool.close()
+    df_total = df_total.join([result for result in results])
+
+    df_total.index = unique_requests
+    print('Elapsed time is: {:.3f}'.format(time.time() - start))
+    return df_total, cleaned_df
+
+
+def keyword_detection(args):
+    key, occurrence, unique_stemmed_descriptions_non_nan = args
     x = pd.DataFrame()
 
-    unique_stemmed_descriptions_non_nan = df[~df['StemmedDescription'].isnull()]['StemmedDescription'].unique()
-    unique_requests = df.dropna(axis=0, subset=['StemmedDescription']).drop_duplicates(subset=['StemmedDescription'])['Request_Num'].unique()
+    result = map(lambda y: int(key in y), unique_stemmed_descriptions_non_nan)
+    x.loc[:, key] = list(result)
 
-    # request_types = df.dropna(axis=0, subset=['StemmedDescription']).drop_duplicates(subset=['StemmedDescription'])['Request_Type']
-
-    cleaned_df = df.dropna(axis=0, subset=['StemmedDescription']).drop_duplicates(subset=['StemmedDescription'])
-
-    for key, occurrence in words_list:
-        result = map(lambda y: int(key in y), unique_stemmed_descriptions_non_nan)
-        x.loc[:, key] = list(result)
-
-    # for request_type in df['Request_Type'].unique():
-    #     result = map(lambda x: int(request_type == x), request_types)
-    #     x.loc[:, 'Request_Type_{}'.format(request_type)] = list(result)
-
-    x.index = unique_requests
-    return x, cleaned_df
+    return x
 
 
 def object_column_removal(df):

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import sys
 import time
 import pyodbc
@@ -69,7 +70,6 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
 
         cnxn.close()
 
-        # print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
         print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
         return df
 
@@ -77,14 +77,19 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
         return  # ToDo need to figure a better way of handling these errors
 
 
-def sql_mapping_retrieval(dsn, db, mapping_tables, options_file):
+def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_file, multiple_columns=0):
     dictionary_list = []
 
     for mapping_table in mapping_tables:
         parameter_dict = {}
         df = sql_retrieve_df(dsn, db, mapping_table, options_file)
-        for key in df['Mapped_Value'].unique():
-            parameter_dict[key] = list(df[df['Mapped_Value'] == key]['Original_Value'].values)
+        if not multiple_columns:
+            for key in df[mapped_column_name].unique():
+                parameter_dict[key] = list(df[df[mapped_column_name] == key]['Original_Value'].values)
+        if multiple_columns:
+            for key in df[mapped_column_name].unique():
+                listing = df[df[mapped_column_name] == key][[x for x in list(df) if x not in mapped_column_name]].values
+                parameter_dict[key] = np.unique([item for sublist in listing for item in sublist if item is not None])
         dictionary_list.append(parameter_dict)
 
     return dictionary_list

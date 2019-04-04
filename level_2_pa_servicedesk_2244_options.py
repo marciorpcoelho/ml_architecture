@@ -105,13 +105,16 @@ language_replacements = {
 
 
 regex_dict = {
-    'url': r'http://(.*)',
+    # 'url_1': r'http://(.*)',
+    # 'url_2': r'http://(.*)php',
+    # 'url_3': r'(http|ftp|https)://([\w_-]+(?:(?:\.[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?',
+    'url': r'(http|ftp|https)://([\w_-]+(?:(?:[\w_-]+)+))([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?',
 }
 
 
 words_to_remove_from_description = ['felisbel', 'felisbela', 'susana', 'paul', 'manuel', 'fernando', 'rui', 'brito', 'lui', 'maia', 'lc', 'joao', 'miguel', 'marlene', 'maria', 'boa',
-                                    'tard', 'jlopez', 'buen', 'de', 'a', 'o', 'que', 'no', 'e', 'em', 'do', 'com', 'da', 'os', 'ao', 'dos', 'um', 'se', 'das', 'uma', 'obrig', 'a', 'p.f',
-                                    'na', 'as', 'por', 'dia', 'é', 'agradeco', 'cumprimento', 'para', 'en', 'el', 'la', 'y', 'lo', 'un', 'una', 'k', 'v', 'gracia', 'me', 'obrigado', 'cp',
-                                    'estar', 'entr', 'le', 'seja', 'foi', 'dr', 'hay', 'es', 'ma', 'saludo', 'del', 'al', 'tengo', 'tenho', 'ja', 'cmpt', 'n', 's', 'r', 'c', 'obg', 'favor',
+                                    'tard', 'jlopez', 'buen', 'de', 'a', 'o', 'que', 'e', 'do', 'da', 'os', 'ao', 'dos', 'um', 'se', 'das', 'uma', 'obrig', 'a', 'p.f',
+                                    'na', 'as', 'por', 'dia', 'é', 'agradeco', 'cumprimento', 'para', 'el', 'la', 'y', 'lo', 'un', 'una', 'k', 'v', 'gracia', 'me', 'obrigado', 'cp',
+                                    'estar', 'entr', 'le', 'seja', 'foi', 'hay', 'es', 'ma', 'saludo', 'del', 'al', 'tengo', 'tenho', 'ja', 'cmpt', 'n', 's', 'r', 'c', 'obg', 'favor',
                                     'ou', 'poi', 'agradecia', 'est', 'obrigada', 'bueno', 'bom', 'con', 'ter', 'bon', 'boa', 'esta', 'pelo', 'tenemos', 'como', 'sao', 'fazer', 'ver', 'estamo',
-                                    'azevedo', 'oliveira', '-', '\'', 'tpsilva']
+                                    'azevedo', 'oliveira', '-', '\'', 'tpsilva', 'mb', '12ts23', '12ts26', '10ua27', 'joliveira']
