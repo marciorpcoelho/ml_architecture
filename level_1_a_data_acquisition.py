@@ -52,7 +52,7 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
         columns = str(columns)[1:-1].replace('\'', '')
 
     try:
-        cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + db)
+        cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, db), searchescape='\\')
 
         if type(query_filters) == int:
             query = 'SELECT ' + columns + ' FROM ' + view

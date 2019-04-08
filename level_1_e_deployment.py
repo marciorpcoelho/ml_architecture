@@ -59,10 +59,10 @@ def sql_inject_single_line(dsn, uid, pwd, database, view, values):
     values_string = '\'%s\'' % '\', \''.join(values)
 
     try:
-        cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + uid + ';PWD=' + pwd + ';DATABASE=' + database)
+        cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, uid, pwd, database), searchescape='\\')
         cursor = cnxn.cursor()
 
-        cursor.execute('INSERT INTO [' + database + '].dbo.[' + view + '] VALUES (' + values_string + ')')
+        cursor.execute('INSERT INTO [{}].dbo.[{}] VALUES ({})'.format(database, view, values_string))
 
         cnxn.commit()
         cursor.close()
@@ -85,7 +85,7 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
     if truncate:
         sql_truncate(dsn, options_file, database, view)
 
-    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
     cursor = cnxn.cursor()
 
     if check_date:
@@ -135,9 +135,8 @@ def sql_string_preparation(values_list):
 
 
 def sql_truncate(dsn, options_file, database, view):
-    # level_0_performance_report.log_record('Truncating view ' + view + ' from DB ' + database, options_file.project_id)
     level_0_performance_report.log_record('Truncating view {} from DB {}.'.format(view, database), options_file.project_id)
-    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
     query = "TRUNCATE TABLE " + view
     cursor = cnxn.cursor()
     cursor.execute(query)
@@ -165,7 +164,7 @@ def sql_date_comparison(df, dsn, options_file, database, view, date_column, time
 def sql_date_checkup(dsn, options_file, database, view, date_column):
 
     try:
-        cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
+        cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
         cursor = cnxn.cursor()
 
         cursor.execute('SELECT MAX(' + '[' + date_column + ']' + ') FROM ' + database + '.dbo.' + view)
@@ -182,7 +181,7 @@ def sql_date_checkup(dsn, options_file, database, view, date_column):
 
 
 def sql_second_highest_date_checkup(dsn, options_file, database, view, date_column='Date'):
-    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
 
     query = 'with second_date as (SELECT MAX([' + str(date_column) + ']) as max_date ' \
             'FROM [' + str(database) + '].[dbo].[' + str(view) + '] ' \
@@ -213,7 +212,7 @@ def sql_age_comparison(dsn, options_file, database, view, update_frequency):
 def sql_mapping_upload(dsn, options_file, dictionaries):
     # dictionaries = [options_file.jantes_dict, options_file.sales_place_dict, options_file.sales_place_dict_v2, options_file.model_dict, options_file.versao_dict, options_file.tipo_int_dict, options_file.color_ext_dict, options_file.color_int_dict, options_file.motor_dict_v2]
     parameters_name = ['Rims_Size', 'Sales_Place', 'Sales_Place_v2', 'Model', 'Version', 'Interior_Type', 'Color_Ext', 'Color_Int', 'Motor_Desc']
-    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + 'BI_MLG')
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE=BI_MLG'.format(dsn, options_file.UID, options_file.PWD), searchescape='\\')
     cursor = cnxn.cursor()
 
     for (parameter, dictionary) in zip(parameters_name, dictionaries):
@@ -253,7 +252,7 @@ def key_and_value_generator(dictionary, all_values, all_keys):
 
 
 def sql_get_last_vehicle_count(dsn, options_file, database, view, date_column='Date'):
-    cnxn = pyodbc.connect('DSN=' + dsn + ';UID=' + options_file.UID + ';PWD=' + options_file.PWD + ';DATABASE=' + database)
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE=BI_MLG'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
     crsr = cnxn.cursor()
 
     query = 'SELECT TOP (1) *' \

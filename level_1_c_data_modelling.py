@@ -4,6 +4,8 @@ import datetime
 import pickle
 import time
 import nltk
+import operator
+from collections import Counter
 from nltk.stem.snowball import SnowballStemmer
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, calinski_harabaz_score
@@ -181,7 +183,7 @@ def new_request_type(df, df_top_words, options_file):
     keyword_dict = sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database_final'], ['SDK_Setup_Keywords'], 'Keyword_Group', options_file, multiple_columns=1)[0]
 
     stemmer_pt = SnowballStemmer('porter')
-    user_dict = {}
+    user_dict, requests_dict_2 = {}, {}
 
     df_top_words['Label'] = 'Não Definido'
     for label in keyword_dict.keys():
@@ -200,29 +202,45 @@ def new_request_type(df, df_top_words, options_file):
                 continue
 
             if ' ' in keywords:
+                rank = 1 + consecutive_flag
                 tokenized_key_word = nltk.tokenize.word_tokenize(keywords)
                 try:
                     selected_cols = df_top_words[tokenized_key_word]
                 except KeyError:
                     tokenized_key_word = [stemmer_pt.stem(x) for x in tokenized_key_word]
-                    selected_cols = df_top_words[tokenized_key_word]
+                    try:
+                        selected_cols = df_top_words[tokenized_key_word]
+                    except KeyError:
+                        log_record('Keywords {} which were stemmed to {} were not found consecutive.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
+                        continue
 
                 matched_index = selected_cols[selected_cols == 1].dropna(axis=0).index.values  # returns the requests with the keyword present
                 if consecutive_flag:
                     matched_index = consecutive_keyword_testing(df, matched_index, tokenized_key_word)  # out of all the requests with the keywords present, searches them for those where they keywords are consecutive
 
                 if matched_index is not None:
+                    requests_dict_2 = request_matches(label, keywords, rank, matched_index, requests_dict_2)
+
                     if len(matched_index):
                         df_top_words.loc[df_top_words.index.isin(matched_index), 'Label'] = label
                 else:
-                    log_record('Keywords {} which were stemmed to {} were not found consecutive.', options_file.project_id, flag=1)
+                    log_record('Keywords {} which were stemmed to {} were not found consecutive.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
 
             # Single word
             elif ' ' not in keywords:
+                rank = 0
                 try:
                     df_top_words.loc[df_top_words[keywords] == 1, 'Label'] = label
+                    requests_dict_2 = request_matches(label, keywords, rank, df_top_words[df_top_words[keywords] == 1].index.values, requests_dict_2)
                 except KeyError:
-                    df_top_words.loc[df_top_words[stemmer_pt.stem(keywords)] == 1, 'Label'] = label
+                    try:
+                        df_top_words.loc[df_top_words[stemmer_pt.stem(keywords)] == 1, 'Label'] = label
+                        requests_dict_2 = request_matches(label, keywords, rank, df_top_words[df_top_words[stemmer_pt.stem(keywords)] == 1].index.values, requests_dict_2)
+                    except KeyError:
+                        log_record('Keyword not found: {}'.format(keywords), options_file.project_id, flag=1)
+                        continue
+
+    df = requests_draw_handling(df, requests_dict_2)
 
     user_label_assignment(df, df_top_words, user_dict)
 
@@ -237,10 +255,8 @@ def new_request_type(df, df_top_words, options_file):
         log_record('Missing requests in the top words dataset: {}'.format([x for x in unique_requests_df_top_words if x not in unique_requests_df]), options_file.project_id, flag=1)
         raise ValueError('Requests have missing Labels!')
 
-    df.loc[:, 'Label'] = df_top_words['Label'].values
-
     print(df['Label'].value_counts())
-    print('{:.2f}% de Pedidos Não Definidos'.format((df[df['Label'] == 'Não Definido'].shape[0] / df['Request_Num'].nunique()) * 100))
+    log_record('{:.2f}% de pedidos Não Definidos'.format((df[df['Label'] == 'Não Definido'].shape[0] / df['Request_Num'].nunique()) * 100), options_file.project_id)
 
     return df
 
@@ -254,17 +270,6 @@ def consecutive_keyword_testing(df, matched_index, keywords):
         description = nltk.tokenize.word_tokenize(df[df['Request_Num'] == request]['StemmedDescription'].values[0])  # Note: this line will raise and IndexError when a request present in the matched index (from df_top_words) is not present in the df
         # print(description)
         keyword_idxs_total = []
-        # print('1 - description: {} and keywords: {}'.format(description, keywords))
-
-        # for keyword in keywords:
-        #     try:
-        #         keyword_idxs.append(description.index(keyword))
-        #         # print('\'{}\' found with index {}'.format(keyword, description.index(keyword)))
-        #     except ValueError:
-        #         # print('\'{}\' does not appear on the description: {}'.format(keyword, description))
-        #         break
-        #         # return 0
-        # # print('after all keywords, this is their index: {}'.format(keyword_idxs))
 
         for keyword in keywords:
             keyword_idxs = [i for i, x in enumerate(description) if x == keyword]
@@ -283,18 +288,6 @@ def consecutive_keyword_testing(df, matched_index, keywords):
                     # print('Last List')
                     continue
 
-        # print(control_value, len(keyword_idxs_total))
-        # if len(keyword_idxs):
-        #     keyword_idxs_diffs = np.diff(keyword_idxs)
-        #     # print(keyword_idxs_diffs)
-        #     if len(set(keyword_idxs_diffs)) == 1 and np.unique(keyword_idxs_diffs) == 1:
-        #         matched_requests.append(request)
-        #         # print('{} IS consecutive and these are the diffs: {}'.format(keyword_idxs, keyword_idxs_diffs))
-        #     # else:
-        #     #     print('{} IS NOT consecutive and these are the diffs {}'.format(keyword_idxs, keyword_idxs_diffs))
-        #     # break
-
-        # print('Control value is {}'.format(control_value))
         if control_value >= len(keyword_idxs_total):
             # print('Sequence Found')
             matched_requests.append(request)
@@ -314,3 +307,46 @@ def user_label_assignment(df, df_top_words, user_dict):
         # print(len(matched_requests))
         df_top_words.loc[df_top_words.index.isin(matched_requests), 'Label'] = key
     return df_top_words
+
+
+def requests_draw_handling(df, requests_dict):
+
+    df['Label'] = 'Não Definido'
+    for request in requests_dict.keys():
+        matches_count = len(requests_dict[request])
+        unique_labels_count = len(set([x[0] for x in requests_dict[request]]))
+        labels = [x[0] for x in requests_dict[request]]
+        unique_labels = set(labels)
+        unique_ranks_count = len(set([x[1] for x in requests_dict[request]]))
+        highest_rank_label = max(requests_dict[request], key=operator.itemgetter(1))[0]
+
+        if matches_count > 1 and unique_labels_count > 1:
+            if 'Workspace' in unique_labels:  # Workspace has priority over any other label
+                df.loc[df['Request_Num'] == request, 'Label'] = 'Workspace'
+            else:
+                if highest_rank_label == 'Demonstração Resultados' and 'Importador' in unique_labels:  # Importador has priority over any rank of Demonstração Resultados
+                    df.loc[df['Request_Num'] == request, 'Label'] = 'Importador'
+                else:
+                    if unique_ranks_count == 1 and unique_labels_count != len(labels):
+                        label_counter = Counter(labels)
+                        df.loc[df['Request_Num'] == request, 'Label'] = label_counter.most_common(1)[0][0]
+                    elif unique_ranks_count == 1 and unique_labels_count == len(labels):
+                        # print('DRAW:', request, requests_dict[request])
+                        df.loc[df['Request_Num'] == request, 'Label'] = 'Draw: ' + '+'.join([x[0] for x in requests_dict[request]])
+                    else:
+                        df.loc[df['Request_Num'] == request, 'Label'] = highest_rank_label
+        else:
+            df.loc[df['Request_Num'] == request, 'Label'] = requests_dict[request][0][0]
+
+    return df
+
+
+def request_matches(label, keywords, rank, requests_list, dictionary):
+
+    for request in requests_list:
+        try:
+            dictionary[request].append((label, rank))
+        except KeyError:
+            dictionary[request] = [(label, rank)]
+
+    return dictionary

@@ -142,7 +142,7 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
 
 
 def error_upload(options_file, project_id, log_file, error_flag=0):
-    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Line', 'Error_Flag', 'Project_Id'})
+    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Error_Flag', 'Project_Id'})
     error_only = None
 
     if error_flag:
@@ -150,10 +150,6 @@ def error_upload(options_file, project_id, log_file, error_flag=0):
         rx = re.compile(regex_dict['between_quotes'])
         error_files = rx.findall(error_full[0])
 
-        rx = re.compile(regex_dict['lines_number'])
-        error_line_number = rx.findall(error_full[0])
-
-        error_line_number = [x.replace(',', '').replace(' ', '') for x in error_line_number]
         error_full_series = [error_full[0]] * len(error_files)
         error_only_series = [error_only[0]] * len(error_files)
         project_id_series = [project_id] * len(error_files)
@@ -161,7 +157,6 @@ def error_upload(options_file, project_id, log_file, error_flag=0):
         df_error['Error_Full'] = error_full_series
         df_error['Error_Only'] = error_only_series
         df_error['File_Loc'] = error_files
-        df_error['Line'] = error_line_number
         df_error['Error_Flag'] = error_flag
         df_error['Project_Id'] = project_id_series
 
@@ -174,7 +169,7 @@ def error_upload(options_file, project_id, log_file, error_flag=0):
 
         email_notification(options_file, project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_desc=error_only, error_flag=1, model_choice_message=0)
     elif not error_flag:
-        df_error.loc[0, ['Error_Full', 'Error_Only', 'File_Loc', 'Line', 'Error_Flag', 'Project_Id']] = [None, None, None, None, 0, project_id]
+        df_error.loc[0, ['Error_Full', 'Error_Only', 'File_Loc', 'Error_Flag', 'Project_Id']] = [None, None, None, 0, project_id]
 
     level_1_e_deployment.sql_inject(df_error, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['error_log'], options_file, list(df_error), check_date=1)
 

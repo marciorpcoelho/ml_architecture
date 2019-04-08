@@ -117,4 +117,4 @@ words_to_remove_from_description = ['felisbel', 'felisbela', 'susana', 'paul', '
                                     'na', 'as', 'por', 'dia', 'é', 'agradeco', 'cumprimento', 'para', 'el', 'la', 'y', 'lo', 'un', 'una', 'k', 'v', 'gracia', 'me', 'obrigado', 'cp',
                                     'estar', 'entr', 'le', 'seja', 'foi', 'hay', 'es', 'ma', 'saludo', 'del', 'al', 'tengo', 'tenho', 'ja', 'cmpt', 'n', 's', 'r', 'c', 'obg', 'favor',
                                     'ou', 'poi', 'agradecia', 'est', 'obrigada', 'bueno', 'bom', 'con', 'ter', 'bon', 'boa', 'esta', 'pelo', 'tenemos', 'como', 'sao', 'fazer', 'ver', 'estamo',
-                                    'azevedo', 'oliveira', '-', '\'', 'tpsilva', 'mb', '12ts23', '12ts26', '10ua27', 'joliveira']
+                                    'azevedo', 'oliveira', '-', '\'', 'tpsilva', 'mb', '12ts23', '12ts26', '10ua27', 'joliveira', 'salvador', 'piedra', 'diego', 'rodriguez', 'estebaranz']

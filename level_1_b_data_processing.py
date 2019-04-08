@@ -182,8 +182,7 @@ def options_scraping(df):
             df.loc[mask_version, 'Motor'] = [x.split(' ')[0] for x in df[mask_version]['Versão']]
     level_0_performance_report.performance_info_append(time.time(), 'end_motor')
 
-    workers = level_0_performance_report.pool_workers_count
-    pool = Pool(processes=workers)
+    pool = Pool(processes=level_0_performance_report.pool_workers_count)
     results = pool.map(options_scraping_per_group, [(key, group) for (key, group) in df_grouped])
     pool.close()
     df = pd.concat([result[0] for result in results if result is not None])
@@ -931,7 +930,7 @@ def words_dataframe_creation(df, top_words_dict):
 
     # print('Number of null Stemmed Descriptions: {}'.format(df[df['StemmedDescription'].isnull()]['StemmedDescription']))
 
-    unique_stemmed_descriptions_non_nan = df[~df['StemmedDescription'].isnull()]['StemmedDescription']
+    unique_stemmed_descriptions_non_nan = df[~df['StemmedDescription'].isnull()].apply(lambda row: nltk.word_tokenize(row['StemmedDescription']), axis=1)
     unique_requests = df.dropna(axis=0, subset=['StemmedDescription'])['Request_Num']
 
     cleaned_df = df.dropna(axis=0, subset=['StemmedDescription'])
@@ -942,8 +941,7 @@ def words_dataframe_creation(df, top_words_dict):
     #
     # x.index = unique_requests
 
-    workers = level_0_performance_report.pool_workers_count
-    pool = Pool(processes=workers)
+    pool = Pool(processes=level_0_performance_report.pool_workers_count)
     results = pool.map(keyword_detection, [(key, occurrence, unique_stemmed_descriptions_non_nan) for (key, occurrence) in words_list])
     pool.close()
     df_total = df_total.join([result for result in results])
@@ -1032,7 +1030,7 @@ def top_words_processing(df_facts):
     df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency)
 
     # These actually take to longer than a re-run, hence they are commented
-    # df_top_words.to_csv('output/df_top_words.csv')
-    # df_cleaned.to_csv('output/df_cleaned.csv')
+    df_top_words.to_csv('output/df_top_words.csv')
+    df_cleaned.to_csv('output/df_cleaned.csv')
 
     return df_cleaned, df_top_words
