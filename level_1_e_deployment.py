@@ -167,7 +167,7 @@ def sql_date_checkup(dsn, options_file, database, view, date_column):
         cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
         cursor = cnxn.cursor()
 
-        cursor.execute('SELECT MAX(' + '[' + date_column + ']' + ') FROM ' + database + '.dbo.' + view)
+        cursor.execute('SELECT MAX(' + '[' + date_column + ']' + ') FROM ' + database + '.dbo.' + view + 'WITH (NOLOCK)')
 
         result = cursor.fetchone()
         result_date = datetime.strptime(result[0], '%Y-%m-%d')
@@ -256,8 +256,8 @@ def sql_get_last_vehicle_count(dsn, options_file, database, view, date_column='D
     crsr = cnxn.cursor()
 
     query = 'SELECT TOP (1) *' \
-            'FROM [' + str(database) + '].[dbo].[' + str(view) + ']' \
-            'ORDER BY [' + str(date_column) + '] DESC'
+            'FROM [' + str(database) + '].[dbo].[' + str(view) + '] ' \
+            'WITH (NOLOCK) ORDER BY [' + str(date_column) + '] DESC'
 
     crsr.execute(query)
     result = crsr.fetchone()[0]

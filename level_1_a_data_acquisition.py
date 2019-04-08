@@ -55,7 +55,7 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
         cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, db), searchescape='\\')
 
         if type(query_filters) == int:
-            query = 'SELECT ' + columns + ' FROM ' + view
+            query = 'SELECT ' + columns + ' FROM ' + view + ' WITH (NOLOCK)'
         elif type(query_filters) == dict:
             for key in query_filters:
                 if type(query_filters[key]) == list:
@@ -63,7 +63,7 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
                     query_filters_string_list.append(key + ' in (' + testing_string + ')')
                 else:
                     query_filters_string_list.append(key + ' = \'%s\'' % str(query_filters[key]))
-            query = 'SELECT ' + columns + ' FROM ' + view + ' WHERE ' + ' and '.join(query_filters_string_list)
+            query = 'SELECT ' + columns + ' FROM ' + view + ' WITH (NOLOCK) WHERE ' + ' and '.join(query_filters_string_list)
         df = pd.read_sql(query, cnxn, **kwargs)
         if column_renaming:
             level_b.column_rename(df, list(options_file.sql_to_code_renaming.keys()), list(options_file.sql_to_code_renaming.values()))
