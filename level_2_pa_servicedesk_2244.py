@@ -1,7 +1,8 @@
 import sys
-import pandas as pd
-import numpy as np
+import time
 import logging
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import level_2_pa_servicedesk_2244_options as options_file
 from level_1_a_data_acquisition import read_csv, sql_retrieve_df, sql_mapping_retrieval
@@ -9,7 +10,7 @@ from level_1_b_data_processing import summary_description_null_checkup, top_word
 from level_1_c_data_modelling import clustering_training, new_request_type
 from level_1_d_model_evaluation import cluster_metrics_plots, radial_chart_preprocess, make_spider
 from level_1_e_deployment import save_csv, sql_inject
-from level_0_performance_report import error_upload, log_record, project_dict, performance_info
+from level_0_performance_report import error_upload, log_record, project_dict, performance_info, performance_info_append
 from wordcloud import WordCloud
 from sklearn.decomposition import PCA
 import matplotlib.patches as mpatches
@@ -52,11 +53,14 @@ def main():
 
 
 def data_modelling(df, df_top_words):
+    performance_info_append(time.time(), 'start_section_c')
     log_record('Started Step C...', options_file.project_id)
 
     df = new_request_type(df, df_top_words, options_file)
 
     log_record('Finished Step C.', options_file.project_id)
+    performance_info_append(time.time(), 'end_section_c')
+
     return df
 
 
@@ -92,6 +96,7 @@ def pca_analysis():
 
 
 def data_acquisition(input_files, query_filters, local=0):
+    performance_info_append(time.time(), 'start_section_a')
     log_record('Started Step A...', options_file.project_id)
 
     if local:
@@ -108,10 +113,13 @@ def data_acquisition(input_files, query_filters, local=0):
         save_csv([df_facts, df_facts_duration, df_clients, df_pbi_categories], ['dbs/db_facts_initial', 'dbs/db_facts_duration', 'dbs/db_clients_initial', 'dbs/db_pbi_categories_initial'])
 
     log_record('Finished Step A...', options_file.project_id)
+    performance_info_append(time.time(), 'end_section_a')
+
     return df_facts, df_facts_duration, df_clients, df_pbi_categories
 
 
 def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
+    performance_info_append(time.time(), 'start_section_b')
     log_record('Started Step B...', options_file.project_id)
 
     dict_strings_to_replace = {('Description', 'filesibmcognoscbindatacqertmodelsfdfdeeacebedeabeeabbedrtm'): 'files ibm cognos', ('Description', 'cognosapv'): 'cognos apv', ('Description', 'caetanoautopt'): 'caetano auto pt',
@@ -176,6 +184,8 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
 
     log_record('After preprocessing the number of requests is: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
     log_record('Finished Step B.', options_file.project_id)
+    performance_info_append(time.time(), 'end_section_b')
+
     return df_facts, df_top_words
 
 
@@ -456,12 +466,15 @@ def word_histogram(listing):
 
 
 def deployment(df):
+    performance_info_append(time.time(), 'start_section_e')
     log_record('Started Step E...', options_file.project_id)
     df = df.astype(object).where(pd.notnull(df), None)
 
     sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, list(df), truncate=1)
 
     log_record('Finished Step E.', options_file.project_id)
+    performance_info_append(time.time(), 'end_section_e')
+
     return
 
 

@@ -76,18 +76,26 @@ def performance_info(project_id, options_file, model_choice_message, unit_count,
         warning_flag = 1
 
     if project_id == 2162:
-        for step in names_global:
-            timings = times_global[names_global.index(step)]
+        for (step, timings) in zip(names_global, times_global):
             if type(timings) == list:
                 df_performance[step] = timings
             else:
                 df_performance[step] = [timings] * unit_count
 
         df_performance = level_1_b_data_processing.column_rename(df_performance, list(options_file.column_performance_sql_renaming.keys()), list(options_file.column_performance_sql_renaming.values()))
+        df_performance['Project_Id'] = project_id
 
         if running_times_upload_flag:
             level_1_e_deployment.sql_inject(df_performance, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance), check_date=1)
         # level_1_e_deployment.sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings), check_date=1)
+
+    if project_id == 2244:
+        for (step, timings) in zip(names_global, times_global):
+            df_performance[step] = [timings]
+
+        df_performance = level_1_b_data_processing.column_rename(df_performance, list(options_file.column_performance_sql_renaming.keys()), list(options_file.column_performance_sql_renaming.values()))
+        df_performance['Project_Id'] = project_id
+        level_1_e_deployment.sql_inject(df_performance, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance), check_date=1)
 
     level_1_e_deployment.sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings), check_date=1)
 
@@ -100,7 +108,7 @@ def performance_info(project_id, options_file, model_choice_message, unit_count,
 
 def email_notification(options_file, project_id, warning_flag, warning_desc, error_desc, error_flag=0, model_choice_message=0):
     run_conclusion, warning_conclusion, conclusion_message = None, None, None
-    fromaddr = 'mrpc@gruposalvadorcaetano.pt'
+    fromaddr = EMAIL
     df_mail_users = level_1_a_data_acquisition.sql_retrieve_df(performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['mail_users'], options_file)
     users = df_mail_users['UserName'].unique()
     toaddrs = df_mail_users['UserEmail'].unique()
@@ -114,19 +122,19 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
         conclusion_message = ''
     elif not error_flag:
         run_conclusion = 'terminou com sucesso.'
-        conclusion_message = 'A sua conclusão foi: ' + str(model_choice_message)
+        conclusion_message = '\r\nA sua conclusão foi: ' + str(model_choice_message)
 
     if warning_flag:
-        warning_conclusion = 'Foram encontrados os seguintes alertas: {}'.format([x for x in warning_desc])
+        warning_conclusion = 'Foram encontrados os seguintes alertas: \r\n - {}'.format('\r\n - '.join(x for x in warning_desc))
     elif not warning_flag:
-        warning_conclusion = 'Não foram encontrados quaisquer alertas.'
+        warning_conclusion = 'Não foram encontrados quaisquer alertas.\n'
 
     for (flag, user, toaddr) in zip(flags_to_send, users, toaddrs):
         if flag:
             mail_body = 'Bom dia {}, ' \
-                         '\nO projeto {} {} \n{} \n{}' \
-                         '\nPara mais informações, por favor consulta o seguinte relatório: {} \n' \
-                         '\nCumprimentos, \nRelatório Automático, v1.3.1' \
+                         '\n \nO projeto {} {} \n{} \n{}' \
+                         '\n \nPara mais informações, por favor consulta o seguinte relatório: {} \n' \
+                         '\nCumprimentos, \nRelatório Automático, v1.4' \
                          .format(user, project_dict[project_id], run_conclusion, warning_conclusion, conclusion_message, link)
             message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
 

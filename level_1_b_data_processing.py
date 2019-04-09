@@ -473,20 +473,8 @@ def datasets_dictionary_function(train_x, train_y, test_x, test_y):
 def column_rename(df, cols_to_replace, new_cols_names):
     for column in cols_to_replace:
         df.rename(index=str, columns={cols_to_replace[cols_to_replace.index(column)]: new_cols_names[cols_to_replace.index(column)]}, inplace=True)
+
     return df
-
-
-# def constant_columns_removal(df):
-#     list_before = list(df)
-#     df = df.loc[:, df.apply(pd.Series.nunique) != 1]
-#     list_after = list(df)
-#     features_removed = [item for item in list_before if item not in list_after]
-#     if len(features_removed):
-#         columns_string, _ = sql_string_preparation(features_removed)
-#         level_0_performance_report.log_record('Removed the following constant columns: ' + str(columns_string), project_id, flag=1)
-#         level_0_performance_report.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
-#
-#     return df[list_after]
 
 
 def constant_columns_removal(df, value=None):
