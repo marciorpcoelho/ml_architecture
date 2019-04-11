@@ -99,9 +99,6 @@ def performance_info(project_id, options_file, model_choice_message, unit_count,
 
     level_1_e_deployment.sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings), check_date=1)
 
-    # if project_id == 2244:
-    #     level_1_e_deployment.sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings), check_date=1)
-
     error_flag, error_only = error_upload(options_file, project_id, options_file.log_files['full_log'])
     email_notification(options_file, project_id, warning_flag=warning_flag, warning_desc=warnings_global, error_desc=error_only, error_flag=error_flag, model_choice_message=model_choice_message)
 
@@ -125,7 +122,7 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
         conclusion_message = '\r\nA sua conclusão foi: ' + str(model_choice_message)
 
     if warning_flag:
-        warning_conclusion = 'Foram encontrados os seguintes alertas: \r\n - {}'.format('\r\n - '.join(x for x in warning_desc))
+        warning_conclusion = '\n \nForam encontrados os seguintes alertas: \r\n - {}'.format('\r\n - '.join(x for x in warning_desc))
     elif not warning_flag:
         warning_conclusion = 'Não foram encontrados quaisquer alertas.\n'
 

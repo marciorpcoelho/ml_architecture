@@ -10,12 +10,6 @@ import level_0_performance_report
 def save_csv(dfs, names):
     # Checks for file existence and deletes it if exists, then saves it
 
-    # for i, df in enumerate(dfs):
-    #     name = names[i] + '.csv'
-    #     if os.path.isfile(name):
-    #         os.remove(name)
-    #     df.to_csv(name)
-
     for df, name in zip(dfs, names):
         name += '.csv'
         if os.path.isfile(name):
@@ -23,25 +17,6 @@ def save_csv(dfs, names):
         df.to_csv(name)
 
     return
-
-
-# def sql_log_inject(line, project_id, flag, performance_info_dict):
-#
-#     try:
-#         cnxn = pyodbc.connect('DSN=' + performance_info_dict['DSN'] + ';UID=' + performance_info_dict['UID'] + ';PWD=' + performance_info_dict['PWD'] + ';DATABASE=' + performance_info_dict['DB'])
-#         cursor = cnxn.cursor()
-#         time_tag_date = time.strftime("%Y-%m-%d")
-#         time_tag_hour = time.strftime("%H:%M:%S")
-#
-#         line = apostrophe_escape(line)
-#         cursor.execute('INSERT INTO [' + str(performance_info_dict['DB']) + '].dbo.[' + str(performance_info_dict['log_view']) + '] VALUES (\'' + str(line) + '\', ' + str(flag) + ', \'' + str(time_tag_hour) + '\', \'' + str(time_tag_date) + '\', ' + str(project_id) + ')')
-#
-#         cnxn.commit()
-#         cursor.close()
-#         cnxn.close()
-#     except (pyodbc.ProgrammingError, pyodbc.OperationalError):
-#         logging.warning('Unable to access SQL Server.')
-#         return
 
 
 def log_inject(line, project_id, flag, performance_info_dict):
@@ -97,7 +72,6 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
         if check_date:
             time_result = sql_date_comparison(df, dsn, options_file, database, view, 'Date', time_to_last_update)
             if time_result:
-                # level_0_performance_report.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', options_file.project_id)
                 level_0_performance_report.log_record('Uploading to SQL Server to DB {} and view {}...'.format(database, view), options_file.project_id)
 
                 for index, row in df.iterrows():
@@ -106,13 +80,11 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
             elif not time_result:
                 level_0_performance_report.log_record('Newer data already exists.', options_file.project_id)
         if not check_date:
-            # level_0_performance_report.log_record('Uploading to SQL Server to DB ' + database + ' and view ' + view + '...', options_file.project_id)
             level_0_performance_report.log_record('Uploading to SQL Server to DB {} and view {}...'.format(database, view), options_file.project_id)
             for index, row in df.iterrows():
                 # continue
                 cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
 
-        # print('Elapsed time: %.2f' % (time.time() - start), 'seconds.')
         print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
     except pyodbc.ProgrammingError:
         save_csv([df], ['output/' + view + '_backup'])
