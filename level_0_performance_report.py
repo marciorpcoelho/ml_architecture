@@ -49,6 +49,10 @@ project_sql_dict = {2244: 'Project_SD',
                     2162: 'Project_VHE_BMW',
                     }
 
+project_pbi_performance_link = {2244: 'https://bit.ly/2X8twFU',
+                                2162: 'https://bit.ly/2U1dznN',
+                                }
+
 
 def performance_info_append(timings, name):
 
@@ -87,7 +91,6 @@ def performance_info(project_id, options_file, model_choice_message, unit_count,
 
         if running_times_upload_flag:
             level_1_e_deployment.sql_inject(df_performance, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance), check_date=1)
-        # level_1_e_deployment.sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings), check_date=1)
 
     if project_id == 2244:
         for (step, timings) in zip(names_global, times_global):
@@ -112,7 +115,7 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
     flags_to_send = df_mail_users[project_sql_dict[project_id]].values
 
     mail_subject = str(project_dict[project_id]) + ' - Relatório'
-    link = 'https://bit.ly/2U1dznN'
+    link = project_pbi_performance_link[project_id]
 
     if error_flag:
         run_conclusion = 'não terminou devido ao erro: {}.'.format(error_desc)

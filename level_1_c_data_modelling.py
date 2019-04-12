@@ -289,10 +289,8 @@ def consecutive_keyword_testing(df, matched_index, keywords):
                     continue
 
         if control_value >= len(keyword_idxs_total):
-            # print('Sequence Found')
             matched_requests.append(request)
         else:
-            # print('Sequence Not Found')
             continue
 
     if len(matched_requests):
@@ -304,7 +302,6 @@ def consecutive_keyword_testing(df, matched_index, keywords):
 def user_label_assignment(df, df_top_words, user_dict):
     for key in user_dict.keys():
         matched_requests = df[df['Contact_Customer_Id'] == int(user_dict[key])]['Request_Num']
-        # print(len(matched_requests))
         df_top_words.loc[df_top_words.index.isin(matched_requests), 'Label'] = key
     return df_top_words
 
