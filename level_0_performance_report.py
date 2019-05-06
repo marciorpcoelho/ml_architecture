@@ -125,7 +125,7 @@ def email_notification(options_file, project_id, warning_flag, warning_desc, err
         conclusion_message = '\r\nA sua conclusão foi: ' + str(model_choice_message)
 
     if warning_flag:
-        warning_conclusion = '\n \nForam encontrados os seguintes alertas: \r\n - {}'.format('\r\n - '.join(x for x in warning_desc))
+        warning_conclusion = '\n Foram encontrados os seguintes alertas: \r\n - {}'.format('\r\n - '.join(x for x in warning_desc))
     elif not warning_flag:
         warning_conclusion = 'Não foram encontrados quaisquer alertas.\n'
 

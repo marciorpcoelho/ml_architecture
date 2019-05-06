@@ -504,12 +504,15 @@ def constant_columns_removal(df, value=None):
 
 
 def col_group(df, columns_to_replace, dictionaries):
+    non_parametrized_data_flag = 0
+
     for dictionary in dictionaries:
         column = columns_to_replace[dictionaries.index(dictionary)]
         try:
             for key in dictionary.keys():
                 df.loc[df[column].isin(dictionary[key]), column + '_new'] = key
             if df[column + '_new'].isnull().values.any():
+                non_parametrized_data_flag = 1
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
                 # print('Column Grouping Warning - NaNs detected in: {}'.format(column + '_new, value(s) not grouped: {}'.format(variable)))
                 # level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
@@ -521,6 +524,10 @@ def col_group(df, columns_to_replace, dictionaries):
         except KeyError:
             # level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column {} not found.'.format(column))
             level_0_performance_report.log_record('Column Grouping Warning - Column {} not found.'.format(column), project_id, flag=1)
+
+    if non_parametrized_data_flag:
+        raise ValueError('Existem valores não parametrizados. Por favor corrigir.')
+
     return df
 
 
