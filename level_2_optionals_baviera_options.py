@@ -65,33 +65,9 @@ colors_en = ['black', 'havanna', 'merino', 'walnut', 'chocolate', 'nevada', 'moo
 
 dakota_colors = ['oyster/cinza', 'preto/laranja/preto', 'black/contrast', 'preto/preto', 'preto/vermelho/preto', 'preto/oyster', 'preto/debroado', 'preto/azul/preto', 'oyster/preto', 'ivory/preto', 'ivory', 'coral', 'preto', 'preta', 'branco', 'branca', 'bege', 'veneto/preto', 'oyster', 'oyster/oyster', 'castanho', 'terra', 'conhaque', 'conhaque/castanho/preto', 'conhaque/castanho/preto/conhaque', 'cognac/preto', 'brown', 'azul', 'mocha/preto', 'mocha/preto/mocha', 'mocha']
 nappa_colors = ['preto', 'white', 'ivory', 'ivory/branco', 'bege', 'mocha', 'castanho', 'cognac/preto', 'antracite']
-vernasca_colors = ['canberra', 'canberra/mokka', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac', 'azuis/preto', 'anthracite/preto', 'cognac/preto', 'branco']
+vernasca_colors = ['canberra', 'bege', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac', 'azuis/preto', 'anthracite/preto', 'cognac/preto', 'branco']
 nevada_colors = ['terra', 'brown', 'preto/preto', 'bege', 'oyster', 'oyster/leather', 'preto', 'branco', 'mocha']
 merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'orange', 'taupe/preto', 'vermelho', 'coffee/preto', 'tartufo/preto', 'tartufo/preto/preto']
-
-# New Cor_Interior v2
-# color_int_dict_layer_1 = {
-#     'preto': ['nappa_antracite', 'vernasca_anthracite/preto', 'merino_preto', 'nevada_preto', 'merino_preto/preto', 'nevada_preto/preto', 'vernasca_preta', 'vernasca_preto/com', 'vernasca_preto/preto', 'preto', 'dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto', 'dakota_preta', 'dakota_black/contrast', 'nappa_preto'],
-#     'branco': ['nevada_branco', 'merino_branco', 'dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white', 'nappa_white', 'nappa_ivory', 'nappa_ivory/branco'],
-#     'vermelho': ['vermelho', 'merino_vermelho', 'dakota_coral'],
-#     'bege': ['merino_bege', 'dakota_bege', 'nappa_bege', 'vernasca_canberra', 'nevada_bege', 'bege'],
-#     'oyster': ['dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza', 'vernasca_oyster', 'nevada_oyster', 'nevada_oyster/leather', 'oyster'],
-#     'castanho': ['vernasca_cognac/preto', 'merino_coffee/preto', 'castanho', 'merino_castanho', 'nevada_terra', 'nevada_brown', 'vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac', 'nappa_castanho', 'nappa_cognac/preto', 'dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
-#     'azul': ['dakota_azul', 'vernasca_azuis/preto'],
-#     'mocha': ['dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha', 'nappa_mocha', 'nevada_mocha'],
-#     'cinzento': ['merino_silverstone', 'merino_taupe/preto', 'cinzento'],
-#     'laranja': ['merino_laranja', 'merino_orange'],
-#     'amarelo': ['amarelo'],
-#     'mini/mota': ['mini/mota'],
-#     'others': ['0', 0]
-# }
-#
-# color_int_dict_layer_2 = {
-#     'preto': ['preto'],
-#     'castanho/mocha': ['castanho', 'mocha'],
-#     'bege/oyster/branco': ['bege', 'oyster', 'branco'],
-#     'outros': ['amarelo', 'vermelho', 'azul', 'laranja', 'cinzento', 'others'],
-# }
 
 # Cor_Interior single parametrization table:
 color_int_dict = {
@@ -101,7 +77,7 @@ color_int_dict = {
     'castanho/mocha': ['merino_tartufo/preto', 'merino_tartufo/preto/preto', 'merino_coffee/preto', 'mocha', 'dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha', 'nappa_mocha', 'nevada_mocha',
                        'castanho', 'merino_castanho', 'nevada_terra', 'nevada_brown', 'vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac', 'vernasca_cognac/preto', 'nappa_castanho', 'nappa_cognac/preto',
                        'dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra'],
-    'bege/oyster/branco': ['merino_bege', 'dakota_bege', 'nappa_bege', 'vernasca_canberra', 'vernasca_canberra/mokka', 'nevada_bege', 'bege', 'dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza', 'vernasca_oyster',
+    'bege/oyster/branco': ['merino_bege', 'dakota_bege', 'nappa_bege', 'vernasca_canberra', 'vernasca_bege', 'nevada_bege', 'bege', 'dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza', 'vernasca_oyster',
                            'nevada_oyster', 'nevada_oyster/leather', 'oyster', 'nevada_branco', 'merino_branco', 'dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white',
                            'nappa_white', 'nappa_ivory', 'nappa_ivory/branco', 'vernasca_branco'],
     'outros': ['amarelo', 'vermelho', 'merino_vermelho', 'dakota_coral', 'dakota_azul', 'vernasca_azuis/preto', 'merino_laranja', 'merino_orange', 'merino_silverstone', 'merino_taupe/preto', 'cinzento', 'others', '0', 0],
