@@ -15,6 +15,7 @@ from gap_statistic import OptimalK
 from sklearn.preprocessing import StandardScaler
 from level_0_performance_report import log_record
 from level_1_a_data_acquisition import sql_mapping_retrieval
+from level_1_b_data_processing import remove_punctuation_and_digits
 from level_2_optionals_baviera_options import classification_models, sql_info, k, gridsearch_score, project_id
 pd.set_option('display.expand_frame_repr', False)
 
@@ -203,16 +204,14 @@ def new_request_type(df, df_top_words, options_file):
 
             if ' ' in keywords:
                 rank = 1 + consecutive_flag
+                keywords = remove_punctuation_and_digits(keywords)
                 tokenized_key_word = nltk.tokenize.word_tokenize(keywords)
                 try:
+                    tokenized_key_word = [stemmer_pt.stem(x) for x in tokenized_key_word]
                     selected_cols = df_top_words[tokenized_key_word]
                 except KeyError:
-                    tokenized_key_word = [stemmer_pt.stem(x) for x in tokenized_key_word]
-                    try:
-                        selected_cols = df_top_words[tokenized_key_word]
-                    except KeyError:
-                        log_record('Keywords {} which were stemmed to {} were not found consecutive.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
-                        continue
+                    log_record('Keywords {} which were stemmed to {} were not found consecutive.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
+                    continue
 
                 matched_index = selected_cols[selected_cols == 1].dropna(axis=0).index.values  # returns the requests with the keyword present
                 if consecutive_flag:
@@ -255,7 +254,6 @@ def new_request_type(df, df_top_words, options_file):
         log_record('Missing requests in the top words dataset: {}'.format([x for x in unique_requests_df_top_words if x not in unique_requests_df]), options_file.project_id, flag=1)
         raise ValueError('Requests have missing Labels!')
 
-    print(df['Label'].value_counts())
     log_record('{:.2f}% de pedidos Não Definidos'.format((df[df['Label'] == 'Não Definido'].shape[0] / df['Request_Num'].nunique()) * 100), options_file.project_id)
 
     return df
@@ -267,7 +265,7 @@ def consecutive_keyword_testing(df, matched_index, keywords):
     matched_requests = []
     for request in matched_index:
         # print('testing request: {}'.format(request))
-        description = nltk.tokenize.word_tokenize(df[df['Request_Num'] == request]['StemmedDescription'].values[0])  # Note: this line will raise and IndexError when a request present in the matched index (from df_top_words) is not present in the df
+        description = nltk.tokenize.word_tokenize(df[df['Request_Num'] == request]['StemmedDescription'].values[0])  # Note: this line will raise an IndexError when a request present in the matched index (from df_top_words) is not present in the df
         # print(description)
         keyword_idxs_total = []
 

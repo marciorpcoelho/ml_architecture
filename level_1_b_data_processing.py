@@ -852,11 +852,8 @@ def text_preprocess(df, unique_clients_decoded, options_file):
     # Punctuation Removal
     for key, row in df.iterrows():
         description, stemmed_words = row['Description'], []
-        digit_remover = str.maketrans('', '', string.digits)
-        punctuation_remover = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
 
-        description = description.translate(digit_remover).translate(punctuation_remover)
-        description = unidecode.unidecode(description)
+        description = remove_punctuation_and_digits(description)
 
         try:
             tokenized = nltk.tokenize.word_tokenize(description)
@@ -879,6 +876,17 @@ def text_preprocess(df, unique_clients_decoded, options_file):
         df.at[key, 'StemmedDescription'] = ' '.join([x for x in stemmed_words if x not in options_file.words_to_remove_from_description])
 
     return df
+
+
+def remove_punctuation_and_digits(string_to_process):
+
+    digit_remover = str.maketrans('', '', string.digits)
+    punctuation_remover = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
+
+    string_to_process = string_to_process.translate(digit_remover).translate(punctuation_remover)
+    string_to_process = unidecode.unidecode(string_to_process)
+
+    return string_to_process
 
 
 def word_frequency(df, threshold=0):
