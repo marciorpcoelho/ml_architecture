@@ -393,7 +393,7 @@ def options_scraping_per_group(args):
                 level_0_performance_report.log_record('The vehicle with VHE_Number {} and Color \'{}\' had no Exterior Color found.'.format(key, line_color), project_id, flag=1)
                 return
             else:
-                raise ValueError('Color Not Found:', tokenized_color)
+                raise ValueError('Color Not Found: {} in Vehicle {}'.format(tokenized_color, key))
     if len(color) > 1:  # Fixes cases such as 'white silver'
         color = [color[0]]
     color = color * group.shape[0]

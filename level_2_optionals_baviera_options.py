@@ -46,7 +46,7 @@ color_ext_dict = {
     'branco': ['branco'],
     'cinzento': ['cinzento', 'prateado', 'prata', 'cinza', 'bluestone'],
     'azul': ['azul'],
-    'outros': ['undefined', 'castanho', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
+    'outros': ['undefined', 'sunstone', 'castanho', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
 }
 
 # New Cor_Exterior (v2)
