@@ -388,10 +388,16 @@ def options_scraping_per_group(args):
                 level_0_performance_report.log_record('The vehicle with VHE_Number {} and Color \'{}\' had no Exterior Color found.'.format(key, line_color), project_id, flag=1)
                 return
             else:
-                raise ValueError('Color Not Found: {} in Vehicle {}'.format(tokenized_color, key))
-    if len(color) > 1:  # Fixes cases such as 'white silver'
-        color = [color[0]]
-    color = color * group.shape[0]
+                level_0_performance_report.log_record('Color Ext Not Found: {} in Vehicle {}'.format(tokenized_color, key), project_id, flag=1)
+                color = np.nan
+                pass
+                # raise ValueError('Color Ext Not Found: {} in Vehicle {}'.format(tokenized_color, key))
+    try:
+        if len(color) > 1:  # Fixes cases such as 'white silver'
+            color = [color[0]]
+        color = color * group.shape[0]
+    except TypeError:
+        pass
     try:
         group['Cor_Exterior'] = color
     except ValueError:
@@ -509,10 +515,6 @@ def col_group(df, columns_to_replace, dictionaries):
             if df[column + '_new'].isnull().values.any():
                 non_parametrized_data_flag = 1
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
-                # print('Column Grouping Warning - NaNs detected in: {}'.format(column + '_new, value(s) not grouped: {}'.format(variable)))
-                # level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
-                # level_0_performance_report.performance_warnings_append('Column Grouping Warning - NaNs detected in: {}_new, value(s) not grouped: {} in Vehicle(s) with VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()))
-                # level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}'.format(columns_to_replace[dictionaries.index(dictionary)]) + '_new, value(s) not grouped: {}'.format(variable) + ' in Vehicle(s) with VHE_Number(s): {}'.format(df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
                 level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}_new, value(s) not grouped: {} in Vehicle(s) with VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
@@ -560,9 +562,12 @@ def color_replacement(df):
     color_types = ['Cor_Exterior']
     colors_to_replace = {'black': 'preto', 'preto/silver': 'preto/prateado', 'tartufo': 'truffle', 'preto/laranja/preto/lara': 'preto/laranja', 'white': 'branco', 'blue': 'azul', 'red': 'vermelho', 'grey': 'cinzento', 'silver': 'prateado', 'orange': 'laranja', 'green': 'verde', 'anthrazit': 'antracite', 'antracit': 'antracite', 'brown': 'castanho', 'antracito': 'antracite', 'âmbar/preto/pr': 'ambar/preto/preto', 'beige': 'bege', 'kaschmirsilber': 'cashmere', 'beje': 'bege'}
 
-    for color_type in color_types:
-        df[color_type] = df[color_type].replace(colors_to_replace)
-        df.drop(df[df[color_type] == 0].index, axis=0, inplace=True)
+    try:
+        for color_type in color_types:
+            df[color_type] = df[color_type].replace(colors_to_replace)
+            df.drop(df[df[color_type] == 0].index, axis=0, inplace=True)
+    except TypeError:
+        level_0_performance_report.log_record('Color Ext Not Found', project_id, flag=1)
 
     return df
 
