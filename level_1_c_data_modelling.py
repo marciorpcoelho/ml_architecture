@@ -302,6 +302,7 @@ def user_label_assignment(df, df_top_words, user_dict):
     for key in user_dict.keys():
         matched_requests = df[df['Contact_Customer_Id'] == int(user_dict[key])]['Request_Num']
         df_top_words.loc[df_top_words.index.isin(matched_requests), 'Label'] = key
+        df.loc[df['Request_Num'].isin(matched_requests), 'Label'] = key
     return df_top_words
 
 
