@@ -832,7 +832,7 @@ def value_replacement(df, replace_approach):
         col1 = list(replace_approach.keys())[0]
         regex = replace_approach[col1]
 
-        df.loc[~df[col1].isnull(), col1] = df[~df[col1].isnull()][col1].replace(regex, '', regex=True)
+        df.loc[~df[col1].isnull(), col1] = df[~df[col1].isnull()][col1].replace(regex, np.nan, regex=True)
 
     return df
 
