@@ -77,6 +77,7 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
 
 def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_file, multiple_columns=0):
     dictionary_list = []
+    dictionary_ranking = {}
 
     for mapping_table in mapping_tables:
         parameter_dict = {}
@@ -86,8 +87,10 @@ def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_f
                 parameter_dict[key] = list(df[df[mapped_column_name] == key]['Original_Value'].values)
         if multiple_columns:
             for key in df[mapped_column_name].unique():
-                listing = df[df[mapped_column_name] == key][[x for x in list(df)[:-1] if x not in mapped_column_name]].values  # Changed to consider the cases where the last column is the priority rank
+                listing = df[df[mapped_column_name] == key][[x for x in list(df)[:-1] if x not in mapped_column_name]].values  # Added [:-1] to consider the cases where the last column is the priority rank
                 parameter_dict[key] = np.unique([item for sublist in listing for item in sublist if item is not None])
+                ranking = int(df[df[mapped_column_name] == key][list(df)[-1]].unique()[0])
+                dictionary_ranking[key] = ranking
         dictionary_list.append(parameter_dict)
 
-    return dictionary_list
+    return dictionary_list, dictionary_ranking

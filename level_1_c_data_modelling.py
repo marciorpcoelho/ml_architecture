@@ -181,7 +181,8 @@ def save_model(clfs, model_name):
 
 
 def new_request_type(df, df_top_words, options_file):
-    keyword_dict = sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database_final'], ['SDK_Setup_Keywords'], 'Keyword_Group', options_file, multiple_columns=1)[0]
+    keyword_dict, ranking_dict = sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database_final'], ['SDK_Setup_Keywords'], 'Keyword_Group', options_file, multiple_columns=1)
+    keyword_dict = keyword_dict[0]
 
     stemmer_pt = SnowballStemmer('porter')
     user_dict, requests_dict_2 = {}, {}
@@ -239,7 +240,7 @@ def new_request_type(df, df_top_words, options_file):
                         log_record('Keyword not found: {}'.format(keywords), options_file.project_id, flag=1)
                         continue
 
-    df = requests_draw_handling(df, requests_dict_2)
+    df = requests_draw_handling(df, requests_dict_2, ranking_dict)
 
     user_label_assignment(df, df_top_words, user_dict)
 
@@ -304,32 +305,60 @@ def user_label_assignment(df, df_top_words, user_dict):
     return df_top_words
 
 
-def requests_draw_handling(df, requests_dict):
+# Old Version, without Priority
+# def requests_draw_handling(df, requests_dict):
+#
+#     df['Label'] = 'Não Definido'
+#     for request in requests_dict.keys():
+#         matches_count = len(requests_dict[request])
+#         unique_labels_count = len(set([x[0] for x in requests_dict[request]]))
+#         labels = [x[0] for x in requests_dict[request]]
+#         unique_labels = set(labels)
+#         unique_ranks_count = len(set([x[1] for x in requests_dict[request]]))
+#         highest_rank_label = max(requests_dict[request], key=operator.itemgetter(1))[0]
+#
+#         if matches_count > 1 and unique_labels_count > 1:
+#             if 'Workspace' in unique_labels:  # Workspace has priority over any other label
+#                 df.loc[df['Request_Num'] == request, 'Label'] = 'Workspace'
+#             else:
+#                 if highest_rank_label == 'Demonstração Resultados' and 'Importador' in unique_labels:  # Importador has priority over any rank of Demonstração Resultados
+#                     df.loc[df['Request_Num'] == request, 'Label'] = 'Importador'
+#                 else:
+#                     if unique_ranks_count == 1 and unique_labels_count != len(labels):
+#                         label_counter = Counter(labels)
+#                         df.loc[df['Request_Num'] == request, 'Label'] = label_counter.most_common(1)[0][0]
+#                     elif unique_ranks_count == 1 and unique_labels_count == len(labels):
+#                         # print('DRAW:', request, requests_dict[request])
+#                         df.loc[df['Request_Num'] == request, 'Label'] = 'Draw: ' + '+'.join([x[0] for x in requests_dict[request]])
+#                     else:
+#                         df.loc[df['Request_Num'] == request, 'Label'] = highest_rank_label
+#         else:
+#             df.loc[df['Request_Num'] == request, 'Label'] = requests_dict[request][0][0]
+#
+#     return df
+
+
+# New Version, with priority
+def requests_draw_handling(df, requests_dict, ranking_dict):
 
     df['Label'] = 'Não Definido'
     for request in requests_dict.keys():
         matches_count = len(requests_dict[request])
         unique_labels_count = len(set([x[0] for x in requests_dict[request]]))
         labels = [x[0] for x in requests_dict[request]]
-        unique_labels = set(labels)
-        unique_ranks_count = len(set([x[1] for x in requests_dict[request]]))
-        highest_rank_label = max(requests_dict[request], key=operator.itemgetter(1))[0]
 
         if matches_count > 1 and unique_labels_count > 1:
-            if 'Workspace' in unique_labels:  # Workspace has priority over any other label
-                df.loc[df['Request_Num'] == request, 'Label'] = 'Workspace'
+            sel_dict = {key: ranking_dict[key] for key in labels if key in ranking_dict}
+            unique_sel_labels_count = len(set(sel_dict.values()))
+
+            if unique_sel_labels_count > 1:
+                max_key = max(sel_dict.items(), key=operator.itemgetter(1))[0]
+                df.loc[df['Request_Num'] == request, 'Label'] = max_key
             else:
-                if highest_rank_label == 'Demonstração Resultados' and 'Importador' in unique_labels:  # Importador has priority over any rank of Demonstração Resultados
-                    df.loc[df['Request_Num'] == request, 'Label'] = 'Importador'
-                else:
-                    if unique_ranks_count == 1 and unique_labels_count != len(labels):
-                        label_counter = Counter(labels)
-                        df.loc[df['Request_Num'] == request, 'Label'] = label_counter.most_common(1)[0][0]
-                    elif unique_ranks_count == 1 and unique_labels_count == len(labels):
-                        # print('DRAW:', request, requests_dict[request])
-                        df.loc[df['Request_Num'] == request, 'Label'] = 'Draw: ' + '+'.join([x[0] for x in requests_dict[request]])
-                    else:
-                        df.loc[df['Request_Num'] == request, 'Label'] = highest_rank_label
+                # print('Draw found in Request {} for categories {}'.format(request, [x[0] for x in requests_dict[request]]))
+                # print('With the following dict: {}'.format(sel_dict))
+                df.loc[df['Request_Num'] == request, 'Label'] = 'Draw: ' + '+'.join([x[0] for x in requests_dict[request]])
+
         else:
             df.loc[df['Request_Num'] == request, 'Label'] = requests_dict[request][0][0]
 
