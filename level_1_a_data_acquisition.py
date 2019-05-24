@@ -75,6 +75,23 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
         return  # ToDo need to figure a better way of handling these errors
 
 
+# When you have a full query to use and no need to prepare anything. Will merge with sql_retrieve_df in the future;
+def sql_retrieve_df_specified_query(dsn, db, options_file, query):
+    start = time.time()
+
+    try:
+        cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, db), searchescape='\\')
+
+        df = pd.read_sql(query, cnxn)
+        cnxn.close()
+
+        print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
+        return df
+
+    except (pyodbc.ProgrammingError, pyodbc.OperationalError):
+        return
+
+
 def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_file, multiple_columns=0):
     dictionary_list = []
     dictionary_ranking = {}

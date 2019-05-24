@@ -200,7 +200,10 @@ def new_request_type(df, df_top_words, options_file):
 
             if 'User:' in keywords:
                 user_id = keywords.replace('User:', '')
-                user_dict[label] = user_id
+                if label in user_dict.keys():
+                    user_dict[label].append(user_id)
+                else:
+                    user_dict[label] = [user_id]
                 continue
 
             if ' ' in keywords:
@@ -242,7 +245,7 @@ def new_request_type(df, df_top_words, options_file):
 
     df = requests_draw_handling(df, requests_dict_2, ranking_dict)
 
-    user_label_assignment(df, df_top_words, user_dict)
+    df, _ = user_label_assignment(df, df_top_words, user_dict)
 
     df.sort_values(by='Request_Num', inplace=True)
     df_top_words.sort_index(inplace=True)
@@ -300,10 +303,10 @@ def consecutive_keyword_testing(df, matched_index, keywords):
 
 def user_label_assignment(df, df_top_words, user_dict):
     for key in user_dict.keys():
-        matched_requests = df[df['Contact_Customer_Id'] == int(user_dict[key])]['Request_Num']
+        matched_requests = df[df['Contact_Customer_Id'].isin([int(user) for user in user_dict[key]])]['Request_Num']
         df_top_words.loc[df_top_words.index.isin(matched_requests), 'Label'] = key
         df.loc[df['Request_Num'].isin(matched_requests), 'Label'] = key
-    return df_top_words
+    return df, df_top_words
 
 
 # Old Version, without Priority

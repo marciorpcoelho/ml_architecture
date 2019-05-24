@@ -4,7 +4,7 @@ from multiprocessing import cpu_count
 dotenv_path = 'info.env'
 read_dotenv(dotenv_path)
 
-DSN = os.getenv('DSN_SD')
+DSN = os.getenv('DSN_Prd')
 DSN_MLG = os.getenv('DSN_MLG')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
