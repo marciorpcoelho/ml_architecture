@@ -19,10 +19,20 @@ def save_csv(dfs, names):
     return
 
 
+def time_tags(format_date="%Y-%m-%d", format_time="%H:%M:%S"):
+
+    time_tag_date = time.strftime(format_date)
+    time_tag_hour = time.strftime(format_time)
+
+    return time_tag_date, time_tag_hour
+
+
 def log_inject(line, project_id, flag, performance_info_dict):
 
-    time_tag_date = time.strftime("%Y-%m-%d")
-    time_tag_hour = time.strftime("%H:%M:%S")
+    # time_tag_date = time.strftime("%Y-%m-%d")
+    # time_tag_hour = time.strftime("%H:%M:%S")
+
+    time_tag_date, time_tag_hour = time_tags()
     line = apostrophe_escape(line)
 
     values = [str(line), str(flag), time_tag_hour, time_tag_date, str(project_id)]
@@ -119,10 +129,10 @@ def sql_truncate(dsn, options_file, database, view):
 
 
 def sql_date_comparison(df, dsn, options_file, database, view, date_column, time_to_last_update):
-    time_tag = time.strftime("%d/%m/%y")
-    current_date = datetime.strptime(time_tag, '%d/%m/%y')
+    time_tag_date, _ = time_tags()
+    current_date = datetime.strptime(time_tag_date, '%d/%m/%y')
 
-    df['Date'] = [time_tag] * df.shape[0]
+    df['Date'] = [time_tag_date] * df.shape[0]
     df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
 
     last_date = sql_date_checkup(dsn, options_file, database, view, date_column)
@@ -170,8 +180,9 @@ def sql_second_highest_date_checkup(dsn, options_file, database, view, date_colu
 
 
 def sql_age_comparison(dsn, options_file, database, view, update_frequency):
-    time_tag = time.strftime("%d/%m/%y")
-    current_date = datetime.strptime(time_tag, '%d/%m/%y')
+    # time_tag = time.strftime("%d/%m/%y")
+    time_tag_date, _ = time_tags(format_date="%d/%m/%y")
+    current_date = datetime.strptime(time_tag_date, '%d/%m/%y')
     last_date = sql_date_checkup(dsn, options_file, database, view, 'Date')
 
     if (current_date - last_date).days >= update_frequency:

@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from imblearn.over_sampling import RandomOverSampler
 import level_0_performance_report
-from level_1_e_deployment import sql_string_preparation
+from level_1_e_deployment import sql_string_preparation, time_tags
 from level_2_optionals_baviera_options import colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, project_id
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -1029,11 +1029,17 @@ def threshold_grouping(x, column, value, threshold=0):
 
 
 def top_words_processing(df_facts):
-    top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts)
-    df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency)
+    time_tag_date, _ = time_tags(format_date="%Y_%m_%d")
 
-    # These actually take to longer than a re-run, hence they are commented
-    df_top_words.to_csv('output/df_top_words.csv')
-    df_cleaned.to_csv('output/df_cleaned.csv')
+    try:
+        df_top_words = pd.read_csv('output/df_top_words_' + str(time_tag_date) + '.csv')
+        df_cleaned = pd.read_csv('output/df_cleaned_' + str(time_tag_date) + '.csv')
+    except FileNotFoundError:
+        top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts)
+        df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency)
+
+        # These actually take to longer than a re-run, hence they are commented
+        df_top_words.to_csv('output/df_top_words_' + str(time_tag_date) + '.csv')
+        df_cleaned.to_csv('output/df_cleaned_' + str(time_tag_date) + '.csv')
 
     return df_cleaned, df_top_words
