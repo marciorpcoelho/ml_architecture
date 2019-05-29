@@ -129,7 +129,7 @@ def sql_truncate(dsn, options_file, database, view):
 
 
 def sql_date_comparison(df, dsn, options_file, database, view, date_column, time_to_last_update):
-    time_tag_date, _ = time_tags()
+    time_tag_date, _ = time_tags(format_date='%d/%m/%y')
     current_date = datetime.strptime(time_tag_date, '%d/%m/%y')
 
     df['Date'] = [time_tag_date] * df.shape[0]

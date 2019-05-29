@@ -1032,8 +1032,8 @@ def top_words_processing(df_facts):
     time_tag_date, _ = time_tags(format_date="%Y_%m_%d")
 
     try:
-        df_top_words = pd.read_csv('output/df_top_words_' + str(time_tag_date) + '.csv')
-        df_cleaned = pd.read_csv('output/df_cleaned_' + str(time_tag_date) + '.csv')
+        df_cleaned = pd.read_csv('output/df_cleaned_' + str(time_tag_date) + '.csv', index_col=0)
+        df_top_words = pd.read_csv('output/df_top_words_' + str(time_tag_date) + '.csv', index_col=0)
     except FileNotFoundError:
         top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts)
         df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency)
