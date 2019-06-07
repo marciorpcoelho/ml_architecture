@@ -132,6 +132,7 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
     df_facts = remove_rows(df_facts, [df_facts.loc[df_facts['Category_Id'].isin(pbi_categories)].index])  # Removes the rows which belong to PBI;
     log_record('After PBI Filtering, the number of requests is: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
 
+
     # Lowercase convertion of Summary and Description
     df_facts = lowercase_column_convertion(df_facts, columns=['Summary', 'Description'])
 
