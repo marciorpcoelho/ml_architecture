@@ -94,6 +94,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_zero_price_total_vhe(df)  # Removes VHE with a price total of 0; ToDo: keep checking up if this is still necessary
         df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index])  # No need for Prov filtering, as it is already filtered in the data source;
         df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
+        df = remove_rows(df, [df[df.Cor == ' '].index], warning=1)
 
         df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
         df = remove_columns(df, ['Colour_Ext_Code'])  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;

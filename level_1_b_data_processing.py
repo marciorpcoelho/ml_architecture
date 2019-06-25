@@ -63,12 +63,23 @@ def remove_columns(df, columns):
     return df
 
 
-def remove_rows(df, rows):
+def remove_rows(df, rows, warning=0):
 
-    for condition in rows:
-        df.drop(condition, axis=0, inplace=True)
+    if not warning:
+        for condition in rows:
+            df.drop(condition, axis=0, inplace=True)
 
-    return df
+        return df
+    else:
+        filtered_df = pd.DataFrame()
+        start_size = df.shape[0]
+        for condition in rows:
+            filtered_df = df.drop(condition, axis=0)
+        end_size = filtered_df.shape[0]
+        if start_size - end_size:
+            level_0_performance_report.log_record('There are vehicles without Cor_Ext: {} which were removed.'.format(df[df.index.isin(rows[0].values)]['Nº Stock'].unique()), project_id, flag=1)
+
+        return filtered_df
 
 
 def string_replacer(df, dictionary):
