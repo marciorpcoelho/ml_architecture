@@ -46,7 +46,7 @@ color_ext_dict = {
     'branco': ['branco'],
     'cinzento': ['cinzento', 'prateado', 'prata', 'cinza', 'bluestone'],
     'azul': ['azul'],
-    'outros': ['undefined', 'sunstone', 'castanho', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
+    'outros': ['undefined', 'sunstone', 'castanho', 'topaz', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
 }
 
 # New Cor_Exterior (v2)
@@ -67,13 +67,13 @@ dakota_colors = ['oyster/cinza', 'preto/laranja/preto', 'black/contrast', 'preto
 nappa_colors = ['preto', 'white', 'ivory', 'ivory/branco', 'bege', 'mocha', 'castanho', 'cognac/preto', 'antracite']
 vernasca_colors = ['canberra', 'bege', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac', 'azuis/preto', 'anthracite/preto', 'cognac/preto', 'branco', 'coffee/preto']
 nevada_colors = ['terra', 'brown', 'preto/preto', 'bege', 'oyster', 'oyster/leather', 'preto', 'branco', 'mocha']
-merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'orange', 'taupe/preto', 'vermelho', 'coffee/preto', 'tartufo/preto', 'tartufo/preto/preto']
+merino_colors = ['preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'orange', 'taupe/preto', 'vermelho', 'coffee/preto', 'tartufo/preto', 'tartufo/preto/preto', 'night/preto/pret']
 
 # Cor_Interior single parametrization table:
 color_int_dict = {
     'preto': ['nappa_antracite', 'vernasca_anthracite/preto', 'merino_preto', 'nevada_preto', 'merino_preto/preto', 'nevada_preto/preto', 'vernasca_preta', 'vernasca_preto/com',
               'vernasca_preto/preto', 'preto', 'dakota_preto/preto', 'dakota_preto/vermelho/preto', 'dakota_preto/laranja/preto', 'dakota_preto/oyster', 'dakota_preto/debroado', 'dakota_preto/azul/preto', 'dakota_preto',
-              'dakota_preta', 'dakota_black/contrast', 'nappa_preto'],
+              'dakota_preta', 'dakota_black/contrast', 'nappa_preto', 'night/preto/pret'],
     'castanho/mocha': ['merino_tartufo/preto', 'merino_tartufo/preto/preto', 'merino_coffee/preto', 'mocha', 'dakota_mocha/preto', 'dakota_mocha/preto/mocha', 'dakota_mocha', 'nappa_mocha', 'nevada_mocha',
                        'castanho', 'merino_castanho', 'nevada_terra', 'nevada_brown', 'vernasca_mocha', 'vernasca_mocha/preto', 'vernasca_cognac', 'vernasca_cognac/preto', 'nappa_castanho', 'nappa_cognac/preto',
                        'dakota_castanho', 'dakota_conhaque', 'dakota_conhaque/castanho/preto', 'dakota_conhaque/castanho/preto/conhaque', 'dakota_cognac/preto', 'dakota_brown', 'dakota_terra', 'vernasca_coffee/preto'],
@@ -124,7 +124,7 @@ model_dict = {
     'mini_country': ['MINI COUNTRYMAN'],
     'mini': ['MINI 5p', 'MINI 3p'],
     'motos': ['Série C', 'Série F', 'Série K', 'Série R'],
-    'outros': ['S8 Cabrio', 'S8 Coupe', 'S2 Cabrio', 'S2 Coupé', 'S3 Gran Turismo', 'S4 Coupé', 'S4 Cabrio', 'S5 Gran Turismo', 'S6 Cabrio', 'S6 Gran Turismo', 'S6 Gran Coupe', 'S6 Coupé', 'S7 Berlina', 'S7 L Berlina', 'X2 SAC', 'X4 SUV', 'X5 SUV', 'X5 M', 'X6', 'X6 M', 'Z4 Roadster', 'M2 Coupé', 'M3 Berlina', 'M4 Cabrio', 'M4 Coupé', 'M5 Berlina', 'S6 Gran Turismo', 'S6 Cabrio', 'S6 Coupé', 'S6 Gran Coupe', 'S7 Berlina', 'S7 L Berlina']
+    'outros': ['X7 SUV', 'S8 Cabrio', 'S8 Coupe', 'S2 Cabrio', 'S2 Coupé', 'S3 Gran Turismo', 'S4 Coupé', 'S4 Cabrio', 'S5 Gran Turismo', 'S6 Cabrio', 'S6 Gran Turismo', 'S6 Gran Coupe', 'S6 Coupé', 'S7 Berlina', 'S7 L Berlina', 'X2 SAC', 'X4 SUV', 'X5 SUV', 'X5 M', 'X6', 'X6 M', 'Z4 Roadster', 'M2 Coupé', 'M3 Berlina', 'M4 Cabrio', 'M4 Coupé', 'M5 Berlina', 'S6 Gran Turismo', 'S6 Cabrio', 'S6 Coupé', 'S6 Gran Coupe', 'S7 Berlina', 'S7 L Berlina']
 }
 
 versao_dict = {
@@ -156,14 +156,14 @@ motor_dict_v1 = {
     '25i': ['xdrive25i'],
     '28i': ['228i', '428i', '528i'],
     '30d': ['330d', '430d', '530d', '630d', '730d', '730ld', 'xdrive30d', 'xdrive'],
-    '30i': ['m235i', '230i', '330i', '430i', '530i', 'xdrive30i'],
+    '30i': ['m235i', '230i', '330i', '430i', '530i', '630i', 'xdrive30i'],
     '35d': ['335d', '435d', '535d', 'xdrive35d'],
     '35i': ['335i', '435i', 'xdrive35i'],
     '40d': ['540d', '640d', '740ld', '740d', 'xdrive40d', '840d'],
-    '40i': ['m140i', '340i', '440i', '540i', '640i', '740i', '740li', 'm40i'],
+    '40i': ['m140i', '340i', '440i', '540i', '640i', '740i', '740li', 'm40i', 'm240i'],
     '50d': ['m550d', '750d', '750ld', 'm50d'],
     '50i': ['750li', 'm850i'],
-    'Híbrido': ['225xe', '330e', 'activehybrid', '530e', '740e', '740le', 'xdrive40e'],
+    'Híbrido': ['225xe', '330e', 'activehybrid', '530e', '740e', '745e', '740le', 'xdrive40e'],
     'M2': ['m2'],
     'M3': ['m3'],
     'M4': ['m4'],
@@ -178,11 +178,11 @@ motor_dict_v2 = {
     '1.5d': ['114d', '116d', '214d', '216d', '316d', 'sdrive16d'],
     '1.5i': ['114i', '116i', '118i', '216i', '218i', 'sdrive18i'],
     '2.0d': ['118d', '120d', '125d', '218d', '220d', '225d', '318d', '320d', '325d', '418d', '420d', '425d', '518d', '520d', '525d', '620d', '725d', 'sdrive', 'sdrive18d', 'sdrive20d', 'sdrive25d', 'xdrive18d', 'xdrive20d', 'xdrive25d'],
-    '2.0i': ['125i', '228i', '230i', '320i', '330i', '420i', '428i', '430i', '520i', '528i', '530i', 'sdrive20i', 'xdrive20i', 'xdrive25i', 'xdrive30i'],
+    '2.0i': ['125i', '228i', '230i', '320i', '330i', '420i', '428i', '430i', '520i', '528i', '530i', 'sdrive20i', 'xdrive20i', 'xdrive25i', 'xdrive30i', '630i'],
     '3.0d': ['330d', '335d', '430d', '435d', '530d', '535d', '540d', '630d', '640d', '730d', '730ld', '740d', '740ld', '750d', '750ld', 'm550d', 'xdrive30d', 'xdrive35d', 'm50d', 'xdrive', 'xdrive40d', '840d', 'm40d'],
-    '3.0i': ['335i', '340i', '435i', '440i', '540i', '640i', '740i', '740li', 'm140i', 'm2', 'm3', 'm4', 'm40i', 'xdrive35i', 'm235i', 'xdrive40i'],
+    '3.0i': ['335i', '340i', '435i', '440i', '540i', '640i', '740i', '740li', 'm140i', 'm2', 'm3', 'm4', 'm40i', 'xdrive35i', 'm235i', 'xdrive40i', 'm240i'],
     '4.0i': ['750li', 'm5', 'm6', 'm', 'm850i'],
-    'Híbrido': ['225xe', '330e', '530e', '740e', '740le', 'activehybrid', 'xdrive40e'],
+    'Híbrido': ['225xe', '330e', '530e', '740e', '740le', 'activehybrid', 'xdrive40e', '745e'],
 }
 
 
