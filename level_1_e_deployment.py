@@ -107,6 +107,61 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
     return
 
 
+def sql_join(df, dsn, database, view, options_file):
+    start = time.time()
+    level_0_performance_report.log_record('Joining to SQL Server to DB {} and view {}...'.format(database, view), options_file.project_id)
+
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+    cursor = cnxn.cursor()
+
+    query = '''update a
+        set Label=b.Label,StemmedDescription=b.StemmedDescription,Language=b.Language
+        from [scsqlsrv3\prd].BI_RCG.dbo.BI_SDK_Fact_Requests_Month_Detail  as a
+        inner join [scrcgaisqld1\dev01].BI_MLG.dbo.SDK_Fact_BI_PA_ServiceDesk as b on a.request_num=b.request_num '''.replace('\'', '\'\'')
+    cursor.execute(query)
+
+    # for index, row in df.iterrows():
+    # cursor.execute(
+    #     'UPDATE ' + view + ' '
+    #     'SET ' + view + '.Label = ' + df['Label'] + ', '
+    #            + view + '.Language = ' + df['Language'] + ', '
+    #            + view + '.StemmedDescription = ' + df['StemmedDescription']
+    #     + ' FROM ' + view
+    #     + ' inner join ' + df['Request_Num'] + ' on ' + df['Request_Num'] + '=' + view + '.Request_Num'
+    # )
+
+    # cursor.execute(
+    #     'UPDATE ' + view + ' '
+    #     'SET ' + view + '.Label = ? , '
+    #            + view + '.Language = ? , '
+    #            + view + '.StemmedDescription = ? '
+    #     + ' FROM ' + view
+    #     + ' inner join ' + df['Request_Num'] + ' on ' + df['Request_Num'] + '=' + view + '.Request_Num'
+    # )
+
+    # for index, row in df.iterrows():
+    #     # print(row['Label'], row['Language'], row['StemmedDescription'])
+    #
+    #     try:
+    #         # query = 'UPDATE ' + view + ' SET ' + view + '.Label = ' + '\'' + row['Label'] + '\'' + ', ' + view + '.Language = ' + '\'' + row['Language'] + '\'' + ', ' + view + '.StemmedDescription = ' + '\'' + row['StemmedDescription'].replace('\'', '\'\'') + '\'' + ' FROM ' + view + ' WHERE ' + view + '.Request_Num = ' + '\'' + row['Request_Num'] + '\''
+    #         query = '''UPDATE {} SET {}.Label = '{}', {}.Language = '{}', {}.StemmedDescription = '{}' FROM {} WHERE {}.Request_Num = '{}' '''.format(view, view, row['Label'], view, row['Language'], view, row['StemmedDescription'].replace('\'', '\'\''), view, view, row['Request_Num'])
+    #
+    #         cursor.execute(query)
+    #     except pyodbc.ProgrammingError:
+    #         print(row['Label'], row['Language'], row['StemmedDescription'], '\n', query)
+    #         raise pyodbc.ProgrammingError
+
+        # print(query)
+
+    print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
+
+    cnxn.commit()
+    cursor.close()
+    cnxn.close()
+
+    return
+
+
 def sql_string_preparation(values_list):
     columns_string = '[%s]' % "], [".join(values_list)
 
