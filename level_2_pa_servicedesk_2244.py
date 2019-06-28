@@ -471,9 +471,9 @@ def deployment(df):
     log_record('Started Step E...', options_file.project_id)
     df = df.astype(object).where(pd.notnull(df), None)
 
-    sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, list(df), truncate=1)
+    sql_inject(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['final_table'], options_file, ['Request_Num', 'StemmedDescription', 'Language', 'Label'], truncate=1)
 
-    sql_join(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts'], options_file)
+    # sql_join(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts'], options_file)
 
     log_record('Finished Step E.', options_file.project_id)
     performance_info_append(time.time(), 'end_section_e')

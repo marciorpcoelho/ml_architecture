@@ -23,7 +23,8 @@ sql_info = {
     'initial_table_facts_durations': 'BI_SDK_Fact_Requests',
     'initial_table_clients': 'BI_SDK_Dim_Contacts',
     'initial_table_pbi_categories': 'BI_SDK_Dim_Requests_Categories',
-    'final_table': 'SDK_Fact_BI_PA_ServiceDesk',
+    # 'final_table': 'SDK_Fact_BI_PA_ServiceDesk',
+    'final_table': 'BI_SDK_Fact_DW_Requests_Classification',
 }
 
 log_files = {
