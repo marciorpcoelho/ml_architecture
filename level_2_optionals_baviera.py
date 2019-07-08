@@ -8,7 +8,7 @@ from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retr
 from level_1_b_data_processing import datasets_dictionary_function, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
-from level_1_e_deployment import sql_inject, sql_age_comparison
+from level_1_e_deployment import sql_inject, sql_age_comparison, sql_mapping_upload
 from level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
 pd.set_option('display.expand_frame_repr', False)
 
@@ -20,6 +20,11 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the 
 configuration_parameters = level_2_optionals_baviera_options.selected_configuration_parameters
 
 running_times_upload_flag = 1
+dict_sql_upload_flag = 0
+
+if dict_sql_upload_flag:
+    dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.sales_place_dict_v2, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.motor_dict_v2]
+    sql_mapping_upload(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, dictionaries)
 
 
 def main():
