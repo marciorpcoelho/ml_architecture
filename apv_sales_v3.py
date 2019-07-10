@@ -15,6 +15,7 @@ from datetime import datetime
 from level_1_a_data_acquisition import sql_retrieve_df_specified_query
 import apv_sales_options as options_file
 from level_1_b_data_processing import null_analysis
+
 pd.set_option('display.expand_frame_repr', False)
 dotenv_path = 'info.env'
 read_dotenv(dotenv_path)
@@ -22,76 +23,169 @@ my_dpi = 96
 lognormal_fit = 0
 slr_date = 0
 wip_date = 0
+mov_date = 1
+urgent_purchases_flags = [4, 5]
 
 
 def main():
-    df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients = data_acquisition(options_file)
-    weather_df = weather_treatment()
-    df_sales, df_purchases = dataset_treatment(weather_df, df_sales, df_purchases, df_stock)
-    sys.exit()
-
-    # df_sales = pd.read_csv('dbs/df_sales_w_flag_v1.csv', parse_dates=['SLR_Document_Date'], usecols=['SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum', 'T', 'U', 'Ff', 'weekday'])
-    df_sales = pd.read_csv('dbs/df_sales_cleaned.csv', parse_dates=['SLR_Document_Date', 'WIP_Date_Created'], usecols=['SLR_Document_Date', 'WIP_Date_Created', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'T', 'U', 'Ff', 'weekday'])
-    df_purchases = pd.read_csv('dbs/df_purchases_cleaned.csv', parse_dates=['Movement_Date'])
-
+    # df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients = data_acquisition(options_file)
+    # df_sales, df_purchases = dataset_treatment(df_sales, df_purchases, df_stock)
     # sys.exit()
 
-    # selected_parts = ['BM11.42.8.507.683', 'BM83.19.2.158.851', 'BM51.91.0.008.617', 'BM51.91.1.052.469', 'BM51.91.9.057.943']
-    selected_parts = ['BM83.21.2.405.675']
-    # selected_parts = df_sales[df_sales['SLR_Document_Date'] > '2018-05-21']['Part_Ref'].unique()
+    ### Call testing.py to create results_merge
+
+    # df_sales = pd.read_csv('dbs/df_sales_w_flag_v1.csv', parse_dates=['SLR_Document_Date'], usecols=['SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum', 'T', 'U', 'Ff', 'weekday'])
+    # df_sales = pd.read_csv('dbs/df_sales_cleaned.csv', parse_dates=['SLR_Document_Date', 'WIP_Date_Created'], usecols=['SLR_Document_Date', 'WIP_Date_Created', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'T', 'U', 'Ff', 'weekday'])
+    # df_purchases = pd.read_csv('dbs/df_purchases_cleaned.csv', parse_dates=['Movement_Date'])
+
+    results_merge = pd.read_csv('output/results_merge.csv', index_col=0, parse_dates=['index'])  # Comes from testing.py
+    results_merge.rename(index=str, columns={'index': 'Movement_Date'}, inplace=True)
+
+    selected_parts = ['BM83.21.2.405.675', 'BM07.12.9.952.104', 'BM07.14.9.213.164', 'BM83.19.2.158.851', 'BM64.11.9.237.555']
+    week_days = range(0, 5)
 
     selected_parts_count = len(selected_parts)
     print('Total Number of Parts: {}'.format(selected_parts_count))
 
-    # part_ref_price_cost_dict = read_dict('dbs/part_ref_price_cost.csv')
+    min_date_weekly_prediction = '2019-02-04'
+    max_date_weekly_prediction = '2019-05-31'
 
-    days = [2, 3]
-    temps = ['cold', 'hot']
-    for (week_day, temperature_range) in zip(days, temps):
-        # for week_day in range(2, 3):
-        #     for temperature_range in ['hot', 'cold']:
-        # for cloud_cover in ['very cloudy', 'clear', 'cloudy']:
-        print('Creating order for day \'{}\', temperature range \'{}\'...'.format(week_day, temperature_range))
+    sel_weeks = results_merge[(results_merge['Part_Ref'] == selected_parts[0]) & (results_merge['Movement_Date'] >= min_date_weekly_prediction) & (results_merge['Movement_Date'] <= max_date_weekly_prediction)]['unique_weeks'].unique()
+    sel_week_days = results_merge[results_merge['unique_weeks'].isin(sel_weeks)][['unique_weeks', 'Movement_Date']].drop_duplicates(subset='unique_weeks')['Movement_Date'].unique()
 
-        # week_day = 2  # 0 = Monday, 1 = Tuesday, etc...
-        # temperature_range = 'cold'  # hot, warm, cold
-        # cloud_cover = 'very cloudy'  # clear, cloudy, very cloudy
+    # days = [2, 3]
+    # temps = ['cold', 'hot']
+    temperature_range = 'cold'
+    # for (week_day, temperature_range) in zip(days, temps):
+    for week_start_day in sel_week_days:
+        x = pd.to_datetime(week_start_day)
+        print('Optimizing for week {}...'.format(x.date()))
+        for week_day in week_days:
+            # for week_day in range(2, 3):
+            #     for temperature_range in ['hot', 'cold']:
+            # for cloud_cover in ['very cloudy', 'clear', 'cloudy']:
+            print('Creating order for day \'{}\', temperature range \'{}\'...'.format(week_day, temperature_range))
 
-        seo_df = pd.DataFrame(columns=['Part_Ref', 'Optimized Stock', 'Stock Flag', 'Weekday', 'Temperature Range'])
-        # selected_parts_count = len(selected_parts)
-        # print('Total Number of Parts: {}'.format(selected_parts_count))
+            # week_day = 2  # 0 = Monday, 1 = Tuesday, etc...
+            # temperature_range = 'cold'  # hot, warm, cold
+            # cloud_cover = 'very cloudy'  # clear, cloudy, very cloudy
 
-        start = time.time()
-        time_tag = time.strftime("%d/%m/%y")
-        current_date = datetime.strptime(time_tag, '%d/%m/%y')
+            seo_df = pd.DataFrame(columns=['Part_Ref', 'Optimized Stock', 'Stock Flag', 'Weekday', 'Temperature Range'])
+            # selected_parts_count = len(selected_parts)
+            # print('Total Number of Parts: {}'.format(selected_parts_count))
 
-        pool = Pool(processes=int(level_0_performance_report.pool_workers_count))
-        results = pool.map(seo, [(part_ref, df_sales, week_day, temperature_range, current_date) for part_ref in selected_parts])
-        pool.close()
-        print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
+            start = time.time()
+            time_tag = time.strftime("%d/%m/%y")
+            current_date = datetime.strptime(time_tag, '%d/%m/%y')
 
-        optimized_order = [result[0] for result in results if result is not None]
-        stock_flags = [result[1] for result in results if result is not None]
+            pool = Pool(processes=int(level_0_performance_report.pool_workers_count))
+            results = pool.map(seo, [(part_ref, results_merge, week_start_day, week_day, temperature_range, current_date) for part_ref in selected_parts])
+            pool.close()
+            print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
 
-        seo_df['Part_Ref'] = selected_parts
-        seo_df['Optimized Stock'] = optimized_order
-        seo_df['Stock Flag'] = stock_flags
-        seo_df['Weekday'] = [week_day] * selected_parts_count
-        seo_df['Temperature Range'] = [temperature_range] * selected_parts_count
-        # print(seo_df)
-        # seo_df['Cloud Cover'] = [cloud_cover] * selected_parts_count
-        seo_df.to_csv('output/seo_df_weekday_{}_temperaturerange_{}_v7.csv'.format(week_day, temperature_range))
+            optimized_order = [result[0] for result in results if result is not None]
+            stock_flags = [result[1] for result in results if result is not None]
+
+            seo_df['Part_Ref'] = selected_parts
+            seo_df['Optimized Stock'] = optimized_order
+            seo_df['Stock Flag'] = stock_flags
+            seo_df['Weekday'] = [week_day] * selected_parts_count
+            seo_df['Temperature Range'] = [temperature_range] * selected_parts_count
+            # print(seo_df)
+            # seo_df['Cloud Cover'] = [cloud_cover] * selected_parts_count
+
+            seo_df.to_csv('output/seo_df_week_start_{}_{}_{}_weekday_{}_temperaturerange_{}_v13.csv'.format(x.day, x.month, x.year, week_day, temperature_range))
+
+    seo_merge_function_2(selected_parts, week_days, temperature_range)
+
+
+def seo_merge_function_2(selected_parts, days, temperature_range):
+    version = 'v13'
+    all_weeks_dfs = pd.DataFrame()
+
+    results_merge = pd.read_csv('output/results_merge.csv', parse_dates=['index'])  # Comes from testing.py
+    results_merge.rename(index=str, columns={'index': 'Movement_Date'}, inplace=True)
+
+    min_date_weekly_prediction = '2019-02-04'
+    max_date_weekly_prediction = '2019-05-31'
+
+    sel_weeks = results_merge[(results_merge['Part_Ref'] == selected_parts[0]) & (results_merge['Movement_Date'] >= min_date_weekly_prediction) & (results_merge['Movement_Date'] <= max_date_weekly_prediction)]['unique_weeks'].unique()
+    sel_week_days = results_merge[results_merge['unique_weeks'].isin(sel_weeks)][['unique_weeks', 'Movement_Date']].drop_duplicates(subset='unique_weeks')['Movement_Date'].unique()
+
+    for week_start_day in sel_week_days:
+        all_dfs = pd.DataFrame()
+        x = pd.to_datetime(week_start_day).date()
+        for week_day in days:
+            df = pd.read_csv('output/seo_df_week_start_{}_{}_{}_weekday_{}_temperaturerange_{}_{}.csv'.format(x.day, x.month, x.year, week_day, temperature_range, version), index_col=0)
+            all_dfs = all_dfs.append(df)
+        # print(all_dfs)
+
+        all_dfs = all_dfs[all_dfs['Stock Flag'] == 0]
+
+        all_dfs = outlier_handling(all_dfs)
+
+        all_dfs_grouped = all_dfs.groupby('Part_Ref')
+
+        all_dfs['SEO_Week_Min'] = all_dfs_grouped['Optimized Stock'].transform('min')
+        all_dfs['SEO_Week_Max'] = all_dfs_grouped['Optimized Stock'].transform('max')
+        all_dfs['SEO_Week_Avg'] = all_dfs_grouped['Optimized Stock'].transform('mean')
+        all_dfs['Week_Start_Day'] = [x] * all_dfs.shape[0]
+
+        all_dfs = all_dfs.drop_duplicates(subset=['Part_Ref'])
+
+        all_dfs = all_dfs.drop(['Optimized Stock', 'Stock Flag', 'Weekday', 'Temperature Range'], axis=1)
+
+        all_dfs[['SEO_Week_Min', 'SEO_Week_Max', 'SEO_Week_Avg']] = all_dfs[['SEO_Week_Min', 'SEO_Week_Max', 'SEO_Week_Avg']].astype(int)
+
+        # print(all_dfs)
+        all_weeks_dfs = all_weeks_dfs.append(all_dfs)
+        all_weeks_dfs.to_csv('output/seo_{}_top5_part_refs.csv'.format(version))
+
+    return
+
+
+def outlier_handling(df):
+    df.reset_index(inplace=True)
+
+    df_grouped = df.groupby('Part_Ref')
+
+    new_df = pd.DataFrame()
+    for key, group in df_grouped:
+        stocks = group['Optimized Stock']
+
+        magnitude_order_max, max_value, max_index = magnitude(stocks.max()), stocks.max(), stocks.idxmax()
+        magnitude_order_min, min_value, min_index = magnitude(stocks.min()), stocks.min(), stocks.idxmin()
+
+        if magnitude_order_max > magnitude_order_min + 2:
+            print('To remove: {} from {}'.format(max_value, list(stocks)))
+            group = group[(group.Part_Ref == key) & (group.index != max_index)]
+
+        new_df = pd.concat([new_df, group])
+
+    return new_df
+
+
+def magnitude(x):
+    if x == 0:
+        return 0
+
+    try:
+        order = int(math.log10(x))
+    except ValueError:
+        order = int(math.floor(math.log10(x)))
+
+    return order
 
 
 def data_acquisition(options_info):
     print('Starting section A...')
     start = time.time()
 
-    sales_info = ['dbs/df_sales_03_06_19', options_file.sales_query]  # ToDo will need to update and let this run today
-    purchases_info = ['dbs/df_purchases_03_06_19', options_file.purchases_query]
-    stock_info = ['dbs/df_stock_03_06_19', options_file.stock_query]
-    reg_info = ['dbs/df_reg_03_06_19', options_file.reg_query]
-    reg_al_info = ['dbs/df_reg_al_client_03_06_19', options_file.reg_autoline_clients]
+    sales_info = ['dbs/df_sales_01_07_19', options_file.sales_query]  # ToDo will need to update and let this run today
+    purchases_info = ['dbs/df_purchases_01_07_19', options_file.purchases_query]
+    stock_info = ['dbs/df_stock_01_07_19', options_file.stock_query]
+    reg_info = ['dbs/df_reg_01_07_19', options_file.reg_query]
+    reg_al_info = ['dbs/df_reg_al_client_01_07_19', options_file.reg_autoline_clients]
 
     dfs = []
 
@@ -126,10 +220,10 @@ def data_acquisition(options_info):
 
 def seo(args):
     stock, stock_flag = 0, 0
-    part_ref, df, week_day, temperature_range, current_date = args
+    part_ref, df, week_start_day, week_day, temperature_range, current_date = args
     # stock_flag, part_mean, part_sigma, price_sale, cost_buy = estimation(df, part_ref, week_day, temperature_range, current_date)
 
-    best_fit_name, best_fit_params, stock_flag, price_sale, cost_buy = estimation(df, part_ref, week_day, temperature_range, current_date)
+    best_fit_name, best_fit_params, stock_flag, price_sale, cost_buy = estimation(df, part_ref, week_start_day, week_day, temperature_range, current_date)
     # print('part_ref {} has flag: {}'.format(part_ref, stock_flag))
 
     if not stock_flag:
@@ -147,18 +241,36 @@ def seo(args):
     return stock, stock_flag
 
 
-def estimation(df, part_ref, day, temp, current_date):
+def estimation(df, part_ref, week_start_day, day, temp, current_date):
     stock_flag, best_fit_name, best_fit_params = 0, '', ()
 
-    all_sel_df = df[(df['Part_Ref'] == part_ref) & (df['T'] == temp) & (df['weekday'] == day)]
-    price_sale, cost_buy = all_sel_df['PVP_1'].mean(), all_sel_df['Cost_Sale_1'].mean()
+    # all_sel_df = df[(df['Part_Ref'] == part_ref) & (df['T'] == temp) & (df['weekday'] == day)]
+    all_sel_df = df[(df['Part_Ref'] == part_ref) & (df['Movement_Date'] < week_start_day) & (df['T'] == temp) & (df['weekday'] == day)]
+    price_sale, cost_buy = all_sel_df['PVP_avg'].mean(), all_sel_df['Cost_Sale_avg'].mean()
 
-    if slr_date:
-        sel_df = all_sel_df.drop_duplicates(subset=['SLR_Document_Date', 'Part_Ref']).sort_values(by='SLR_Document_Date')
+    if mov_date:
+        sel_df = all_sel_df.drop_duplicates(subset=['Movement_Date', 'Part_Ref']).sort_values(by='Movement_Date')
 
         if sel_df.shape[0]:
-            last_sale_date = sel_df['SLR_Document_Date'].max()
-            # last_sale_date = sel_df['WIP_Date_Created'].max()
+            last_sale_date = sel_df['Movement_Date'].max()
+            if (current_date - last_sale_date).days < 365 and sum(sel_df['Qty_Sold_sum_mov'].unique() != [0]):
+                # print('part_ref {} is in!'.format(part_ref))
+                x = np.array(sel_df['Qty_Sold_sum_mov'].values).ravel()
+
+                best_dist, best_fit_name, best_fit_params = best_fit_distribution(x)
+
+            else:
+                stock_flag = 3
+        else:
+            stock_flag = 1
+
+    if slr_date:
+        # sel_df = all_sel_df.drop_duplicates(subset=['SLR_Document_Date', 'Part_Ref']).sort_values(by='SLR_Document_Date')
+        sel_df = all_sel_df.drop_duplicates(subset=['Movement_Date', 'Part_Ref']).sort_values(by='Movement_Date')
+
+        if sel_df.shape[0]:
+            # last_sale_date = sel_df['SLR_Document_Date'].max()
+            last_sale_date = sel_df['Movement_Date'].max()
             if (current_date - last_sale_date).days < 365 and sum(sel_df['Qty_Sold_sum_slr'].unique() != [0]):
                 # print('part_ref {} is in!'.format(part_ref))
                 x = np.array(sel_df['Qty_Sold_sum_slr'].values).ravel()
@@ -200,13 +312,13 @@ def read_dict(dict_loc):
 
 
 def optimization(best_dist, best_fit_params, part_ref, price_sale, cost_buy):
-
     if (price_sale - cost_buy) < 0 or price_sale == cost_buy or price_sale == 0 or cost_buy == 0:
         q = 0
         stock_flag = 2
     else:
         critical_fractile = ((price_sale - cost_buy) / price_sale)
-        # print('critical fractile: {:.3f}'.format(critical_fractile))
+        print('original critical fractile: {:.3f}'.format(critical_fractile))
+        critical_fractile = 0.90
         try:
             inv_cdf = calculate_ppf(critical_fractile, best_dist, best_fit_params)
             # norm_inv = st.norm.ppf(critical_fractile)
@@ -229,53 +341,53 @@ def optimization(best_dist, best_fit_params, part_ref, price_sale, cost_buy):
     return q, stock_flag
 
 
-def weather_treatment():
-    print('Weather Data Treatment started.')
-    start = time.time()
-    df_weather = pd.read_csv('dbs/weather_data_lisbon.csv', skiprows=6, delimiter=';', usecols=['Local time in Lisbon / Portela (airport)', 'T', 'U', 'Ff', 'c'], parse_dates=['Local time in Lisbon / Portela (airport)'])
+# def weather_treatment():
+#     print('Weather Data Treatment started.')
+#     start = time.time()
+#     df_weather = pd.read_csv('dbs/weather_data_lisbon.csv', skiprows=6, delimiter=';', usecols=['Local time in Lisbon / Portela (airport)', 'T', 'U', 'Ff', 'c'], parse_dates=['Local time in Lisbon / Portela (airport)'])
+#
+#     df_weather['Ff'] = df_weather['Ff'] * 3.6
+#
+#     df_weather['T'] = df_weather['T'].fillna(method='bfill')
+#     df_weather['U'] = df_weather['U'].fillna(method='bfill')
+#
+#     # Cloud Cover isn't used atm
+#     # df_weather['c'] = df_weather['c'].fillna(method='bfill')
+#     #
+#     # unique_c = df_weather['c'].unique()
+#     # for c in unique_c:
+#     #     tokenized_c = nltk.tokenize.word_tokenize(c)
+#     #     try:
+#     #         cover_limits = tokenized_c[3]
+#     #         if 'vertical' in tokenized_c and 'visibility' in tokenized_c:
+#     #             df_weather.loc[df_weather['c'] == c, 'cloud_cover'] = 100
+#     #         else:
+#     #             # print(tokenized_c, cover_limits, int(cover_limits[:2]), int(cover_limits[3:5]), (int(cover_limits[:1]) + int(cover_limits[3:5])), (int(cover_limits[:1]) + int(cover_limits[3:5])) / 2)
+#     #             df_weather.loc[df_weather['c'] == c, 'cloud_cover'] = (int(cover_limits[:2]) + int(cover_limits[3:5])) / 2
+#     #             df_weather.loc[df_weather['c'] == c, 'c'] = tokenized_c[3]
+#     #     except (ValueError, IndexError):
+#     #         df_weather.loc[df_weather['c'] == c, 'cloud_cover'] = 100
+#
+#     df_weather.drop('c', axis=1, inplace=True)
+#
+#     # Daily Resample
+#     df_weather.index = df_weather['Local time in Lisbon / Portela (airport)']
+#     df_weather_daily = df_weather.resample('d').mean()
+#
+#     df_weather_daily.dropna(inplace=True)
+#
+#     # Weather Data categories
+#     # df_weather_daily['T'] = ['cold' if x < 15 else 'hot' if x > 25 else 'warm' for x in df_weather_daily['T']]
+#     df_weather_daily['T'] = ['hot' if x > 15 else 'cold' for x in df_weather_daily['T']]
+#     df_weather_daily['U'] = ['dry' if x < 70 else 'moist' if x > 90 else 'normal' for x in df_weather_daily['U']]
+#     df_weather_daily['Ff'] = ['windy' if x > 18 else 'not windy' for x in df_weather_daily['Ff']]
+#     # df_weather_daily['cloud_cover'] = ['clear' if x < 35 else 'very cloudy' if x > 80 else 'cloudy' for x in df_weather_daily['cloud_cover']]
+#
+#     print('Weather Data Treatment finished. Elapsed time: {:.2f}.'.format(time.time() - start))
+#     return df_weather_daily
 
-    df_weather['Ff'] = df_weather['Ff'] * 3.6
 
-    df_weather['T'] = df_weather['T'].fillna(method='bfill')
-    df_weather['U'] = df_weather['U'].fillna(method='bfill')
-
-    # Cloud Cover isn't used atm
-    # df_weather['c'] = df_weather['c'].fillna(method='bfill')
-    #
-    # unique_c = df_weather['c'].unique()
-    # for c in unique_c:
-    #     tokenized_c = nltk.tokenize.word_tokenize(c)
-    #     try:
-    #         cover_limits = tokenized_c[3]
-    #         if 'vertical' in tokenized_c and 'visibility' in tokenized_c:
-    #             df_weather.loc[df_weather['c'] == c, 'cloud_cover'] = 100
-    #         else:
-    #             # print(tokenized_c, cover_limits, int(cover_limits[:2]), int(cover_limits[3:5]), (int(cover_limits[:1]) + int(cover_limits[3:5])), (int(cover_limits[:1]) + int(cover_limits[3:5])) / 2)
-    #             df_weather.loc[df_weather['c'] == c, 'cloud_cover'] = (int(cover_limits[:2]) + int(cover_limits[3:5])) / 2
-    #             df_weather.loc[df_weather['c'] == c, 'c'] = tokenized_c[3]
-    #     except (ValueError, IndexError):
-    #         df_weather.loc[df_weather['c'] == c, 'cloud_cover'] = 100
-
-    df_weather.drop('c', axis=1, inplace=True)
-
-    # Daily Resample
-    df_weather.index = df_weather['Local time in Lisbon / Portela (airport)']
-    df_weather_daily = df_weather.resample('d').mean()
-
-    df_weather_daily.dropna(inplace=True)
-
-    # Weather Data categories
-    # df_weather_daily['T'] = ['cold' if x < 15 else 'hot' if x > 25 else 'warm' for x in df_weather_daily['T']]
-    df_weather_daily['T'] = ['hot' if x > 15 else 'cold' for x in df_weather_daily['T']]
-    df_weather_daily['U'] = ['dry' if x < 70 else 'moist' if x > 90 else 'normal' for x in df_weather_daily['U']]
-    df_weather_daily['Ff'] = ['windy' if x > 18 else 'not windy' for x in df_weather_daily['Ff']]
-    # df_weather_daily['cloud_cover'] = ['clear' if x < 35 else 'very cloudy' if x > 80 else 'cloudy' for x in df_weather_daily['cloud_cover']]
-
-    print('Weather Data Treatment finished. Elapsed time: {:.2f}.'.format(time.time() - start))
-    return df_weather_daily
-
-
-def dataset_treatment(df_weather_daily, df_sales, df_purchases, df_stock):
+def dataset_treatment(df_sales, df_purchases, df_stock):
     print('Dataset processing started.')
     start = time.time()
     dictionary_prices_cost = {}
@@ -284,11 +396,6 @@ def dataset_treatment(df_weather_daily, df_sales, df_purchases, df_stock):
         df_sales = pd.read_csv('dbs/df_sales_processed.csv', index_col=0, parse_dates=['SLR_Document_Date', 'WIP_Date_Created', 'Movement_Date'])
     except FileNotFoundError:
         df_sales = df_sales[df_sales['Qty_Sold'] != 0]
-
-        df_sales = df_sales[(df_sales['WIP_Number'] == 38381) & (df_sales['Part_Ref'] == 'BM83.19.2.158.851')]
-
-        # print(df_sales)
-
         df_sales = data_processing_negative_values(df_sales, sales_flag=1)
         df_sales.to_csv('dbs/df_sales_processed.csv')
         # df_sales['SLR_Document_Date'] = pd.to_datetime(df_sales['SLR_Document_Date'], format='%Y%m%d')
@@ -308,37 +415,69 @@ def dataset_treatment(df_weather_daily, df_sales, df_purchases, df_stock):
     df_purchases['Cost_Value_1'] = df_purchases['Cost_Value'] / df_purchases['Quantity']
 
     df_sales.drop(['PVP', 'Sale_Value', 'Gross_Margin', 'Cost_Sale'], axis=1, inplace=True)
-    df_purchases.drop(['Cost_Value'], axis=1, inplace=True)
+    # df_purchases.drop(['Cost_Value'], axis=1, inplace=True)
 
     # df_sales_grouped = df_sales.groupby(['SLR_Document_Date', 'Part_Ref'])
-    df_sales_grouped_wip = df_sales.groupby(['WIP_Date_Created', 'Part_Ref'])  # New approach, where WIP_Date_Created is used instead of the SLR_Document_Date
     df_sales_grouped_slr = df_sales.groupby(['SLR_Document_Date', 'Part_Ref'])  # Old Approach, using SLR_Document_Date
-    df_sales_grouped_mov = df_sales.groupby(['Movement_Date', 'Part_Ref'])  # Old Approach, using SLR_Document_Date
+    df_sales_grouped_wip = df_sales.groupby(['WIP_Date_Created', 'Part_Ref'])  # Old approach, where WIP_Date_Created is used instead of the SLR_Document_Date
+    df_sales_grouped_mov = df_sales.groupby(['Movement_Date', 'Part_Ref'])  # New Approach, using Movement_Date
     df_purchases_grouped = df_purchases.groupby(['Movement_Date', 'Part_Ref'])
+    df_purchases_grouped_urgent = df_purchases[df_purchases['Order_Type_DW'].isin(urgent_purchases_flags)].groupby(['Movement_Date', 'Part_Ref'])
+    df_purchases_grouped_non_urgent = df_purchases[~df_purchases['Order_Type_DW'].isin(urgent_purchases_flags)].groupby(['Movement_Date', 'Part_Ref'])
 
     df_sales['Qty_Sold_sum_wip'] = df_sales_grouped_wip['Qty_Sold'].transform('sum')
     df_sales['Qty_Sold_sum_slr'] = df_sales_grouped_slr['Qty_Sold'].transform('sum')
     df_sales['Qty_Sold_sum_mov'] = df_sales_grouped_mov['Qty_Sold'].transform('sum')
     df_purchases['Qty_Purchased_sum'] = df_purchases_grouped['Quantity'].transform('sum')
+    df_purchases['Qty_Purchased_urgent_sum'] = df_purchases_grouped_urgent['Quantity'].transform('sum')
+    df_purchases['Qty_Purchased_non_urgent_sum'] = df_purchases_grouped_non_urgent['Quantity'].transform('sum')
+    df_purchases['Cost_Purchase_avg'] = df_purchases_grouped['Cost_Value'].transform('mean')
+
+    df_purchases.drop(['Cost_Value'], axis=1, inplace=True)
+    df_purchases = purchases_na_fill(df_purchases_grouped)
+    # df_purchases[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']] = df_purchases_grouped.apply(lambda x: x[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']].fillna(method='ffill').fillna(method='bfill').fillna(0))
+
     df_sales.drop('Qty_Sold', axis=1, inplace=True)
-    df_purchases.drop('Quantity', axis=1, inplace=True)
+    df_purchases.drop(['Quantity', 'Order_Type_DW'], axis=1, inplace=True)
     # print(df.head(10))
 
     # df_sales = df_sales.join(df_weather_daily, on='SLR_Document_Date')
     # df_sales = df_sales.join(df_weather_daily, on='WIP_Date_Created')  # New approach, where WIP_Date_Created is used instead of the SLR_Document_Date
-    df_sales = df_sales.join(df_weather_daily, on='Movement_Date')
+    # df_sales = df_sales.join(df_weather_daily, on='Movement_Date')  # Weather data will be joined later
     df_sales.sort_index(inplace=True)
     df_sales.fillna(method='bfill', inplace=True)
 
     # df_sales['weekday'] = df_sales['SLR_Document_Date'].dt.dayofweek
     # df_sales['weekday'] = df_sales['WIP_Date_Created'].dt.dayofweek  # New approach, where WIP_Date_Created is used instead of the SLR_Document_Date
-    df_sales['weekday'] = df_sales['Movement_Date'].dt.dayofweek
+    # df_sales['weekday'] = df_sales['Movement_Date'].dt.dayofweek
 
     df_sales.to_csv('dbs/df_sales_cleaned.csv')
     df_purchases.to_csv('dbs/df_purchases_cleaned.csv')
 
     print('Dataset processing finished. Elapsed time: {:.2f}'.format(time.time() - start))
     return df_sales, df_purchases
+
+
+def purchases_na_fill(df_grouped):
+    start = time.time()
+
+    pool = Pool(processes=int(level_0_performance_report.pool_workers_count))
+    results = pool.map(na_group_fill, [(z[0], z[1]) for z in df_grouped])
+    pool.close()
+    df_filled = pd.concat([result for result in results if result is not None])
+
+    print('Elapsed Time: {:.2f}'.format(time.time() - start))
+    return df_filled
+
+
+def na_group_fill(args):
+    _, group = args
+
+    # df_purchases[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']] = df_purchases_grouped.apply(lambda x: x[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']].fillna(method='ffill').fillna(method='bfill').fillna(0))
+
+    group[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']] = group[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']].fillna(method='ffill').fillna(method='bfill').fillna(0)
+
+    return group
 
 
 def data_processing_negative_values(df, sales_flag=0, purchases_flag=0):
@@ -350,7 +489,7 @@ def data_processing_negative_values(df, sales_flag=0, purchases_flag=0):
     pool.close()
     gt_treated = pd.concat([result for result in results if result is not None])
 
-    print(gt_treated)
+    # print(gt_treated)
 
     print('Elapsed Time: {:.2f}'.format(time.time() - start))
     return gt_treated
@@ -388,9 +527,9 @@ def matching_negative_row_removal_2(args):
     matching_positive_rows = pd.DataFrame()
 
     if sales_flag:
-        print(group)
+        # print(group)
         negative_rows = group[group['Qty_Sold'] < 0]
-        print('negative_rows: \n{}'.format(negative_rows))
+        # print('negative_rows: \n{}'.format(negative_rows))
 
         if negative_rows.shape[0]:
             for key, row in negative_rows.iterrows():
@@ -398,7 +537,7 @@ def matching_negative_row_removal_2(args):
                 # matching_positive_row = group[(group['Movement_Date'] == row['Movement_Date']) & (group['Qty_Sold'] == row['Qty_Sold'] * -1) & (group['PVP'] == row['PVP'] * -1) & (group['Sale_Value'] == row['Sale_Value'] * -1) & (group['Cost_Sale'] == row['Cost_Sale'] * -1) & (group['Gross_Margin'] == row['Gross_Margin'] * -1)]
 
                 # matching_positive_row = group[(group['Movement_Date'] == row['Movement_Date']) & (group['Qty_Sold'] == abs(row['Qty_Sold'])) & (group['PVP'] == abs(row['PVP'])) & (group['Sale_Value'] == abs(row['Sale_Value'])) & (group['Cost_Sale'] == abs(row['Cost_Sale'])) & (group['Gross_Margin'] == abs(row['Gross_Margin']))]
-                print('matching_positive_row: \n{}'.format(matching_positive_row))
+                # print('matching_positive_row: \n{}'.format(matching_positive_row))
 
                 # if matching_positive_row.shape[0]:
                 #     if group['WIP_Number'].unique() == 28883:
@@ -408,10 +547,10 @@ def matching_negative_row_removal_2(args):
 
                 if matching_positive_row.shape[0] > 1:
                     matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row[matching_positive_row.index == matching_positive_row['Movement_Date'].idxmax()]])
-                    print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
+                    # print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
                 else:
                     matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row.head(1)])
-                    print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
+                    # print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
 
     elif purchases_flag:
         negative_rows = group[group['Quantity'] < 0]
@@ -430,7 +569,7 @@ def matching_negative_row_removal_2(args):
         # Note: Sometimes, identical negative rows with only Part_Ref different will match with the same row with positive values. This is okay as when I remove the matched rows from the
         # original group I remove by index, so double matched rows make no problem whatsoever
 
-    print(group)
+    # print(group)
     return group
 
 
@@ -449,7 +588,6 @@ def calculate_ppf(critical_fractile, dist, params, size=10000):
 
 
 def best_fit_distribution(data, bins=200, ax=None):
-
     # Distributions to check
     if not lognormal_fit:
         print('Searching for the best fit to the distribution...')
