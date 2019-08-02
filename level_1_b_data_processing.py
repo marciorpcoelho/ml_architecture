@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from imblearn.over_sampling import RandomOverSampler
 import level_0_performance_report
-from level_1_e_deployment import sql_string_preparation, time_tags
+from level_1_e_deployment import sql_string_preparation_v2, time_tags
 from level_2_optionals_baviera_options import colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, project_id
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -508,7 +508,7 @@ def constant_columns_removal(df, value=None):
                 list_after.append(column)
 
     if len(features_removed):
-        columns_string, _ = sql_string_preparation(features_removed)
+        columns_string = sql_string_preparation_v2(features_removed)
         level_0_performance_report.log_record('Removed the following constant columns: ' + str(columns_string), project_id, flag=1)
         # level_0_performance_report.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
 

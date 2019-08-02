@@ -4,12 +4,10 @@ import time
 import pandas as pd
 import numpy as np
 from multiprocessing import Pool
-pd.set_option('display.expand_frame_repr', False)
-from level_1_a_data_acquisition import sql_retrieve_df_specified_query
-import apv_sales_options as options_file
-from level_1_b_data_processing import null_analysis
+from dateutil.relativedelta import relativedelta
 import level_0_performance_report
 import warnings
+pd.set_option('display.expand_frame_repr', False)
 warnings.filterwarnings('ignore')
 
 DSN = os.getenv('DSN_MLG')
@@ -29,51 +27,178 @@ class FakeOptionsFile(object):
 
 def main():
 
-    # selected_parts = ['BM83.21.2.405.675']
-    selected_parts = ['BM83.21.2.405.675', 'BM07.12.9.952.104', 'BM07.14.9.213.164', 'BM83.19.2.158.851', 'BM64.11.9.237.555']
+    # pse_code = '0I'  # Expo
+    pse_code = '0B'  # Gaia
+    selected_parts = []
 
-    min_date = '2018-06-30'
-    max_date = '2019-05-31'
-    print('full year')
-    # min_date = '2018-12-03'
-    # max_date = '2019-04-30'
-    # print('single month')
+    if pse_code == '0I':
+        selected_parts = ['BM83.21.2.405.675', 'BM07.12.9.952.104', 'BM07.14.9.213.164', 'BM83.19.2.158.851', 'BM64.11.9.237.555']  # PSE_Code = 0I
+    if pse_code == '0B':
+        # selected_parts = ['BM51.16.7.363.919']  # Need to check this
+        # selected_parts = ['BM61.31.9.217.643']  # Need to check this
+        # selected_parts = ['BM83.21.0.406.573', 'BM83.13.9.415.965', 'BM51.18.1.813.017', 'BM11.42.8.507.683', 'BM64.11.9.237.555']  # PSE_Code = 0B
+        selected_parts = ['BM34.33.6.796.853', 'BM13.62.7.804.742', 'BM32.10.6.884.404AT', 'BM51.16.8.159.698', 'BM34.21.1.161.806', 'BM34.33.6.857.405', 'BM83.21.0.406.573', 'BM11.12.7.799.225', 'BM32.30.6.854.768', 'BM61.21.6.924.023']
+
+    # min_date = '2017-12-31'
+    # max_date = '2019-06-28'  # Why are the stock levels in 28/06 instead of  30/06 ? - Caused by Migration
+    # print('full data')
+    # min_date = '2018-07-31'
+    # max_date = '2019-05-31'
+    # print('full year')
+    min_date = '2018-01-31'
+    max_date = '2019-06-28'
+    print('single month')
 
     version = 'v13'
 
+    # weather_data_daily = weather_treatment()
+    selected_parts = part_ref_selection(pse_code, max_date)
+    # selected_parts = selected_parts[0:3]
+    selected_parts = ['BM80.14.2.454.715', 'BM80.14.2.454.716', 'BM11.61.8.575.534', 'BM80.14.2.298.174', 'BM80.28.2.411.529', 'BM72.11.7.321.413', 'BM51.12.8.408.392', 'BM80.14.2.454.605', 'BM61.34.9.350.797', 'BM61.34.9.302.183',
+                      'BM34.40.6.857.640', 'BM67.13.7.232.743', 'BM80.14.2.454.595', 'BM80.42.2.351.056', 'BM51.77.7.157.105', 'BM51.16.2.993.420', 'BM52.10.7.374.875', 'BM64.11.1.394.286', 'BM63.12.8.375.303', 'BM51.16.6.954.945',
+                      'BM83.13.0.443.029', 'BM01.40.2.969.874', 'BM51.71.8.204.894', 'BM61.31.9.225.710', 'BM51.45.6.997.929', 'BM51.75.7.125.441', 'BM41.61.8.238.461', 'BM64.12.6.939.511', 'BM51.41.8.224.595', 'BM66.53.9.291.386',
+                      'BM84.21.2.289.717', 'BM12.31.7.525.376', 'BM51.71.0.443.130', 'BM61.31.9.225.940', 'BM36.12.0.396.391', 'BM32.30.6.782.596', 'BM32.30.6.783.829', 'BM33.31.1.504.023', 'BM51.31.7.285.936', 'BM51.47.9.200.682',
+                      'BM31.11.6.796.693', 'BM36.11.6.783.631', 'BM41.00.7.203.980', 'BM51.16.7.363.919', 'BM36.11.6.772.249', 'BM18.30.3.449.081', 'BM51.45.9.123.695', 'BM83.12.2.285.678', 'BM51.13.1.934.178', 'BM07.14.6.985.596']
+
+    df_sales, df_al, df_stock, df_reg_al_clients, df_purchases = data_retrieval(pse_code)
+    stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date)
+
+
+def data_retrieval(pse_code):
+    df_stock, df_reg_al_clients, df_purchases = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+    # df_al = pd.read_excel('dbs/{}_{}.xlsx'.format(selected_part[0], pse_code), usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P'])
+    df_al = pd.read_csv('dbs/auto_line_part_ref_history_{}.csv'.format(pse_code), usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P'])
+    df_sales = pd.read_csv('dbs/df_sales_cleaned_{}.csv'.format(pse_code), parse_dates=['Movement_Date', 'WIP_Date_Created', 'SLR_Document_Date'], usecols=['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']).sort_values(by='WIP_Date_Created')
+    df_al.rename(index=str, columns={'Data Mov': 'Movement_Date', 'Refª da peça': 'Part_Ref', 'Descrição': 'Part_Desc', 'Nº de factura': 'SLR_Document_Number', 'WIP nº': 'WIP_Number', 'Sugestão nº  (Enc)': 'Encomenda', 'Conta': 'SLR_Document_Account', 'Nº auditoria stock': 'Audit_Number'}, inplace=True)
+    df_al['Movement_Date'] = pd.to_datetime(df_al['Movement_Date'], format='%d/%m/%Y')
+    df_al.sort_values(by='Movement_Date', inplace=True)
+
+    if pse_code == '0I':
+        df_purchases = pd.read_csv('dbs/df_purchases_cleaned_{}.csv'.format(pse_code), index_col=0, parse_dates=['Movement_Date']).sort_values(by='Movement_Date')
+        df_purchases.rename(index=str, columns={'Qty_Sold_sum': 'Qty_Purchased_sum'}, inplace=True)  # Will be removed next time i run the data_processement
+        df_stock = pd.read_csv('dbs/df_stock_' + str(pse_code) + '_01_07_19.csv', parse_dates=['Record_Date'], usecols=['Part_Ref', 'Quantity', 'Record_Date']).sort_values(by='Record_Date')
+        df_stock.rename(index=str, columns={'Quantity': 'Stock_Qty'}, inplace=True)
+        # df_reg = pd.read_csv('dbs/df_reg_' + str(pse_code) + '_01_07_19.csv', parse_dates=['Movement_Date'], usecols=['Movement_Date', 'Part_Ref', 'Quantity', 'SLR_Document', 'Cost_Value']).sort_values(by='Movement_Date')
+        # df_reg.rename(index=str, columns={'Quantity': 'Qty_Regulated'}, inplace=True)
+        df_reg_al_clients = pd.read_csv('dbs/df_reg_al_client_' + str(pse_code) + '_01_07_19.csv', index_col=0)
+    elif pse_code == '0B':
+        df_purchases = pd.read_csv('dbs/df_purchases_cleaned_{}.csv'.format(pse_code), index_col=0, parse_dates=['Movement_Date']).sort_values(by='Movement_Date')
+        df_purchases.rename(index=str, columns={'Qty_Sold_sum': 'Qty_Purchased_sum'}, inplace=True)  # Will be removed next time i run the data_processement
+        df_stock = pd.read_csv('dbs/df_stock_' + str(pse_code) + '_15_07_19.csv', parse_dates=['Record_Date'], usecols=['Part_Ref', 'Quantity', 'Record_Date']).sort_values(by='Record_Date')
+        df_stock.rename(index=str, columns={'Quantity': 'Stock_Qty'}, inplace=True)
+        # df_reg = pd.read_csv('dbs/df_reg_' + str(pse_code) + '_15_07_19.csv', parse_dates=['Movement_Date'], usecols=['Movement_Date', 'Part_Ref', 'Quantity', 'SLR_Document', 'Cost_Value']).sort_values(by='Movement_Date')
+        # df_reg.rename(index=str, columns={'Quantity': 'Qty_Regulated'}, inplace=True)
+        df_reg_al_clients = pd.read_csv('dbs/df_reg_al_client_' + str(pse_code) + '_15_07_19.csv', index_col=0)
+
+    return df_sales, df_al, df_stock, df_reg_al_clients, df_purchases
+
+
+def stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
+
+    df_stock.set_index('Record_Date', inplace=True)
+    df_purchases.set_index('Movement_Date', inplace=True)
+    df_al['Unit'] = df_al['Unit'] * (-1)  # Turn the values to their symmetrical so it matches the other dfs
+
+    i, parts_count = 1, len(selected_parts)
+    dataframes_list = [df_sales, df_al, df_stock, df_reg_al_clients, df_purchases]
     datetime_index = pd.date_range(start=min_date, end=max_date)
     results = pd.DataFrame()
+    positions = []
 
-    weather_data_daily = weather_treatment()
-
+    print('PSE_Code = {}'.format(pse_code))
     for part_ref in selected_parts:
-        result_part_ref = sql_data([part_ref], min_date, max_date, weather_data_daily)
+        start = time.time()
+        result_part_ref, stock_evolution_correct_flag, offset = sql_data([part_ref], pse_code, min_date, max_date, dataframes_list)
+        # result_part_ref.to_csv('output/results_merge_MN51712285495_first_step_{}.csv'.format(pse_code))
 
-        result_part_ref = result_part_ref.reindex(datetime_index).reset_index().rename(columns={'Unnamed: 0': 'Movement_Date'})
-        ffill_cols = ['Part_Ref', 'Stock_Qty', 'Stock_Qty_al', 'Stock_Qty_mov', 'Sales Evolution_al', 'Sales Evolution_mov', 'Purchases Evolution', 'Regulated Evolution', 'Purchases Urgent Evolution', 'Purchases Non Urgent Evolution', 'T', 'U', 'Ff', 'Cost_Sale_avg', 'PVP_avg']
-        zero_fill_cols = ['Qty_Purchased_sum', 'Qty_Regulated_sum', 'Qty_Sold_sum_mov', 'Qty_Sold_sum_al', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg', 'Cost_Reg_avg']
+        if result_part_ref.shape[0]:
+            print(part_ref)
+            print(result_part_ref)
+            result_part_ref = result_part_ref.reindex(datetime_index).reset_index().rename(columns={'Unnamed: 0': 'Movement_Date'})
+            # result_part_ref.to_csv('output/results_merge_MN51712285495_second_step_{}.csv'.format(pse_code))
 
-        [result_part_ref[x].fillna(0, inplace=True) for x in zero_fill_cols]
-        [result_part_ref[x].fillna(method='ffill', inplace=True) for x in ffill_cols]
-        result_part_ref['weekday'] = result_part_ref['index'].dt.dayofweek
-        result_part_ref['weekofyear'] = result_part_ref['index'].dt.weekofyear  # Careful with the end of year dates and respective weeks
-        result_part_ref['year'] = result_part_ref['index'].dt.year
-        result_part_ref['unique_weeks'] = result_part_ref['year'].apply(str) + '_' + result_part_ref['weekofyear'].apply(str)
-        # End of year handling:
-        result_part_ref.loc[result_part_ref['index'] == '2018-12-31', 'unique_weeks'] = '2019_1'
+            # ffill_cols = ['Part_Ref', 'Stock_Qty', 'Stock_Qty_al', 'Sales Evolution_al', 'Purchases Evolution', 'Regulated Evolution', 'Purchases Urgent Evolution', 'Purchases Non Urgent Evolution', 'Cost_Sale_avg', 'PVP_avg', 'Stock_Evolution_Correct_Flag', 'Stock_Evolution_Offset']
+            # zero_fill_cols = ['Qty_Purchased_sum', 'Qty_Regulated_sum', 'Qty_Sold_sum_al', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg', 'Cost_Reg_avg']
+            ffill_and_zero_fill_cols = ['Stock_Qty_al', 'Sales Evolution_al', 'Purchases Evolution', 'Regulated Evolution', 'Purchases Urgent Evolution', 'Purchases Non Urgent Evolution']
+            zero_fill_cols = ['Qty_Purchased_sum', 'Qty_Regulated_sum', 'Qty_Sold_sum_al', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg', 'Cost_Reg_avg', 'Cost_Sale_avg', 'PVP_avg']
+            ffill_and_bfill_cols = ['Part_Ref', 'Stock_Qty']
 
-        # Just so the variation matches with rest: positive regularization means an increase in stock, while negative is a decrease; Equivalent for cost;
-        result_part_ref['Qty_Regulated_sum'] = result_part_ref['Qty_Regulated_sum'] * (-1)
-        result_part_ref['Cost_Reg_avg'] = result_part_ref['Cost_Reg_avg'] * (-1)
+            [result_part_ref[x].fillna(method='ffill', inplace=True) for x in ffill_and_zero_fill_cols + ffill_and_bfill_cols]
+            [result_part_ref[x].fillna(0, inplace=True) for x in zero_fill_cols + ffill_and_zero_fill_cols]
+            [result_part_ref[x].fillna(method='bfill', inplace=True) for x in ffill_and_bfill_cols]
 
-        result_part_ref = cost_calculation_function(result_part_ref, part_ref, min_date, max_date, version)
+            if result_part_ref[result_part_ref['Part_Ref'].isnull()].shape[0]:
+                print('null values found for part_ref: \n{}'.format(part_ref))
+                print('Number of null rows: {}'.format(result_part_ref[result_part_ref['Part_Ref'].isnull()].shape))
+                # print(result_part_ref.head())
+                # print(result_part_ref.tail())
+                # print(result_part_ref[result_part_ref['Part_Ref'].isnull()])
 
-        results = results.append(result_part_ref)
+            result_part_ref.loc[:, 'Stock_Evolution_Correct_Flag'] = stock_evolution_correct_flag
+            result_part_ref.loc[:, 'Stock_Evolution_Offset'] = offset
 
-    results.to_csv('output/results_merge.csv')
+            # result_part_ref['weekday'] = result_part_ref['index'].dt.dayofweek
+            # result_part_ref['weekofyear'] = result_part_ref['index'].dt.weekofyear  # Careful with the end of year dates and respective weeks
+            # result_part_ref['year'] = result_part_ref['index'].dt.year
+            # result_part_ref['unique_weeks'] = result_part_ref['year'].apply(str) + '_' + result_part_ref['weekofyear'].apply(str)
+            # End of year handling:
+            # result_part_ref.loc[result_part_ref['index'] == '2018-12-31', 'unique_weeks'] = '2019_1'
+
+            # Just so the variation matches with the rest: positive regularization means an increase in stock, while negative is a decrease; Equivalent for cost;
+            result_part_ref['Qty_Regulated_sum'] = result_part_ref['Qty_Regulated_sum'] * (-1)
+            result_part_ref['Cost_Reg_avg'] = result_part_ref['Cost_Reg_avg'] * (-1)
+
+            # result_part_ref = cost_calculation_function(result_part_ref, part_ref, min_date, max_date, version)
+            # print(result_part_ref)
+            results = results.append(result_part_ref)
+            print('Elapsed time: {:.2f}.'.format(time.time() - start))
+
+        position = int((i / parts_count) * 100)
+        if not position % 1:
+            if position not in positions:
+                print('{}% completed'.format(position))
+                positions.append(position)
+
+        i += 1
+    # print(results)
+    # results.to_csv('output/results_merge_{}.csv'.format(pse_code))
+    return results
+
+
+def part_ref_selection(pse_code, current_date):
+    print('Selection of Part Reference')
+
+    df_al = pd.read_csv('dbs/auto_line_part_ref_history_{}.csv'.format(pse_code), index_col=0)
+    df_al.rename(index=str, columns={'Data Mov': 'Movement_Date', 'Refª da peça': 'Part_Ref', 'Descrição': 'Part_Desc', 'Nº de factura': 'SLR_Document_Number', 'WIP nº': 'WIP_Number', 'Sugestão nº  (Enc)': 'Encomenda', 'Conta': 'SLR_Document_Account', 'Nº auditoria stock': 'Audit_Number'}, inplace=True)
+    df_al['Movement_Date'] = pd.to_datetime(df_al['Movement_Date'], format='%d/%m/%Y')
+    df_al.sort_values(by='Movement_Date', inplace=True)
+
+    last_year_date = pd.to_datetime(current_date) - relativedelta(years=1)
+
+    df_al_filtered = df_al[(df_al['Movement_Date'] > last_year_date) & (df_al['Movement_Date'] <= current_date)]
+
+    all_unique_part_refs = df_al_filtered['Part_Ref'].unique()
+
+    all_unique_part_refs_bm = [x for x in all_unique_part_refs if x.startswith('BM')]
+    all_unique_part_refs_mn = [x for x in all_unique_part_refs if x.startswith('MN')]
+
+    all_unique_part_refs = all_unique_part_refs_bm + all_unique_part_refs_mn
+
+    all_unique_part_refs_at = [x for x in all_unique_part_refs if x.endswith('AT')]
+
+    all_unique_part_refs = [x for x in all_unique_part_refs if x not in all_unique_part_refs_at]
+
+    [print('{} has a weird size!'.format(x)) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
+
+    print('{} unique part_refs sold between {} and {}.'.format(len(all_unique_part_refs), last_year_date.date(), current_date))
+
+    return all_unique_part_refs
 
 
 def cost_calculation_function(results_merge, part_ref, min_date, max_date, version):
+    ### Note: I changed the way Cost_Sale_avg and PVP_avg are filled from ffill to fillna(0). If this function does not work or provide erroneous results, consider this change - 30/07/19
+
     emergency_cost = 5
     emergency_cost_per_purchase = 1
     emergency_cost_per_part = 0
@@ -188,6 +313,9 @@ def cost_calculation_function(results_merge, part_ref, min_date, max_date, versi
     if hot_start:
         # Hot Start Cost Correction
         # Stock > Stock Level
+        sel_results_merge['seo_stock_week_min_cost_backup'] = sel_results_merge['seo_stock_week_min_cost']
+        sel_results_merge['seo_stock_week_max_cost_backup'] = sel_results_merge['seo_stock_week_max_cost']
+        sel_results_merge['seo_stock_week_avg_cost_backup'] = sel_results_merge['seo_stock_week_avg_cost']
         sel_results_merge.loc[sel_results_merge['stock_evolution_only_sales'] > sel_results_merge['seo_week_min'], 'seo_stock_week_min_cost'] = 0
         sel_results_merge.loc[sel_results_merge['stock_evolution_only_sales'] > sel_results_merge['seo_week_max'], 'seo_stock_week_avg_cost'] = 0
         sel_results_merge.loc[sel_results_merge['stock_evolution_only_sales'] > sel_results_merge['seo_week_avg'], 'seo_stock_week_max_cost'] = 0
@@ -276,7 +404,7 @@ def cost_calculation_function(results_merge, part_ref, min_date, max_date, versi
 
 
 def weather_treatment():
-    print('Weather Data Treatment started.')
+    print('Weather Data Treatment started...')
     start = time.time()
     df_weather = pd.read_csv('dbs/weather_data_lisbon.csv', skiprows=6, delimiter=';', usecols=['Local time in Lisbon / Portela (airport)', 'T', 'U', 'Ff', 'c'], parse_dates=['Local time in Lisbon / Portela (airport)'])
 
@@ -321,140 +449,49 @@ def weather_treatment():
     return df_weather_daily
 
 
-def sql_data(selected_part, min_date, max_date, weather_data_daily):
-    wip_date = 0
-    slr_date = 0
-    mov_date = 1
+def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
 
-    print('Selected Part: {}'.format(selected_part))
+    df_sales, df_al, df_stock, df_reg_al_clients, df_purchases = dataframes_list[0], dataframes_list[1], dataframes_list[2], dataframes_list[3], dataframes_list[4]
+    result, stock_evolution_correct_flag, offset = pd.DataFrame(), 0, 0
 
-    df_sales = pd.read_csv('dbs/df_sales_cleaned.csv', parse_dates=['Movement_Date', 'WIP_Date_Created', 'SLR_Document_Date'], usecols=['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']).sort_values(by='WIP_Date_Created')
-    df_al = pd.read_excel('dbs/{}.xlsx'.format(selected_part[0]), usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P'])
-    df_al.rename(index=str, columns={'Data Mov': 'Movement_Date', 'Refª da peça': 'Part_Ref', 'Descrição': 'Part_Desc', 'Nº de factura': 'SLR_Document_Number', 'WIP nº': 'WIP_Number', 'Sugestão nº  (Enc)': 'Encomenda', 'Conta': 'SLR_Document_Account', 'Nº auditoria stock': 'Audit_Number'}, inplace=True)
-    df_al['Movement_Date'] = pd.to_datetime(df_al['Movement_Date'], format='%d/%m/%Y')
-    df_al.sort_values(by='Movement_Date', inplace=True)
+    df_sales_filtered = df_sales[(df_sales['Part_Ref'].isin(selected_part)) & (df_sales['Movement_Date'] > min_date) & (df_sales['Movement_Date'] <= max_date)]
+    df_al_filtered = df_al[(df_al['Part_Ref'].isin(selected_part)) & (df_al['Movement_Date'] > min_date) & (df_al['Movement_Date'] <= max_date)]
+    df_purchases_filtered = df_purchases[(df_purchases['Part_Ref'].isin(selected_part)) & (df_purchases.index > min_date) & (df_purchases.index <= max_date)]
+    df_stock_filtered = df_stock[(df_stock['Part_Ref'].isin(selected_part)) & (df_stock.index >= min_date) & (df_stock.index <= max_date)]
 
-    df_purchases = pd.read_csv('dbs/df_purchases_cleaned.csv', index_col=0, parse_dates=['Movement_Date']).sort_values(by='Movement_Date')
-    df_purchases.rename(index=str, columns={'Qty_Sold_sum': 'Qty_Purchased_sum'}, inplace=True)  # Will be removed next time i run the data_processement
-    df_stock = pd.read_csv('dbs/df_stock_01_07_19.csv', parse_dates=['Record_Date'], usecols=['Part_Ref', 'Quantity', 'Record_Date']).sort_values(by='Record_Date')
-    df_stock.rename(index=str, columns={'Quantity': 'Stock_Qty'}, inplace=True)
-    df_reg = pd.read_csv('dbs/df_reg_01_07_19.csv', parse_dates=['Movement_Date'], usecols=['Movement_Date', 'Part_Ref', 'Quantity', 'SLR_Document', 'Cost_Value']).sort_values(by='Movement_Date')
-    df_reg.rename(index=str, columns={'Quantity': 'Qty_Regulated'}, inplace=True)
-    df_reg_al_clients = pd.read_csv('dbs/df_reg_al_client_03_06_19.csv', index_col=0)
+    df_al_filtered = auto_line_dataset_cleaning(df_sales_filtered, df_al_filtered, df_purchases_filtered, df_reg_al_clients, pse_code)
 
-    # WIP Date
-    # if wip_date:
-    #     print('Using WIP_Date_Created')
-    #     df_sales_filtered = df_sales[df_sales['Part_Ref'].isin(selected_part)]
-    #     df_sales_filtered = df_sales_filtered.drop_duplicates(subset=['WIP_Date_Created', 'Part_Ref']).sort_values(by='WIP_Date_Created')
-    #
-    #     df_purchases_filtered = df_purchases[df_purchases['Part_Ref'].isin(selected_part)]
-    #     # df_purchases_filtered['Purchases_Flag'] = 1
-    #     df_stock_filtered = df_stock[df_stock['Part_Ref'].isin(selected_part)]
-    #     # df_stock_filtered['Stock_Flag'] = 1
-    #
-    #     # dfs_filtered = [df_sales_filtered, df_purchases_filtered, df_stock_filtered]
-    #
-    #     df_stock_filtered.set_index('Record_Date', inplace=True)
-    #     df_purchases_filtered.set_index('Movement_Date', inplace=True)
-    #     df_sales_filtered.set_index('WIP_Date_Created', inplace=True)
-    #
-    #     print(df_stock_filtered[(df_stock_filtered.index >= min_date) & (df_stock_filtered.index <= max_date)])
-    #     print(df_purchases_filtered[(df_purchases_filtered.index >= min_date) & (df_purchases_filtered.index <= max_date)])
-    #     print(df_sales_filtered[(df_stock_filtered.index > min_date) & (df_sales_filtered.index <= max_date)])
-    #
-    #     sys.exit()
-    #
-    #     result = pd.concat([df_stock_filtered[['Part_Ref', 'Stock_Qty']], df_purchases_filtered[['Qty_Purchased_sum']], df_sales_filtered['Qty_Sold_sum_wip']], axis=1, sort=False)
-    #
-    #     # result_2 = pd.concat([result, df_sales_filtered['Qty_Sold_sum']], axis=1, sort=False)
-    #
-    #     print('Qty_Sold_sum_WIP: {}'.format(result[(result.index >= '2019-03-31') & (result.index <= '2019-04-30')]['Qty_Sold_sum_wip'].sum()))
-    #
-    #     print(result[(result.index >= '2019-03-31') & (result.index <= '2019-04-30')])
+    df_sales_filtered = df_sales_filtered.drop_duplicates(subset=['Movement_Date', 'Part_Ref']).sort_values(by='Movement_Date')
+    df_sales_filtered.set_index('Movement_Date', inplace=True)
 
-    # SLR Date
-    # if slr_date:
-    #     print('Using SLR_Document_Date:')
-    #     df_sales_filtered = df_sales[df_sales['Part_Ref'].isin(selected_parts)]
-    #     df_sales_filtered = df_sales_filtered.drop_duplicates(subset=['SLR_Document_Date', 'Part_Ref']).sort_values(by='SLR_Document_Date')
-    #
-    #     df_purchases_filtered = df_purchases[df_purchases['Part_Ref'].isin(selected_parts)]
-    #     # df_purchases_filtered['Purchases_Flag'] = 1
-    #     df_stock_filtered = df_stock[df_stock['Part_Ref'].isin(selected_parts)]
-    #     # df_stock_filtered['Stock_Flag'] = 1
-    #     df_reg_filtered = df_reg[df_reg['Part_Ref'].isin(selected_parts)]
-    #
-    #     # dfs_filtered = [df_sales_filtered, df_purchases_filtered, df_stock_filtered]
-    #
-    #     df_stock_filtered.set_index('Record_Date', inplace=True)
-    #     df_purchases_filtered.set_index('Movement_Date', inplace=True)
-    #     df_sales_filtered.set_index('SLR_Document_Date', inplace=True)
-    #     df_reg_filtered.set_index('Movement_Date', inplace=True)
-    #
-    #     print(df_stock_filtered[(df_stock_filtered.index >= min_date) & (df_stock_filtered.index <= max_date)])
-    #     print(df_purchases_filtered[(df_purchases_filtered.index >= min_date) & (df_purchases_filtered.index <= max_date)])
-    #     print(df_sales_filtered[(df_sales_filtered.index > min_date) & (df_sales_filtered.index <= max_date)])
-    #     print(df_reg_filtered[(df_reg_filtered.index > min_date) & (df_reg_filtered.index <= max_date)])
-    #
-    #     qty_sold = df_sales_filtered[(df_sales_filtered.index > '2019-01-31') & (df_sales_filtered.index <= '2019-02-28')]['Qty_Sold_sum_slr'].sum()
-    #     qty_purchased = df_purchases_filtered[(df_purchases_filtered.index > min_date) & (df_purchases_filtered.index <= max_date)]['Qty_Purchased_sum'].sum()
-    #     stock_start = df_stock_filtered[df_stock_filtered.index == min_date]['Stock_Qty'].values[0]
-    #     stock_end = df_stock_filtered[df_stock_filtered.index == max_date]['Stock_Qty'].values[0]
-    #     reg_value = df_reg_filtered[(df_reg_filtered.index > min_date) & (df_reg_filtered.index <= max_date)]['Quantity'].sum()
-    #
-    #     if not reg_value:
-    #         reg_value = 0
-    #
-    #     # print('Here: Qty_Sold_sum: {}'.format(df_sales_filtered[(df_sales_filtered.index > '2019-01-31') & (df_sales_filtered.index <= '2019-02-28')]['Qty_Sold_sum_slr'].sum()))
-    #     print('\nStock at Start: {} \nSum Purchases: {} \nSum Sales: {} \nSum Regularizations: {} \nStock at End: {}'.format(stock_start, qty_purchased, qty_sold, reg_value, stock_end))
-    #     result = stock_start + qty_purchased - qty_sold + reg_value
-    #     if result != stock_end:
-    #         print('\nValues dont match!')
-    #         print('Stock has an offset of {}'.format(stock_end - result))
-    #     else:
-    #         print('\nValues are correct :D')
-    #     sys.exit()
-    #
-    #     result = pd.concat([df_stock_filtered[['Part_Ref', 'Stock_Qty']], df_purchases_filtered[['Qty_Purchased_sum']], df_sales_filtered['Qty_Sold_sum_slr']], axis=1, sort=False)
-    #
-    #     # result_2 = pd.concat([result, df_sales_filtered['Qty_Sold_sum']], axis=1, sort=False)
-    #
-    #     print('Qty_Sold_sum_SLR: {}'.format(result[(result.index > '2019-03-31') & (result.index <= '2019-04-30')]['Qty_Sold_sum_slr'].sum()))
-    #
-    #     print(result[(result.index >= '2019-03-31') & (result.index <= '2019-04-30')])
+    if not df_al_filtered.shape[0]:
+        # raise ValueError('No data found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
+        # print('\nNo data found for part_ref {} and/or selected period {}/{}.\n'.format(selected_part[0], min_date, max_date))
+        no_data_flag = 1
+        return pd.DataFrame(), stock_evolution_correct_flag, offset
+    elif df_al_filtered.shape[0] == 1:
+        # raise ValueError('Only 1 row found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
+        # print('\nOnly 1 row found for part_ref {} and/or selected period {}/{}. Ignored.\n'.format(selected_part[0], min_date, max_date))
+        one_row_only_flag = 1
+        return pd.DataFrame(), stock_evolution_correct_flag, offset
 
-    # Movement_Date
-    if mov_date:
-        print('Using Movement_Date:')
-        df_sales_filtered = df_sales[(df_sales['Part_Ref'].isin(selected_part)) & (df_sales['Movement_Date'] > min_date) & (df_sales['Movement_Date'] <= max_date)]
+    df_al_filtered['Qty_Sold_sum_al'], df_al_filtered['Cost_Sale_avg'], df_al_filtered['PVP_avg'] = 0, 0, 0  # Placeholder for cases without sales
+    df_al_grouped = df_al_filtered[df_al_filtered['regularization_flag'] == 0].groupby(['Movement_Date', 'Part_Ref'])
+    for key, row in df_al_grouped:
+        rows_selection = (df_al_filtered['Movement_Date'] == key[0]) & (df_al_filtered['Part_Ref'] == key[1])
+        df_al_filtered.loc[rows_selection, 'Qty_Sold_sum_al'] = row['Unit'].sum()
+        df_al_filtered.loc[rows_selection, 'Cost_Sale_avg'] = row['Preço de custo'].mean()
+        df_al_filtered.loc[rows_selection, 'PVP_avg'] = row['P. V. P'].mean()
 
-        df_al['Unit'] = df_al['Unit'] * (-1)  # Turn the values to their symmetrical so it matches the other dfs
-        df_al_filtered = df_al[(df_al['Part_Ref'].isin(selected_part)) & (df_al['Movement_Date'] > min_date) & (df_al['Movement_Date'] <= max_date)]
+    df_al_filtered['Qty_Regulated_sum'], df_al_filtered['Cost_Reg_avg'] = 0, 0  # Placeholder for cases without regularizations
+    df_al_grouped_reg_flag = df_al_filtered[df_al_filtered['regularization_flag'] == 1].groupby(['Movement_Date', 'Part_Ref'])
+    for key, row in df_al_grouped_reg_flag:
+        rows_selection = (df_al_filtered['Movement_Date'] == key[0]) & (df_al_filtered['Part_Ref'] == key[1])
+        df_al_filtered.loc[rows_selection, 'Qty_Regulated_sum'] = row['Unit'].sum()
+        df_al_filtered.loc[rows_selection, 'Cost_Reg_avg'] = row['Cost_Reg'].sum()
 
-        df_stock.set_index('Record_Date', inplace=True)
-        df_purchases.set_index('Movement_Date', inplace=True)
-        df_reg.set_index('Movement_Date', inplace=True)
-
-        df_purchases_filtered = df_purchases[(df_purchases['Part_Ref'].isin(selected_part)) & (df_purchases.index > min_date) & (df_purchases.index <= max_date)]
-        df_stock_filtered = df_stock[(df_stock['Part_Ref'].isin(selected_part)) & (df_stock.index >= min_date) & (df_stock.index <= max_date)]
-        df_reg_filtered = df_reg[(df_reg['Part_Ref'].isin(selected_part)) & (df_reg.index > min_date) & (df_reg.index <= max_date)]
-
-        df_al_filtered = auto_line_dataset_cleaning(df_sales_filtered, df_al_filtered, df_purchases_filtered, df_reg_al_clients)
-
-        df_sales_filtered = df_sales_filtered.drop_duplicates(subset=['Movement_Date', 'Part_Ref']).sort_values(by='Movement_Date')
-        df_sales_filtered.set_index('Movement_Date', inplace=True)
-
-        df_al_grouped = df_al_filtered.groupby(['Movement_Date', 'Part_Ref'])
-        df_al_filtered['Qty_Sold_sum_al'] = df_al_grouped['Unit'].transform('sum')
-        df_al_filtered['Cost_Sale_avg'] = df_al_grouped['Preço de custo'].transform('mean')
-        df_al_filtered['PVP_avg'] = df_al_grouped['P. V. P'].transform('mean')
-        df_al_filtered.drop(['Unit', 'Preço de custo', 'P. V. P'], axis=1, inplace=True)
-
-        df_reg_grouped = df_reg_filtered.groupby(df_reg_filtered.index)
-        df_reg_filtered['Qty_Regulated_sum'] = df_reg_grouped['Qty_Regulated'].transform('sum')
-        df_reg_filtered['Cost_Reg_avg'] = df_reg_grouped['Cost_Value'].transform('mean')
-        df_reg_filtered = df_reg_filtered.loc[~df_reg_filtered.index.duplicated(keep='first')]
+    if df_al_filtered['Qty_Sold_sum_al'].sum() != 0 and df_al_filtered[df_al_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:
+        df_al_filtered.drop(['Unit', 'Preço de custo', 'P. V. P', 'regularization_flag'], axis=1, inplace=True)
 
         df_al_filtered = df_al_filtered.drop_duplicates(subset=['Movement_Date'])
         df_al_filtered.set_index('Movement_Date', inplace=True)
@@ -473,16 +510,30 @@ def sql_data(selected_part, min_date, max_date, weather_data_daily):
         except IndexError:
             stock_end = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
 
-        reg_value = df_reg_filtered['Qty_Regulated_sum'].sum()
-        delta_stock = stock_end - stock_start
+        reg_value = df_al_filtered['Qty_Regulated_sum'].sum()
+        # delta_stock = stock_end - stock_start
 
         if not reg_value:
             reg_value = 0
 
-        result = pd.concat([df_stock_filtered.head(1), df_purchases_filtered[['Qty_Purchased_sum', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg']], df_reg_filtered[['Qty_Regulated_sum', 'Cost_Reg_avg']], df_sales_filtered['Qty_Sold_sum_mov'], df_al_filtered[['Qty_Sold_sum_al', 'Cost_Sale_avg', 'PVP_avg']]], axis=1, sort=False)
+        # test_dfs = [df_stock_filtered['Stock_Qty'].head(1), df_purchases_filtered[['Qty_Purchased_sum', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg']], df_al_filtered[['Qty_Regulated_sum', 'Cost_Reg_avg', 'Qty_Sold_sum_al', 'Cost_Sale_avg', 'PVP_avg']]]
+        # for df in test_dfs:
+        #     print(df.head())
+        #     print(df.tail())
 
-        print('\nStock at Start: {} \nSum Purchases: {} \nSum Sales SQL: {} \nSum Sales AutoLine: {} \nSum Regularizations: {} \nStock at End: {} \nStock Variance: {}'.format(stock_start, qty_purchased, qty_sold_mov, qty_sold_al, reg_value, stock_end, delta_stock))
-        result_mov = stock_start + qty_purchased - qty_sold_mov - reg_value
+        # result = pd.concat([df_stock_filtered.head(1), df_purchases_filtered[['Qty_Purchased_sum', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg']], df_sales_filtered['Qty_Sold_sum_mov'], df_al_filtered[['Qty_Regulated_sum', 'Cost_Reg_avg', 'Qty_Sold_sum_al', 'Cost_Sale_avg', 'PVP_avg']]], axis=1, sort=False)
+        # if not df_stock_filtered.shape[0]:
+        #     df_stock_filtered['Part_Ref'] = selected_part
+
+        result = pd.concat([df_purchases_filtered[['Qty_Purchased_sum', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg']], df_al_filtered[['Qty_Regulated_sum', 'Cost_Reg_avg', 'Qty_Sold_sum_al', 'Cost_Sale_avg', 'PVP_avg']]], axis=1, sort=False)
+        result['Part_Ref'] = selected_part * result.shape[0]
+        try:
+            result['Stock_Qty'] = df_stock_filtered['Stock_Qty'].head(1).values[0]
+        except IndexError:
+            result['Stock_Qty'] = 0  # Cases when there is no stock information
+
+        # print('\nStock at Start: {} \nSum Purchases: {} \nSum Sales SQL: {} \nSum Sales AutoLine: {} \nSum Regularizations: {} \nStock at End: {} \nStock Variance: {}'.format(stock_start, qty_purchased, qty_sold_mov, qty_sold_al, reg_value, stock_end, delta_stock))
+        # result_mov = stock_start + qty_purchased - qty_sold_mov - reg_value
         result_al = stock_start + qty_purchased - qty_sold_al - reg_value
 
         # if result_mov != stock_end:
@@ -491,53 +542,67 @@ def sql_data(selected_part, min_date, max_date, weather_data_daily):
         #     print('\nValues for SQL are correct :D')
 
         if result_al != stock_end:
-            print('\nValues dont match for AutoLine values - Stock has an offset of {:.2f}'.format(stock_end - result_al))
+            offset = stock_end - result_al
+            # print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
         else:
-            print('\nValues for AutoLine are correct :D \n')
+            # print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
+            stock_evolution_correct_flag = 1
 
         result['Stock_Qty'].fillna(method='ffill', inplace=True)
         result['Part_Ref'].fillna(method='ffill', inplace=True)
         result.fillna(0, inplace=True)
 
         result['Sales Evolution_al'] = result['Qty_Sold_sum_al'].cumsum()
-        result['Sales Evolution_mov'] = result['Qty_Sold_sum_mov'].cumsum()
+        # result['Sales Evolution_mov'] = result['Qty_Sold_sum_mov'].cumsum()
         result['Purchases Evolution'] = result['Qty_Purchased_sum'].cumsum()
         result['Purchases Urgent Evolution'] = result['Qty_Purchased_urgent_sum'].cumsum()
         result['Purchases Non Urgent Evolution'] = result['Qty_Purchased_non_urgent_sum'].cumsum()
         result['Regulated Evolution'] = result['Qty_Regulated_sum'].cumsum()
         result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
-        result['Stock_Qty_mov'] = result['Stock_Qty'] - result['Sales Evolution_mov'] + result['Purchases Evolution'] - result['Regulated Evolution']
+        # result['Stock_Qty_mov'] = result['Stock_Qty'] - result['Sales Evolution_mov'] + result['Purchases Evolution'] - result['Regulated Evolution']
         result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
 
-        result = result.join(weather_data_daily)
+        # print(result[result.index <= '2018-01-31'][['Stock_Qty', 'Qty_Purchased_sum', 'Qty_Regulated_sum', 'Qty_Sold_sum_al', 'Stock_Qty_al']])
+        # sys.exit()
+        # print(df_stock_filtered)
+        # print(result[result.index.isin(df_stock_filtered.index)]['Stock_Qty_al'])
 
-        result.to_csv('output/{}_stock_evolution.csv'.format(selected_part[0]))
+        # result = result.join(weather_data_daily)  ### Note: Right now, no weather data is needed.
 
-        return result
+        # print(result.shape)
+        # print(result.head())
+        # result.to_csv('output/{}_stock_evolution.csv'.format(selected_part[0]))
+
+    return result, stock_evolution_correct_flag, offset
 
 
-def auto_line_dataset_cleaning(df_sales, df_al, df_purchases, df_reg_al_clients):
-    start = time.time()
-    print('AutoLine and PSE_Sales Lines comparison started')
+def auto_line_dataset_cleaning(df_sales, df_al, df_purchases, df_reg_al_clients, pse_code):
+    # print('AutoLine and PSE_Sales Lines comparison started...')
+
+    # ToDo Martelanço
+    if pse_code == '0B' and df_purchases['Part_Ref'].unique() == 'BM83.21.0.406.573':
+        if '2019-02-05' in df_purchases.index:
+            df_purchases.drop(df_purchases[df_purchases['PLR_Document'] == 0].index, inplace=True)
 
     purchases_unique_plr = df_purchases['PLR_Document'].unique().tolist()
     reg_unique_slr = df_reg_al_clients['SLR_Account'].unique().tolist() + ['@Check']
 
     duplicated_rows = df_al[df_al.duplicated(subset='Encomenda', keep=False)]
-    # print('duplicated_rows: \n{}'.format(duplicated_rows))
     if duplicated_rows.shape[0]:
         duplicated_rows_grouped = duplicated_rows.groupby(['Movement_Date', 'Part_Ref', 'WIP_Number'])
 
         df_al = df_al.drop(duplicated_rows.index, axis=0)
 
         pool = Pool(processes=int(level_0_performance_report.pool_workers_count))
-        results = pool.map(sales_cleaning, [(key, group, df_sales) for (key, group) in duplicated_rows_grouped])
+        results = pool.map(sales_cleaning, [(key, group, df_sales, pse_code) for (key, group) in duplicated_rows_grouped])
         pool.close()
         df_al_merged = pd.concat([df_al, pd.concat([result for result in results if result is not None])], axis=0)
 
-        df_al_cleaned = purchases_reg_cleaning(df_al_merged, purchases_unique_plr, reg_unique_slr)
+        # ToDo Martelanço
+        if pse_code == '0B':
+            df_al_merged.loc[(df_al_merged['Part_Ref'] == 'BM11.42.8.507.683') & (df_al_merged['Movement_Date'] == '2018-12-04') & (df_al_merged['WIP_Number'] == 41765) & (df_al_merged['Unit'] == 0) & (df_al_merged['SLR_Document_Account'] == 'd077612'), 'Unit'] = -1
 
-        print('AutoLine and PSE_Sales Lines comparison ended. Elapsed time: {:.2f}'.format(time.time() - start))
+        df_al_cleaned = purchases_reg_cleaning(df_al_merged, purchases_unique_plr, reg_unique_slr)
     else:
         df_al_cleaned = purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr)
 
@@ -550,59 +615,67 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
     if matched_rows_purchases.shape[0]:
         df_al = df_al.drop(matched_rows_purchases.index, axis=0)
 
-    matched_rows_reg = df_al[df_al['SLR_Document_Account'].isin(reg_unique_slr)]
-    if matched_rows_reg.shape[0]:
-        df_al = df_al.drop(matched_rows_reg.index, axis=0)
+    matched_rows_reg = df_al[df_al['SLR_Document_Account'].isin(reg_unique_slr)].index
+
+    df_al['regularization_flag'] = 0
+    df_al.loc[df_al.index.isin(matched_rows_reg), 'regularization_flag'] = 1
+    df_al.loc[df_al['regularization_flag'] == 1, 'Cost_Reg'] = df_al['Unit'] * df_al['Preço de custo']
 
     return df_al
 
 
 def sales_cleaning(args):
-    key, group, df_sales = args
+    key, group, df_sales, pse_code = args
     group_size = group.shape[0]
 
     # print('initial group: \n', group)
+
+    # if group['WIP_Number'].unique() == 23468:
+    #     print('initial group: \n', group)
     # Note: There might not be a match!
     if group_size > 1 and group['Audit_Number'].nunique() < group_size:
         # print(group)
 
-        # if group['WIP_Number'].unique() == 63960:
+        # if group['WIP_Number'].unique() == 23468:
         #     print('group to clean: \n', group)
 
         matching_sales = df_sales[(df_sales['Movement_Date'] == key[0]) & (df_sales['Part_Ref'] == key[1]) & (df_sales['WIP_Number'] == key[2])]
 
-        # if group['WIP_Number'].unique() == 63960:
+        # if group['WIP_Number'].unique() == 23468:
         #     print('matched sales: \n', matching_sales)
 
         number_matched_lines, group_size = matching_sales.shape[0], group.shape[0]
-        if 0 < number_matched_lines < group_size:
+        if 0 < number_matched_lines <= group_size:
 
-            # if group['WIP_Number'].unique() == 63960:
-                # print('matched lines under group size')
+            # if group['WIP_Number'].unique() == 23468:
+            #     print('matched lines under group size')
 
             group = group[group['SLR_Document_Number'].isin(matching_sales['SLR_Document'].unique())]
 
-            # if group['WIP_Number'].unique() == 63960:
+            # if group['WIP_Number'].unique() == 23468:
             #     print('group after cleaning by sales: \n', group)
 
-        elif number_matched_lines > 0 and number_matched_lines == group_size:
+        # elif number_matched_lines > 0 and number_matched_lines == group_size:
             # print('matched lines equal to group size')
             # print('sales = autoline: no rows to remove')
-            pass  # ToDo will need to handle these exceptions better
+            # pass  # ToDo will need to handle these exceptions better
         elif number_matched_lines > 0 and number_matched_lines > group_size:
+            # print('number_matched_lines > group_size')
             # print('matched lines over group size')
             # print('sales > autoline - weird case?')
             pass  # ToDo will need to handle these exceptions better
         elif number_matched_lines == 0:
+            # print('number_matched_lines == 0')
             # print('NO MATCHED ROWS?!?')
             # print(group, '\n', matching_sales)
             group = group.tail(1)  # ToDo Needs to be confirmed
 
         # ToDo Martelanço:
-        if group['Part_Ref'].unique() == 'BM83.19.2.158.851' and key[2] == 38381:
-            group = group[group['SLR_Document_Number'] != 44446226]
-        if group['Part_Ref'].unique() == 'BM83.21.2.405.675' and key[2] == 63960:
-            group = group[group['SLR_Document_Number'] != 44462775]
+        if pse_code == '0I':
+            if group['Part_Ref'].unique() == 'BM83.19.2.158.851' and key[2] == 38381:
+                group = group[group['SLR_Document_Number'] != 44446226]
+            if group['Part_Ref'].unique() == 'BM83.21.2.405.675' and key[2] == 63960:
+                group = group[group['SLR_Document_Number'] != 44462775]
 
     return group
 

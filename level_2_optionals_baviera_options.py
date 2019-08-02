@@ -80,7 +80,7 @@ color_int_dict = {
     'bege/oyster/branco': ['merino_bege', 'dakota_bege', 'nappa_bege', 'vernasca_canberra', 'vernasca_bege', 'nevada_bege', 'bege', 'dakota_oyster', 'dakota_oyster/oyster', 'dakota_oyster/cinza', 'vernasca_oyster',
                            'nevada_oyster', 'nevada_oyster/leather', 'oyster', 'nevada_branco', 'merino_branco', 'dakota_oyster/preto', 'dakota_ivory/preto', 'dakota_ivory', 'dakota_branco', 'dakota_white',
                            'nappa_white', 'nappa_ivory', 'nappa_ivory/branco', 'vernasca_branco'],
-    'outros': ['amarelo', 'vermelho', 'merino_vermelho', 'dakota_coral', 'dakota_azul', 'vernasca_azuis/preto', 'merino_laranja', 'merino_orange', 'merino_silverstone', 'merino_taupe/preto', 'cinzento', 'others', '0', 0],
+    'outros': ['amarelo', 'vermelho', 'merino_vermelho', 'dakota_coral', 'dakota_azul', 'vernasca_azuis/preto', 'merino_laranja', 'merino_orange', 'merino_silverstone', 'merino_taupe/preto', 'cinzento', 'others', '0'],
 }
 
 # New Jantes
@@ -141,7 +141,7 @@ versao_dict = {
 tipo_int_dict = {
     'tecido': ['tecido'],
     'pele': ['pele'],
-    'combinação/interior_m': ['combinação', 'tecido_micro', 0, '0']
+    'combinação/interior_m': ['combinação', 'tecido_micro', '0']
 }
 
 # Motor v1

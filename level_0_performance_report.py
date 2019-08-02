@@ -39,10 +39,13 @@ regex_dict = {
     'error_only': r'[\n](.*){1}$',
     'between_quotes': r'\s{1}\"(.*?.py|.*?.pyx)\"',
     'lines_number': r'\s[0-9]{1,}\,',
+    'null_replacement': r'\'NULL\'',
+    'timestamp_removal': r'Timestamp'
 }
 
 project_dict = {2244: 'PA@Service Desk',
                 2162: 'Otimização Encomenda Baviera (BMW)',
+                2259: 'Otimização Encomenda Baviera APV',
                 }
 
 project_sql_dict = {2244: 'Project_SD',
@@ -200,7 +203,7 @@ def parse_line(file_path):
 
 
 def log_record(message, project_id, flag=0):
-    # flag code: message: 0, warning: 1, error: 2
+    # Flag Code: message: 0, warning: 1, error: 2
 
     if flag == 0:
         logging.info(message)

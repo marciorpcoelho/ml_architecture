@@ -18,7 +18,6 @@ max_number_of_clusters = 11
 sql_info = {
     'database_source': 'BI_RCG',
     'database_final': 'BI_MLG',
-    'log_record': 'LOG_PA@ServiceDesk',
     'initial_table_facts': 'BI_SDK_Fact_Requests_Month_Detail',
     'initial_table_facts_durations': 'BI_SDK_Fact_Requests',
     'initial_table_clients': 'BI_SDK_Dim_Contacts',

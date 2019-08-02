@@ -1,19 +1,15 @@
 import pandas as pd
-import numpy as np
-import nltk
 import csv
 from pylab import *
 from scipy import stats as st
 import sys
-from ast import literal_eval
-from scipy.stats import lognorm
-import matplotlib.pyplot as plt
-import level_0_performance_report
+from datetime import datetime
 from multiprocessing import Pool
 from py_dotenv import read_dotenv
-from datetime import datetime
-from level_1_a_data_acquisition import sql_retrieve_df_specified_query
+import level_0_performance_report
 import apv_sales_options as options_file
+from dateutil.relativedelta import relativedelta
+from level_1_a_data_acquisition import sql_retrieve_df_specified_query
 from level_1_b_data_processing import null_analysis
 
 pd.set_option('display.expand_frame_repr', False)
@@ -25,12 +21,13 @@ slr_date = 0
 wip_date = 0
 mov_date = 1
 urgent_purchases_flags = [4, 5]
+pse_code = options_file.PSE_Code[1:3]
 
 
 def main():
-    # df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients = data_acquisition(options_file)
-    # df_sales, df_purchases = dataset_treatment(df_sales, df_purchases, df_stock)
-    # sys.exit()
+    df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients = data_acquisition(options_file, pse_code)
+    df_sales, df_purchases = dataset_treatment(df_sales, df_purchases, df_stock, pse_code)
+    sys.exit()
 
     ### Call testing.py to create results_merge
 
@@ -177,16 +174,23 @@ def magnitude(x):
     return order
 
 
-def data_acquisition(options_info):
+def data_acquisition(options_info, pse_code):
     print('Starting section A...')
     start = time.time()
+    print('PSE_Code = {}'.format(pse_code))
 
-    sales_info = ['dbs/df_sales_01_07_19', options_file.sales_query]  # ToDo will need to update and let this run today
-    purchases_info = ['dbs/df_purchases_01_07_19', options_file.purchases_query]
-    stock_info = ['dbs/df_stock_01_07_19', options_file.stock_query]
-    reg_info = ['dbs/df_reg_01_07_19', options_file.reg_query]
-    reg_al_info = ['dbs/df_reg_al_client_01_07_19', options_file.reg_autoline_clients]
-
+    if pse_code == '0I':
+        sales_info = ['dbs/df_sales_0I_01_07_19', options_file.sales_query]
+        purchases_info = ['dbs/df_purchases_0I_01_07_19', options_file.purchases_query]
+        stock_info = ['dbs/df_stock_0I_01_07_19', options_file.stock_query]
+        reg_info = ['dbs/df_reg_0I_01_07_19', options_file.reg_query]
+        reg_al_info = ['dbs/df_reg_al_client_0I_01_07_19', options_file.reg_autoline_clients]
+    if pse_code == '0B':
+        sales_info = ['dbs/df_sales_0B_15_07_19', options_file.sales_query]
+        purchases_info = ['dbs/df_purchases_0B_15_07_19', options_file.purchases_query]
+        stock_info = ['dbs/df_stock_0B_15_07_19', options_file.stock_query]
+        reg_info = ['dbs/df_reg_0B_15_07_19', options_file.reg_query]
+        reg_al_info = ['dbs/df_reg_al_client_0B_15_07_19', options_file.reg_autoline_clients]
     dfs = []
 
     for dimension in [sales_info, purchases_info, stock_info, reg_info, reg_al_info]:
@@ -387,26 +391,29 @@ def optimization(best_dist, best_fit_params, part_ref, price_sale, cost_buy):
 #     return df_weather_daily
 
 
-def dataset_treatment(df_sales, df_purchases, df_stock):
+def dataset_treatment(df_sales, df_purchases, df_stock, pse_code):
     print('Dataset processing started.')
     start = time.time()
     dictionary_prices_cost = {}
 
     try:
-        df_sales = pd.read_csv('dbs/df_sales_processed.csv', index_col=0, parse_dates=['SLR_Document_Date', 'WIP_Date_Created', 'Movement_Date'])
+        df_sales = pd.read_csv('dbs/df_sales_processedasas_' + str(pse_code) + '.csv', index_col=0, parse_dates=['SLR_Document_Date', 'WIP_Date_Created', 'Movement_Date'])
     except FileNotFoundError:
         df_sales = df_sales[df_sales['Qty_Sold'] != 0]
+
+        df_sales = df_sales[df_sales['WIP_Number'] == 23468]
+
         df_sales = data_processing_negative_values(df_sales, sales_flag=1)
-        df_sales.to_csv('dbs/df_sales_processed.csv')
+        df_sales.to_csv('dbs/df_sales_processed_' + str(pse_code) + '.csv')
         # df_sales['SLR_Document_Date'] = pd.to_datetime(df_sales['SLR_Document_Date'], format='%Y%m%d')
         # df_sales['WIP_Date_Created'] = pd.to_datetime(df_sales['WIP_Date_Created'], format='%Y%m%d')
         # df_sales['Movement_Date'] = pd.to_datetime(df_sales['Movement_Date'], format='%Y%m%d')
 
     try:
-        df_purchases = pd.read_csv('dbs/df_purchases_processed.csv', index_col=0, parse_dates=['Movement_Date', 'WIP_Date_Created'])
+        df_purchases = pd.read_csv('dbs/df_purchases_processed_' + str(pse_code) + '.csv', index_col=0, parse_dates=['Movement_Date', 'WIP_Date_Created'])
     except FileNotFoundError:
         # df_purchases = data_processing_negative_values(df_purchases, purchases_flag=1)
-        df_purchases.to_csv('dbs/df_purchases_processed.csv')
+        df_purchases.to_csv('dbs/df_purchases_processed_' + str(pse_code) + '.csv')
         # df_purchases['Movement_Date'] = pd.to_datetime(df_purchases['Movement_Date'], format='%Y%m%d')
         # df_purchases['WIP_Date_Created'] = pd.to_datetime(df_purchases['WIP_Date_Created'], format='%Y%m%d')
 
@@ -451,8 +458,8 @@ def dataset_treatment(df_sales, df_purchases, df_stock):
     # df_sales['weekday'] = df_sales['WIP_Date_Created'].dt.dayofweek  # New approach, where WIP_Date_Created is used instead of the SLR_Document_Date
     # df_sales['weekday'] = df_sales['Movement_Date'].dt.dayofweek
 
-    df_sales.to_csv('dbs/df_sales_cleaned.csv')
-    df_purchases.to_csv('dbs/df_purchases_cleaned.csv')
+    df_sales.to_csv('dbs/df_sales_cleaned_' + str(pse_code) + '.csv')
+    df_purchases.to_csv('dbs/df_purchases_cleaned_' + str(pse_code) + '.csv')
 
     print('Dataset processing finished. Elapsed time: {:.2f}'.format(time.time() - start))
     return df_sales, df_purchases
@@ -529,7 +536,8 @@ def matching_negative_row_removal_2(args):
     if sales_flag:
         # print(group)
         negative_rows = group[group['Qty_Sold'] < 0]
-        # print('negative_rows: \n{}'.format(negative_rows))
+        if group['WIP_Number'].unique() == 23468:
+            print(group)
 
         if negative_rows.shape[0]:
             for key, row in negative_rows.iterrows():
@@ -539,18 +547,47 @@ def matching_negative_row_removal_2(args):
                 # matching_positive_row = group[(group['Movement_Date'] == row['Movement_Date']) & (group['Qty_Sold'] == abs(row['Qty_Sold'])) & (group['PVP'] == abs(row['PVP'])) & (group['Sale_Value'] == abs(row['Sale_Value'])) & (group['Cost_Sale'] == abs(row['Cost_Sale'])) & (group['Gross_Margin'] == abs(row['Gross_Margin']))]
                 # print('matching_positive_row: \n{}'.format(matching_positive_row))
 
-                # if matching_positive_row.shape[0]:
-                #     if group['WIP_Number'].unique() == 28883:
-                #         if negative_rows[negative_rows['Part_Ref'] == 'BM07.14.9.213.164'].shape[0]:
-                #             print('negative rows: \n {}'.format(negative_rows[negative_rows['Part_Ref'] == 'BM07.14.9.213.164']))
-                #             print('matching_positive_row: \n {}'.format(matching_positive_row[matching_positive_row['Part_Ref'] == 'BM07.14.9.213.164']))
+                # Control Prints
+                if matching_positive_row.shape[0]:
+                    if group['WIP_Number'].unique() == 23468:
+                        if row['Part_Ref'] == 'BM83.21.0.406.573':
+                            print('negative row: \n {}'.format(row))
+                        if matching_positive_row[matching_positive_row['Part_Ref'] == 'BM83.21.0.406.573'].shape[0]:
+                            print('matching_positive_row: \n {}'.format(matching_positive_row[matching_positive_row['Part_Ref'] == 'BM83.21.0.406.573']))
 
                 if matching_positive_row.shape[0] > 1:
-                    matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row[matching_positive_row.index == matching_positive_row['Movement_Date'].idxmax()]])
-                    # print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
+                    matched_positive_row_idxs = list(matching_positive_row.sort_values(by='Movement_Date').index)
+                    # print(matched_positive_row_idxs)
+                    sel_row = matching_positive_row[matching_positive_row.index == matching_positive_row['Movement_Date'].idxmax()]
+
+                    added, j = 0, 0
+                    while not added:
+                        try:
+                            idx = matched_positive_row_idxs[j]
+                            if idx not in matching_positive_rows.index:
+                                matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row[matching_positive_row.index == idx]])
+                                added = 1
+                        except IndexError:
+                            # Reached the end of the matched rows and all have already been added
+                            added = 1
+                        j += 1
+
+                    # matching_positive_rows = pd.concat([matching_positive_rows, sel_row])
+
+                    # Control Prints
+                    if group['WIP_Number'].unique() == 23468:
+                        if row['Part_Ref'] == 'BM83.21.0.406.573':
+                            if sel_row.shape[0]:
+                                print('Row selected: \n', sel_row)
+
+                    if group['WIP_Number'].unique() == 23468:
+                        if row['Part_Ref'] == 'BM83.21.0.406.573':
+                            print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
                 else:
                     matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row.head(1)])
-                    # print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
+                    if group['WIP_Number'].unique() == 23468:
+                        if row['Part_Ref'] == 'BM83.21.0.406.573':
+                            print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
 
     elif purchases_flag:
         negative_rows = group[group['Quantity'] < 0]

@@ -9,7 +9,7 @@ from level_1_a_data_acquisition import read_csv, sql_retrieve_df, sql_mapping_re
 from level_1_b_data_processing import summary_description_null_checkup, top_words_processing, threshold_grouping, value_count_histogram, date_cols, ohe, data_type_conversion, min_max_scaling, min_max_scaling_reverse, constant_columns_removal, remove_columns, object_column_removal, text_preprocess, literal_removal, string_to_list, df_join_function, null_handling, lowercase_column_convertion, null_analysis, remove_rows, value_replacement, value_substitution, duplicate_removal, language_detection, string_replacer, close_and_resolve_date_replacements
 from level_1_c_data_modelling import clustering_training, new_request_type
 from level_1_d_model_evaluation import cluster_metrics_plots, radial_chart_preprocess, make_spider
-from level_1_e_deployment import save_csv, sql_inject, sql_join
+from level_1_e_deployment import save_csv, sql_inject
 from level_0_performance_report import error_upload, log_record, project_dict, performance_info, performance_info_append
 from wordcloud import WordCloud
 from sklearn.decomposition import PCA

@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import pyodbc
 import logging
@@ -62,7 +63,7 @@ def apostrophe_escape(line):
     return line.replace('\'', '"')
 
 
-def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check_date=0):
+def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check_date=0):  # v1
     time_to_last_update = options_file.update_frequency_days
 
     start = time.time()
@@ -76,7 +77,7 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
     if check_date:
         columns += ['Date']
 
-    columns_string, values_string = sql_string_preparation(columns)
+    columns_string, values_string = sql_string_preparation_v1(columns)
 
     try:
         if check_date:
@@ -96,7 +97,7 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
                 cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
 
         print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
-    except pyodbc.ProgrammingError:
+    except (pyodbc.ProgrammingError, pyodbc.DataError):
         save_csv([df], ['output/' + view + '_backup'])
         level_0_performance_report.log_record('Error in uploading to database. Saving locally...', options_file.project_id, flag=1)
 
@@ -105,6 +106,69 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
     cnxn.close()
 
     return
+
+
+def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, check_date=0):  # v2
+    time_to_last_update = options_file.update_frequency_days
+
+    query_convert_datetimes = ''
+    start = time.time()
+
+    if truncate:
+        sql_truncate(dsn, options_file, database, view)
+
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+    cursor = cnxn.cursor()
+
+    if check_date:
+        columns += ['Date']
+
+    columns_string = sql_string_preparation_v2(columns)
+
+    insert_ = '''
+    INSERT INTO {}
+    ({})
+    VALUES'''.format(view, columns_string)
+
+    try:
+        if check_date:
+            time_result = sql_date_comparison(df, dsn, options_file, database, view, 'Date', time_to_last_update)
+            print(df.head())
+            if time_result:
+                values_string = [str(tuple(x)) for x in df.values]
+
+                for batch in chunker(values_string, 1000):
+                    rows = ','.join(batch)
+                    rows = re.sub(level_0_performance_report.regex_dict['null_replacement'], 'NULL', rows)
+                    rows = re.sub(level_0_performance_report.regex_dict['timestamp_removal'], '', rows)
+                    insert_rows = insert_ + rows
+                    cursor.execute(insert_rows)
+
+            elif not time_result:
+                level_0_performance_report.log_record('Newer data already exists.', options_file.project_id)
+        if not check_date:
+            values_string = [str(tuple(x)) for x in df.values]
+            for batch in chunker(values_string, 1000):
+                rows = ','.join(batch)
+                rows = re.sub(level_0_performance_report.regex_dict['null_replacement'], 'NULL', rows)
+                rows = re.sub(level_0_performance_report.regex_dict['timestamp_removal'], '', rows)
+                insert_rows = insert_ + rows + query_convert_datetimes
+                cursor.execute(insert_rows)
+
+        print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
+    except (pyodbc.ProgrammingError, pyodbc.DataError):
+        save_csv([df], ['output/' + view + '_backup'])
+        level_0_performance_report.log_record('Error in uploading to database. Saving locally...', options_file.project_id, flag=1)
+
+    cnxn.commit()
+    cursor.close()
+    cnxn.close()
+
+    return
+
+
+def chunker(seq, size):
+    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 
 def sql_join(df, dsn, database, view, options_file):
@@ -162,7 +226,16 @@ def sql_join(df, dsn, database, view, options_file):
     return
 
 
-def sql_string_preparation(values_list):
+def sql_string_preparation_v2(values_list):
+    columns_string = '[%s]' % "], [".join(values_list)
+
+    # values_string = ['?'] * len(values_list)
+    # values_string = 'values (%s)' % ', '.join(values_string)
+
+    return columns_string
+
+
+def sql_string_preparation_v1(values_list):
     columns_string = '[%s]' % "], [".join(values_list)
 
     values_string = ['?'] * len(values_list)
@@ -184,11 +257,11 @@ def sql_truncate(dsn, options_file, database, view):
 
 
 def sql_date_comparison(df, dsn, options_file, database, view, date_column, time_to_last_update):
-    time_tag_date, _ = time_tags(format_date='%d/%m/%y')
-    current_date = datetime.strptime(time_tag_date, '%d/%m/%y')
+    time_tag_date, _ = time_tags()
+    current_date = datetime.strptime(time_tag_date, '%Y-%m-%d')
 
     df['Date'] = [time_tag_date] * df.shape[0]
-    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
+    # df['Date'] = pd.to_datetime(df['Date'])
 
     last_date = sql_date_checkup(dsn, options_file, database, view, date_column)
 
@@ -267,12 +340,19 @@ def sql_mapping_upload(dsn, options_file, dictionaries):
         df_map['Original_Value'] = all_values
         df_map['Mapped_Value'] = all_keys
 
-        columns_string, values_string = sql_string_preparation(list(df_map))
+        columns_string = sql_string_preparation_v2(list(df_map))
+        values_string = [str(tuple(x)) for x in df_map.values]
 
         sql_truncate(dsn, options_file, 'BI_MLG', view)
         print('Uploading to SQL Server to DB ' + 'BI_MLG' + ' and view ' + view + '...')
-        for index, row in df_map.iterrows():
-            cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in list(df_map)])
+
+        insert_ = '''INSERT INTO {}
+        ({}) VALUES '''.format(view, columns_string)
+
+        for batch in chunker(values_string, 1000):
+            rows = ','.join(batch)
+            insert_rows = insert_ + str(rows)
+            cursor.execute(insert_rows)
 
     cnxn.commit()
     cursor.close()
@@ -294,8 +374,8 @@ def sql_get_last_vehicle_count(dsn, options_file, database, view, date_column='D
     crsr = cnxn.cursor()
 
     query = 'SELECT TOP (1) *' \
-            'FROM [' + str(database) + '].[dbo].[' + str(view) + '] ' \
-            'WITH (NOLOCK) ORDER BY [' + str(date_column) + '] DESC'
+           'FROM [' + str(database) + '].[dbo].[' + str(view) + '] ' \
+           'WITH (NOLOCK) ORDER BY [' + str(date_column) + '] DESC'
 
     crsr.execute(query)
     result = crsr.fetchone()[0]
