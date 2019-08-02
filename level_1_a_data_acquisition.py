@@ -111,3 +111,66 @@ def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_f
         dictionary_list.append(parameter_dict)
 
     return dictionary_list, dictionary_ranking
+
+
+def dw_data_retrieval(pse_code, current_date, options_info, update):
+
+    print('PSE_Code = {}'.format(pse_code))
+
+    sales_info = ['dbs/df_sales', options_info.sales_query]
+    purchases_info = ['dbs/df_purchases', options_info.purchases_query]
+    stock_info = ['dbs/df_stock', options_info.stock_query]
+    reg_info = ['dbs/df_reg', options_info.reg_query]
+    reg_al_info = ['dbs/df_reg_al_client', options_info.reg_autoline_clients]
+
+    dfs = []
+
+    for dimension in [sales_info, purchases_info, stock_info, reg_info, reg_al_info]:
+
+        if update:
+            file_name = dimension[0] + '_' + str(pse_code) + '_' + str(current_date)
+        else:
+            file_name = dimension[0] + '_' + str(pse_code) + '_02_08_19'  # Last time I ran this script and saved these files
+
+        try:
+            df = read_csv(file_name + '.csv', index_col=0)
+            print('{} file found.'.format(file_name))
+        except FileNotFoundError:
+            print('{} file not found. Retrieving data from SQL...'.format(file_name))
+            df = sql_retrieve_df_specified_query(options_info.DSN_PRD, options_info.sql_info['database'], options_info, dimension[1])
+            df.to_csv(file_name + '.csv')
+
+        dfs.append(df)
+
+    df_sales = dfs[0]
+    df_purchases = dfs[1]
+    df_stock = dfs[2]
+    df_reg = dfs[3]
+    df_reg_al_clients = dfs[4]
+
+    df_purchases['Movement_Date'] = pd.to_datetime(df_purchases['Movement_Date'], format='%Y%m%d')
+    df_purchases['WIP_Date_Created'] = pd.to_datetime(df_purchases['WIP_Date_Created'], format='%Y%m%d')
+
+    df_sales['SLR_Document_Date'] = pd.to_datetime(df_sales['SLR_Document_Date'], format='%Y%m%d')
+    df_sales['WIP_Date_Created'] = pd.to_datetime(df_sales['WIP_Date_Created'], format='%Y%m%d')
+    df_sales['Movement_Date'] = pd.to_datetime(df_sales['Movement_Date'], format='%Y%m%d')
+
+    df_stock['Record_Date'] = pd.to_datetime(df_stock['Record_Date'], format='%Y%m%d')
+    df_stock.rename(index=str, columns={'Quantity': 'Stock_Qty'}, inplace=True)
+
+    return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients
+
+
+def autoline_data_retrieval(pse_code):
+
+    try:
+        df_al = read_csv('dbs/auto_line_part_ref_history_' + str(pse_code) + '.csv', usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P'])
+        df_al.rename(index=str, columns={'Data Mov': 'Movement_Date', 'Refª da peça': 'Part_Ref', 'Descrição': 'Part_Desc', 'Nº de factura': 'SLR_Document_Number', 'WIP nº': 'WIP_Number', 'Sugestão nº  (Enc)': 'Encomenda', 'Conta': 'SLR_Document_Account', 'Nº auditoria stock': 'Audit_Number'}, inplace=True)
+        df_al['Movement_Date'] = pd.to_datetime(df_al['Movement_Date'], format='%d/%m/%Y')
+        df_al.sort_values(by='Movement_Date', inplace=True)
+
+        return df_al
+    except FileNotFoundError:
+        raise FileNotFoundError('AutoLine file for PSE_Code={} was not found!'.format(pse_code))
+
+

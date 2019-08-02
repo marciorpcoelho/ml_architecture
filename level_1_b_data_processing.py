@@ -1054,3 +1054,176 @@ def top_words_processing(df_facts):
         df_cleaned.to_csv('output/df_cleaned_' + str(time_tag_date) + '.csv')
 
     return df_cleaned, df_top_words
+
+
+def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_purchases_flags):
+    current_date, _ = time_tags()
+    sales_cols_to_keep = ['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']
+    stock_cols_to_keep = ['Part_Ref', 'Stock_Qty', 'Record_Date']
+
+    sales_file_name = 'dbs/df_sales_cleaned_' + str(pse_code) + '_' + str(current_date)
+    purchases_file_name = 'dbs/df_purchases_cleaned_' + str(pse_code) + '_' + str(current_date)
+
+    try:
+        df_sales = pd.read_csv(sales_file_name + '.csv', index_col=0, parse_dates=['Movement_Date', 'WIP_Date_Created', 'SLR_Document_Date'], usecols=['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']).sort_values(by='Movement_Date')
+        print('{} file found!'.format(sales_file_name))
+    except FileNotFoundError:
+        print('{} file not found, processing...'.format(sales_file_name))
+        df_sales = df_sales[df_sales['Qty_Sold'] != 0]
+        df_sales = data_processing_negative_values(df_sales, sales_flag=1)
+        df_sales.to_csv('dbs/df_sales_processed_' + str(pse_code) + '_' + str(current_date) + '.csv')
+
+        df_sales['PVP_1'] = df_sales['PVP'] / df_sales['Qty_Sold']
+        df_sales['Cost_Sale_1'] = df_sales['Cost_Sale'] / df_sales['Qty_Sold']
+
+        df_sales.drop(['PVP', 'Sale_Value', 'Gross_Margin', 'Cost_Sale'], axis=1, inplace=True)
+
+        df_sales_grouped_slr = df_sales.groupby(['SLR_Document_Date', 'Part_Ref'])  # Old Approach, using SLR_Document_Date
+        df_sales_grouped_wip = df_sales.groupby(['WIP_Date_Created', 'Part_Ref'])  # Old approach, where WIP_Date_Created is used instead of the SLR_Document_Date
+        df_sales_grouped_mov = df_sales.groupby(['Movement_Date', 'Part_Ref'])  # New Approach, using Movement_Date
+
+        df_sales['Qty_Sold_sum_wip'] = df_sales_grouped_wip['Qty_Sold'].transform('sum')
+        df_sales['Qty_Sold_sum_slr'] = df_sales_grouped_slr['Qty_Sold'].transform('sum')
+        df_sales['Qty_Sold_sum_mov'] = df_sales_grouped_mov['Qty_Sold'].transform('sum')
+
+        df_sales.drop('Qty_Sold', axis=1, inplace=True)
+
+        df_sales.remove_columns([x for x in list(df_sales) if x not in sales_cols_to_keep])
+
+        df_sales.sort_index(inplace=True)
+
+        df_sales.to_csv(sales_file_name + '.csv')
+
+    try:
+        df_purchases = pd.read_csv(purchases_file_name + '.csv', index_col=0, parse_dates=['Movement_Date']).sort_values(by='Movement_Date')
+        print('{} file found!'.format(purchases_file_name))
+    except FileNotFoundError:
+        print('{} file not found, processing...'.format(purchases_file_name))
+        df_purchases['Cost_Value_1'] = df_purchases['Cost_Value'] / df_purchases['Quantity']
+
+        df_purchases_grouped = df_purchases.groupby(['Movement_Date', 'Part_Ref'])
+        df_purchases_grouped_urgent = df_purchases[df_purchases['Order_Type_DW'].isin(urgent_purchases_flags)].groupby(['Movement_Date', 'Part_Ref'])
+        df_purchases_grouped_non_urgent = df_purchases[~df_purchases['Order_Type_DW'].isin(urgent_purchases_flags)].groupby(['Movement_Date', 'Part_Ref'])
+
+        df_purchases['Qty_Purchased_sum'] = df_purchases_grouped['Quantity'].transform('sum')
+        df_purchases['Qty_Purchased_urgent_sum'] = df_purchases_grouped_urgent['Quantity'].transform('sum')
+        df_purchases['Qty_Purchased_non_urgent_sum'] = df_purchases_grouped_non_urgent['Quantity'].transform('sum')
+        df_purchases['Cost_Purchase_avg'] = df_purchases_grouped['Cost_Value'].transform('mean')
+
+        df_purchases.drop(['Cost_Value'], axis=1, inplace=True)
+        df_purchases = purchases_na_fill(df_purchases_grouped)
+
+        df_purchases.drop(['Quantity', 'Order_Type_DW'], axis=1, inplace=True)
+
+        df_sales.fillna(method='bfill', inplace=True)
+
+        df_purchases.to_csv(purchases_file_name + '.csv')
+
+    df_purchases.rename(index=str, columns={'Qty_Sold_sum': 'Qty_Purchased_sum'}, inplace=True)  # Will be removed next time i run the data_processement
+    df_stock = remove_columns(df_stock, [x for x in list(df_stock) if x not in stock_cols_to_keep])
+
+    return df_sales, df_purchases, df_stock
+
+
+def data_processing_negative_values(df, sales_flag=0, purchases_flag=0):
+    start = time.time()
+
+    # print('number of wips', len(df.groupby('WIP_Number')))
+    pool = Pool(processes=int(level_0_performance_report.pool_workers_count))
+    results = pool.map(matching_negative_row_removal_2, [(y[0], y[1], sales_flag, purchases_flag) for y in df.groupby('WIP_Number')])
+    pool.close()
+    gt_treated = pd.concat([result for result in results if result is not None])
+
+    print('Sales Negative Values Processing - Elapsed Time: {:.2f}'.format(time.time() - start))
+    return gt_treated
+
+
+def matching_negative_row_removal_2(args):
+    key, group, sales_flag, purchases_flag = args
+    negative_rows = pd.DataFrame()
+
+    matching_positive_rows = pd.DataFrame()
+
+    if sales_flag:
+        negative_rows = group[group['Qty_Sold'] < 0]
+
+        if negative_rows.shape[0]:
+            for key, row in negative_rows.iterrows():
+                matching_positive_row = group[(group['Movement_Date'] == row['Movement_Date']) & (group['Qty_Sold'] == row['Qty_Sold'] * -1) & (group['Sale_Value'] == row['Sale_Value'] * -1) & (group['Cost_Sale'] == row['Cost_Sale'] * -1) & (group['Gross_Margin'] == row['Gross_Margin'] * -1)]
+
+                # Control Prints
+                # if matching_positive_row.shape[0]:
+                #     if group['WIP_Number'].unique() == 23468:
+                #         if row['Part_Ref'] == 'BM83.21.0.406.573':
+                #             print('negative row: \n {}'.format(row))
+                #         if matching_positive_row[matching_positive_row['Part_Ref'] == 'BM83.21.0.406.573'].shape[0]:
+                #             print('matching_positive_row: \n {}'.format(matching_positive_row[matching_positive_row['Part_Ref'] == 'BM83.21.0.406.573']))
+
+                if matching_positive_row.shape[0] > 1:
+                    matched_positive_row_idxs = list(matching_positive_row.sort_values(by='Movement_Date').index)
+                    # sel_row = matching_positive_row[matching_positive_row.index == matching_positive_row['Movement_Date'].idxmax()]
+
+                    added, j = 0, 0
+                    while not added:
+                        try:
+                            idx = matched_positive_row_idxs[j]
+                            if idx not in matching_positive_rows.index:
+                                matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row[matching_positive_row.index == idx]])
+                                added = 1
+                        except IndexError:
+                            # Reached the end of the matched rows and all have already been added
+                            added = 1
+                        j += 1
+
+                    # Control Prints
+                    # if group['WIP_Number'].unique() == 23468:
+                    #     if row['Part_Ref'] == 'BM83.21.0.406.573':
+                    #         if sel_row.shape[0]:
+                    #             print('Row selected: \n', sel_row)
+                    #
+                    # if group['WIP_Number'].unique() == 23468:
+                    #     if row['Part_Ref'] == 'BM83.21.0.406.573':
+                    #         print('matching_positive_rows that will be removed \n{}'.format(matching_positive_rows))
+                else:
+                    matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row.head(1)])
+
+    elif purchases_flag:
+        negative_rows = group[group['Quantity'] < 0]
+        if negative_rows.shape[0]:
+            for key, row in negative_rows.iterrows():
+                matching_positive_row = group[(group['Quantity'] == abs(row['Quantity'])) & (group['Cost_Value'] == abs(row['Cost_Value'])) & (group['Part_Ref'] == row['Part_Ref']) & (group['WIP_Number'] == row['WIP_Number'])]
+
+                if matching_positive_row.shape[0] > 1:
+                    matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row[matching_positive_row.index == matching_positive_row['Movement_Date'].idxmax()]])
+                else:
+                    matching_positive_rows = pd.concat([matching_positive_rows, matching_positive_row.head(1)])
+
+    if negative_rows.shape[0]:
+        group.drop(negative_rows.index, axis=0, inplace=True)
+        group.drop(matching_positive_rows.index, axis=0, inplace=True)
+        # Note: Sometimes, identical negative rows with only Part_Ref different will match with the same row with positive values. This is okay as when I remove the matched rows from the
+        # original group I remove by index, so double matched rows make no problem whatsoever
+
+    return group
+
+
+def purchases_na_fill(df_grouped):
+    start = time.time()
+
+    pool = Pool(processes=int(level_0_performance_report.pool_workers_count))
+    results = pool.map(na_group_fill, [(z[0], z[1]) for z in df_grouped])
+    pool.close()
+    df_filled = pd.concat([result for result in results if result is not None])
+
+    print('Purchases NaN Fill - Elapsed Time: {:.2f}'.format(time.time() - start))
+    return df_filled
+
+
+def na_group_fill(args):
+    _, group = args
+
+    group[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']] = group[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']].fillna(method='ffill').fillna(method='bfill').fillna(0)
+
+    return group
+
+

@@ -5,15 +5,15 @@ import pickle
 import time
 import nltk
 import operator
-from collections import Counter
 from nltk.stem.snowball import SnowballStemmer
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, calinski_harabaz_score
 from scipy.spatial.distance import cdist, pdist
 from sklearn.model_selection import GridSearchCV
 from gap_statistic import OptimalK
+from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
-from level_0_performance_report import log_record
+from level_0_performance_report import log_record, pool_workers_count
 from level_1_a_data_acquisition import sql_mapping_retrieval
 from level_1_b_data_processing import remove_punctuation_and_digits
 from level_2_optionals_baviera_options import classification_models, sql_info, k, gridsearch_score, project_id
@@ -378,3 +378,249 @@ def request_matches(label, keywords, rank, requests_list, dictionary):
             dictionary[request] = [(label, rank)]
 
     return dictionary
+
+
+def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
+
+    try:
+        results = pd.read_csv('output/results_merge_{}.csv'.format(pse_code), index_col=0)
+        print('File results_merge_{} found.'.format(pse_code))
+
+    except FileNotFoundError:
+        print('File results_merge_{} not found. Processing...'.format(pse_code))
+        df_stock.set_index('Record_Date', inplace=True)
+        df_purchases.set_index('Movement_Date', inplace=True)
+        df_al['Unit'] = df_al['Unit'] * (-1)  # Turn the values to their symmetrical so it matches the other dfs
+
+        i, parts_count = 1, len(selected_parts)
+        dataframes_list = [df_sales, df_al, df_stock, df_reg_al_clients, df_purchases]
+        datetime_index = pd.date_range(start=min_date, end=max_date)
+        results = pd.DataFrame()
+        positions = []
+
+        print('PSE_Code = {}'.format(pse_code))
+        for part_ref in selected_parts:
+            start = time.time()
+            result_part_ref, stock_evolution_correct_flag, offset = sql_data([part_ref], pse_code, min_date, max_date, dataframes_list)
+
+            if result_part_ref.shape[0]:
+                print(part_ref)
+                result_part_ref = result_part_ref.reindex(datetime_index).reset_index().rename(columns={'Unnamed: 0': 'Movement_Date'})
+
+                ffill_and_zero_fill_cols = ['Stock_Qty_al', 'Sales Evolution_al', 'Purchases Evolution', 'Regulated Evolution', 'Purchases Urgent Evolution', 'Purchases Non Urgent Evolution']
+                zero_fill_cols = ['Qty_Purchased_sum', 'Qty_Regulated_sum', 'Qty_Sold_sum_al', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg', 'Cost_Reg_avg', 'Cost_Sale_avg', 'PVP_avg']
+                ffill_and_bfill_cols = ['Part_Ref', 'Stock_Qty']
+
+                [result_part_ref[x].fillna(method='ffill', inplace=True) for x in ffill_and_zero_fill_cols + ffill_and_bfill_cols]
+                [result_part_ref[x].fillna(0, inplace=True) for x in zero_fill_cols + ffill_and_zero_fill_cols]
+                [result_part_ref[x].fillna(method='bfill', inplace=True) for x in ffill_and_bfill_cols]
+
+                if result_part_ref[result_part_ref['Part_Ref'].isnull()].shape[0]:
+                    print('null values found for part_ref: \n{}'.format(part_ref))
+                    print('Number of null rows: {}'.format(result_part_ref[result_part_ref['Part_Ref'].isnull()].shape))
+
+                result_part_ref.loc[:, 'Stock_Evolution_Correct_Flag'] = stock_evolution_correct_flag
+                result_part_ref.loc[:, 'Stock_Evolution_Offset'] = offset
+
+                # Just so the variation matches with the rest: positive regularization means an increase in stock, while negative is a decrease; Equivalent for cost;
+                result_part_ref['Qty_Regulated_sum'] = result_part_ref['Qty_Regulated_sum'] * (-1)
+                result_part_ref['Cost_Reg_avg'] = result_part_ref['Cost_Reg_avg'] * (-1)
+
+                results = results.append(result_part_ref)
+                print('Elapsed time: {:.2f}.'.format(time.time() - start))
+
+            position = int((i / parts_count) * 100)
+            if not position % 1:
+                if position not in positions:
+                    print('{}% completed'.format(position))
+                    positions.append(position)
+
+            i += 1
+        results.to_csv('output/results_merge_{}.csv'.format(pse_code))
+    return results
+
+
+def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
+
+    df_sales, df_al, df_stock, df_reg_al_clients, df_purchases = dataframes_list[0], dataframes_list[1], dataframes_list[2], dataframes_list[3], dataframes_list[4]
+    result, stock_evolution_correct_flag, offset = pd.DataFrame(), 0, 0
+
+    df_sales_filtered = df_sales[(df_sales['Part_Ref'].isin(selected_part)) & (df_sales['Movement_Date'] > min_date) & (df_sales['Movement_Date'] <= max_date)]
+    df_al_filtered = df_al[(df_al['Part_Ref'].isin(selected_part)) & (df_al['Movement_Date'] > min_date) & (df_al['Movement_Date'] <= max_date)]
+    df_purchases_filtered = df_purchases[(df_purchases['Part_Ref'].isin(selected_part)) & (df_purchases.index > min_date) & (df_purchases.index <= max_date)]
+    df_stock_filtered = df_stock[(df_stock['Part_Ref'].isin(selected_part)) & (df_stock.index >= min_date) & (df_stock.index <= max_date)]
+
+    df_al_filtered = auto_line_dataset_cleaning(df_sales_filtered, df_al_filtered, df_purchases_filtered, df_reg_al_clients, pse_code)
+
+    df_sales_filtered = df_sales_filtered.drop_duplicates(subset=['Movement_Date', 'Part_Ref']).sort_values(by='Movement_Date')
+    df_sales_filtered.set_index('Movement_Date', inplace=True)
+
+    if not df_al_filtered.shape[0]:
+        # raise ValueError('No data found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
+        # print('\nNo data found for part_ref {} and/or selected period {}/{}.\n'.format(selected_part[0], min_date, max_date))
+        # no_data_flag = 1
+        return pd.DataFrame(), stock_evolution_correct_flag, offset
+    elif df_al_filtered.shape[0] == 1:
+        # raise ValueError('Only 1 row found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
+        # print('\nOnly 1 row found for part_ref {} and/or selected period {}/{}. Ignored.\n'.format(selected_part[0], min_date, max_date))
+        # one_row_only_flag = 1
+        return pd.DataFrame(), stock_evolution_correct_flag, offset
+
+    df_al_filtered['Qty_Sold_sum_al'], df_al_filtered['Cost_Sale_avg'], df_al_filtered['PVP_avg'] = 0, 0, 0  # Placeholder for cases without sales
+    df_al_grouped = df_al_filtered[df_al_filtered['regularization_flag'] == 0].groupby(['Movement_Date', 'Part_Ref'])
+    for key, row in df_al_grouped:
+        rows_selection = (df_al_filtered['Movement_Date'] == key[0]) & (df_al_filtered['Part_Ref'] == key[1])
+        df_al_filtered.loc[rows_selection, 'Qty_Sold_sum_al'] = row['Unit'].sum()
+        df_al_filtered.loc[rows_selection, 'Cost_Sale_avg'] = row['Preço de custo'].mean()
+        df_al_filtered.loc[rows_selection, 'PVP_avg'] = row['P. V. P'].mean()
+
+    df_al_filtered['Qty_Regulated_sum'], df_al_filtered['Cost_Reg_avg'] = 0, 0  # Placeholder for cases without regularizations
+    df_al_grouped_reg_flag = df_al_filtered[df_al_filtered['regularization_flag'] == 1].groupby(['Movement_Date', 'Part_Ref'])
+    for key, row in df_al_grouped_reg_flag:
+        rows_selection = (df_al_filtered['Movement_Date'] == key[0]) & (df_al_filtered['Part_Ref'] == key[1])
+        df_al_filtered.loc[rows_selection, 'Qty_Regulated_sum'] = row['Unit'].sum()
+        df_al_filtered.loc[rows_selection, 'Cost_Reg_avg'] = row['Cost_Reg'].sum()
+
+    if df_al_filtered['Qty_Sold_sum_al'].sum() != 0 and df_al_filtered[df_al_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:
+        df_al_filtered.drop(['Unit', 'Preço de custo', 'P. V. P', 'regularization_flag'], axis=1, inplace=True)
+
+        df_al_filtered = df_al_filtered.drop_duplicates(subset=['Movement_Date'])
+        df_al_filtered.set_index('Movement_Date', inplace=True)
+
+        df_purchases_filtered = df_purchases_filtered.loc[~df_purchases_filtered.index.duplicated(keep='first')]
+
+        qty_sold_al = df_al_filtered['Qty_Sold_sum_al'].sum()
+        qty_purchased = df_purchases_filtered['Qty_Purchased_sum'].sum()
+        try:
+            stock_start = df_stock_filtered[df_stock_filtered.index == min_date]['Stock_Qty'].values[0]
+        except IndexError:
+            stock_start = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
+        try:
+            stock_end = df_stock_filtered[df_stock_filtered.index == max_date]['Stock_Qty'].values[0]
+        except IndexError:
+            stock_end = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
+
+        reg_value = df_al_filtered['Qty_Regulated_sum'].sum()
+        # delta_stock = stock_end - stock_start
+
+        if not reg_value:
+            reg_value = 0
+
+        result = pd.concat([df_purchases_filtered[['Qty_Purchased_sum', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg']], df_al_filtered[['Qty_Regulated_sum', 'Cost_Reg_avg', 'Qty_Sold_sum_al', 'Cost_Sale_avg', 'PVP_avg']]], axis=1, sort=False)
+        result['Part_Ref'] = selected_part * result.shape[0]
+        try:
+            result['Stock_Qty'] = df_stock_filtered['Stock_Qty'].head(1).values[0]
+        except IndexError:
+            result['Stock_Qty'] = 0  # Cases when there is no stock information
+
+        result_al = stock_start + qty_purchased - qty_sold_al - reg_value
+
+        if result_al != stock_end:
+            offset = stock_end - result_al
+            print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
+        else:
+            print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
+            stock_evolution_correct_flag = 1
+
+        result['Stock_Qty'].fillna(method='ffill', inplace=True)
+        result['Part_Ref'].fillna(method='ffill', inplace=True)
+        result.fillna(0, inplace=True)
+
+        result['Sales Evolution_al'] = result['Qty_Sold_sum_al'].cumsum()
+        result['Purchases Evolution'] = result['Qty_Purchased_sum'].cumsum()
+        result['Purchases Urgent Evolution'] = result['Qty_Purchased_urgent_sum'].cumsum()
+        result['Purchases Non Urgent Evolution'] = result['Qty_Purchased_non_urgent_sum'].cumsum()
+        result['Regulated Evolution'] = result['Qty_Regulated_sum'].cumsum()
+        result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
+        result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
+
+        # result.to_csv('output/{}_stock_evolution.csv'.format(selected_part[0]))
+
+    return result, stock_evolution_correct_flag, offset
+
+
+def auto_line_dataset_cleaning(df_sales, df_al, df_purchases, df_reg_al_clients, pse_code):
+    # print('AutoLine and PSE_Sales Lines comparison started...')
+
+    # ToDo Martelanço
+    if pse_code == '0B' and df_purchases['Part_Ref'].unique() == 'BM83.21.0.406.573':
+        if '2019-02-05' in df_purchases.index:
+            df_purchases.drop(df_purchases[df_purchases['PLR_Document'] == 0].index, inplace=True)
+
+    purchases_unique_plr = df_purchases['PLR_Document'].unique().tolist()
+    reg_unique_slr = df_reg_al_clients['SLR_Account'].unique().tolist() + ['@Check']
+
+    duplicated_rows = df_al[df_al.duplicated(subset='Encomenda', keep=False)]
+    if duplicated_rows.shape[0]:
+        duplicated_rows_grouped = duplicated_rows.groupby(['Movement_Date', 'Part_Ref', 'WIP_Number'])
+
+        df_al = df_al.drop(duplicated_rows.index, axis=0)
+
+        pool = Pool(processes=int(pool_workers_count))
+        results = pool.map(sales_cleaning, [(key, group, df_sales, pse_code) for (key, group) in duplicated_rows_grouped])
+        pool.close()
+        df_al_merged = pd.concat([df_al, pd.concat([result for result in results if result is not None])], axis=0)
+
+        # ToDo Martelanço
+        if pse_code == '0B':
+            df_al_merged.loc[(df_al_merged['Part_Ref'] == 'BM11.42.8.507.683') & (df_al_merged['Movement_Date'] == '2018-12-04') & (df_al_merged['WIP_Number'] == 41765) & (df_al_merged['Unit'] == 0) & (df_al_merged['SLR_Document_Account'] == 'd077612'), 'Unit'] = -1
+
+        df_al_cleaned = purchases_reg_cleaning(df_al_merged, purchases_unique_plr, reg_unique_slr)
+    else:
+        df_al_cleaned = purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr)
+
+    return df_al_cleaned
+
+
+def sales_cleaning(args):
+    key, group, df_sales, pse_code = args
+    group_size = group.shape[0]
+
+    # Note: There might not be a match!
+    if group_size > 1 and group['Audit_Number'].nunique() < group_size:
+
+        matching_sales = df_sales[(df_sales['Movement_Date'] == key[0]) & (df_sales['Part_Ref'] == key[1]) & (df_sales['WIP_Number'] == key[2])]
+
+        number_matched_lines, group_size = matching_sales.shape[0], group.shape[0]
+        if 0 < number_matched_lines <= group_size:
+
+            group = group[group['SLR_Document_Number'].isin(matching_sales['SLR_Document'].unique())]
+
+        # elif number_matched_lines > 0 and number_matched_lines == group_size:
+            # print('matched lines equal to group size')
+            # print('sales = autoline: no rows to remove')
+            # pass  # ToDo will need to handle these exceptions better
+        elif number_matched_lines > 0 and number_matched_lines > group_size:
+            # print('number_matched_lines > group_size')
+            # print('matched lines over group size')
+            # print('sales > autoline - weird case?')
+            pass  # ToDo will need to handle these exceptions better
+        elif number_matched_lines == 0:
+            # print('number_matched_lines == 0')
+            # print('NO MATCHED ROWS?!?')
+            # print(group, '\n', matching_sales)
+            group = group.tail(1)  # ToDo Needs to be confirmed
+
+        # ToDo Martelanço:
+        if pse_code == '0I':
+            if group['Part_Ref'].unique() == 'BM83.19.2.158.851' and key[2] == 38381:
+                group = group[group['SLR_Document_Number'] != 44446226]
+            if group['Part_Ref'].unique() == 'BM83.21.2.405.675' and key[2] == 63960:
+                group = group[group['SLR_Document_Number'] != 44462775]
+
+    return group
+
+
+def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
+
+    matched_rows_purchases = df_al[df_al['SLR_Document_Number'].isin(purchases_unique_plr)]
+    if matched_rows_purchases.shape[0]:
+        df_al = df_al.drop(matched_rows_purchases.index, axis=0)
+
+    matched_rows_reg = df_al[df_al['SLR_Document_Account'].isin(reg_unique_slr)].index
+
+    df_al['regularization_flag'] = 0
+    df_al.loc[df_al.index.isin(matched_rows_reg), 'regularization_flag'] = 1
+    df_al.loc[df_al['regularization_flag'] == 1, 'Cost_Reg'] = df_al['Unit'] * df_al['Preço de custo']
+
+    return df_al
