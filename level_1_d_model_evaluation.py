@@ -155,7 +155,7 @@ def feature_contribution(df, configuration_parameters, options_file, project_id)
                         p_c1_f0 = c1_f0 / f0 * 1.
                     except ZeroDivisionError:
                         # log_record('Insufficient data for feature ' + str(feature) + ' and value ' + str(value) + '.', project_id, flag=1)
-                        log_record('Insufficient data for feature {} and value {}.'.format(feature, value), project_id, flag=1)
+                        log_record('Dados insuficientes para a feature {} com valor {}.'.format(feature, value), project_id, flag=1)
 
                         continue
 
@@ -263,37 +263,31 @@ def model_choice(dsn, options_file, df_results):
         # makes sure there are results above minimum threshold
         best_model_name = df_results[df_results.loc[:, metric].gt(metric_threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
         best_model_value = df_results[df_results.loc[:, metric].gt(metric_threshold)][[metric, 'Running_Time']].max().head(1).values[0]
-        # log_record('There are values (%.4f' % best_model_value + ') from algorithm ' + str(best_model_name) + ' above minimum threshold (' + str(metric_threshold) + '). Will compare with last result in SQL Server...', options_file.project_id)
-        log_record('There are values ({:.4f}) from algorithm {} above minimum threshold ({}). Will compare with last result in SQL Server...'.format(best_model_value, best_model_name, metric_threshold), options_file.project_id)
+        log_record('Existem resultados ({:.4f}) do algoritmo {} superiores ao limite mínimo ({}). A comparar com os últimos resultados guardados...'.format(best_model_value, best_model_name, metric_threshold), options_file.project_id)
 
         df_previous_performance_results = sql_second_highest_date_checkup(dsn, options_file, performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'])
         if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
-            # log_record('Older values have better results in the same metric: %.4f' % df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() + ' > %.4f' % best_model_value + ' in model ' + df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax(), options_file.project_id, flag=1)
-            log_record('Older values have better results in the same metric: {:.4f} > {:.4f} in model {}.'.format(df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max(), best_model_value, df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax()), options_file.project_id, flag=1)
+            log_record('Resultados mais antigos são melhores na métrica em avaliação: {:.4f} > {:.4f} para o algoritmo {}.'.format(df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max(), best_model_value, df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax()), options_file.project_id, flag=1)
 
             model_choice_flag = 1
             if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() - best_model_value < performance_threshold_interval:
-                log_record('Even though older results are better, the difference is too small (<2%), so will upload the data in SQL.', options_file.project_id)
+                log_record('Apesar de os resultados mais antigos serem melhores, a diferença é demasiado pequena (<2%). Como tal, os dados serão atualizados de acordo com os novos resultados.', options_file.project_id)
                 step_e_upload_flag = 1
                 model_choice_flag = 3
         elif df_previous_performance_results.loc[df_previous_performance_results[metric].eq(best_model_value)].shape[0]:
-            # log_record('New values have the same performance as the old values (%.4f) ' % best_model_value + ' in the same metric. Will upload the data in SQL to update for the latest sales.', options_file.project_id)
-            log_record('New values have the same performance as the old values ({:.4f}) in the same metric. Will upload the data in SQL to update for the latest sales.'.format(best_model_value), options_file.project_id)
+            log_record('Os novos resultados são iguais aos resultados antigos ({:.4f}) na métrica em avaliação. Os dados serão atualizados em SQL de forma a garantir os dados mais recentes.'.format(best_model_value), options_file.project_id)
             step_e_upload_flag = 1
             model_choice_flag = 4
         else:
             step_e_upload_flag = 1
             try:
-                # log_record('New value is: %.4f' % best_model_value + ' and greater than the last value which was: %.4f' % df_previous_performance_results[metric].max() + ' for model ' + df_previous_performance_results[metric].idxmax() + ' so will upload in section E...', options_file.project_id)
-                log_record('New value is: {:.4f} and greater than the last value which was: {:.4f} for model {} so will upload in section E...'.format(best_model_value, df_previous_performance_results[metric].max(), df_previous_performance_results[metric].idxmax()), options_file.project_id)
+                log_record('O novo resultado é: {:.4f} e é superior ao último resultado que era {:.4f} para o modelo {}. Como tal, os dados serão atualizados...'.format(best_model_value, df_previous_performance_results[metric].max(), df_previous_performance_results[metric].idxmax()), options_file.project_id)
             except TypeError:
-                # log_record('New value is: %.4f' % best_model_value + ' and no previous result was found, so will upload in section E...', options_file.project_id)
-                log_record('New value is: {:.4f} and no previous result was found, so will upload in section E...'.format(best_model_value), options_file.project_id)
+                log_record('O novo resultado é: {:.4f} e não foram encontrados resultados mais antigos. Como tal, os dados serão atualizados...'.format(best_model_value), options_file.project_id)
             model_choice_flag = 2
 
     except ValueError:
-        # log_record('No value above minimum threshold (%.4f' % metric_threshold + ') found. Will maintain previous result - No upload in Section E to SQL Server.', options_file.project_id, flag=1)
-        log_record('No value above minimum threshold ({:.4f}) found. Will maintain previous result - No upload in Section E to SQL Server.'.format(metric_threshold), options_file.project_id, flag=1)
+        log_record('Sem resultados superiores ao limite mínimo ({:.4f}). Os últimos dados serão mantidos - Não haverá update dos mesmos.'.format(metric_threshold), options_file.project_id, flag=1)
 
         model_choice_flag, best_model_name, best_model_value = 0, 0, 0
 

@@ -56,7 +56,7 @@ def remove_columns(df, columns):
         try:
             df.drop([column], axis=1, inplace=True)
         except KeyError:
-            level_0_performance_report.log_record('Column Deletion Warning - Column {} not found.'.format(column), project_id, flag=1)
+            level_0_performance_report.log_record('Aviso de remoção de coluna - A coluna {} não foi encontrada.'.format(column), project_id, flag=1)
             # level_0_performance_report.performance_warnings_append('Column Deletion Warning - Column ' + str(column) + ' not found.')
             continue
 
@@ -77,7 +77,7 @@ def remove_rows(df, rows, warning=0):
             filtered_df = df.drop(condition, axis=0)
         end_size = filtered_df.shape[0]
         if start_size - end_size:
-            level_0_performance_report.log_record('There are vehicles without Cor_Ext: {} which were removed.'.format(df[df.index.isin(rows[0].values)]['Nº Stock'].unique()), project_id, flag=1)
+            level_0_performance_report.log_record('Existem veículos sem Cor_Ext {} que foram removidos.'.format(df[df.index.isin(rows[0].values)]['Nº Stock'].unique()), project_id, flag=1)
 
         return filtered_df
 
@@ -396,10 +396,10 @@ def options_scraping_per_group(args):
             if line_color_ext_code == 'P0X13':
                 color = ['castanho']
             elif len(tokenized_color) == 0:
-                level_0_performance_report.log_record('The vehicle with VHE_Number {} and Color \'{}\' had no Exterior Color found.'.format(key, line_color), project_id, flag=1)
+                level_0_performance_report.log_record('Não foi encontrada a cor exterior do veículo {} com a seguinte descrição de cor exterior: \'{}\'.'.format(key, line_color), project_id, flag=1)
                 return
             else:
-                level_0_performance_report.log_record('Color Ext Not Found: {} in Vehicle {}'.format(tokenized_color, key), project_id, flag=1)
+                level_0_performance_report.log_record('Cor exterior não encontrada {} para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
                 color = np.nan
                 pass
                 # raise ValueError('Color Ext Not Found: {} in Vehicle {}'.format(tokenized_color, key))
@@ -509,7 +509,7 @@ def constant_columns_removal(df, value=None):
 
     if len(features_removed):
         columns_string = sql_string_preparation_v2(features_removed)
-        level_0_performance_report.log_record('Removed the following constant columns: ' + str(columns_string), project_id, flag=1)
+        level_0_performance_report.log_record('A(s) seguinte(s) coluna(s) sem variação de valores foram removida(s): ' + str(columns_string), project_id, flag=1)
         # level_0_performance_report.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
 
     return df[list_after]
@@ -526,7 +526,7 @@ def col_group(df, columns_to_replace, dictionaries):
             if df[column + '_new'].isnull().values.any():
                 non_parametrized_data_flag = 1
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
-                level_0_performance_report.log_record('Column Grouping Warning - NaNs detected in: {}_new, value(s) not grouped: {} in Vehicle(s) with VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
+                level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetatos em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
         except KeyError:
@@ -552,7 +552,7 @@ def remove_zero_price_total_vhe(df):
 
     removed_vehicles = old_count - new_count
     if removed_vehicles:
-        level_0_performance_report.log_record('Removed {} vehicles with price total of 0.'.format(old_count - new_count), project_id, flag=1)
+        level_0_performance_report.log_record('Foram removidos {} veículos com custo total de 0.'.format(old_count - new_count), project_id, flag=1)
     return df
 
 

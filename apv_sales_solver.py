@@ -3,6 +3,8 @@ import time
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from multiprocessing import Pool
+import level_0_performance_report
 from scipy.optimize import minimize, LinearConstraint, Bounds
 from dateutil.relativedelta import relativedelta
 pd.set_option('display.expand_frame_repr', False)
@@ -14,14 +16,22 @@ profit_evolution = []
 dtss_evolution = []
 scale_argument = 1000
 
+cost_goal = 252051
+sales_goal = 300000
+dtss_goal = 15  # Weekdays only!
+
 
 def main():
-    # df_sales = pd.read_csv('output/results_merge_case_study_0B.csv', parse_dates=['index'], index_col=0)
-    # df_sales = pd.read_csv('output/results_merge_0B.csv', parse_dates=['index'], index_col=0)
-    # current_date = '2019-06-28'
-    # df_solve = solver_dataset_preparation(df_sales, current_date)
+    current_date = '2019-06-28'
 
-    df_solve = pd.read_csv('output/df_solve_0B.csv', index_col=0)
+    try:
+        df_solve = pd.read_csv('output/df_solve_0B_filtered.csv', index_col=0)
+        print('df_solve found...')
+    except FileNotFoundError:
+        print('df_solve file not found, processing a new one...')
+        # df_sales = pd.read_csv('dbs/results_merge_case_study_0B.csv', parse_dates=['index'], index_col=0)
+        df_sales = pd.read_csv('output/results_merge_0B.csv', parse_dates=['index'], index_col=0)
+        df_solve = solver_dataset_preparation(df_sales, current_date)
 
     unique_parts = df_solve['Part_Ref'].unique()
     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
@@ -34,14 +44,10 @@ def main():
     margins = df_solve['Margin'].values.tolist()
     dtss = df_solve['DaysToSell_1_Part']
 
-    cost_goal = 252051
-    sales_goal = 300000
-    dtss_goal = 15  # Weekdays only!
-
     constraint_1 = [
-        {'type': 'ineq', 'fun': lambda n: cost_calculation(n, costs, cost_goal)},
-        {'type': 'ineq', 'fun': lambda n: sales_calculation(n, pvps, sales_goal)},
-        {'type': 'ineq', 'fun': lambda n: days_to_sell_calculation(n, dtss, dtss_goal)},
+        {'type': 'ineq', 'fun': lambda n: cost_calculation(n, costs)},
+        {'type': 'ineq', 'fun': lambda n: sales_calculation(n, pvps)},
+        {'type': 'ineq', 'fun': lambda n: days_to_sell_calculation(n, dtss)},
     ]
 
     bnds = [(0, 10000) for i in range(n_size)]
@@ -106,7 +112,7 @@ def main():
     plt.show()
 
 
-def cost_calculation(ns, costs, cost_goal):
+def cost_calculation(ns, costs):
 
     total_cost = np.sum([n * cost for n, cost in zip(ns, costs)]) - cost_goal
 
@@ -115,7 +121,7 @@ def cost_calculation(ns, costs, cost_goal):
     return total_cost
 
 
-def sales_calculation(ns, pvps, sales_goal):
+def sales_calculation(ns, pvps):
 
     total_sales = np.sum([n * pvp for n, pvp in zip(ns, pvps)]) - sales_goal
 
@@ -124,7 +130,7 @@ def sales_calculation(ns, pvps, sales_goal):
     return total_sales
 
 
-def days_to_sell_calculation(ns, dtss, dtss_goal):
+def days_to_sell_calculation(ns, dtss):
 
     days_to_sell = [n * dts for n, dts in zip(ns, dtss)]
     max_days_to_sell = dtss_goal - np.max(days_to_sell)
@@ -154,12 +160,15 @@ def test_function(x):
 
 
 def solver_dataset_preparation(df_sales, current_date):
-    df_solve = pd.DataFrame(columns=['Part_Ref', 'Cost', 'PVP', 'Margin', 'DII Year', 'DII Year weekdays', 'DaysToSell_1_Part'])
+    start = time.time()
+
     unique_part_refs = df_sales['Part_Ref'].unique()
+    unique_part_refs_count = df_sales['Part_Ref'].nunique()
 
     df_sales['weekday'] = df_sales['index'].dt.dayofweek
 
     last_year_date = pd.to_datetime(current_date) - relativedelta(years=1)
+    dts_interval_sales = df_sales.tail(dtss_goal)['index'].min()
 
     # print(df_sales[(df_sales['weekday'] == 5) & (df_sales['Qty_Sold_sum_al'] > 0)])
     # print(df_sales[(df_sales['weekday'] == 5) & (df_sales['Qty_Sold_sum_al'] > 0)].shape)  # 13 rows of sales at saturdays
@@ -169,69 +178,97 @@ def solver_dataset_preparation(df_sales, current_date):
     df_sales = df_sales[(df_sales['weekday'] >= 0) & (df_sales['weekday'] < 5)]  # Removal of weekend data
     df_sales.set_index('Part_Ref', inplace=True)
     i, parts_count, positions = 1, len(unique_part_refs), []
-    k = 0
+    # k = 0
 
-    for part_ref in unique_part_refs:
-        # print('Part_Ref: {}'.format(part_ref))
+    df_sales_grouped = df_sales.groupby('Part_Ref')
+    pool = Pool(processes=level_0_performance_report.pool_workers_count)
+    results = pool.map(solver_metrics_per_part_ref, [(part_ref, group, last_year_date, dts_interval_sales) for (part_ref, group) in df_sales_grouped])
+    pool.close()
+    df_solve = pd.concat([result for result in results if result is not None])
 
-        # start = time.time()
-        df_sales_filtered = df_sales.loc[part_ref, :]
-        if df_sales_filtered['Qty_Sold_sum_al'].sum() != 0 and df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:  # ToDo: This checkup will be removed tomorrow (02/08/19) as it will be enforced in a previous step
+    df_solve.to_csv('output/df_solve_0B.csv')
 
-            df_sales_filtered.set_index('index', inplace=True)
-            # I should use last purchase date/cost, but first: not all parts have purchases (e.g. BM83.13.9.415.965) and second, they should give the same value.
+    after_solve_preparation = df_solve['Part_Ref'].nunique()
+    df_solve_filtered = df_solve[df_solve['DaysToSell_1_Part'] <= dtss_goal]  # 6110 to 650
+    after_dtss_filter = df_solve_filtered['Part_Ref'].nunique()
+    df_solve_filtered.reset_index(inplace=True)
 
-            # last_sale_date = df_sales_filtered[(df_sales_filtered['Qty_Sold_sum_al'] > 0)]['index'].max()
-            last_sale_date = df_sales_filtered[(df_sales_filtered['Qty_Sold_sum_al'] > 0)].index.max()
+    print('From the initial value of {} \nit was reduced to {} \nand then filtered down to {}'.format(unique_part_refs_count, after_solve_preparation, after_dtss_filter))
+    # df_solve_filtered_2 = df_solve_filtered[df_solve_filtered['DTS_Max_Total_Qty_Sold'] > 0]  # 650 to 318  # I can't do this, but maybe i can add a flag to signal these part_refs
 
-            # last_cost = df_sales_filtered[(df_sales_filtered['index'] == last_sale_date)]['Cost_Sale_avg'].values[0]
-            # last_pvp = df_sales_filtered[(df_sales_filtered['index'] == last_sale_date)]['PVP_avg'].values[0]
-            last_cost = df_sales_filtered.loc[last_sale_date, 'Cost_Sale_avg']
-            last_pvp = df_sales_filtered.loc[last_sale_date, 'PVP_avg']
+    df_solve_filtered.to_csv('output/df_solve_0B_filtered.csv')
 
-            last_stock = df_sales_filtered['Stock_Qty_al'].tail(1).values[0]
-            if last_stock:
-                last_stock_value = last_stock * last_cost
+    print('Elapsed Time: {:.2f}'.format(time.time() - start))
+    return df_solve_filtered
 
-                # last_year_sales = df_sales_filtered[df_sales_filtered['index'] >= last_year_date]['Qty_Sold_sum_al'].sum()
-                # last_year_sales_avg = df_sales_filtered[df_sales_filtered['index'] >= last_year_date]['Qty_Sold_sum_al'].mean()
-                last_year_sales = df_sales_filtered.loc[last_year_date::, 'Qty_Sold_sum_al'].sum()
-                last_year_sales_avg = df_sales_filtered.loc[last_year_date::, 'Qty_Sold_sum_al'].mean()
 
-                if last_year_sales:
-                    last_year_cogs = last_year_sales * last_cost
-                    margin = (last_pvp - last_cost)
+def solver_metrics_per_part_ref(args):
+    part_ref, df_sales_filtered, last_year_date, dts_interval_sales = args
+    df_solve = pd.DataFrame(columns=['Part_Ref', 'Cost', 'PVP', 'Margin', 'DII Year', 'DII Year weekdays', 'DaysToSell_1_Part', 'DTS_Total_Qty_Sold', 'DTS_Min_Total_Qty_Sold', 'DTS_Max_Total_Qty_Sold'])
+    # final_df = pd.DataFrame()
 
-                    dii = last_stock_value / last_year_cogs
-                    dii_year = dii * 365
+    if df_sales_filtered['Qty_Sold_sum_al'].sum() >= 0 and df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:  # ToDo: This checkup will be removed tomorrow (02/08/19) as it will be enforced in a previous step
 
-                    avg_sales_per_day = last_stock / last_year_sales_avg  # The diff between dii_year and avg_sales_per_day is caused by the number of non-weekdays;
+        df_sales_filtered.set_index('index', inplace=True)
+        # I should use last purchase date/cost, but first: not all parts have purchases (e.g. BM83.13.9.415.965) and second, they should give the same value.
 
-                    days_to_sell_1_part = 1 / last_year_sales_avg
+        last_sale_date = df_sales_filtered[(df_sales_filtered['Qty_Sold_sum_al'] > 0)].index.max()
 
-                    if margin <= 0:
-                        pass
+        if last_sale_date < last_year_date:
+            return None
 
-                    # print('Part_Ref: {} \n Cost: {:.3f} \n Margin: {:.3f} \n Last Stock: {:.3f} \n Last Stock Value: {:.3f} \n Last Year Sales: {:.3f}'
-                    #       .format(part_ref, last_cost, margin, last_stock, last_stock_value, last_year_sales))
-                    df_solve.loc[k, ['Part_Ref', 'Cost', 'PVP', 'Margin', 'DII Year', 'DII Year weekdays', 'DaysToSell_1_Part']] = \
-                                                                            [part_ref, last_cost, last_pvp, margin, dii_year, avg_sales_per_day, days_to_sell_1_part]
-                    k += 1
+        df_last_sale = df_sales_filtered.loc[last_sale_date, ['Cost_Sale_avg', 'PVP_avg']].values
+        # last_cost = df_sales_filtered.loc[last_sale_date, 'Cost_Sale_avg']
+        # last_pvp = df_sales_filtered.loc[last_sale_date, 'PVP_avg']
+        last_cost = df_last_sale[0]
+        last_pvp = df_last_sale[1]
 
-                    # print('Part_Ref: {}, Cost: {:.2f}, PVP: {:.2f}, Margin: {:.2f}, Last Stock Value: {}, Last Year COGS: {}, DII Year: {:.2f}, Last Stock: {}, Last Year Sales Avg: {}, DII Year weekdays: {:.2f}, DaysToSell_1_Part: {:.2f},'
-                    #       .format(part_ref, last_cost, last_pvp, margin, last_stock_value, last_year_cogs, dii_year, last_stock, last_year_sales_avg, avg_sales_per_day, days_to_sell_1_part))
+        dts_sales = df_sales_filtered.loc[dts_interval_sales::, 'Qty_Sold_sum_al']
+        dts_total_qty_sold = dts_sales.sum()
+        dts_min_total_qty_sold = dts_sales[dts_sales >= 0].min()
+        dts_max_total_qty_sol = dts_sales.max()
 
-        position = int((i / parts_count) * 100)
-        if not position % 1:
-            if position not in positions:
-                print('{}% completed'.format(position))
-                positions.append(position)
+        # print(part_ref, dts_total_qty_sold, dts_min_total_qty_sold, dts_max_total_qty_sol)
+        # print('last_cost', last_cost, '\n', 'last_pvp', last_pvp)
 
-        i += 1
-        # except IndexError:
-        #     print(part_ref)
-        # print('{} - Elapsed Time: {:.2f} seconds.'.format(part_ref, time.time() - start))
-    # print(df_solve)
+        last_stock = df_sales_filtered['Stock_Qty_al'].tail(1).values[0]
+        # print('last_stock', last_stock)
+        if last_stock >= 0:
+            last_stock_value = last_stock * last_cost
+            # print('last_stock_value', last_stock_value)
+
+            df_last_year = df_sales_filtered.loc[last_year_date::, 'Qty_Sold_sum_al']
+            # last_year_sales = df_sales_filtered.loc[last_year_date::, 'Qty_Sold_sum_al'].sum()
+            last_year_sales = df_last_year.sum()
+            # print('last_year_sales', last_year_sales)
+
+            # last_year_sales_avg = df_sales_filtered.loc[last_year_date::, 'Qty_Sold_sum_al'].mean()
+            last_year_sales_avg = df_last_year.mean()
+            # print('last_year_sales_avg', last_year_sales_avg)
+
+            if last_year_sales:
+                last_year_cogs = last_year_sales * last_cost
+                # print('last_year_cogs', last_year_cogs)
+                margin = (last_pvp - last_cost)
+
+                dii = last_stock_value / last_year_cogs
+                dii_year = dii * 365
+
+                avg_sales_per_day = last_stock / last_year_sales_avg  # The diff between dii_year and avg_sales_per_day is caused by the number of non-weekdays;
+
+                days_to_sell_1_part = 1 / last_year_sales_avg
+
+                if margin <= 0:
+                    return None
+
+                # print('Part_Ref: {} \n Cost: {:.3f} \n Margin: {:.3f} \n Last Stock: {:.3f} \n Last Stock Value: {:.3f} \n Last Year Sales: {:.3f}'
+                #       .format(part_ref, last_cost, margin, last_stock, last_stock_value, last_year_sales))
+                df_solve.loc[0, ['Part_Ref', 'Cost', 'PVP', 'Margin', 'DII Year', 'DII Year weekdays', 'DaysToSell_1_Part', 'DTS_Total_Qty_Sold', 'DTS_Min_Total_Qty_Sold', 'DTS_Max_Total_Qty_Sold']] = \
+                                                                        [part_ref, last_cost, last_pvp, margin, dii_year, avg_sales_per_day, days_to_sell_1_part, dts_total_qty_sold, dts_min_total_qty_sold, dts_max_total_qty_sol]
+
+                # print('Part_Ref: {}, Cost: {:.2f}, PVP: {:.2f}, Margin: {:.2f}, Last Stock Value: {}, Last Year COGS: {}, DII Year: {:.2f}, Last Stock: {}, Last Year Sales Avg: {}, DII Year weekdays: {:.2f}, DaysToSell_1_Part: {:.2f},'
+                #       .format(part_ref, last_cost, last_pvp, margin, last_stock_value, last_year_cogs, dii_year, last_stock, last_year_sales_avg, avg_sales_per_day, days_to_sell_1_part))
+
     return df_solve
 
 

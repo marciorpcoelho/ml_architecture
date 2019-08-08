@@ -180,17 +180,17 @@ def data_acquisition(options_info, pse_code):
     print('PSE_Code = {}'.format(pse_code))
 
     if pse_code == '0I':
-        sales_info = ['dbs/df_sales_0I_01_07_19', options_file.sales_query]
-        purchases_info = ['dbs/df_purchases_0I_01_07_19', options_file.purchases_query]
-        stock_info = ['dbs/df_stock_0I_01_07_19', options_file.stock_query]
-        reg_info = ['dbs/df_reg_0I_01_07_19', options_file.reg_query]
-        reg_al_info = ['dbs/df_reg_al_client_0I_01_07_19', options_file.reg_autoline_clients]
+        sales_info = ['dbs/df_sales_0I_02_08_19', options_file.sales_query]
+        purchases_info = ['dbs/df_purchases_0I_02_08_19', options_file.purchases_query]
+        stock_info = ['dbs/df_stock_0I_02_08_19', options_file.stock_query]
+        reg_info = ['dbs/df_reg_0I_02_08_19', options_file.reg_query]
+        reg_al_info = ['dbs/df_reg_al_client_0I_02_08_19', options_file.reg_autoline_clients]
     if pse_code == '0B':
-        sales_info = ['dbs/df_sales_0B_15_07_19', options_file.sales_query]
-        purchases_info = ['dbs/df_purchases_0B_15_07_19', options_file.purchases_query]
-        stock_info = ['dbs/df_stock_0B_15_07_19', options_file.stock_query]
-        reg_info = ['dbs/df_reg_0B_15_07_19', options_file.reg_query]
-        reg_al_info = ['dbs/df_reg_al_client_0B_15_07_19', options_file.reg_autoline_clients]
+        sales_info = ['dbs/df_sales_0B_02_08_19', options_file.sales_query]
+        purchases_info = ['dbs/df_purchases_0B_02_08_19', options_file.purchases_query]
+        stock_info = ['dbs/df_stock_0B_02_08_19', options_file.stock_query]
+        reg_info = ['dbs/df_reg_0B_02_08_19', options_file.reg_query]
+        reg_al_info = ['dbs/df_reg_al_client_0B_02_08_19', options_file.reg_autoline_clients]
     dfs = []
 
     for dimension in [sales_info, purchases_info, stock_info, reg_info, reg_al_info]:
@@ -397,7 +397,7 @@ def dataset_treatment(df_sales, df_purchases, df_stock, pse_code):
     dictionary_prices_cost = {}
 
     try:
-        df_sales = pd.read_csv('dbs/df_sales_processedasas_' + str(pse_code) + '.csv', index_col=0, parse_dates=['SLR_Document_Date', 'WIP_Date_Created', 'Movement_Date'])
+        df_sales = pd.read_csv('dbs/df_sales_processed_' + str(pse_code) + '.csv', index_col=0, parse_dates=['SLR_Document_Date', 'WIP_Date_Created', 'Movement_Date'])
     except FileNotFoundError:
         df_sales = df_sales[df_sales['Qty_Sold'] != 0]
 

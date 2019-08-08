@@ -214,7 +214,7 @@ def new_request_type(df, df_top_words, options_file):
                     tokenized_key_word = [stemmer_pt.stem(x) for x in tokenized_key_word]
                     selected_cols = df_top_words[tokenized_key_word]
                 except KeyError:
-                    log_record('Keywords {} which were stemmed to {} were not found consecutive.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
+                    log_record('Palavras chave {} que foram reduzidas a {} não foram encontradas de forma consecutiva.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
                     continue
 
                 matched_index = selected_cols[selected_cols == 1].dropna(axis=0).index.values  # returns the requests with the keyword present
@@ -227,7 +227,7 @@ def new_request_type(df, df_top_words, options_file):
                     if len(matched_index):
                         df_top_words.loc[df_top_words.index.isin(matched_index), 'Label'] = label
                 else:
-                    log_record('Keywords {} which were stemmed to {} were not found consecutive.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
+                    log_record('Palavras chave {} que foram reduzidas a {} não foram encontradas de forma consecutiva.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
 
             # Single word
             elif ' ' not in keywords:
@@ -253,10 +253,10 @@ def new_request_type(df, df_top_words, options_file):
     if [(x, y) for (x, y) in zip(df['Request_Num'].values, df_top_words.index.values) if x != y]:
         unique_requests_df = df['Request_Num'].unique()
         unique_requests_df_top_words = df_top_words.index.values
-        log_record('Requests have missing Labels!', options_file.project_id, flag=1)
-        log_record('Missing requests in the original dataset: {}'.format([x for x in unique_requests_df if x not in unique_requests_df_top_words]), options_file.project_id, flag=1)
-        log_record('Missing requests in the top words dataset: {}'.format([x for x in unique_requests_df_top_words if x not in unique_requests_df]), options_file.project_id, flag=1)
-        raise ValueError('Requests have missing Labels!')
+        log_record('Existem pedidos sem classificação!', options_file.project_id, flag=1)
+        log_record('Pedidos não classificados no dataset original: {}'.format([x for x in unique_requests_df if x not in unique_requests_df_top_words]), options_file.project_id, flag=1)
+        log_record('Pedidos não classificados no dataset Top_Words: {}'.format([x for x in unique_requests_df_top_words if x not in unique_requests_df]), options_file.project_id, flag=1)
+        raise ValueError('Existem pedidos sem classificação!')
 
     log_record('{:.2f}% de pedidos Não Definidos'.format((df[df['Label'] == 'Não Definido'].shape[0] / df['Request_Num'].nunique()) * 100), options_file.project_id)
 
