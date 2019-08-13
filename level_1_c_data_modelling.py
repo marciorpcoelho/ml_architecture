@@ -414,6 +414,7 @@ def apv_last_stock_calculation(min_date, max_date, pse_code):
     results_files = [datetime.datetime.strptime(f[17:25], format('%Y%m%d')) for f in listdir('output/') if f.startswith('results_merge_{}_'.format(pse_code))]
     min_date = datetime.datetime.strptime(min_date, format('%Y%m%d'))
     max_date = datetime.datetime.strptime(max_date, format('%Y%m%d'))
+    preprocessed_data_exists_flag = 0
 
     try:
         max_file_date = np.max(results_files)
@@ -421,12 +422,13 @@ def apv_last_stock_calculation(min_date, max_date, pse_code):
             if max_file_date == max_date:
                 raise Exception('All data has been processed already up to date {}.'.format(max_file_date))
             else:
+                preprocessed_data_exists_flag = 1
                 print('Data already processed from {} to {}. Will adjust accordingly...'.format(min_date, max_file_date))
-            return max_file_date
+            return max_file_date, preprocessed_data_exists_flag
         else:
-            return min_date
+            return min_date, preprocessed_data_exists_flag
     except ValueError:
-        return min_date
+        return min_date, preprocessed_data_exists_flag
 
 
 def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
@@ -437,7 +439,7 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
 
     except FileNotFoundError:
         print('File results_merge_{} not found. Processing...'.format(pse_code))
-        min_date = apv_last_stock_calculation(min_date, max_date, pse_code)
+        min_date, preprocessed_data_exists_flag = apv_last_stock_calculation(min_date, max_date, pse_code)
 
         df_stock.set_index('Record_Date', inplace=True)
         df_purchases.set_index('Movement_Date', inplace=True)
@@ -487,7 +489,31 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
 
             i += 1
         results.to_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date))
+
+        if preprocessed_data_exists_flag:
+            results_preprocess_merge(pse_code, results, min_date)
+
     return results
+
+
+def results_preprocess_merge(pse_code, results, min_date):
+
+    old_results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, min_date))
+    new_results = pd.concat([old_results, results])
+
+    old_results_unique_parts = old_results['Part_Ref'].unique()
+    new_results_unique_parts = results['Part_Ref'].unique()
+    nunique_matching_parts = len([x for x in old_results_unique_parts if x in new_results_unique_parts])
+
+    shape_before = new_results.shape
+    new_results.drop_duplicates(subset=['index', 'Part_Ref'], inplace=True)
+    shape_after = new_results.shape
+    shape_diff = shape_before[0] - shape_after[0]
+
+    if shape_diff != nunique_matching_parts:
+        raise ValueError('Problem while removing repeated rows. Instead of removing {} repeated rows, {} were removed instead.'.format(nunique_matching_parts, shape_diff))
+    else:
+        return new_results
 
 
 def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
@@ -506,15 +532,17 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
     df_sales_filtered.set_index('Movement_Date', inplace=True)
 
     if not df_al_filtered.shape[0]:
+        print('am i here?')
         # raise ValueError('No data found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
         # print('\nNo data found for part_ref {} and/or selected period {}/{}.\n'.format(selected_part[0], min_date, max_date))
         # no_data_flag = 1
         return pd.DataFrame(), stock_evolution_correct_flag, offset
     elif df_al_filtered.shape[0] == 1:
+        print('im here!')
         # raise ValueError('Only 1 row found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
         # print('\nOnly 1 row found for part_ref {} and/or selected period {}/{}. Ignored.\n'.format(selected_part[0], min_date, max_date))
         # one_row_only_flag = 1
-        return pd.DataFrame(), stock_evolution_correct_flag, offset
+        # return pd.DataFrame(), stock_evolution_correct_flag, offset
 
     df_al_filtered['Qty_Sold_sum_al'], df_al_filtered['Cost_Sale_avg'], df_al_filtered['PVP_avg'] = 0, 0, 0  # Placeholder for cases without sales
     df_al_grouped = df_al_filtered[df_al_filtered['regularization_flag'] == 0].groupby(['Movement_Date', 'Part_Ref'])
@@ -523,6 +551,8 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
         df_al_filtered.loc[rows_selection, 'Qty_Sold_sum_al'] = row['Unit'].sum()
         df_al_filtered.loc[rows_selection, 'Cost_Sale_avg'] = row['Preço de custo'].mean()
         df_al_filtered.loc[rows_selection, 'PVP_avg'] = row['P. V. P'].mean()
+
+    print(df_al_filtered)
 
     df_al_filtered = df_al_filtered.assign(Qty_Regulated_sum=0)  # Placeholder for cases without regularizations
     df_al_filtered = df_al_filtered.assign(Cost_Reg_avg=0)  # Placeholder for cases without regularizations
@@ -533,66 +563,66 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
         df_al_filtered.loc[rows_selection, 'Qty_Regulated_sum'] = row['Unit'].sum()
         df_al_filtered.loc[rows_selection, 'Cost_Reg_avg'] = row['Cost_Reg'].sum()
 
-    if df_al_filtered['Qty_Sold_sum_al'].sum() != 0 and df_al_filtered[df_al_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:
-        df_al_filtered.drop(['Unit', 'Preço de custo', 'P. V. P', 'regularization_flag'], axis=1, inplace=True)
+    # if df_al_filtered['Qty_Sold_sum_al'].sum() != 0 and df_al_filtered[df_al_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:
+    df_al_filtered.drop(['Unit', 'Preço de custo', 'P. V. P', 'regularization_flag'], axis=1, inplace=True)
 
-        df_al_filtered = df_al_filtered.drop_duplicates(subset=['Movement_Date'])
-        df_al_filtered.set_index('Movement_Date', inplace=True)
+    df_al_filtered = df_al_filtered.drop_duplicates(subset=['Movement_Date'])
+    df_al_filtered.set_index('Movement_Date', inplace=True)
 
-        df_purchases_filtered = df_purchases_filtered.loc[~df_purchases_filtered.index.duplicated(keep='first')]
+    df_purchases_filtered = df_purchases_filtered.loc[~df_purchases_filtered.index.duplicated(keep='first')]
 
-        qty_sold_al = df_al_filtered[df_al_filtered.index > min_date]['Qty_Sold_sum_al'].sum()
-        qty_purchased = df_purchases_filtered['Qty_Purchased_sum'].sum()
-        try:
-            stock_start = df_stock_filtered[df_stock_filtered.index == min_date]['Stock_Qty'].values[0]
-        except IndexError:
-            stock_start = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
-        try:
-            stock_end = df_stock_filtered[df_stock_filtered.index == max_date]['Stock_Qty'].values[0]
-        except IndexError:
-            stock_end = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
+    qty_sold_al = df_al_filtered[df_al_filtered.index > min_date]['Qty_Sold_sum_al'].sum()
+    qty_purchased = df_purchases_filtered['Qty_Purchased_sum'].sum()
+    try:
+        stock_start = df_stock_filtered[df_stock_filtered.index == min_date]['Stock_Qty'].values[0]
+    except IndexError:
+        stock_start = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
+    try:
+        stock_end = df_stock_filtered[df_stock_filtered.index == max_date]['Stock_Qty'].values[0]
+    except IndexError:
+        stock_end = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
 
-        reg_value = df_al_filtered['Qty_Regulated_sum'].sum()
-        # delta_stock = stock_end - stock_start
+    reg_value = df_al_filtered['Qty_Regulated_sum'].sum()
+    # delta_stock = stock_end - stock_start
 
-        if not reg_value:
-            reg_value = 0
+    if not reg_value:
+        reg_value = 0
 
-        result = pd.concat([df_purchases_filtered[['Qty_Purchased_sum', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg']], df_al_filtered[['Qty_Regulated_sum', 'Cost_Reg_avg', 'Qty_Sold_sum_al', 'Cost_Sale_avg', 'PVP_avg']]], axis=1, sort=False)
-        result['Part_Ref'] = selected_part * result.shape[0]
-        try:
-            # result['Stock_Qty'] = df_stock_filtered['Stock_Qty'].head(1).values[0]
-            result['Stock_Qty'] = stock_start
-        except IndexError:
-            result['Stock_Qty'] = 0  # Cases when there is no stock information
+    result = pd.concat([df_purchases_filtered[['Qty_Purchased_sum', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg']], df_al_filtered[['Qty_Regulated_sum', 'Cost_Reg_avg', 'Qty_Sold_sum_al', 'Cost_Sale_avg', 'PVP_avg']]], axis=1, sort=False)
+    result['Part_Ref'] = selected_part * result.shape[0]
+    try:
+        # result['Stock_Qty'] = df_stock_filtered['Stock_Qty'].head(1).values[0]
+        result['Stock_Qty'] = stock_start
+    except IndexError:
+        result['Stock_Qty'] = 0  # Cases when there is no stock information
 
-        result_al = stock_start + qty_purchased - qty_sold_al - reg_value
+    result_al = stock_start + qty_purchased - qty_sold_al - reg_value
 
-        if result_al != stock_end:
-            offset = stock_end - result_al
-            print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
-        else:
-            print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
-            stock_evolution_correct_flag = 1
+    if result_al != stock_end:
+        offset = stock_end - result_al
+        print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
+    else:
+        print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
+        stock_evolution_correct_flag = 1
 
-        result['Stock_Qty'].fillna(method='ffill', inplace=True)
-        result['Part_Ref'].fillna(method='ffill', inplace=True)
-        result.fillna(0, inplace=True)
+    result['Stock_Qty'].fillna(method='ffill', inplace=True)
+    result['Part_Ref'].fillna(method='ffill', inplace=True)
+    result.fillna(0, inplace=True)
 
-        # The filters in the evolution columns is to compensate for sales/purchases/etc in the first day, even though the stock for that same day already has those movements into consideration.
-        # The stock_qty_al initial value is to compensate for the previous line.
-        min_date_next_day = min_date + relativedelta(days=1)
-        result['Sales Evolution_al'] = result[min_date_next_day:]['Qty_Sold_sum_al'].cumsum()
-        result['Purchases Evolution'] = result[min_date_next_day:]['Qty_Purchased_sum'].cumsum()
-        result['Purchases Urgent Evolution'] = result[min_date_next_day:]['Qty_Purchased_urgent_sum'].cumsum()
-        result['Purchases Non Urgent Evolution'] = result[min_date_next_day:]['Qty_Purchased_non_urgent_sum'].cumsum()
-        result['Regulated Evolution'] = result[min_date_next_day:]['Qty_Regulated_sum'].cumsum()
+    # The filters in the evolution columns is to compensate for sales/purchases/etc in the first day, even though the stock for that same day already has those movements into consideration.
+    # The stock_qty_al initial value is to compensate for the previous line.
+    min_date_next_day = min_date + relativedelta(days=1)
+    result['Sales Evolution_al'] = result[min_date_next_day:]['Qty_Sold_sum_al'].cumsum()
+    result['Purchases Evolution'] = result[min_date_next_day:]['Qty_Purchased_sum'].cumsum()
+    result['Purchases Urgent Evolution'] = result[min_date_next_day:]['Qty_Purchased_urgent_sum'].cumsum()
+    result['Purchases Non Urgent Evolution'] = result[min_date_next_day:]['Qty_Purchased_non_urgent_sum'].cumsum()
+    result['Regulated Evolution'] = result[min_date_next_day:]['Qty_Regulated_sum'].cumsum()
 
-        result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
-        result.ix[0, 'Stock_Qty_al'] = stock_start  #
-        result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
+    result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
+    result.ix[0, 'Stock_Qty_al'] = stock_start  #
+    result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
 
-        # result.to_csv('output/{}_stock_evolution.csv'.format(selected_part[0]))
+    # result.to_csv('output/{}_stock_evolution.csv'.format(selected_part[0]))
 
     return result, stock_evolution_correct_flag, offset
 

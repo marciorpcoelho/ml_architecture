@@ -13,7 +13,7 @@ update = 1  # Decides whether to fetch new datasets from the DW or not
 def main():
     selected_parts = []
     min_date = '20180131'  # This is a placeholder for the minimum possible date. It should search for last date with processed data
-    max_date = '20190731'  # This will be replaced by current date
+    max_date = '20190628'  # This will be replaced by current date
     print('Full Available Data: {} to {}'.format(min_date, max_date))
 
     df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al = data_acquistion(options_file)
