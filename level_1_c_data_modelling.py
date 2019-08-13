@@ -581,11 +581,13 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
 
         # The filters in the evolution columns is to compensate for sales/purchases/etc in the first day, even though the stock for that same day already has those movements into consideration.
         # The stock_qty_al initial value is to compensate for the previous line.
-        result['Sales Evolution_al'] = result[result.index > min_date]['Qty_Sold_sum_al'].cumsum()
-        result['Purchases Evolution'] = result[result.index > min_date]['Qty_Purchased_sum'].cumsum()
-        result['Purchases Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_urgent_sum'].cumsum()
-        result['Purchases Non Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_non_urgent_sum'].cumsum()
-        result['Regulated Evolution'] = result[result.index > min_date]['Qty_Regulated_sum'].cumsum()
+        min_date_next_day = min_date + relativedelta(days=1)
+        result['Sales Evolution_al'] = result[min_date_next_day:]['Qty_Sold_sum_al'].cumsum()
+        result['Purchases Evolution'] = result[min_date_next_day:]['Qty_Purchased_sum'].cumsum()
+        result['Purchases Urgent Evolution'] = result[min_date_next_day:]['Qty_Purchased_urgent_sum'].cumsum()
+        result['Purchases Non Urgent Evolution'] = result[min_date_next_day:]['Qty_Purchased_non_urgent_sum'].cumsum()
+        result['Regulated Evolution'] = result[min_date_next_day:]['Qty_Regulated_sum'].cumsum()
+
         result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
         result.ix[0, 'Stock_Qty_al'] = stock_start  #
         result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
