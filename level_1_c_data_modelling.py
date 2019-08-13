@@ -532,13 +532,12 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
     df_sales_filtered.set_index('Movement_Date', inplace=True)
 
     if not df_al_filtered.shape[0]:
-        print('am i here?')
         # raise ValueError('No data found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
         # print('\nNo data found for part_ref {} and/or selected period {}/{}.\n'.format(selected_part[0], min_date, max_date))
         # no_data_flag = 1
         return pd.DataFrame(), stock_evolution_correct_flag, offset
-    elif df_al_filtered.shape[0] == 1:
-        print('im here!')
+    # elif df_al_filtered.shape[0] == 1:
+    #     print('im here!')
         # raise ValueError('Only 1 row found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
         # print('\nOnly 1 row found for part_ref {} and/or selected period {}/{}. Ignored.\n'.format(selected_part[0], min_date, max_date))
         # one_row_only_flag = 1
@@ -551,8 +550,6 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
         df_al_filtered.loc[rows_selection, 'Qty_Sold_sum_al'] = row['Unit'].sum()
         df_al_filtered.loc[rows_selection, 'Cost_Sale_avg'] = row['Preço de custo'].mean()
         df_al_filtered.loc[rows_selection, 'PVP_avg'] = row['P. V. P'].mean()
-
-    print(df_al_filtered)
 
     df_al_filtered = df_al_filtered.assign(Qty_Regulated_sum=0)  # Placeholder for cases without regularizations
     df_al_filtered = df_al_filtered.assign(Cost_Reg_avg=0)  # Placeholder for cases without regularizations
@@ -600,9 +597,9 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
 
     if result_al != stock_end:
         offset = stock_end - result_al
-        print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
+        # print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
     else:
-        print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
+        # print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
         stock_evolution_correct_flag = 1
 
     result['Stock_Qty'].fillna(method='ffill', inplace=True)
