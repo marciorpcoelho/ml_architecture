@@ -408,15 +408,20 @@ def part_ref_selection(df_al, current_date):
     return all_unique_part_refs
 
 
-def apv_last_stock_calculation(min_date, pse_code):
+def apv_last_stock_calculation(min_date, max_date, pse_code):
+    # Proj_ID = 2259
 
     results_files = [datetime.datetime.strptime(f[17:25], format('%Y%m%d')) for f in listdir('output/') if f.startswith('results_merge_{}_'.format(pse_code))]
     min_date = datetime.datetime.strptime(min_date, format('%Y%m%d'))
+    max_date = datetime.datetime.strptime(max_date, format('%Y%m%d'))
 
     try:
         max_file_date = np.max(results_files)
         if min_date < max_file_date:
-            print('Data already processed from {} to {}. Will adjust accordingly...'.format(min_date, max_file_date))
+            if max_file_date == max_date:
+                raise Exception('All data has been processed already up to date {}.'.format(max_file_date))
+            else:
+                print('Data already processed from {} to {}. Will adjust accordingly...'.format(min_date, max_file_date))
             return max_file_date
         else:
             return min_date
@@ -432,7 +437,7 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
 
     except FileNotFoundError:
         print('File results_merge_{} not found. Processing...'.format(pse_code))
-        min_date = apv_last_stock_calculation(min_date, pse_code)
+        min_date = apv_last_stock_calculation(min_date, max_date, pse_code)
 
         df_stock.set_index('Record_Date', inplace=True)
         df_purchases.set_index('Movement_Date', inplace=True)
@@ -490,8 +495,8 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
     df_sales, df_al, df_stock, df_reg_al_clients, df_purchases = dataframes_list[0], dataframes_list[1], dataframes_list[2], dataframes_list[3], dataframes_list[4]
     result, stock_evolution_correct_flag, offset = pd.DataFrame(), 0, 0
 
-    df_sales_filtered = df_sales[(df_sales['Part_Ref'].isin(selected_part)) & (df_sales['Movement_Date'] > min_date) & (df_sales['Movement_Date'] <= max_date)]
-    df_al_filtered = df_al[(df_al['Part_Ref'].isin(selected_part)) & (df_al['Movement_Date'] > min_date) & (df_al['Movement_Date'] <= max_date)]
+    df_sales_filtered = df_sales[(df_sales['Part_Ref'].isin(selected_part)) & (df_sales['Movement_Date'] >= min_date) & (df_sales['Movement_Date'] <= max_date)]
+    df_al_filtered = df_al[(df_al['Part_Ref'].isin(selected_part)) & (df_al['Movement_Date'] >= min_date) & (df_al['Movement_Date'] <= max_date)]
     df_purchases_filtered = df_purchases[(df_purchases['Part_Ref'].isin(selected_part)) & (df_purchases.index > min_date) & (df_purchases.index <= max_date)]
     df_stock_filtered = df_stock[(df_stock['Part_Ref'].isin(selected_part)) & (df_stock.index >= min_date) & (df_stock.index <= max_date)]
 
@@ -536,7 +541,7 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
 
         df_purchases_filtered = df_purchases_filtered.loc[~df_purchases_filtered.index.duplicated(keep='first')]
 
-        qty_sold_al = df_al_filtered['Qty_Sold_sum_al'].sum()
+        qty_sold_al = df_al_filtered[df_al_filtered.index > min_date]['Qty_Sold_sum_al'].sum()
         qty_purchased = df_purchases_filtered['Qty_Purchased_sum'].sum()
         try:
             stock_start = df_stock_filtered[df_stock_filtered.index == min_date]['Stock_Qty'].values[0]
@@ -565,21 +570,24 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
 
         if result_al != stock_end:
             offset = stock_end - result_al
-            # print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
+            print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
         else:
-            # print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
+            print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
             stock_evolution_correct_flag = 1
 
         result['Stock_Qty'].fillna(method='ffill', inplace=True)
         result['Part_Ref'].fillna(method='ffill', inplace=True)
         result.fillna(0, inplace=True)
 
-        result['Sales Evolution_al'] = result['Qty_Sold_sum_al'].cumsum()
-        result['Purchases Evolution'] = result['Qty_Purchased_sum'].cumsum()
-        result['Purchases Urgent Evolution'] = result['Qty_Purchased_urgent_sum'].cumsum()
-        result['Purchases Non Urgent Evolution'] = result['Qty_Purchased_non_urgent_sum'].cumsum()
-        result['Regulated Evolution'] = result['Qty_Regulated_sum'].cumsum()
+        # The filters in the evolution columns is to compensate for sales/purchases/etc in the first day, even though the stock for that same day already has those movements into consideration.
+        # The stock_qty_al initial value is to compensate for the previous line.
+        result['Sales Evolution_al'] = result[result.index > min_date]['Qty_Sold_sum_al'].cumsum()
+        result['Purchases Evolution'] = result[result.index > min_date]['Qty_Purchased_sum'].cumsum()
+        result['Purchases Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_urgent_sum'].cumsum()
+        result['Purchases Non Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_non_urgent_sum'].cumsum()
+        result['Regulated Evolution'] = result[result.index > min_date]['Qty_Regulated_sum'].cumsum()
         result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
+        result.ix[0, 'Stock_Qty_al'] = stock_start  #
         result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
 
         # result.to_csv('output/{}_stock_evolution.csv'.format(selected_part[0]))
