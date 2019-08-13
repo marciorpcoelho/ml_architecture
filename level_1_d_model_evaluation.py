@@ -326,7 +326,7 @@ def model_choice_upload(flag, name, value, options_file):
     return message
 
 
-def plot_roc_curve(models, models_name, datasets, save_name, save_dir):
+def plot_roc_curve(models, models_name, datasets, save_name):
     plt.subplots(figsize=(800 / my_dpi, 800 / my_dpi), dpi=my_dpi)
     for model in models_name:
         prob_train_init = models[model].fit(datasets['train_x'], datasets['train_y'][list(datasets['train_y'])[0]]).predict_proba(datasets['test_x'])
@@ -344,15 +344,15 @@ def plot_roc_curve(models, models_name, datasets, save_name, save_dir):
     plt.legend(loc="lower right")
     plt.grid()
     plt.tight_layout()
-    save_fig(save_name, save_dir=save_dir)
+    save_fig(save_name)
     plt.clf()
 
 
-def save_fig(name, save_dir='output/'):
+def save_fig(name, save_dir='plots/'):
     # Saves plot in at least two formats, .png and .pdf
 
     if os.path.exists(save_dir + str(name) + '.png'):
-        os.remove(save_dir + str(name) + '.png')
+        os.remove(save_dir + str(name) + '.png')  # This is needed as png format is not overwritten
 
     plt.savefig(save_dir + str(name) + '.png')
     plt.savefig(save_dir + str(name) + '.pdf')

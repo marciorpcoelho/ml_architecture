@@ -187,7 +187,7 @@ def model_evaluation(df, models, best_models, running_times, classes, datasets, 
 
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, options_file, proj_id)  # Creates a df with the performance of each model evaluated in various metrics, explained
     # in the provided pdf
-    plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features), save_dir='plots/')
+    plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features))
 
     df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, proj_id)
     model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)

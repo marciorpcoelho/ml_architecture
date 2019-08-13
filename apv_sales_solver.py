@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import level_0_performance_report
+from level_1_d_model_evaluation import save_fig
 from scipy.optimize import minimize, LinearConstraint, Bounds
 from dateutil.relativedelta import relativedelta
 pd.set_option('display.expand_frame_repr', False)
@@ -109,6 +110,7 @@ def main():
 
     plt.tight_layout()
     plt.title('N={}'.format(n_size))
+    save_fig('apv_solver_metrics_evolution')
     plt.show()
 
 

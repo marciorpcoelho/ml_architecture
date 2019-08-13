@@ -1057,7 +1057,7 @@ def top_words_processing(df_facts):
 
 
 def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_purchases_flags):
-    current_date, _ = time_tags()
+    current_date, _ = time_tags(format_date='%Y%m%d')
     sales_cols_to_keep = ['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']
     stock_cols_to_keep = ['Part_Ref', 'Stock_Qty', 'Record_Date']
 
@@ -1066,7 +1066,7 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
 
     try:
         df_sales = pd.read_csv(sales_file_name + '.csv', index_col=0, parse_dates=['Movement_Date', 'WIP_Date_Created', 'SLR_Document_Date'], usecols=['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']).sort_values(by='Movement_Date')
-        print('{} file found!'.format(sales_file_name))
+        print('{} file found.'.format(sales_file_name))
     except FileNotFoundError:
         print('{} file not found, processing...'.format(sales_file_name))
         df_sales = df_sales[df_sales['Qty_Sold'] != 0]
@@ -1088,7 +1088,7 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
 
         df_sales.drop('Qty_Sold', axis=1, inplace=True)
 
-        df_sales.remove_columns([x for x in list(df_sales) if x not in sales_cols_to_keep])
+        df_sales = remove_columns(df_sales, [x for x in list(df_sales) if x not in sales_cols_to_keep])
 
         df_sales.sort_index(inplace=True)
 
@@ -1096,7 +1096,7 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
 
     try:
         df_purchases = pd.read_csv(purchases_file_name + '.csv', index_col=0, parse_dates=['Movement_Date']).sort_values(by='Movement_Date')
-        print('{} file found!'.format(purchases_file_name))
+        print('{} file found.'.format(purchases_file_name))
     except FileNotFoundError:
         print('{} file not found, processing...'.format(purchases_file_name))
         df_purchases['Cost_Value_1'] = df_purchases['Cost_Value'] / df_purchases['Quantity']

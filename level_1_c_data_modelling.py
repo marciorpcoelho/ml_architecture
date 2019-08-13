@@ -4,7 +4,9 @@ import datetime
 import pickle
 import time
 import nltk
+from os import listdir
 import operator
+from dateutil.relativedelta import relativedelta
 from nltk.stem.snowball import SnowballStemmer
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score, calinski_harabaz_score
@@ -380,14 +382,58 @@ def request_matches(label, keywords, rank, requests_list, dictionary):
     return dictionary
 
 
+def part_ref_selection(df_al, current_date):
+    # Proj_ID = 2259
+    print('Selection of Part Reference')
+
+    last_year_date = pd.to_datetime(current_date) - relativedelta(years=1)
+
+    df_al_filtered = df_al[(df_al['Movement_Date'] > last_year_date) & (df_al['Movement_Date'] <= current_date)]
+
+    all_unique_part_refs = df_al_filtered['Part_Ref'].unique()
+
+    all_unique_part_refs_bm = [x for x in all_unique_part_refs if x.startswith('BM')]
+    all_unique_part_refs_mn = [x for x in all_unique_part_refs if x.startswith('MN')]
+
+    all_unique_part_refs = all_unique_part_refs_bm + all_unique_part_refs_mn
+
+    all_unique_part_refs_at = [x for x in all_unique_part_refs if x.endswith('AT')]
+
+    all_unique_part_refs = [x for x in all_unique_part_refs if x not in all_unique_part_refs_at]
+
+    [print('{} has a weird size!'.format(x)) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
+
+    print('{} unique part_refs sold between {} and {}.'.format(len(all_unique_part_refs), last_year_date.date(), current_date))
+
+    return all_unique_part_refs
+
+
+def apv_last_stock_calculation(min_date, pse_code):
+
+    results_files = [datetime.datetime.strptime(f[17:25], format('%Y%m%d')) for f in listdir('output/') if f.startswith('results_merge_{}_'.format(pse_code))]
+    min_date = datetime.datetime.strptime(min_date, format('%Y%m%d'))
+
+    try:
+        max_file_date = np.max(results_files)
+        if min_date < max_file_date:
+            print('Data already processed from {} to {}. Will adjust accordingly...'.format(min_date, max_file_date))
+            return max_file_date
+        else:
+            return min_date
+    except ValueError:
+        return min_date
+
+
 def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
 
     try:
-        results = pd.read_csv('output/results_merge_{}.csv'.format(pse_code), index_col=0)
-        print('File results_merge_{} found.'.format(pse_code))
+        results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date), index_col=0)
+        print('File results_merge_{}_{} found.'.format(pse_code, max_date))
 
     except FileNotFoundError:
         print('File results_merge_{} not found. Processing...'.format(pse_code))
+        min_date = apv_last_stock_calculation(min_date, pse_code)
+
         df_stock.set_index('Record_Date', inplace=True)
         df_purchases.set_index('Movement_Date', inplace=True)
         df_al['Unit'] = df_al['Unit'] * (-1)  # Turn the values to their symmetrical so it matches the other dfs
@@ -404,7 +450,6 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
             result_part_ref, stock_evolution_correct_flag, offset = sql_data([part_ref], pse_code, min_date, max_date, dataframes_list)
 
             if result_part_ref.shape[0]:
-                print(part_ref)
                 result_part_ref = result_part_ref.reindex(datetime_index).reset_index().rename(columns={'Unnamed: 0': 'Movement_Date'})
 
                 ffill_and_zero_fill_cols = ['Stock_Qty_al', 'Sales Evolution_al', 'Purchases Evolution', 'Regulated Evolution', 'Purchases Urgent Evolution', 'Purchases Non Urgent Evolution']
@@ -436,7 +481,7 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
                     positions.append(position)
 
             i += 1
-        results.to_csv('output/results_merge_{}.csv'.format(pse_code))
+        results.to_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date))
     return results
 
 
@@ -474,7 +519,9 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
         df_al_filtered.loc[rows_selection, 'Cost_Sale_avg'] = row['Preço de custo'].mean()
         df_al_filtered.loc[rows_selection, 'PVP_avg'] = row['P. V. P'].mean()
 
-    df_al_filtered['Qty_Regulated_sum'], df_al_filtered['Cost_Reg_avg'] = 0, 0  # Placeholder for cases without regularizations
+    df_al_filtered = df_al_filtered.assign(Qty_Regulated_sum=0)  # Placeholder for cases without regularizations
+    df_al_filtered = df_al_filtered.assign(Cost_Reg_avg=0)  # Placeholder for cases without regularizations
+
     df_al_grouped_reg_flag = df_al_filtered[df_al_filtered['regularization_flag'] == 1].groupby(['Movement_Date', 'Part_Ref'])
     for key, row in df_al_grouped_reg_flag:
         rows_selection = (df_al_filtered['Movement_Date'] == key[0]) & (df_al_filtered['Part_Ref'] == key[1])
@@ -509,7 +556,8 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
         result = pd.concat([df_purchases_filtered[['Qty_Purchased_sum', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg']], df_al_filtered[['Qty_Regulated_sum', 'Cost_Reg_avg', 'Qty_Sold_sum_al', 'Cost_Sale_avg', 'PVP_avg']]], axis=1, sort=False)
         result['Part_Ref'] = selected_part * result.shape[0]
         try:
-            result['Stock_Qty'] = df_stock_filtered['Stock_Qty'].head(1).values[0]
+            # result['Stock_Qty'] = df_stock_filtered['Stock_Qty'].head(1).values[0]
+            result['Stock_Qty'] = stock_start
         except IndexError:
             result['Stock_Qty'] = 0  # Cases when there is no stock information
 
@@ -517,9 +565,9 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
 
         if result_al != stock_end:
             offset = stock_end - result_al
-            print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
+            # print('Selected Part: {} - Values dont match for AutoLine values - Stock has an offset of {:.2f} \n'.format(selected_part, offset))
         else:
-            print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
+            # print('Selected Part: {} - Values for AutoLine are correct :D \n'.format(selected_part))
             stock_evolution_correct_flag = 1
 
         result['Stock_Qty'].fillna(method='ffill', inplace=True)
@@ -619,7 +667,7 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
 
     matched_rows_reg = df_al[df_al['SLR_Document_Account'].isin(reg_unique_slr)].index
 
-    df_al['regularization_flag'] = 0
+    df_al = df_al.assign(regularization_flag=0)
     df_al.loc[df_al.index.isin(matched_rows_reg), 'regularization_flag'] = 1
     df_al.loc[df_al['regularization_flag'] == 1, 'Cost_Reg'] = df_al['Unit'] * df_al['Preço de custo']
 
