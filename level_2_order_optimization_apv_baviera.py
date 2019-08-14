@@ -3,7 +3,7 @@ import pandas as pd
 import sys
 from level_1_a_data_acquisition import dw_data_retrieval, autoline_data_retrieval
 from level_1_b_data_processing import apv_dataset_treatment
-from level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_selection
+from level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_selection, part_ref_ta_definition
 from level_1_e_deployment import time_tags
 import level_2_order_optimization_apv_baviera_options as options_file
 
@@ -55,6 +55,8 @@ def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_pu
 
     selected_parts = part_ref_selection(df_al, min_date, max_date)
     results = apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date)
+    part_ref_ta_definition(df_al, selected_parts, pse_code, max_date)  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
+    # sales_solver(results)
 
     return results
 

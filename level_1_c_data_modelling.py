@@ -17,7 +17,7 @@ from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
 from level_0_performance_report import log_record, pool_workers_count
 from level_1_a_data_acquisition import sql_mapping_retrieval
-from level_1_b_data_processing import remove_punctuation_and_digits
+from level_1_b_data_processing import remove_punctuation_and_digits, col_group
 from level_2_optionals_baviera_options import classification_models, sql_info, k, gridsearch_score, project_id
 pd.set_option('display.expand_frame_repr', False)
 
@@ -719,3 +719,67 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
     df_al.loc[df_al['regularization_flag'] == 1, 'Cost_Reg'] = df_al['Unit'] * df_al['Preço de custo']
 
     return df_al
+
+
+def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date):
+
+    df_part_ref_ta = pd.DataFrame(columns={'Part_Ref', 'TA'})
+    part_refs, part_ref_tas = [], []
+
+    df_al = df_al[~df_al['TA'].isnull()]
+
+    i, parts_count, positions = 1, len(selected_parts), []
+
+    for part_ref in selected_parts:
+        if part_ref.startswith('BM83.'):
+            if not part_ref.startswith('BM83.25.1.1') or not part_ref.startswith('BM83.25.1.3'):
+                part_refs.append(part_ref)
+                part_ref_tas.append('Chemical')
+
+        else:
+            part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].unique()
+
+            if len(part_ref_ta) == 1:
+                try:
+                    part_ref_tas.append(part_ref_ta[0][1])
+                    part_refs.append(part_ref)
+                except IndexError:
+                    # Cases where only the part_ref only has one TA but it is only a letter and not letter + number, which provides no information
+                    continue
+
+            elif len(part_ref_ta) > 1:
+                try:
+                    # Ill try to use the most common TA for each part_ref. Even then, some parts will not match between their TA's (part_ref BM should have a Bx reference, etc), hence why I should only take the number from the TA group
+                    part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].value_counts().head(1).index.values[0][1]  # Get the second character of the first TA
+                except IndexError:
+                    try:
+                        part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].value_counts().head(2).index.values[1][1]  # Get the second character of the second TA
+                    except (ValueError, IndexError):
+                        continue  # I won't consider TA past this point
+
+                part_ref_tas.append(part_ref_ta)
+                part_refs.append(part_ref)
+
+            elif not part_ref_ta:
+                print('{} has no TA.')
+
+            position = int((i / parts_count) * 100)
+            if not position % 1:
+                if position not in positions:
+                    print('{}% completed'.format(position))
+                    positions.append(position)
+
+        i += 1
+
+    df_part_ref_ta['Part_Ref'] = part_refs
+    df_part_ref_ta['TA'] = part_ref_tas
+    df_part_ref_ta['Group'] = part_ref_tas
+
+    df_bmw = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')], ['Group'], [bmw_ta_mapping])
+    df_mini = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')], ['Group'], [mini_ta_mapping])
+
+    df_part_ref_ta_grouped = pd.concat([df_bmw, df_mini])
+
+    df_part_ref_ta_grouped.to_csv('output/part_ref_ta_{}.csv'.format(max_date))
+
+    return df_part_ref_ta_grouped

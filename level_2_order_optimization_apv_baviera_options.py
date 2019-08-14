@@ -23,6 +23,39 @@ pse_code = '0B'
 urgent_purchases_flags = [4, 5]
 
 
+bmw_ta_mapping = {
+    'BMW_Bonus_Group_1': ['1', '2'],  # Peças + Óleos
+    'BMW_Bonus_Group_2': ['-'],  # Vendas de 4º Nível - No idea on this one...
+    'BMW_Bonus_Group_3': ['Chemical'],  # Químicos
+    'BMW_Bonus_Group_4': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
+    'BMW_Bonus_Group_5': ['8'],  # Pneus
+    'Outros': ['4', '6', '9'],
+}
+
+# The cost goals for group 1 and 2, as well as the sale goals for groups 3, 4 and 5 are taken from the provided files.
+# The remaining sale/cost goals are fluctuations of 5% from the previous values
+# There currently are no goals for MINI groups
+group_goals = {
+    'BMW_Bonus_Group_1': [252051, 264654],  # Cost, Sales
+    'BMW_Bonus_Group_2': [56055, 58858],  # Cost, Sales
+    'BMW_Bonus_Group_3': [5075, 5329],  # Cost, Sales
+    'BMW_Bonus_Group_4': [9539, 10016],  # Cost, Sales
+    'BMW_Bonus_Group_5': [8675, 9109],  # Cost, Sales
+    'MINI_Bonus_Group_1': [0, 0],
+    'MINI_Bonus_Group_2': [0, 0],
+    'MINI_Bonus_Group_3': [0, 0],
+    'MINI_Bonus_Group_4': [0, 0],
+}
+
+mini_ta_mapping = {
+    'MINI_Bonus_Group_1': ['1', '2'],  # Peças + Óleos
+    'MINI_Bonus_Group_2': ['-'],  # MINI Regeneration - No idea on this one...
+    'MINI_Bonus_Group_3': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
+    'MINI_Bonus_Group_4': ['8'],  # Pneus
+    'Outros': ['4', '6', '9'],
+}
+
+
 sales_query = '''
     Select Sales.SLR_Document_Date,  
         Sales.Movement_Date,  

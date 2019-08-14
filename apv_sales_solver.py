@@ -6,8 +6,11 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import level_0_performance_report
 from level_1_d_model_evaluation import save_fig
+from level_1_b_data_processing import df_join_function
+from level_2_order_optimization_apv_baviera_options import group_goals
 from scipy.optimize import minimize, LinearConstraint, Bounds
 from dateutil.relativedelta import relativedelta
+
 pd.set_option('display.expand_frame_repr', False)
 my_dpi = 96
 
@@ -17,13 +20,12 @@ profit_evolution = []
 dtss_evolution = []
 scale_argument = 1000
 
-cost_goal = 252051
-sales_goal = 300000
 dtss_goal = 15  # Weekdays only!
 
 
 def main():
-    current_date = '2019-06-28'
+    current_date = '20190731'
+    df_part_refs_ta = pd.read_csv('output/part_ref_ta_{}.csv'.format(current_date), index_col=0)
 
     try:
         df_solve = pd.read_csv('output/df_solve_0B_filtered.csv', index_col=0)
@@ -31,9 +33,22 @@ def main():
     except FileNotFoundError:
         print('df_solve file not found, processing a new one...')
         # df_sales = pd.read_csv('dbs/results_merge_case_study_0B.csv', parse_dates=['index'], index_col=0)
-        df_sales = pd.read_csv('output/results_merge_0B.csv', parse_dates=['index'], index_col=0)
-        df_solve = solver_dataset_preparation(df_sales, current_date)
+        df_sales = pd.read_csv('output/results_merge_0B_{}.csv'.format(current_date), parse_dates=['index'], index_col=0)
+        df_solve = solver_dataset_preparation(df_sales, df_part_refs_ta, current_date)
 
+    for key, group in df_solve.groupby('Group'):
+        if key in ['Outros', 'BMW_Bonus_Group_1', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4']:
+            continue
+        else:
+            cost_goal = group_goals[key][0]
+            sales_goal = group_goals[key][1]
+            print('There are {} unique part_refs for {}'.format(len(group), key))
+            print('Cost goal: {}, Sale Goal: {}'.format(cost_goal, sales_goal))
+            solver(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, cost_goal, sales_goal)
+
+
+def solver(df_solve, group, cost_goal, sales_goal):
+    print('Solving for {}...'.format(group))
     unique_parts = df_solve['Part_Ref'].unique()
     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
 
@@ -46,8 +61,8 @@ def main():
     dtss = df_solve['DaysToSell_1_Part']
 
     constraint_1 = [
-        {'type': 'ineq', 'fun': lambda n: cost_calculation(n, costs)},
-        {'type': 'ineq', 'fun': lambda n: sales_calculation(n, pvps)},
+        {'type': 'ineq', 'fun': lambda n: cost_calculation(n, costs, cost_goal)},
+        {'type': 'ineq', 'fun': lambda n: sales_calculation(n, pvps, sales_goal)},
         {'type': 'ineq', 'fun': lambda n: days_to_sell_calculation(n, dtss)},
     ]
 
@@ -71,18 +86,22 @@ def main():
     # print(res)
     print('Termination Message: {}'.format(res.message))
     print('Number of iterations: {}'.format(res.nit))
-    [print(part + ': ' + str(qty)) for part, qty in zip(unique_parts, res.x)]
+    # [print(part + ': ' + str(qty)) for part, qty in zip(unique_parts, res.x)]
 
-    costs = [n*cost for n, cost in zip(res.x, costs)]
-    sales = [n*pvp for n, pvp in zip(res.x, pvps)]
-    dtss = [n*dts for n, dts in zip(res.x, dtss)]
+    costs = [n * cost for n, cost in zip(res.x, costs)]
+    sales = [n * pvp for n, pvp in zip(res.x, pvps)]
+    dtss = [n * dts for n, dts in zip(res.x, dtss)]
     # profits = [n*margin for n, margin in zip(res.x, margins)]
     # print(costs, '\n', profits)
     print('Total cost of: {:.2f} / {:.2f} ({:.2f}%) \nTotal Sales of: {:.2f} / {:.2f} ({:.2f}%) \nDays to Sell: {:.2f} / {:.2f} ({:.2f}%) \nProfit of {:.2f}'
           .format(np.sum(costs), cost_goal, (np.sum(costs) / cost_goal) * 100, np.sum(sales), sales_goal, (np.sum(sales) / sales_goal) * 100, np.max(dtss), dtss_goal, (np.max(dtss) / dtss_goal) * 100, -res.fun * scale_argument))
 
-    print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
+    print('Elapsed time: {:.2f} seconds.\n'.format(time.time() - start))
 
+    evolution_plots(n_size, group, cost_goal, sales_goal)
+
+
+def evolution_plots(n_size, group, cost_goal, sales_goal):
     f, ax = plt.subplots(2, 2, figsize=(1400 / my_dpi, 1000 / my_dpi), dpi=my_dpi)
 
     ax[0, 0].plot(range(len(cost_evolution)), [x + cost_goal for x in cost_evolution], label='Cost Evolution', c='blue')
@@ -110,12 +129,11 @@ def main():
 
     plt.tight_layout()
     plt.title('N={}'.format(n_size))
-    save_fig('apv_solver_metrics_evolution')
-    plt.show()
+    save_fig('apv_solver_metrics_evolution_{}'.format(group))
+    # plt.show()
 
 
-def cost_calculation(ns, costs):
-
+def cost_calculation(ns, costs, cost_goal):
     total_cost = np.sum([n * cost for n, cost in zip(ns, costs)]) - cost_goal
 
     cost_evolution.append(total_cost)
@@ -123,8 +141,7 @@ def cost_calculation(ns, costs):
     return total_cost
 
 
-def sales_calculation(ns, pvps):
-
+def sales_calculation(ns, pvps, sales_goal):
     total_sales = np.sum([n * pvp for n, pvp in zip(ns, pvps)]) - sales_goal
 
     sale_evolution.append(total_sales)
@@ -133,7 +150,6 @@ def sales_calculation(ns, pvps):
 
 
 def days_to_sell_calculation(ns, dtss):
-
     days_to_sell = [n * dts for n, dts in zip(ns, dtss)]
     max_days_to_sell = dtss_goal - np.max(days_to_sell)
 
@@ -142,13 +158,11 @@ def days_to_sell_calculation(ns, dtss):
 
 
 def zero_hess(*args):
-
     list_of_zeros = [0] * len(args[0])
     return np.array(list_of_zeros)
 
 
 def profit_function(n, costs, pvps):
-
     pvp_sum = np.sum([n_single * pvp for n_single, pvp in zip(n, pvps)])
     cost_sum = np.sum([n_single * cost for n_single, cost in zip(n, costs)])
     profit = -(pvp_sum - cost_sum)
@@ -158,10 +172,10 @@ def profit_function(n, costs, pvps):
 
 
 def test_function(x):
-    return (x[0] - 1)**2 + (x[1] - 2.5)**2
+    return (x[0] - 1) ** 2 + (x[1] - 2.5) ** 2
 
 
-def solver_dataset_preparation(df_sales, current_date):
+def solver_dataset_preparation(df_sales, df_part_refs_ta, current_date):
     start = time.time()
 
     unique_part_refs = df_sales['Part_Ref'].unique()
@@ -197,6 +211,8 @@ def solver_dataset_preparation(df_sales, current_date):
 
     print('From the initial value of {} \nit was reduced to {} \nand then filtered down to {}'.format(unique_part_refs_count, after_solve_preparation, after_dtss_filter))
     # df_solve_filtered_2 = df_solve_filtered[df_solve_filtered['DTS_Max_Total_Qty_Sold'] > 0]  # 650 to 318  # I can't do this, but maybe i can add a flag to signal these part_refs
+
+    df_solve_filtered = df_join_function(df_solve_filtered, df_part_refs_ta[['Part_Ref', 'Group']].set_index('Part_Ref'), on='Part_Ref')
 
     df_solve_filtered.to_csv('output/df_solve_0B_filtered.csv')
 
@@ -266,7 +282,7 @@ def solver_metrics_per_part_ref(args):
                 # print('Part_Ref: {} \n Cost: {:.3f} \n Margin: {:.3f} \n Last Stock: {:.3f} \n Last Stock Value: {:.3f} \n Last Year Sales: {:.3f}'
                 #       .format(part_ref, last_cost, margin, last_stock, last_stock_value, last_year_sales))
                 df_solve.loc[0, ['Part_Ref', 'Cost', 'PVP', 'Margin', 'DII Year', 'DII Year weekdays', 'DaysToSell_1_Part', 'DTS_Total_Qty_Sold', 'DTS_Min_Total_Qty_Sold', 'DTS_Max_Total_Qty_Sold']] = \
-                                                                        [part_ref, last_cost, last_pvp, margin, dii_year, avg_sales_per_day, days_to_sell_1_part, dts_total_qty_sold, dts_min_total_qty_sold, dts_max_total_qty_sol]
+                    [part_ref, last_cost, last_pvp, margin, dii_year, avg_sales_per_day, days_to_sell_1_part, dts_total_qty_sold, dts_min_total_qty_sold, dts_max_total_qty_sol]
 
                 # print('Part_Ref: {}, Cost: {:.2f}, PVP: {:.2f}, Margin: {:.2f}, Last Stock Value: {}, Last Year COGS: {}, DII Year: {:.2f}, Last Stock: {}, Last Year Sales Avg: {}, DII Year weekdays: {:.2f}, DaysToSell_1_Part: {:.2f},'
                 #       .format(part_ref, last_cost, last_pvp, margin, last_stock_value, last_year_cogs, dii_year, last_stock, last_year_sales_avg, avg_sales_per_day, days_to_sell_1_part))
