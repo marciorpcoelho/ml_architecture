@@ -7,18 +7,18 @@ from level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_s
 from level_1_e_deployment import time_tags
 import level_2_order_optimization_apv_baviera_options as options_file
 
-update = 1  # Decides whether to fetch new datasets from the DW or not
+update = 0  # Decides whether to fetch new datasets from the DW or not
 
 
 def main():
     selected_parts = []
     min_date = '20180131'  # This is a placeholder for the minimum possible date. It should search for last date with processed data
-    max_date = '20190628'  # This will be replaced by current date
+    max_date = '20190731'  # This will be replaced by current date
     print('Full Available Data: {} to {}'.format(min_date, max_date))
 
     df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al = data_acquistion(options_file)
     df_sales_cleaned, df_purchases_cleaned, df_stock = data_processing(df_sales, df_purchases, df_stock, options_file)
-    results = data_modelling(options_file.pse_code, selected_parts, df_sales_cleaned, df_al, df_stock, df_reg_al_clients, df_purchases_cleaned, min_date, max_date)
+    results = data_modelling(options_file.pse_code, df_sales_cleaned, df_al, df_stock, df_reg_al_clients, df_purchases_cleaned, min_date, max_date)
 
 
 def data_acquistion(options_info):
@@ -39,13 +39,13 @@ def data_processing(df_sales, df_purchases, df_stock, options_info):
     print('Dataset processing started.')
     start_treatment = time.time()
 
-    df_sales, df_purchases, df_stock = apv_dataset_treatment(df_sales, df_purchases, df_stock, options_info.pse_code, options_info.urgent_purchases_flags)
+    df_sales, df_purchases, df_stock = apv_dataset_treatment(df_sales, df_purchases, df_stock, options_info.pse_code, options_info.urgent_purchases_flags, update)
 
     print('Dataset processing finished. Elapsed time: {:.2f}'.format(time.time() - start_treatment))
     return df_sales, df_purchases, df_stock
 
 
-def data_modelling(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
+def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
     print('Data modelling started...')
 
     if pse_code == '0I':
@@ -53,7 +53,7 @@ def data_modelling(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_a
     if pse_code == '0B':
         selected_parts = ['BM83.21.0.406.573', 'BM83.13.9.415.965', 'BM51.18.1.813.017', 'BM11.42.8.507.683', 'BM64.11.9.237.555']  # PSE_Code = 0B, Gaia
 
-    selected_parts = part_ref_selection(df_al, max_date)
+    selected_parts = part_ref_selection(df_al, min_date, max_date)
     results = apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date)
 
     return results

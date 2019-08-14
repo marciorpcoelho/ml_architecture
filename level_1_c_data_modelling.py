@@ -382,13 +382,14 @@ def request_matches(label, keywords, rank, requests_list, dictionary):
     return dictionary
 
 
-def part_ref_selection(df_al, current_date):
+def part_ref_selection(df_al, min_date, max_date, last_year_flag=1):
     # Proj_ID = 2259
-    print('Selection of Part Reference')
+    print('Selection of Part References')
 
-    last_year_date = pd.to_datetime(current_date) - relativedelta(years=1)
+    if last_year_flag:
+        min_date = pd.to_datetime(max_date) - relativedelta(years=1)
 
-    df_al_filtered = df_al[(df_al['Movement_Date'] > last_year_date) & (df_al['Movement_Date'] <= current_date)]
+    df_al_filtered = df_al[(df_al['Movement_Date'] > min_date) & (df_al['Movement_Date'] <= max_date)]
 
     all_unique_part_refs = df_al_filtered['Part_Ref'].unique()
 
@@ -403,7 +404,7 @@ def part_ref_selection(df_al, current_date):
 
     [print('{} has a weird size!'.format(x)) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
 
-    print('{} unique part_refs sold between {} and {}.'.format(len(all_unique_part_refs), last_year_date.date(), current_date))
+    print('{} unique part_refs between {} and {}.'.format(len(all_unique_part_refs), min_date.date(), max_date))
 
     return all_unique_part_refs
 
@@ -423,7 +424,7 @@ def apv_last_stock_calculation(min_date, max_date, pse_code):
                 raise Exception('All data has been processed already up to date {}.'.format(max_file_date))
             else:
                 preprocessed_data_exists_flag = 1
-                print('Data already processed from {} to {}. Will adjust accordingly...'.format(min_date, max_file_date))
+                print('Data already processed from {} to {}. Will adjust accordingly: minimum date to process is now: {}.'.format(min_date, max_file_date, max_file_date))
             return max_file_date, preprocessed_data_exists_flag
         else:
             return min_date, preprocessed_data_exists_flag
@@ -440,6 +441,8 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
     except FileNotFoundError:
         print('File results_merge_{} not found. Processing...'.format(pse_code))
         min_date, preprocessed_data_exists_flag = apv_last_stock_calculation(min_date, max_date, pse_code)
+        if preprocessed_data_exists_flag:
+            selected_parts = part_ref_selection(df_al, min_date, max_date, last_year_flag=0)
 
         df_stock.set_index('Record_Date', inplace=True)
         df_purchases.set_index('Movement_Date', inplace=True)
@@ -453,7 +456,7 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
 
         print('PSE_Code = {}'.format(pse_code))
         for part_ref in selected_parts:
-            start = time.time()
+            # start = time.time()
             result_part_ref, stock_evolution_correct_flag, offset = sql_data([part_ref], pse_code, min_date, max_date, dataframes_list)
 
             if result_part_ref.shape[0]:
@@ -479,7 +482,7 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
                 result_part_ref['Cost_Reg_avg'] = result_part_ref['Cost_Reg_avg'] * (-1)
 
                 results = results.append(result_part_ref)
-                print('Elapsed time: {:.2f}.'.format(time.time() - start))
+                # print('Elapsed time: {:.2f}.'.format(time.time() - start))
 
             position = int((i / parts_count) * 100)
             if not position % 1:
@@ -488,15 +491,18 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
                     positions.append(position)
 
             i += 1
-        results.to_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date))
-
         if preprocessed_data_exists_flag:
-            results_preprocess_merge(pse_code, results, min_date)
+            results = results_preprocess_merge(pse_code, results, min_date)
+
+        results.to_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date))
 
     return results
 
 
 def results_preprocess_merge(pse_code, results, min_date):
+
+    min_date = datetime.datetime.strptime(min_date, format('%Y-%m-%d %H:%M:%S'))
+    min_date = datetime.datetime.strftime(min_date, format('%Y%m%d'))
 
     old_results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, min_date))
     new_results = pd.concat([old_results, results])
@@ -517,6 +523,7 @@ def results_preprocess_merge(pse_code, results, min_date):
 
 
 def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
+    # Proj_ID = 2259
 
     df_sales, df_al, df_stock, df_reg_al_clients, df_purchases = dataframes_list[0], dataframes_list[1], dataframes_list[2], dataframes_list[3], dataframes_list[4]
     result, stock_evolution_correct_flag, offset = pd.DataFrame(), 0, 0
@@ -609,11 +616,14 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
     # The filters in the evolution columns is to compensate for sales/purchases/etc in the first day, even though the stock for that same day already has those movements into consideration.
     # The stock_qty_al initial value is to compensate for the previous line.
     min_date_next_day = min_date + relativedelta(days=1)
-    result['Sales Evolution_al'] = result[min_date_next_day:]['Qty_Sold_sum_al'].cumsum()
-    result['Purchases Evolution'] = result[min_date_next_day:]['Qty_Purchased_sum'].cumsum()
-    result['Purchases Urgent Evolution'] = result[min_date_next_day:]['Qty_Purchased_urgent_sum'].cumsum()
-    result['Purchases Non Urgent Evolution'] = result[min_date_next_day:]['Qty_Purchased_non_urgent_sum'].cumsum()
-    result['Regulated Evolution'] = result[min_date_next_day:]['Qty_Regulated_sum'].cumsum()
+    try:
+        result['Sales Evolution_al'] = result[result.index > min_date]['Qty_Sold_sum_al'].cumsum()
+        result['Purchases Evolution'] = result[result.index > min_date]['Qty_Purchased_sum'].cumsum()
+        result['Purchases Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_urgent_sum'].cumsum()
+        result['Purchases Non Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_non_urgent_sum'].cumsum()
+        result['Regulated Evolution'] = result[result.index > min_date]['Qty_Regulated_sum'].cumsum()
+    except KeyError:
+        print(selected_part, min_date_next_day, '\n', result)
 
     result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
     result.ix[0, 'Stock_Qty_al'] = stock_start  #
