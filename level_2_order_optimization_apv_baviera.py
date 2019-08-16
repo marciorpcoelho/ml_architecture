@@ -7,31 +7,31 @@ from level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_s
 from level_1_e_deployment import time_tags
 import level_2_order_optimization_apv_baviera_options as options_file
 
-update = 0  # Decides whether to fetch new datasets from the DW or not
+update = 1  # Decides whether to fetch new datasets from the DW or not
 
 
 def main():
     selected_parts = []
     min_date = '20180131'  # This is a placeholder for the minimum possible date. It should search for last date with processed data
-    max_date = '20190731'  # This will be replaced by current date
+    # max_date = '20190731'  # This will be replaced by current date
+    max_date, _ = time_tags(format_date='%Y%m%d')
     print('Full Available Data: {} to {}'.format(min_date, max_date))
 
-    df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al = data_acquistion(options_file)
+    df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al = data_acquistion(options_file, max_date)
     df_sales_cleaned, df_purchases_cleaned, df_stock = data_processing(df_sales, df_purchases, df_stock, options_file)
     results = data_modelling(options_file.pse_code, df_sales_cleaned, df_al, df_stock, df_reg_al_clients, df_purchases_cleaned, min_date, max_date)
 
 
-def data_acquistion(options_info):
+def data_acquistion(options_info, current_date):
     print('Starting section A...')
 
     pse_code = options_info.pse_code
     start = time.time()
-    current_date, _ = time_tags(format_date='%Y%m%d')
 
     df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients = dw_data_retrieval(pse_code, current_date, options_info, update)
-    df_al = autoline_data_retrieval(pse_code)
-    print('Ended section A - Elapsed time: {:.2f}'.format(time.time() - start))
+    df_al = autoline_data_retrieval(pse_code, current_date)
 
+    print('Ended section A - Elapsed time: {:.2f}'.format(time.time() - start))
     return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al
 
 
