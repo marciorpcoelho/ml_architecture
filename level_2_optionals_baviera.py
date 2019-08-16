@@ -3,7 +3,7 @@ import sys
 import logging
 import pandas as pd
 import level_2_optionals_baviera_options
-from level_2_optionals_baviera_options import project_id
+from level_2_optionals_baviera_options import project_id, classification_models, k, gridsearch_score
 from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
 from level_1_b_data_processing import datasets_dictionary_function, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
@@ -172,7 +172,7 @@ def data_modelling(df, datasets, models):
 
     df.sort_index(inplace=True)
 
-    classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'])  # Training of each referenced model
+    classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'], classification_models, k, gridsearch_score, project_id)  # Training of each referenced model
     save_model(best_models, models)
 
     log_record('Finished Step C.', project_id)

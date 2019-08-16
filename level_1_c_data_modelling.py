@@ -18,7 +18,6 @@ from sklearn.preprocessing import StandardScaler
 from level_0_performance_report import log_record, pool_workers_count
 from level_1_a_data_acquisition import sql_mapping_retrieval
 from level_1_b_data_processing import remove_punctuation_and_digits, col_group
-from level_2_optionals_baviera_options import classification_models, sql_info, k, gridsearch_score, project_id
 pd.set_option('display.expand_frame_repr', False)
 
 
@@ -93,7 +92,7 @@ class RegressionTraining(object):
         self.clf.fit(x, y)
 
 
-def model_training(models, train_x, train_y):
+def model_training(models, train_x, train_y, classification_models, k, gridsearch_score, project_id):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
     clf, classes = None, None
 
@@ -382,7 +381,7 @@ def request_matches(label, keywords, rank, requests_list, dictionary):
     return dictionary
 
 
-def part_ref_selection(df_al, min_date, max_date, last_year_flag=1):
+def part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=1):
     # Proj_ID = 2259
     print('Selection of Part References...')
 
@@ -402,7 +401,7 @@ def part_ref_selection(df_al, min_date, max_date, last_year_flag=1):
 
     all_unique_part_refs = [x for x in all_unique_part_refs if x not in all_unique_part_refs_at]
 
-    [print('{} has a weird size!'.format(x)) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
+    [log_record('{} has a weird size!'.format(x), project_id, flag=1) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
 
     print('{} unique part_refs between {} and {}.'.format(len(all_unique_part_refs), min_date.date(), max_date))
 
@@ -432,7 +431,7 @@ def apv_last_stock_calculation(min_date, max_date, pse_code):
         return min_date, preprocessed_data_exists_flag
 
 
-def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
+def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date, project_id):
 
     try:
         results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date), index_col=0)
@@ -442,7 +441,7 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
         print('File results_merge_{} not found. Processing...'.format(pse_code))
         min_date, preprocessed_data_exists_flag = apv_last_stock_calculation(min_date, max_date, pse_code)
         if preprocessed_data_exists_flag:
-            selected_parts = part_ref_selection(df_al, min_date, max_date, last_year_flag=0)
+            selected_parts = part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=0)
 
         df_stock.set_index('Record_Date', inplace=True)
         df_purchases.set_index('Movement_Date', inplace=True)

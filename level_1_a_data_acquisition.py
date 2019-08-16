@@ -115,7 +115,7 @@ def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_f
 
 def dw_data_retrieval(pse_code, current_date, options_info, update):
 
-    print('PSE_Code = {}'.format(pse_code))
+    print('Retrieving data for PSE_Code = {}'.format(pse_code))
 
     sales_info = ['dbs/df_sales', options_info.sales_query]
     purchases_info = ['dbs/df_purchases', options_info.purchases_query]
@@ -134,7 +134,7 @@ def dw_data_retrieval(pse_code, current_date, options_info, update):
 
         try:
             df = read_csv(file_name + '.csv', index_col=0)
-            print('{} file found.'.format(file_name))
+            # print('{} file found.'.format(file_name))
         except FileNotFoundError:
             print('{} file not found. Retrieving data from SQL...'.format(file_name))
             df = sql_retrieve_df_specified_query(options_info.DSN_PRD, options_info.sql_info['database'], options_info, dimension[1])
@@ -166,7 +166,7 @@ def autoline_data_retrieval(pse_code, current_date):
 
     try:
         df_al = read_csv('dbs/auto_line_part_ref_history_{}_{}.csv'.format(pse_code, current_date), usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P', 'GPr'])
-        print('dbs/auto_line_part_ref_history_{}_{} found.'.format(pse_code, current_date))
+        # print('dbs/auto_line_part_ref_history_{}_{} found.'.format(pse_code, current_date))
     except FileNotFoundError:
         try:
             df_1 = pd.read_excel('dbs/auto_line_fb1_{}_{}.xlsx'.format(pse_code, current_date))

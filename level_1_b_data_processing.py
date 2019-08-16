@@ -1070,9 +1070,10 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
 
     try:
         df_sales = pd.read_csv(sales_file_name + '.csv', index_col=0, parse_dates=['Movement_Date', 'WIP_Date_Created', 'SLR_Document_Date'], usecols=['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']).sort_values(by='Movement_Date')
-        print('{} file found.'.format(sales_file_name))
+        # print('{} file found.'.format(sales_file_name))
     except FileNotFoundError:
         print('{} file not found, processing...'.format(sales_file_name))
+
         df_sales = df_sales[df_sales['Qty_Sold'] != 0]
         df_sales = data_processing_negative_values(df_sales, sales_flag=1)
         df_sales.to_csv('dbs/df_sales_processed_' + str(pse_code) + '_' + str(current_date) + '.csv')
@@ -1100,9 +1101,10 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
 
     try:
         df_purchases = pd.read_csv(purchases_file_name + '.csv', index_col=0, parse_dates=['Movement_Date']).sort_values(by='Movement_Date')
-        print('{} file found.'.format(purchases_file_name))
+        # print('{} file found.'.format(purchases_file_name))
     except FileNotFoundError:
         print('{} file not found, processing...'.format(purchases_file_name))
+
         df_purchases['Cost_Value_1'] = df_purchases['Cost_Value'] / df_purchases['Quantity']
 
         df_purchases_grouped = df_purchases.groupby(['Movement_Date', 'Part_Ref'])
