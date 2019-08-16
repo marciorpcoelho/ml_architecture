@@ -22,6 +22,10 @@ project_id = 2259
 pse_code = '0B'
 urgent_purchases_flags = [4, 5]
 
+log_files = {
+    'full_log': 'logs/apv_baviera_2259.txt'
+}
+
 
 bmw_ta_mapping = {
     'BMW_Bonus_Group_1': ['1', '2'],  # Peças + Óleos
