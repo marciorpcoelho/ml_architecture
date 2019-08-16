@@ -173,7 +173,7 @@ def autoline_data_retrieval(pse_code, current_date):
             df_2 = pd.read_excel('dbs/auto_line_fb2_{}_{}.xlsx'.format(pse_code, current_date))
             df_al = pd.concat([df_1, df_2])
 
-            df_al.to_csv('dbs/auto_line_part_ref_history_{}.csv'.format(pse_code, current_date))
+            df_al.to_csv('dbs/auto_line_part_ref_history_{}_{}.csv'.format(pse_code, current_date))
             print('dbs/auto_line_part_ref_history_{}_{} created and saved.'.format(pse_code, current_date))
 
         except FileNotFoundError:
