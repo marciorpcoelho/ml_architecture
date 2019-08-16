@@ -384,7 +384,7 @@ def request_matches(label, keywords, rank, requests_list, dictionary):
 
 def part_ref_selection(df_al, min_date, max_date, last_year_flag=1):
     # Proj_ID = 2259
-    print('Selection of Part References')
+    print('Selection of Part References...')
 
     if last_year_flag:
         min_date = pd.to_datetime(max_date) - relativedelta(years=1)
@@ -492,16 +492,16 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
 
             i += 1
         if preprocessed_data_exists_flag:
-            results = results_preprocess_merge(pse_code, results, min_date)
+            results = results_preprocess_merge(pse_code, results, min_date, max_date)
 
         results.to_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date))
 
     return results
 
 
-def results_preprocess_merge(pse_code, results, min_date):
+def results_preprocess_merge(pse_code, results, min_date, max_date):
 
-    min_date = datetime.datetime.strptime(min_date, format('%Y-%m-%d %H:%M:%S'))
+    # min_date = datetime.datetime.strptime(min_date, format('%Y-%m-%d %H:%M:%S'))
     min_date = datetime.datetime.strftime(min_date, format('%Y%m%d'))
 
     old_results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, min_date))
@@ -516,10 +516,12 @@ def results_preprocess_merge(pse_code, results, min_date):
     shape_after = new_results.shape
     shape_diff = shape_before[0] - shape_after[0]
 
-    if shape_diff != nunique_matching_parts:
-        raise ValueError('Problem while removing repeated rows. Instead of removing {} repeated rows, {} were removed instead.'.format(nunique_matching_parts, shape_diff))
-    else:
-        return new_results
+    # if shape_diff != nunique_matching_parts:
+    #     results.to_csv('output/results_merge_{}_{}_to_{}.csv'.format(pse_code, min_date, max_date))
+    #     raise ValueError('Problem while removing repeated rows. Instead of removing {} repeated rows, {} were removed.'.format(nunique_matching_parts, shape_diff))
+    # else:
+    print('Removed {} repeated rows.'.format(shape_diff))
+    return new_results
 
 
 def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
@@ -721,12 +723,14 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
     return df_al
 
 
-def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date):
+def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings):
+    print('Fetching TA for each part_reference...')
+    start = time.time()
 
     df_part_ref_ta = pd.DataFrame(columns={'Part_Ref', 'TA'})
     part_refs, part_ref_tas = [], []
 
-    df_al = df_al[~df_al['TA'].isnull()]
+    df_al = df_al[df_al['TA'].notnull()]
 
     i, parts_count, positions = 1, len(selected_parts), []
 
@@ -761,7 +765,7 @@ def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date):
                 part_refs.append(part_ref)
 
             elif not part_ref_ta:
-                print('{} has no TA.')
+                print('{} has no TA.'.format(part_ref))
 
             position = int((i / parts_count) * 100)
             if not position % 1:
@@ -775,11 +779,12 @@ def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date):
     df_part_ref_ta['TA'] = part_ref_tas
     df_part_ref_ta['Group'] = part_ref_tas
 
-    df_bmw = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')], ['Group'], [bmw_ta_mapping])
-    df_mini = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')], ['Group'], [mini_ta_mapping])
+    df_bmw = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')], ['Group'], [mappings[0]])
+    df_mini = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')], ['Group'], [mappings[1]])
 
     df_part_ref_ta_grouped = pd.concat([df_bmw, df_mini])
 
     df_part_ref_ta_grouped.to_csv('output/part_ref_ta_{}.csv'.format(max_date))
 
+    print('Elapsed Time: {:.2f}'.format(time.time() - start))
     return df_part_ref_ta_grouped

@@ -55,7 +55,7 @@ def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_pu
 
     selected_parts = part_ref_selection(df_al, min_date, max_date)
     results = apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date)
-    part_ref_ta_definition(df_al, selected_parts, pse_code, max_date)  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
+    part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping])  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
     # sales_solver(results)
 
     return results

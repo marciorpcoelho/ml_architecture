@@ -165,7 +165,7 @@ def autoline_data_retrieval(pse_code, current_date):
     start = time.time()
 
     try:
-        df_al = read_csv('dbs/auto_line_part_ref_history_{}_{}.csv'.format(pse_code, current_date), usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P'])
+        df_al = read_csv('dbs/auto_line_part_ref_history_{}_{}.csv'.format(pse_code, current_date), usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P', 'GPr'])
         print('dbs/auto_line_part_ref_history_{}_{} found.'.format(pse_code, current_date))
     except FileNotFoundError:
         try:
@@ -179,7 +179,7 @@ def autoline_data_retrieval(pse_code, current_date):
         except FileNotFoundError:
             raise FileNotFoundError('AutoLine file for PSE_Code={} and date={} was not found!'.format(pse_code, current_date))
 
-    df_al.rename(index=str, columns={'Data Mov': 'Movement_Date', 'Refª da peça': 'Part_Ref', 'Descrição': 'Part_Desc', 'Nº de factura': 'SLR_Document_Number', 'WIP nº': 'WIP_Number', 'Sugestão nº  (Enc)': 'Encomenda', 'Conta': 'SLR_Document_Account', 'Nº auditoria stock': 'Audit_Number'}, inplace=True)
+    df_al.rename(index=str, columns={'Data Mov': 'Movement_Date', 'Refª da peça': 'Part_Ref', 'Descrição': 'Part_Desc', 'Nº de factura': 'SLR_Document_Number', 'WIP nº': 'WIP_Number', 'Sugestão nº  (Enc)': 'Encomenda', 'Conta': 'SLR_Document_Account', 'Nº auditoria stock': 'Audit_Number', 'GPr': 'TA'}, inplace=True)
     df_al['Movement_Date'] = pd.to_datetime(df_al['Movement_Date'], format='%d/%m/%Y')
     df_al.sort_values(by='Movement_Date', inplace=True)
 
