@@ -23,7 +23,7 @@ def main():
 
 
 def data_acquistion(options_info, current_date):
-    print('Starting section A...')
+    print('Data acquisition started...')
 
     pse_code = options_info.pse_code
     start = time.time()
@@ -31,7 +31,7 @@ def data_acquistion(options_info, current_date):
     df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients = dw_data_retrieval(pse_code, current_date, options_info, update)
     df_al = autoline_data_retrieval(pse_code, current_date)
 
-    print('Ended section A - Elapsed time: {:.2f}'.format(time.time() - start))
+    print('Data acquisition finished - Elapsed time: {:.2f}'.format(time.time() - start))
     return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al
 
 
@@ -47,6 +47,7 @@ def data_processing(df_sales, df_purchases, df_stock, options_info):
 
 def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
     print('Data modelling started...')
+    start = time.time()
 
     if pse_code == '0I':
         selected_parts = ['BM83.21.2.405.675', 'BM07.12.9.952.104', 'BM07.14.9.213.164', 'BM83.19.2.158.851', 'BM64.11.9.237.555']  # PSE_Code = 0I, Lisboa - Expo
@@ -58,6 +59,7 @@ def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_pu
     part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping])  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
     # sales_solver(results)
 
+    print('Data modelling finished. Elapsed time: {:.2f}'.format(time.time() - start))
     return results
 
 
