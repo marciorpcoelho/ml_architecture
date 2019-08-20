@@ -1,14 +1,13 @@
-import pandas as pd
+import os
+import time
 import numpy as np
 from math import pi
-import os
+import pandas as pd
 import multiprocessing
-import time
 import matplotlib.pyplot as plt
-from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
 from level_1_e_deployment import sql_inject, save_csv, sql_second_highest_date_checkup
-from level_2_optionals_baviera_options import metric, metric_threshold, dict_models_name_conversion
-from level_0_performance_report import log_record, performance_sql_info, pool_workers_count
+from level_0_performance_report import log_record, performance_sql_info, pool_workers_count, dict_models_name_conversion
+from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
 pd.set_option('display.expand_frame_repr', False)
 
 my_dpi = 96
@@ -261,33 +260,33 @@ def model_choice(dsn, options_file, df_results):
 
     try:
         # makes sure there are results above minimum threshold
-        best_model_name = df_results[df_results.loc[:, metric].gt(metric_threshold)][[metric, 'Running_Time']].idxmax().head(1).values[0]
-        best_model_value = df_results[df_results.loc[:, metric].gt(metric_threshold)][[metric, 'Running_Time']].max().head(1).values[0]
-        log_record('Existem resultados ({:.4f}) do algoritmo {} superiores ao limite mínimo ({}). A comparar com os últimos resultados guardados...'.format(best_model_value, best_model_name, metric_threshold), options_file.project_id)
+        best_model_name = df_results[df_results.loc[:, options_file.metric].gt(options_file.metric_threshold)][[options_file.metric, 'Running_Time']].idxmax().head(1).values[0]
+        best_model_value = df_results[df_results.loc[:, options_file.metric].gt(options_file.metric_threshold)][[options_file.metric, 'Running_Time']].max().head(1).values[0]
+        log_record('Existem resultados ({:.4f}) do algoritmo {} superiores ao limite mínimo ({}). A comparar com os últimos resultados guardados...'.format(best_model_value, best_model_name, options_file.metric_threshold), options_file.project_id)
 
         df_previous_performance_results = sql_second_highest_date_checkup(dsn, options_file, performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'])
-        if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)].shape[0]:
-            log_record('Resultados mais antigos são melhores na métrica em avaliação: {:.4f} > {:.4f} para o algoritmo {}.'.format(df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max(), best_model_value, df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].idxmax()), options_file.project_id, flag=1)
+        if df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)].shape[0]:
+            log_record('Resultados mais antigos são melhores na métrica em avaliação: {:.4f} > {:.4f} para o algoritmo {}.'.format(df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].max(), best_model_value, df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].idxmax()), options_file.project_id, flag=1)
 
             model_choice_flag = 1
-            if df_previous_performance_results.loc[df_previous_performance_results[metric].gt(best_model_value)][metric].max() - best_model_value < performance_threshold_interval:
+            if df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].max() - best_model_value < performance_threshold_interval:
                 log_record('Apesar de os resultados mais antigos serem melhores, a diferença é demasiado pequena (<2%). Como tal, os dados serão atualizados de acordo com os novos resultados.', options_file.project_id)
                 step_e_upload_flag = 1
                 model_choice_flag = 3
-        elif df_previous_performance_results.loc[df_previous_performance_results[metric].eq(best_model_value)].shape[0]:
+        elif df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].eq(best_model_value)].shape[0]:
             log_record('Os novos resultados são iguais aos resultados antigos ({:.4f}) na métrica em avaliação. Os dados serão atualizados em SQL de forma a garantir os dados mais recentes.'.format(best_model_value), options_file.project_id)
             step_e_upload_flag = 1
             model_choice_flag = 4
         else:
             step_e_upload_flag = 1
             try:
-                log_record('O novo resultado é: {:.4f} e é superior ao último resultado que era {:.4f} para o modelo {}. Como tal, os dados serão atualizados...'.format(best_model_value, df_previous_performance_results[metric].max(), df_previous_performance_results[metric].idxmax()), options_file.project_id)
+                log_record('O novo resultado é: {:.4f} e é superior ao último resultado que era {:.4f} para o modelo {}. Como tal, os dados serão atualizados...'.format(best_model_value, df_previous_performance_results[options_file.metric].max(), df_previous_performance_results[options_file.metric].idxmax()), options_file.project_id)
             except TypeError:
                 log_record('O novo resultado é: {:.4f} e não foram encontrados resultados mais antigos. Como tal, os dados serão atualizados...'.format(best_model_value), options_file.project_id)
             model_choice_flag = 2
 
     except ValueError:
-        log_record('Sem resultados superiores ao limite mínimo ({:.4f}). Os últimos dados serão mantidos - Não haverá update dos mesmos.'.format(metric_threshold), options_file.project_id, flag=1)
+        log_record('Sem resultados superiores ao limite mínimo ({:.4f}). Os últimos dados serão mantidos - Não haverá update dos mesmos.'.format(options_file.metric_threshold), options_file.project_id, flag=1)
 
         model_choice_flag, best_model_name, best_model_value = 0, 0, 0
 
@@ -317,7 +316,7 @@ def model_choice_upload(flag, name, value, options_file):
         if flag == 4:
             message = 'Novo modelo com performance igual ao anterior.'
         df_model_result['Chosen_Model'] = [name]
-        df_model_result['Metric'] = [metric]
+        df_model_result['Metric'] = [options_file.metric]
         df_model_result['Value'] = [value]
     df_model_result['Message'] = [message]
 

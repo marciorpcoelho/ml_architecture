@@ -1,12 +1,12 @@
 import time
 import sys
 import logging
-from level_0_performance_report import log_record, project_dict
+import level_2_order_optimization_apv_baviera_options as options_file
 from level_1_a_data_acquisition import dw_data_retrieval, autoline_data_retrieval
 from level_1_b_data_processing import apv_dataset_treatment
 from level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_selection, part_ref_ta_definition
 from level_1_e_deployment import time_tags
-import level_2_order_optimization_apv_baviera_options as options_file
+from level_0_performance_report import log_record, project_dict
 
 update = 1  # Decides whether to fetch new datasets from the DW or not
 
@@ -27,7 +27,7 @@ def main():
 
     df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al = data_acquistion(options_file, max_date)
     df_sales_cleaned, df_purchases_cleaned, df_stock = data_processing(df_sales, df_purchases, df_stock, options_file)
-    results = data_modelling(options_file.pse_code, df_sales_cleaned, df_al, df_stock, df_reg_al_clients, df_purchases_cleaned, min_date, max_date)
+    results = data_modelling(options_file.pse_code, df_sales_cleaned, df_al, df_stock, df_reg_al_clients, df_purchases_cleaned, min_date, max_date, options_file.project_id)
 
     log_record('Finished Successfully - Project: {} .\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 
@@ -51,7 +51,7 @@ def data_processing(df_sales, df_purchases, df_stock, options_info):
     log_record('Sarted Step B...', options_file.project_id)
     start_treatment = time.time()
 
-    df_sales, df_purchases, df_stock = apv_dataset_treatment(df_sales, df_purchases, df_stock, options_info.pse_code, options_info.urgent_purchases_flags, update)
+    df_sales, df_purchases, df_stock = apv_dataset_treatment(df_sales, df_purchases, df_stock, options_info.pse_code, options_info.urgent_purchases_flags, update, options_info.project_id)
 
     print('Elapsed time: {:.2f}'.format(time.time() - start_treatment))
 
@@ -59,7 +59,7 @@ def data_processing(df_sales, df_purchases, df_stock, options_info):
     return df_sales, df_purchases, df_stock
 
 
-def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date):
+def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date, project_id):
     log_record('Started Step C', options_file.project_id)
     start = time.time()
 
@@ -70,7 +70,7 @@ def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_pu
 
     selected_parts = part_ref_selection(df_al, min_date, max_date, options_file.project_id)
     results = apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date, options_file.project_id)
-    part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping])  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
+    part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping], project_id)  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
     # sales_solver(results)
 
     print('Elapsed time: {:.2f}'.format(time.time() - start))

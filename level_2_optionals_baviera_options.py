@@ -1,12 +1,12 @@
-import numpy as np
 import os
-from sklearn import tree, linear_model, neighbors, svm
-from sklearn.neural_network import MLPClassifier
-from sklearn.naive_bayes import GaussianNB
-from py_dotenv import read_dotenv
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
+import numpy as np
 import xgboost as xgb
 import lightgbm as lgb
+from py_dotenv import read_dotenv
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neural_network import MLPClassifier
+from sklearn import tree, linear_model, neighbors, svm
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
 dotenv_path = 'info.env'
 read_dotenv(dotenv_path)
 
@@ -199,21 +199,6 @@ classification_models = {
     'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
     'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100), 'solver': ['sgd'], 'max_iter': [1000]}]],
     'voting': [VotingClassifier, [{'voting': ['soft']}]]
-}
-
-dict_models_name_conversion = {
-    'dt': ['Decision Tree'],
-    'rf': ['Random Forest'],
-    'lr': ['Logistic Regression'],
-    'knn': ['KNN'],
-    'svm': ['SVM'],
-    'ab': ['Adaboost'],
-    'xgb': ['XGBoost'],
-    'lgb': ['LightGBM'],
-    'gc': ['Gradient'],
-    'bayes': ['Bayesian'],
-    'ann': ['ANN'],
-    'voting': ['Voting']
 }
 
 sql_to_code_renaming = {

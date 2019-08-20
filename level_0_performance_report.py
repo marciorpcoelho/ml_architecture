@@ -57,6 +57,22 @@ project_pbi_performance_link = {2244: 'https://bit.ly/2X8twFU',
                                 }
 
 
+dict_models_name_conversion = {
+    'dt': ['Decision Tree'],
+    'rf': ['Random Forest'],
+    'lr': ['Logistic Regression'],
+    'knn': ['KNN'],
+    'svm': ['SVM'],
+    'ab': ['Adaboost'],
+    'xgb': ['XGBoost'],
+    'lgb': ['LightGBM'],
+    'gc': ['Gradient'],
+    'bayes': ['Bayesian'],
+    'ann': ['ANN'],
+    'voting': ['Voting']
+}
+
+
 def performance_info_append(timings, name):
 
     times_global.append(timings)

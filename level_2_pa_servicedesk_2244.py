@@ -13,8 +13,6 @@ from level_1_e_deployment import save_csv, sql_inject
 from level_0_performance_report import error_upload, log_record, project_dict, performance_info, performance_info_append
 from wordcloud import WordCloud
 from sklearn.decomposition import PCA
-import matplotlib.patches as mpatches
-from mpl_toolkits.mplot3d import Axes3D
 my_dpi = 96
 pd.set_option('display.expand_frame_repr', False)
 
@@ -129,9 +127,8 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
     log_record('Total Initial Requests: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
     pbi_categories = remove_rows(df_pbi_categories.copy(), [df_pbi_categories[~df_pbi_categories['Category_Name'].str.contains('Power BI')].index])['Category_Id'].values  # Selects the Category ID's which belong to PBI
     log_record('The number of PBI requests are: {}'.format(df_facts[df_facts['Category_Id'].isin(pbi_categories)]['Request_Num'].nunique()), options_file.project_id)
-    df_facts = remove_rows(df_facts, [df_facts.loc[df_facts['Category_Id'].isin(pbi_categories)].index])  # Removes the rows which belong to PBI;
+    df_facts = remove_rows(df_facts, [df_facts.loc[df_facts['Category_Id'].isin(pbi_categories)].index], options_file.project_id)  # Removes the rows which belong to PBI;
     log_record('After PBI Filtering, the number of requests is: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
-
 
     # Lowercase convertion of Summary and Description
     df_facts = lowercase_column_convertion(df_facts, columns=['Summary', 'Description'])
@@ -352,7 +349,7 @@ def cluster_word_cloud(df):
 
     for i in range(4):
         df_label = df[df['labels'] == i]
-        df_label = constant_columns_removal(df_label, value=0)
+        df_label = constant_columns_removal(df_label, options_file.project_id, value=0)
 
         list_words = list(df_label)[:-1]
         # print(i, '\n', df_label.describe().T)

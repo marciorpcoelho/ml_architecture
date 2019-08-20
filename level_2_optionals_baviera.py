@@ -1,5 +1,5 @@
-import time
 import sys
+import time
 import logging
 import pandas as pd
 import level_2_optionals_baviera_options
@@ -44,7 +44,7 @@ def main():
     df = data_acquistion(input_file, query_filters, local=0)
     df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, datasets, models)
-    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, project_id)
+    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, metric, metric_threshold, project_id)
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options, model_choice_message, vehicle_count, running_times_upload_flag)
@@ -96,24 +96,24 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
         df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
         df = total_price(df)  # Creates a new column with the total cost for each configuration;
-        df = remove_zero_price_total_vhe(df)  # Removes VHE with a price total of 0; ToDo: keep checking up if this is still necessary
-        df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index])  # No need for Prov filtering, as it is already filtered in the data source;
-        df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
-        df = remove_rows(df, [df[(df.Colour_Ext_Code == ' ') & (df.Cor == ' ')].index], warning=1)
+        df = remove_zero_price_total_vhe(df, project_id)  # Removes VHE with a price total of 0; ToDo: keep checking up if this is still necessary
+        df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index], project_id)  # No need for Prov filtering, as it is already filtered in the data source;
+        df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index], project_id)  # This removes Toyota Vehicles that aren't supposed to be in this model
+        df = remove_rows(df, [df[(df.Colour_Ext_Code == ' ') & (df.Cor == ' ')].index], project_id, warning=1)
 
-        df = options_scraping(df)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
-        df = remove_columns(df, ['Colour_Ext_Code'])  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;
+        df = options_scraping(df, project_id)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+        df = remove_columns(df, ['Colour_Ext_Code'], project_id)  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;
 
         vehicle_count_checkup(df, level_2_optionals_baviera_options, sql_check=1)
 
-        df = color_replacement(df)  # Translates all english colors to portuguese
+        df = color_replacement(df, project_id)  # Translates all english colors to portuguese
 
         df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
 
-        df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'Custo', 'Versão', 'Tipo Encomenda', 'Franchise_Code'])  # Remove columns not needed atm;
+        df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'Custo', 'Versão', 'Tipo Encomenda', 'Franchise_Code'], project_id)  # Remove columns not needed atm;
         # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
 
-        df = remove_rows(df, [df.loc[df['Local da Venda'] == 'DCV - Viat.Toy Viseu', :].index])  # Removes the vehicles sold here, as they are from another brand (Toyota)
+        df = remove_rows(df, [df.loc[df['Local da Venda'] == 'DCV - Viat.Toy Viseu', :].index], project_id)  # Removes the vehicles sold here, as they are from another brand (Toyota)
 
         df = margin_calculation(df)  # Calculates the margin in percentage of the total price
         df = score_calculation(df, level_2_optionals_baviera_options.stock_days_threshold, level_2_optionals_baviera_options.margin_threshold)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
@@ -122,7 +122,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Exterior', 'Cor_Interior', 'Motor']
         dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings'], 'Mapped_Value', level_2_optionals_baviera_options)
-        df = col_group(df, cols_to_group_layer_2, dictionaries)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
+        df = col_group(df, cols_to_group_layer_2, dictionaries, project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
         # groups are shown in level_2_optionals_baviera_options
 
         df = new_features_optionals_baviera(df, sel_cols=configuration_parameters)  # Creates a series of new features, explained in the provided pdf
@@ -134,7 +134,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), truncate=1, check_date=1)
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))
-        df = remove_columns(df, ['Date'])
+        df = remove_columns(df, ['Date'], project_id)
 
     else:
         log_record('Checkpoint Found. Retrieving data...', project_id)
@@ -151,8 +151,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     else:
         removed_columns = []
 
-    df_ohe = remove_columns(df_ohe, removed_columns)
-    df_ohe = constant_columns_removal(df_ohe)
+    df_ohe = remove_columns(df_ohe, removed_columns, project_id)
+    df_ohe = constant_columns_removal(df_ohe, project_id)
 
     train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Local da Venda_v2', 'Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
     # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed

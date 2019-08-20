@@ -1,22 +1,22 @@
-import pandas as pd
-import numpy as np
-import datetime
-import pickle
-import time
 import nltk
-from os import listdir
+import time
+import pickle
 import operator
-from dateutil.relativedelta import relativedelta
-from nltk.stem.snowball import SnowballStemmer
+import datetime
+import numpy as np
+import pandas as pd
+from os import listdir
+from multiprocessing import Pool
 from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_score, calinski_harabaz_score
+from gap_statistic import OptimalK
+from nltk.stem.snowball import SnowballStemmer
 from scipy.spatial.distance import cdist, pdist
 from sklearn.model_selection import GridSearchCV
-from gap_statistic import OptimalK
-from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
-from level_0_performance_report import log_record, pool_workers_count
+from dateutil.relativedelta import relativedelta
 from level_1_a_data_acquisition import sql_mapping_retrieval
+from sklearn.metrics import silhouette_score, calinski_harabaz_score
+from level_0_performance_report import log_record, pool_workers_count
 from level_1_b_data_processing import remove_punctuation_and_digits, col_group
 pd.set_option('display.expand_frame_repr', False)
 
@@ -722,7 +722,7 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
     return df_al
 
 
-def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings):
+def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings, project_id):
     print('Fetching TA for each part_reference...')
     start = time.time()
 
@@ -783,8 +783,8 @@ def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings):
         df_part_ref_ta['TA'] = part_ref_tas
         df_part_ref_ta['Group'] = part_ref_tas
 
-        df_bmw = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')], ['Group'], [mappings[0]])
-        df_mini = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')], ['Group'], [mappings[1]])
+        df_bmw = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')], ['Group'], [mappings[0]], project_id)
+        df_mini = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')], ['Group'], [mappings[1]], project_id)
 
         df_part_ref_ta_grouped = pd.concat([df_bmw, df_mini])
 

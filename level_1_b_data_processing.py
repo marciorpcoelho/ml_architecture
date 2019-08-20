@@ -17,7 +17,7 @@ from sklearn.preprocessing import MinMaxScaler
 from imblearn.over_sampling import RandomOverSampler
 import level_0_performance_report
 from level_1_e_deployment import sql_string_preparation_v2, time_tags
-from level_2_optionals_baviera_options import colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors, project_id
+from level_2_optionals_baviera_options import colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors
 warnings.simplefilter('ignore', FutureWarning)
 
 # Globals Definition
@@ -50,7 +50,7 @@ def lowercase_column_convertion(df, columns):
     return df
 
 
-def remove_columns(df, columns):
+def remove_columns(df, columns, project_id):
 
     for column in columns:
         try:
@@ -63,7 +63,7 @@ def remove_columns(df, columns):
     return df
 
 
-def remove_rows(df, rows, warning=0):
+def remove_rows(df, rows, project_id, warning=0):
 
     if not warning:
         for condition in rows:
@@ -107,6 +107,9 @@ def null_analysis(df):
 
     print(tab_info)
 
+    if not tab_info.loc['#null:', :].sum(axis=0):
+        print('No nulls detected!')
+
 
 def inf_analysis(df):
     # Displays the number and percentage of infinite values in the DF
@@ -119,6 +122,9 @@ def inf_analysis(df):
 
     print(tab_info)
 
+    if not tab_info.loc['#inf:', :].sum(axis=0) + tab_info.loc['#-inf:', :].sum(axis=0):
+        print('No infinities detected!')
+
 
 def zero_analysis(df):
     # Displays the number and percentage of zero values in the DF
@@ -128,6 +134,9 @@ def zero_analysis(df):
     tab_info = tab_info.append(pd.DataFrame((df == 0).astype(int).sum(axis=0) / df.shape[0] * 100).T.rename(index={0: '%zero:'}))
 
     print(tab_info)
+
+    if not tab_info.loc['#zero:', :].sum(axis=0):
+        print('No zeros detected!')
 
 
 def value_count_histogram(df, columns, tag, output_dir='output/'):
@@ -162,7 +171,8 @@ def save_fig(name, save_dir='output/'):
     plt.savefig(save_dir + str(name) + '.png')
 
 
-def options_scraping(df):
+def options_scraping(df, project_id):
+    # Project_Id = 2162
     # df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index])  # No need for Prov filtering, as it is already filtered in the data source;
     # df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
     # df = remove_rows(df, [df['Registration_Number'].str.contains('/').index, [df['Registration_Number'].str.len() > 8].index])  # This removes vehicles with erroneous registration numbers;
@@ -194,7 +204,7 @@ def options_scraping(df):
     level_0_performance_report.performance_info_append(time.time(), 'end_motor')
 
     pool = Pool(processes=level_0_performance_report.pool_workers_count)
-    results = pool.map(options_scraping_per_group, [(key, group) for (key, group) in df_grouped])
+    results = pool.map(options_scraping_per_group, [(key, group, project_id) for (key, group) in df_grouped])
     pool.close()
     df = pd.concat([result[0] for result in results if result is not None])
     durations_times = [nav_all, barras_all, alarme_all, seven_lug_all, prot_all, ac_all, teto_all, cor_ext_all, cor_int_all, int_type_all, sens_all, trans_all, versao_all, farois_all, jantes_all]
@@ -262,7 +272,7 @@ def options_scraping(df):
 
 
 def options_scraping_per_group(args):
-    key, group = args
+    key, group, project_id = args
 
     duration_sens, duration_trans, duration_versao, duration_farois, duration_jantes = 0, 0, 0, 0, 0
     line_modelo = group['Modelo'].head(1).values[0]
@@ -489,7 +499,7 @@ def column_rename(df, cols_to_replace, new_cols_names):
     return df
 
 
-def constant_columns_removal(df, value=None):
+def constant_columns_removal(df, project_id, value=None):
     features_removed, list_after = [], []
 
     list_before = list(df)
@@ -515,7 +525,7 @@ def constant_columns_removal(df, value=None):
     return df[list_after]
 
 
-def col_group(df, columns_to_replace, dictionaries):
+def col_group(df, columns_to_replace, dictionaries, project_id):
     non_parametrized_data_flag = 0
 
     for dictionary in dictionaries:
@@ -526,12 +536,15 @@ def col_group(df, columns_to_replace, dictionaries):
             if df[column + '_new'].isnull().values.any():
                 non_parametrized_data_flag = 1
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
-                level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetatos em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
+                if project_id == 2162:
+                    level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetatos em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
+                elif project_id == 2406:
+                    level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetatos em: {}_new, valor(es) não agrupados: {} nos veículos(s) com Chassis_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Chassis_Number'].unique()), project_id, flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
         except KeyError:
             # level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column {} not found.'.format(column))
-            level_0_performance_report.log_record('Column Grouping Warning - Column {} not found.'.format(column), project_id, flag=1)
+            level_0_performance_report.log_record('Aviso no Agrupamento de Colunas - Coluna {} não encontrada.'.format(column), project_id, flag=1)
 
     if non_parametrized_data_flag:
         raise ValueError('Existem valores não parametrizados. Por favor corrigir.')
@@ -545,9 +558,9 @@ def total_price(df):
     return df
 
 
-def remove_zero_price_total_vhe(df):
+def remove_zero_price_total_vhe(df, project_id):
     old_count = df['Nº Stock'].nunique()
-    remove_rows(df, [df.loc[df.price_total == 0, :].index])
+    remove_rows(df, [df.loc[df.price_total == 0, :].index], project_id)
     new_count = df['Nº Stock'].nunique()
 
     removed_vehicles = old_count - new_count
@@ -569,7 +582,9 @@ def prov_replacement(df):
     return df
 
 
-def color_replacement(df):
+def color_replacement(df, project_id):
+    # Project_Id = 2162
+
     color_types = ['Cor_Exterior']
     colors_to_replace = {'black': 'preto', 'preto/silver': 'preto/prateado', 'tartufo': 'truffle', 'preto/laranja/preto/lara': 'preto/laranja', 'white': 'branco', 'blue': 'azul', 'red': 'vermelho', 'grey': 'cinzento', 'silver': 'prateado', 'orange': 'laranja', 'green': 'verde', 'anthrazit': 'antracite', 'antracit': 'antracite', 'brown': 'castanho', 'antracito': 'antracite', 'âmbar/preto/pr': 'ambar/preto/preto', 'beige': 'bege', 'kaschmirsilber': 'cashmere', 'beje': 'bege'}
 
@@ -1056,7 +1071,7 @@ def top_words_processing(df_facts):
     return df_cleaned, df_top_words
 
 
-def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_purchases_flags, update):
+def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_purchases_flags, update, project_id):
     current_date, _ = time_tags(format_date='%Y%m%d')
     sales_cols_to_keep = ['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']
     stock_cols_to_keep = ['Part_Ref', 'Stock_Qty', 'Record_Date']
@@ -1093,7 +1108,7 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
 
         df_sales.drop('Qty_Sold', axis=1, inplace=True)
 
-        df_sales = remove_columns(df_sales, [x for x in list(df_sales) if x not in sales_cols_to_keep])
+        df_sales = remove_columns(df_sales, [x for x in list(df_sales) if x not in sales_cols_to_keep], project_id)
 
         df_sales.sort_index(inplace=True)
 
@@ -1126,7 +1141,7 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
         df_purchases.to_csv(purchases_file_name + '.csv')
 
     df_purchases.rename(index=str, columns={'Qty_Sold_sum': 'Qty_Purchased_sum'}, inplace=True)  # Will be removed next time i run the data_processement
-    df_stock = remove_columns(df_stock, [x for x in list(df_stock) if x not in stock_cols_to_keep])
+    df_stock = remove_columns(df_stock, [x for x in list(df_stock) if x not in stock_cols_to_keep], project_id)
 
     return df_sales, df_purchases, df_stock
 
@@ -1231,5 +1246,91 @@ def na_group_fill(args):
     group[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']] = group[['Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum']].fillna(method='ffill').fillna(method='bfill').fillna(0)
 
     return group
+
+
+def na_fill_hyundai(df_grouped):
+    # project_id = 2406
+    start = time.time()
+
+    pool = Pool(processes=4)
+    results = pool.map(na_group_fill_hyundai, [(z[0], z[1]) for z in df_grouped])
+    pool.close()
+    df_filled = pd.concat([result for result in results if result is not None])
+
+    print('Elapsed Time: {:.2f}'.format(time.time() - start))
+    return df_filled
+
+
+def na_group_fill_hyundai(args):
+    # project_id = 2406
+    _, group = args
+    cols_to_fill = ['Quantity_CHS']
+    measure_cols = ['Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12']
+    support_measure_cols = ['Measure_13', 'Measure_14', 'Measure_15']
+
+    if group.shape[0] == 1 and group['Quantity_CHS'].values == 0:
+        return None
+
+    if sum(group['SLR_Document_Date_CHS'].isnull()) == group['SLR_Document_Date_CHS'].shape[0]:
+        # print('No SLR_Document_Date_CHS: \n', group)
+        return None
+
+    if group['SLR_Document_Date_CHS'].nunique() > 1:
+        slr_document_date_chs_min = group['SLR_Document_Date_CHS'].min()
+        try:
+            slr_document_date_chs_min_idx = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) & (group['Quantity_CHS'] == 1)].index.values[0]
+        except IndexError:
+            slr_document_date_chs_min_idx = group['SLR_Document_Date_CHS'].idxmin()
+    elif group['SLR_Document_Date_CHS'].nunique() == 1:
+        # slr_document_date_chs_min = group['SLR_Document_Date_CHS'].head(1).values[0]
+        slr_document_date_chs_min = group['SLR_Document_Date_CHS'].min()
+        # slr_document_date_chs_min_idx = group[group['Quantity_CHS'] == 1].head(1).index.values[0]
+        slr_document_date_chs_min_idx = group['SLR_Document_Date_CHS'].idxmin()
+
+    check_for_registration_number = group['Registration_Number'].nunique()
+    check_for_slr_document_chs = group['SLR_Document_CHS'].nunique()
+    check_for_slr_document_rgn = group['SLR_Document_RGN'].nunique()
+
+    group.loc[:, cols_to_fill] = group[group.index == slr_document_date_chs_min_idx][cols_to_fill]
+
+    for col_o in measure_cols:
+        group[col_o] = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) | (group['SLR_Document_Date_CHS'].isnull())][col_o].sum(axis=0)
+    for col_s in support_measure_cols:
+        group[col_s] = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min)][col_s].sum(axis=0)
+
+    group['SLR_Document_Date_CHS'] = group['SLR_Document_Date_CHS'].min()
+    group['SLR_Document_Date_RGN'] = group['SLR_Document_Date_RGN'].min()
+
+    [group[x].fillna(method='bfill', inplace=True) for x in cols_to_fill]
+
+    if not check_for_registration_number and check_for_slr_document_chs:
+        group['No_Registration_Number_Flag'] = 1
+    elif check_for_registration_number and check_for_slr_document_chs and not check_for_slr_document_rgn:
+        group['Registration_Number_No_SLR_Document_RGN_Flag'] = 1
+    elif check_for_slr_document_chs and check_for_slr_document_rgn:
+        group['SLR_Document_RGN_Flag'] = 1
+    else:
+        group['Undefined_VHE_Status'] = 1
+
+    return group.head(1)
+
+
+def measures_calculation_hyundai(df):
+    # project_id = 2406
+    measure_2, measure_3, measure_4 = df['Measure_2'], df['Measure_3'], df['Measure_4']
+    measure_5, measure_6, measure_7 = df['Measure_5'], df['Measure_6'], df['Measure_7']
+    measure_9, measure_10, measure_11, measure_12 = df['Measure_9'], df['Measure_10'], df['Measure_11'], df['Measure_12']
+    measure_13, measure_14, measure_15 = df['Measure_13'], df['Measure_14'], df['Measure_15']
+
+    df['Total_Sales'] = measure_2 + measure_3 + measure_4
+    df['Total_Discount'] = measure_5 + measure_6 + measure_7
+    df['Total_Discount_%'] = df['Total_Discount'] / df['Total_Sales']
+    df['Total_Net_Sales'] = (measure_2 - measure_5) + (measure_3 - measure_6) + (measure_4 - measure_7)
+    df['Total_Cost'] = measure_9 + measure_10 + measure_11 + measure_12
+    df['Fixed_Margin_I'] = (((measure_2 - measure_5) + (measure_3 - measure_6)) + (measure_4 - measure_7)) + ((measure_9 + measure_10) + (measure_11 + measure_12)) + ((measure_13 + measure_14) + measure_15)
+    df['Fixed_Margin_I_%'] = df['Fixed_Margin_I'] / df['Total_Net_Sales']
+    df['HME_Support'] = measure_13
+
+    return df
 
 
