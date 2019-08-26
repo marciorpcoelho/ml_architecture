@@ -20,11 +20,9 @@ profit_evolution = []
 dtss_evolution = []
 scale_argument = 1000
 
-dtss_goal = 15  # Weekdays only!
-
 
 def main():
-    current_date = '20190731'
+    current_date = '20190816'
     df_part_refs_ta = pd.read_csv('output/part_ref_ta_{}.csv'.format(current_date), index_col=0)
 
     try:
@@ -34,20 +32,21 @@ def main():
         print('df_solve file not found, processing a new one...')
         # df_sales = pd.read_csv('dbs/results_merge_case_study_0B.csv', parse_dates=['index'], index_col=0)
         df_sales = pd.read_csv('output/results_merge_0B_{}.csv'.format(current_date), parse_dates=['index'], index_col=0)
-        df_solve = solver_dataset_preparation(df_sales, df_part_refs_ta, current_date)
+        df_solve = solver_dataset_preparation(df_sales, df_part_refs_ta, group_goals['dtss_goal'], current_date)
 
+    dtss_goal = group_goals['dtss_goal']
     for key, group in df_solve.groupby('Group'):
-        if key in ['Outros', 'BMW_Bonus_Group_1', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4']:
+        if key in ['BMW_Bonus_Group_3', 'Outros', 'BMW_Bonus_Group_1', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4']:
             continue
         else:
             cost_goal = group_goals[key][0]
             sales_goal = group_goals[key][1]
             print('There are {} unique part_refs for {}'.format(len(group), key))
-            print('Cost goal: {}, Sale Goal: {}'.format(cost_goal, sales_goal))
-            solver(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, cost_goal, sales_goal)
+            print('Cost goal: {}, Sale Goal: {}, DTSS Goal: {}'.format(cost_goal, sales_goal, dtss_goal))
+            solver(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, cost_goal, sales_goal, dtss_goal)
 
 
-def solver(df_solve, group, cost_goal, sales_goal):
+def solver(df_solve, group, cost_goal, sales_goal, dtss_goal):
     print('Solving for {}...'.format(group))
     unique_parts = df_solve['Part_Ref'].unique()
     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
@@ -60,17 +59,32 @@ def solver(df_solve, group, cost_goal, sales_goal):
     margins = df_solve['Margin'].values.tolist()
     dtss = df_solve['DaysToSell_1_Part']
 
+    # [print(part + ' - ' + str(dts)) for part, dts in zip(unique_parts, dtss)]
+
     constraint_1 = [
         {'type': 'ineq', 'fun': lambda n: cost_calculation(n, costs, cost_goal)},
         {'type': 'ineq', 'fun': lambda n: sales_calculation(n, pvps, sales_goal)},
-        {'type': 'ineq', 'fun': lambda n: days_to_sell_calculation(n, dtss)},
+        {'type': 'ineq', 'fun': lambda n: days_to_sell_calculation(n, dtss, dtss_goal)},
     ]
 
     bnds = [(0, 10000) for i in range(n_size)]
-    n_init = np.array([1] * n_size)
+    n_init = np.array([2] * n_size)
 
     # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='trust-constr', hess=zero_hess, bounds=bnds, constraints=constraint_1, options={'xtol': 1e-8, 'gtol': 1e-5, 'maxiter': 100000})
-    res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='SLSQP', bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='SLSQP', bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='Nelder-Mead', bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method Nelder-Mead cannot handle constraints nor bounds.
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='Powell', bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # Method Powell cannot handle constraints nor bounds.
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='CG', bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method CG cannot handle constraints nor bounds.
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='BFGS', bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method CG cannot handle constraints nor bounds.
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='Newton-CG', jac=None, bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method Newton-CG cannot handle constraints nor bounds., ValueError: Jacobian is required for Newton-CG method
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='L-BFGS-B', jac=None, bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method L-BFGS-B cannot handle constraints.
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='TNC', jac=None, bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method TNC cannot handle constraints.
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='COBYLA', bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method COBYLA cannot handle bounds.
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='dogleg', jac=None, bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method dogleg cannot handle constraints nor bounds., ValueError: Jacobian is required for dogleg minimization
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='trust-ncg', jac=None, bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # RuntimeWarning: Method trust-ncg cannot handle constraints nor bounds., ValueError: Jacobian is required for Newton-CG trust-region minimization
+    # res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='trust-exact', jac=zero_hess, hess=zero_hess, bounds=bnds, constraints=constraint_1, options={'maxiter': 100000})  # numpy.AxisError: axis 1 is out of bounds for array of dimension 1
+    res = minimize(profit_function, x0=n_init, args=(costs, pvps), method='trust-krylov', jac=zero_hess, hess=zero_hess, bounds=bnds, constraints=constraint_1, options={'maxiter': 100000, 'inexact': True, 'tol': 1e-4, 'xtol': 1e-8, 'gtol': 1e-5})
+
 
     # Dummy Example
     # A = np.array([[1, -2], [-1, -2], [-1, 2]])
@@ -86,11 +100,13 @@ def solver(df_solve, group, cost_goal, sales_goal):
     # print(res)
     print('Termination Message: {}'.format(res.message))
     print('Number of iterations: {}'.format(res.nit))
-    # [print(part + ': ' + str(qty)) for part, qty in zip(unique_parts, res.x)]
 
     costs = [n * cost for n, cost in zip(res.x, costs)]
     sales = [n * pvp for n, pvp in zip(res.x, pvps)]
     dtss = [n * dts for n, dts in zip(res.x, dtss)]
+
+    # [print(part + ': ' + str(qty) + ', DTSS: {:.2f}'.format(dts)) for part, qty, dts in zip(unique_parts, res.x, dtss)]
+
     # profits = [n*margin for n, margin in zip(res.x, margins)]
     # print(costs, '\n', profits)
     print('Total cost of: {:.2f} / {:.2f} ({:.2f}%) \nTotal Sales of: {:.2f} / {:.2f} ({:.2f}%) \nDays to Sell: {:.2f} / {:.2f} ({:.2f}%) \nProfit of {:.2f}'
@@ -98,10 +114,10 @@ def solver(df_solve, group, cost_goal, sales_goal):
 
     print('Elapsed time: {:.2f} seconds.\n'.format(time.time() - start))
 
-    evolution_plots(n_size, group, cost_goal, sales_goal)
+    evolution_plots(n_size, group, cost_goal, sales_goal, dtss_goal)
 
 
-def evolution_plots(n_size, group, cost_goal, sales_goal):
+def evolution_plots(n_size, group, cost_goal, sales_goal, dtss_goal):
     f, ax = plt.subplots(2, 2, figsize=(1400 / my_dpi, 1000 / my_dpi), dpi=my_dpi)
 
     ax[0, 0].plot(range(len(cost_evolution)), [x + cost_goal for x in cost_evolution], label='Cost Evolution', c='blue')
@@ -149,7 +165,7 @@ def sales_calculation(ns, pvps, sales_goal):
     return total_sales
 
 
-def days_to_sell_calculation(ns, dtss):
+def days_to_sell_calculation(ns, dtss, dtss_goal):
     days_to_sell = [n * dts for n, dts in zip(ns, dtss)]
     max_days_to_sell = dtss_goal - np.max(days_to_sell)
 
@@ -175,7 +191,7 @@ def test_function(x):
     return (x[0] - 1) ** 2 + (x[1] - 2.5) ** 2
 
 
-def solver_dataset_preparation(df_sales, df_part_refs_ta, current_date):
+def solver_dataset_preparation(df_sales, df_part_refs_ta, dtss_goal, current_date):
     start = time.time()
 
     unique_part_refs = df_sales['Part_Ref'].unique()

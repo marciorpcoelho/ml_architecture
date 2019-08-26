@@ -39,12 +39,26 @@ bmw_ta_mapping = {
 # The cost goals for group 1 and 2, as well as the sale goals for groups 3, 4 and 5 are taken from the provided files.
 # The remaining sale/cost goals are fluctuations of 5% from the previous values
 # There currently are no goals for MINI groups
+# group_goals = {
+#     'dtss_goal': 15,  # Weekdays only!
+#     'BMW_Bonus_Group_1': [252051, 264654],  # Cost, Sales
+#     'BMW_Bonus_Group_2': [56055, 58858],  # Cost, Sales
+#     'BMW_Bonus_Group_3': [5075, 5329],  # Cost, Sales
+#     'BMW_Bonus_Group_4': [9539, 10016],  # Cost, Sales
+#     'BMW_Bonus_Group_5': [8675, 9109],  # Cost, Sales
+#     'MINI_Bonus_Group_1': [0, 0],
+#     'MINI_Bonus_Group_2': [0, 0],
+#     'MINI_Bonus_Group_3': [0, 0],
+#     'MINI_Bonus_Group_4': [0, 0],
+# }
+
 group_goals = {
-    'BMW_Bonus_Group_1': [252051, 264654],  # Cost, Sales
-    'BMW_Bonus_Group_2': [56055, 58858],  # Cost, Sales
-    'BMW_Bonus_Group_3': [5075, 5329],  # Cost, Sales
-    'BMW_Bonus_Group_4': [9539, 10016],  # Cost, Sales
-    'BMW_Bonus_Group_5': [8675, 9109],  # Cost, Sales
+    'dtss_goal': 22,  # Weekdays only!
+    'BMW_Bonus_Group_1': [640345 - 399127, 253279],  # Cost, Sales (Values are for a single month, using the goal for the 3-month period minus the already sold in the first two months
+    'BMW_Bonus_Group_2': [155713 - 93374, 3655],  # Cost, Sales
+    'BMW_Bonus_Group_3': [12893 - 10808, 2189],  # Cost, Sales
+    'BMW_Bonus_Group_4': [25445 - 16152, 9758],  # Cost, Sales
+    'BMW_Bonus_Group_5': [23143 - 14146, 9447],  # Cost, Sales
     'MINI_Bonus_Group_1': [0, 0],
     'MINI_Bonus_Group_2': [0, 0],
     'MINI_Bonus_Group_3': [0, 0],
