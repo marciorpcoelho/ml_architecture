@@ -10,6 +10,7 @@ PWD = os.getenv('PWD')
 
 project_id = 2406
 update_frequency_days = 0
+stock_days_threshold = 150
 
 sql_info = {
     'database_source': 'BI_DTR',
@@ -41,12 +42,14 @@ sales_query = '''
 
 stock_query = '''
         select *
-        from VHE_Fact_BI_Stock_DTR WITH (NOLOCK)'''
+        from [BI_DTR].dbo.[VHE_Fact_BI_Stock_DTR] WITH (NOLOCK)'''
 
-product_db = '''
-        select *
-        from VHE_Dim_VehicleData_DTR WITH (NOLOCK)'''
-
+product_db_query = '''
+        SELECT *
+        FROM [BI_DTR].dbo.[VHE_Dim_VehicleData_DTR] WITH (NOLOCK)
+        UNION ALL
+        SELECT *
+        FROM [BI_DW_History].dbo.[VHE_Dim_VehicleData_DTR] WITH (NOLOCK)'''
 
 # Motorização
 motor_translation = {

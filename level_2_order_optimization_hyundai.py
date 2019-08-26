@@ -27,7 +27,7 @@ def data_acquisition():
 
     sales_info = ['dbs/df_sales', options_file.sales_query]
     stock_info = ['dbs/df_stock', options_file.stock_query]
-    product_db = ['dbs/df_pdb', options_file.product_db]
+    product_db = ['dbs/df_pdb', options_file.product_db_query]
 
     current_date, _ = time_tags()
 
@@ -116,15 +116,13 @@ def data_processing(df_sales, df_stock, df_pdb_dim):
 
     df_sales = lowercase_column_convertion(df_sales, description_cols)
 
-    # print(df_sales.head())
-
     # Filtering rows with no information
     df_sales = df_sales[df_sales['VehicleData_Code'] != 1]
     df_sales = df_sales[df_sales['Sales_Type_Dealer_Code'] != 'Demo']
     df_sales = df_sales[df_sales['Sales_Type_Code_DMS'].isin(['RAC', 'STOCK', 'VENDA'])]
 
     # Remove unnecessary columns:
-    df_sales = remove_columns(df_sales, ['VehicleData_Code', 'Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type', 'Registration_Number',
+    df_sales = remove_columns(df_sales, ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type', 'Registration_Number',
                                          'NLR_Posting_Date', 'SLR_Document_Category', 'Chassis_Flag', 'SLR_Document_Date_CHS', 'SLR_Document_Period_CHS', 'SLR_Document_Year_CHS', 'SLR_Document_CHS', 'SLR_Document_Type_CHS',
                                          'SLR_Account_CHS', 'SLR_Account_CHS_Key', 'Quantity_CHS', 'Registration_Flag', 'Analysis_Date_RGN', 'Analysis_Period_RGN', 'Analysis_Year_RGN', 'SLR_Document_Date_RGN',
                                          'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'Location_Code', 'VehicleData_Key',
@@ -139,13 +137,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim):
     df_sales['Total_Discount_%'] = df_sales['Total_Discount_%'].replace([np.inf, np.nan, -np.inf], 0)  # Is this correct? This is caused by Total Sales = 0
     df_sales['Fixed_Margin_I_%'] = df_sales['Fixed_Margin_I_%'].replace([np.inf, np.nan, -np.inf], 0)  # Is this correct? This is caused by Total Net Sales = 0
 
-    print(df_sales['PT_PDB_Interior_Color_Desc'].unique())
-    print(df_sales['PT_PDB_Interior_Color_Desc'].nunique())
-
     df_sales = parameter_processing(df_sales)
-
-    print(df_sales['PT_PDB_Interior_Color_Desc'].unique())
-    print(df_sales['PT_PDB_Interior_Color_Desc'].nunique())
 
     # print(df_sales.head())
     # print(df_sales.describe())
@@ -172,7 +164,6 @@ def data_modelling(df_sales, models):
 
 def parameter_processing(df_sales):
 
-    print(df_sales.head())
     description_cols = ['PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 
     # Modelo

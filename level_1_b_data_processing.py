@@ -537,9 +537,9 @@ def col_group(df, columns_to_replace, dictionaries, project_id):
                 non_parametrized_data_flag = 1
                 variable = df.loc[df[column + '_new'].isnull(), column].unique()
                 if project_id == 2162:
-                    level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetatos em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
+                    level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetados em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
                 elif project_id == 2406:
-                    level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetatos em: {}_new, valor(es) não agrupados: {} nos veículos(s) com Chassis_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Chassis_Number'].unique()), project_id, flag=1)
+                    level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetados em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VehicleData_Code(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['VehicleData_Code'].unique()), project_id, flag=1)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=str, columns={column + '_new': column}, inplace=True)
         except KeyError:
