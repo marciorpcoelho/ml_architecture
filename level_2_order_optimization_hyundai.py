@@ -4,7 +4,7 @@ import numpy as np
 import time
 import pandas as pd
 from level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv
-from level_1_b_data_processing import df_join_function, null_analysis, lowercase_column_convertion, col_group, value_count_histogram, value_substitution, na_fill_hyundai, remove_columns, measures_calculation_hyundai
+from level_1_b_data_processing import value_count_histogram, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, lowercase_column_convertion, value_count_histogram, value_substitution, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from level_1_e_deployment import sql_inject_v2, time_tags
 import level_0_performance_report
 import level_2_order_optimization_hyundai_options as options_file
@@ -12,11 +12,10 @@ import level_2_order_optimization_hyundai_options as options_file
 
 def main():
     models = ['dt', 'rf', 'lr', 'ab', 'xgb', 'lgb']
-    tentative_daysinstock_limit = 30  # DaysInStock_Global
-    tentative_margin_limit = 3  # Fixed_Margin_I_%
+    configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 
     df_sales, df_stock, df_pdb_dim = data_acquisition()
-    df_sales = data_processing(df_sales, df_stock, df_pdb_dim)
+    df_sales = data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters)
     best_models, running_times = data_modelling(df_sales, models)
     # deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
@@ -50,6 +49,8 @@ def data_acquisition():
     df_stock = dfs[1]
     df_pdb = dfs[2]
 
+    df_pdb.drop_duplicates(subset='VehicleData_Code', inplace=True)  # There are repeated VehicleData_Code inside this union between BI_DTR and BI_DW_History
+
     # df_sales['SLR_Document_Date'] = pd.to_datetime(df_sales['SLR_Document_Date'], format='%Y%m%d')
     # df_sales['WIP_Date_Created'] = pd.to_datetime(df_sales['WIP_Date_Created'], format='%Y%m%d')
     # df_sales['Movement_Date'] = pd.to_datetime(df_sales['Movement_Date'], format='%Y%m%d')
@@ -59,7 +60,7 @@ def data_acquisition():
     return df_sales, df_stock, df_pdb
 
 
-def data_processing(df_sales, df_stock, df_pdb_dim):
+def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_cols):
     current_date, _ = time_tags()
 
     try:
@@ -109,17 +110,25 @@ def data_processing(df_sales, df_stock, df_pdb_dim):
         df_sales.to_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date))
 
     # description_cols = [x for x in list(df_pdb_dim) if x.endswith('_Desc')]
-    description_cols = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
+    # description_cols = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 
     # Step 2: ML Processing
-    df_sales = df_join_function(df_sales, df_pdb_dim[['VehicleData_Code'] + description_cols].set_index('VehicleData_Code'), on='VehicleData_Code')
+    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    df_sales = df_join_function(df_sales, df_pdb_dim[['VehicleData_Code'] + configuration_parameters_cols].set_index('VehicleData_Code'), on='VehicleData_Code', how='left')
 
-    df_sales = lowercase_column_convertion(df_sales, description_cols)
+    df_sales = lowercase_column_convertion(df_sales, configuration_parameters_cols)
 
-    # Filtering rows with no information
+    # Filtering rows with no relevant information
     df_sales = df_sales[df_sales['VehicleData_Code'] != 1]
+    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['Sales_Type_Dealer_Code'] != 'Demo']
+    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['Sales_Type_Code_DMS'].isin(['RAC', 'STOCK', 'VENDA'])]
+    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    df_sales = df_sales[~df_sales['Dispatch_Type_Code'].isin(['AMBULÂNCIA', 'TAXI', 'PSP'])]
+    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    df_sales = df_sales[df_sales['DaysInStock_Global'] >= 0]  # Filters rows where, for some odd reason, the days in stock are negative
+    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
 
     # Remove unnecessary columns:
     df_sales = remove_columns(df_sales, ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type', 'Registration_Number',
@@ -137,7 +146,17 @@ def data_processing(df_sales, df_stock, df_pdb_dim):
     df_sales['Total_Discount_%'] = df_sales['Total_Discount_%'].replace([np.inf, np.nan, -np.inf], 0)  # Is this correct? This is caused by Total Sales = 0
     df_sales['Fixed_Margin_I_%'] = df_sales['Fixed_Margin_I_%'].replace([np.inf, np.nan, -np.inf], 0)  # Is this correct? This is caused by Total Net Sales = 0
 
-    df_sales = parameter_processing(df_sales)
+    df_sales = lowercase_column_convertion(df_sales, configuration_parameters_cols)  # Lowercases the strings of these columns
+
+    df_sales = parameter_processing_hyundai(df_sales, options_file, configuration_parameters_cols)
+
+    translation_dictionaries = [options_file.motor_translation, options_file.transmission_translation, options_file.version_translation, options_file.ext_color_translation, options_file.int_color_translation]
+    df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], translation_dictionaries, options_file.project_id)
+
+    # Target Variable Calculation
+    df_sales = score_calculation(df_sales, options_file.stock_days_threshold, options_file.margin_threshold, options_file.project_id)
+
+    value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406')
 
     # print(df_sales.head())
     # print(df_sales.describe())
@@ -155,26 +174,9 @@ def data_processing(df_sales, df_stock, df_pdb_dim):
 def data_modelling(df_sales, models):
     print('Started Step C...')
 
-
-
     print('Finished Step C.')
     a, b = 1, 2
     return a, b
-
-
-def parameter_processing(df_sales):
-
-    description_cols = ['PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
-
-    # Modelo
-    df_sales = lowercase_column_convertion(df_sales, description_cols)  # Lowercases the strings of these columns
-    df_sales.loc[:, 'Modelo'] = df_sales['PT_PDB_Model_Desc'].str.split().str[0]
-
-    translation_dictionaries = [options_file.motor_translation, options_file.transmission_translation, options_file.version_translation, options_file.ext_color_translation, options_file.int_color_translation]
-
-    df_sales = col_group(df_sales, description_cols, translation_dictionaries, options_file.project_id)
-
-    return df_sales
 
 
 def deployment(df, db, view):

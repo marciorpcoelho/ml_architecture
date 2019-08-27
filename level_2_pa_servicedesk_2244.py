@@ -125,7 +125,7 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
 
     # Remove PBI's categories requests
     log_record('Total Initial Requests: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
-    pbi_categories = remove_rows(df_pbi_categories.copy(), [df_pbi_categories[~df_pbi_categories['Category_Name'].str.contains('Power BI')].index])['Category_Id'].values  # Selects the Category ID's which belong to PBI
+    pbi_categories = remove_rows(df_pbi_categories.copy(), [df_pbi_categories[~df_pbi_categories['Category_Name'].str.contains('Power BI')].index], options_file.project_id)['Category_Id'].values  # Selects the Category ID's which belong to PBI
     log_record('The number of PBI requests are: {}'.format(df_facts[df_facts['Category_Id'].isin(pbi_categories)]['Request_Num'].nunique()), options_file.project_id)
     df_facts = remove_rows(df_facts, [df_facts.loc[df_facts['Category_Id'].isin(pbi_categories)].index], options_file.project_id)  # Removes the rows which belong to PBI;
     log_record('After PBI Filtering, the number of requests is: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)

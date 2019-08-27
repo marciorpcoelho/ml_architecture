@@ -139,23 +139,49 @@ def zero_analysis(df):
         print('No zeros detected!')
 
 
-def value_count_histogram(df, columns, tag, output_dir='output/'):
+def value_count_histogram(df, columns, tag, output_dir='plots/'):
     for column in columns:
         plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
 
-        df_column_as_str = df[column].astype(str)
-        counts = df_column_as_str.value_counts().values
-        values = df_column_as_str.value_counts().index
-        rects = plt.bar(values, counts)
+        if column != 'DaysInStock_Global':
+            df_column_as_str = df[column].astype(str)
+            counts = df_column_as_str.value_counts().values
+            values = df_column_as_str.value_counts().index
+            rects = plt.bar(values, counts)
 
-        # plt.tight_layout()
-        plt.xlabel('Values')
-        plt.xticks(rotation=30)
-        plt.ylabel('Counts')
-        plt.title('Distribution for column - ' + column)
-        bar_plot_auto_label(rects)
-        save_fig(str(column) + '_' + tag, output_dir)
-        plt.show()
+            # plt.tight_layout()
+            plt.xlabel('Values')
+            plt.xticks(rotation=30)
+            plt.ylabel('Counts')
+            plt.title('Distribution for column - {}. Total Count = {}'.format(column, sum(counts)))
+            bar_plot_auto_label(rects)
+            save_fig(str(column) + '_' + tag, output_dir)
+            # plt.show()
+
+        else:
+            n, bin_edge = np.histogram(df[column].values)
+            n = n * 100. / n.sum()
+            bincenters = 0.5 * (bin_edge[1:] + bin_edge[:-1])
+            plt.plot(bincenters, n, '-', label='Target Class')
+
+            plt.xlabel('Days In Stock')
+            plt.ylabel('Relative Frequency (%)')
+            plt.title('Distribution for column - {}'.format(column))
+            plt.grid()
+            save_fig(str(column) + '_' + tag + '_plot', output_dir)
+            plt.clf()
+
+            ser = pd.Series(df[column].values)
+            cum_dist = np.linspace(0., 1., len(ser))
+            ser_cdf = pd.Series(cum_dist, index=ser.sort_values())
+            plt.plot(ser_cdf, label='Target Class')
+            plt.xlabel('Days In Stock')
+            plt.ylabel('CDF')
+            plt.title('Distribution for column - {}'.format(column))
+            plt.grid()
+            plt.tight_layout()
+            save_fig(str(column) + '_' + tag + '_cdf', output_dir)
+            plt.clf()
 
 
 def bar_plot_auto_label(rects):
@@ -598,20 +624,28 @@ def color_replacement(df, project_id):
     return df
 
 
-def score_calculation(df, stockdays_threshold, margin_threshold):
-    df['stock_days'] = (df['Data Venda'] - df['Data Compra']).dt.days
-    df.loc[df['stock_days'].lt(0), 'stock_days'] = 0
+def score_calculation(df, stockdays_threshold, margin_threshold, project_id):
+    if project_id == 2162:
+        df['stock_days'] = (df['Data Venda'] - df['Data Compra']).dt.days
+        df.loc[df['stock_days'].lt(0), 'stock_days'] = 0
 
-    df['stock_days_class'] = 0
-    df.loc[df['stock_days'] <= stockdays_threshold, 'stock_days_class'] = 1
-    df['margin_class'] = 0
-    df.loc[df['margem_percentagem'] >= margin_threshold, 'margin_class'] = 1
+        df['stock_days_class'] = 0
+        df.loc[df['stock_days'] <= stockdays_threshold, 'stock_days_class'] = 1
+        df['margin_class'] = 0
+        df.loc[df['margem_percentagem'] >= margin_threshold, 'margin_class'] = 1
 
-    df['new_score'] = 0
-    df.loc[(df['stock_days_class'] == 1) & (df['margin_class'] == 1), 'new_score'] = 1
+        df['new_score'] = 0
+        df.loc[(df['stock_days_class'] == 1) & (df['margin_class'] == 1), 'new_score'] = 1
 
-    df['days_stock_price'] = (0.05/360) * df['price_total'] * df['stock_days']
-    df['score_euros'] = df['Margem'] - df['days_stock_price']
+        df['days_stock_price'] = (0.05/360) * df['price_total'] * df['stock_days']
+        df['score_euros'] = df['Margem'] - df['days_stock_price']
+
+    elif project_id == 2406:
+        df['stock_days_class'] = 0
+        df.loc[df['DaysInStock_Global'] <= stockdays_threshold, 'stock_days_class'] = 1
+
+        df['target_class'] = 0
+        df.loc[(df['stock_days_class'] == 1), 'target_class'] = 1
 
     return df
 
@@ -1334,3 +1368,10 @@ def measures_calculation_hyundai(df):
     return df
 
 
+def parameter_processing_hyundai(df_sales, options_file, description_cols):
+    # Project_ID = 2406
+
+    # Modelo
+    df_sales.loc[:, 'Modelo'] = df_sales['PT_PDB_Model_Desc'].str.split().str[0]
+
+    return df_sales

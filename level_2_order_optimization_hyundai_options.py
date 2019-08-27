@@ -10,7 +10,8 @@ PWD = os.getenv('PWD')
 
 project_id = 2406
 update_frequency_days = 0
-stock_days_threshold = 150
+stock_days_threshold = 150  # DaysInStock_Global
+margin_threshold = "nan"  # Currently there is no threshold;
 
 sql_info = {
     'database_source': 'BI_DTR',
@@ -54,9 +55,9 @@ product_db_query = '''
 # Motorização
 motor_translation = {
     '1.0': ['1.0 lpgi'],
-    '1.0i': ['1.0 t-gdi', '1.0i', '1.0l'],
+    '1.0i': ['1.0 t-gdi', '1.0i', '1.0l', '1.0 mpi'],
     '1.1d': ['1.1 crdi'],
-    '1.2i': ['1.2i'],
+    '1.2i': ['1.2i', '1.2 mpi'],
     '1.3i': ['1.3l'],
     '1.4d': ['1.4 crdi'],
     '1.4i': ['1.4 t-gdi'],
@@ -70,7 +71,7 @@ motor_translation = {
     '2.2d': ['2.2 crdi'],
     '2.5d': ['2.5 crdi'],
     'eletrico': ['motor elétrico'],
-    'NÃO_PARAMETRIZADOS': ['1.0 mpi', '1.2 mpi'],
+    'NÃO_PARAMETRIZADOS': [],
 }
 
 # Transmissão
@@ -102,38 +103,40 @@ version_translation = {
     'Sport': ['sport plus', 'sport'],
     'Style': ['style', 'comfort my18', 'style my18', 'style plus my18', 'style+', 'blue style hp my17', 'blue style', 'style my19'],
     'Type R': ['gt pack', 'gt'],
-    'NÃO_PARAMETRIZADOS': ['trend', 'trend ', 'x-road navi', 'dynamic + connect navi ', 'auto ribeiro', 'teclife', 'van 6 lugares', 'turbo', 'led', 'panorama', 'style + navi', '250cv', 'my18']
+    'Trend': ['trend', 'trend '],
+    'X-Road': ['x-road navi'],
+    'Teclife': ['teclife'],
+    'NÃO_PARAMETRIZADOS': ['dynamic + connect navi ', 'auto ribeiro', 'teclife', 'van 6 lugares', 'turbo', 'led', 'panorama', 'style + navi', '250cv', 'my18']
 }
 
 # Cor Exterior
 ext_color_translation = {
-    'Amarelo': ['acid yellow', 'acid yellow (tt)'],
-    'Azul': ['intense blue', 'brilliant sporty blue m.', 'morpho blue p.', 'stargazing blue', 'champion blue', 'ceramic blue', 'stellar blue', 'blue lagoon', 'performance blue', 'morning blue', 'ara blue', 'marina blue', 'ceramic blue (tt)', 'blue lagoon (tt)', 'skyride blue m.', 'twilight blue m.'],
+    'Amarelo': ['acid yellow', 'acid yellow (tt)', 'ral1016'],
+    'Azul': ['stormy sea', 'ocean view', 'aqua sparkling', 'clean slate', 'intense blue', 'brilliant sporty blue m.', 'morpho blue p.', 'stargazing blue', 'champion blue', 'ceramic blue', 'stellar blue', 'blue lagoon', 'performance blue', 'morning blue', 'ara blue', 'marina blue', 'ceramic blue (tt)', 'blue lagoon (tt)', 'skyride blue m.', 'twilight blue m.'],
     'Branco': ['taffeta white', 'platinum white p.', 'white orchid p.', 'polar white', 'white sand', 'creamy white', 'chalk white', 'pure white', 'white crystal', 'white cream', 'chalk white (tt)', 'championship white'],
-    'Castanho': ['golden brown m.', 'cashmere brown', 'tan brown', 'demitasse brown', 'premium agate brown p.'],
-    'Cinzento': ['shining grey m.', 'modern steel m.', 'micron grey', 'galactic grey', 'iron gray', 'galactic grey (tt)', 'sonic grey p.', 'shadow grey', 'stone gray'],
-    'Laranja': ['sunset orange ii'],
+    'Castanho': ['iced coffee', 'moon rock', 'golden brown m.', 'cashmere brown', 'tan brown', 'demitasse brown', 'premium agate brown p.'],
+    'Cinzento': ['urban titanium m.', 'velvet dune', 'velvet dune (tt)', 'dark knight (tt)', 'wild explorer', 'rain forest', 'magnetic force', 'olivine grey', 'dark knight', 'star dust', 'polished metal m.', 'shining grey m.', 'modern steel m.', 'micron grey', 'galactic grey', 'iron gray', 'galactic grey (tt)', 'sonic grey p.', 'shadow grey', 'stone gray'],
+    'Laranja': ['tangerine comet (tt)', 'tangerine comet', 'sunset orange ii'],
     'Prateado': ['lunar silver m.', 'platinum silver', 'sleek silver', 'lake silver', 'aurora silver', 'titanium silver', 'platinum silve', 'typhoon silver', 'lake silver (tt)', 'alabaster silver m.', 'tinted silver m.'],
-    'Preto': ['crystal black p.', 'ruse black m.', 'phantom black'],
-    'Vermelho': ['rallye red', 'milano red', 'fiery red', 'passion red', 'tomato red', 'pulse red', 'engine red', 'magma red', 'pulse red (tt)', 'passion red p.'],
-    'NÃO_PARAMETRIZADOS': ['ral3000', 'ral1016', 'dark knight', 'tangerine comet', 'velvet dune', 'velvet dune (tt)', 'tangerine comet (tt)', 'dark knight (tt)', 'ocean view', 'magnetic force', 'stormy sea', 'rain forest',
-                           'wild explorer', 'polished metal m.', 'midnight burgundy p.', 'star dust', 'aqua sparkling', 'iced coffee', 'urban titanium m.', 'moon rock', 'clean slate', 'olivine grey']
+    'Preto': ['midnight burgundy p.', 'crystal black p.', 'ruse black m.', 'phantom black'],
+    'Vermelho': ['ral3000', 'rallye red', 'milano red', 'fiery red', 'passion red', 'tomato red', 'pulse red', 'engine red', 'magma red', 'pulse red (tt)', 'passion red p.'],
+    'NÃO_PARAMETRIZADOS': [],
 }
 
 int_color_translation = {
-    'Azul': ['blue'],
+    'Azul': ['blue', 'blue point'],
     'Bege': ['beige', 'sahara beige', 'dark beige', 'elegant beige'],
     'Bege/Preto': ['beige + black'],
     'Branco': ['ivory'],
-    'Cinzento': ['grey', 'pele sintética cinza'],
-    'Cinzento Escuro': ['dark grey'],
+    'Castanho': ['brilliant brown'],
+    'Cinzento': ['blue grey', 'lava stone', 'grey', 'pele sintética cinza', 'dark grey'],
     'Laranja': ['orange'],
     'Preto': ['black', 'black 2', 'black 3', 'neutral black'],
     'Preto/Castanho': ['black / brown'],
     'Preto/Cinzento': ['black/charcoal'],
     'Preto/Laranja': ['black/orange'],
-    'Vermelho': ['red'],
-    'NÃO_PARAMETRIZADOS': ['lava stone', 'red point', 'blue point', 'brilliant brown', 'blue grey', 'black + red point'],
+    'Vermelho': ['red', 'red point', 'black + red point'],
+    'NÃO_PARAMETRIZADOS': [],
 }
 
 

@@ -46,6 +46,7 @@ regex_dict = {
 project_dict = {2244: 'PA@Service Desk',
                 2162: 'Otimização Encomenda Baviera (BMW)',
                 2259: 'Otimização Encomenda Baviera APV',
+                2406: 'Otimização Encomenda Hyundai/Honda',
                 }
 
 project_sql_dict = {2244: 'Project_SD',
