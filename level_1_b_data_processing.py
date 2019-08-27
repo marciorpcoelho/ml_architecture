@@ -147,13 +147,14 @@ def value_count_histogram(df, columns, tag, output_dir='plots/'):
             df_column_as_str = df[column].astype(str)
             counts = df_column_as_str.value_counts().values
             values = df_column_as_str.value_counts().index
-            rects = plt.bar(values, counts)
+            rects = plt.bar(values, counts, label='#Different Values: {}'.format(len(counts)))
 
             # plt.tight_layout()
             plt.xlabel('Values')
             plt.xticks(rotation=30)
             plt.ylabel('Counts')
             plt.title('Distribution for column - {}. Total Count = {}'.format(column, sum(counts)))
+            plt.legend()
             bar_plot_auto_label(rects)
             save_fig(str(column) + '_' + tag, output_dir)
             # plt.show()
@@ -1298,6 +1299,8 @@ def na_fill_hyundai(df_grouped):
 def na_group_fill_hyundai(args):
     # project_id = 2406
     _, group = args
+    slr_document_date_chs_min_idx, slr_document_date_chs_min = 0, 0
+
     cols_to_fill = ['Quantity_CHS']
     measure_cols = ['Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12']
     support_measure_cols = ['Measure_13', 'Measure_14', 'Measure_15']
@@ -1372,6 +1375,6 @@ def parameter_processing_hyundai(df_sales, options_file, description_cols):
     # Project_ID = 2406
 
     # Modelo
-    df_sales.loc[:, 'Modelo'] = df_sales['PT_PDB_Model_Desc'].str.split().str[0]
+    df_sales.loc[:, 'PT_PDB_Model_Desc'] = df_sales['PT_PDB_Model_Desc'].str.split().str[0]
 
     return df_sales

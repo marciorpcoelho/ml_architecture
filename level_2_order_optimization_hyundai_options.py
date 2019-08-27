@@ -1,5 +1,13 @@
 import os
+import numpy as np
+import xgboost as xgb
+import lightgbm as lgb
 from py_dotenv import read_dotenv
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neural_network import MLPClassifier
+from sklearn import tree, linear_model, neighbors, svm
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
+
 dotenv_path = 'info.env'
 read_dotenv(dotenv_path)
 
@@ -13,6 +21,10 @@ update_frequency_days = 0
 stock_days_threshold = 150  # DaysInStock_Global
 margin_threshold = "nan"  # Currently there is no threshold;
 
+metric, metric_threshold = 'ROC_Curve', 0.70  # The metric to compare on the final models and the minimum threshold to consider;
+k, gridsearch_score = 5, 'recall'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
+
+
 sql_info = {
     'database_source': 'BI_DTR',
     'database_final': 'BI_MLG',
@@ -20,6 +32,11 @@ sql_info = {
     'sales': 'VHE_Fact_BI_Sales_DTR',
     'stock': 'VHE_Fact_BI_Stock_DTR',
     'final_table': 'VHE_Fact_BI_Sales_DTR_Temp',
+    'feature_contribution': 'VHE_Fact_Feature_Contribution',
+}
+
+log_files = {
+    'full_log': 'logs/optionals_hyundai.txt'
 }
 
 sales_query_filtered = '''
@@ -54,7 +71,7 @@ product_db_query = '''
 
 # Motorização
 motor_translation = {
-    '1.0': ['1.0 lpgi'],
+    '1.0i/g': ['1.0 lpgi'],
     '1.0i': ['1.0 t-gdi', '1.0i', '1.0l', '1.0 mpi'],
     '1.1d': ['1.1 crdi'],
     '1.2i': ['1.2i', '1.2 mpi'],
@@ -74,12 +91,40 @@ motor_translation = {
     'NÃO_PARAMETRIZADOS': [],
 }
 
+# v1
+motor_grouping = {
+    '1.0': ['1.0i', '1.0i/g'],
+    '1.1/1.2': ['1.1d', '1.2i'],
+    '1.3/1.4/1.5': ['1.3i', '1.4i', '1.4d', '1.5i'],
+    '1.6/1.7': ['1.6i', '1.6d', '1.7d'],
+    '2.0+': ['2.0i', '2.0d', '2.2d', '2.5d'],
+    'Elétrico': ['eletrico'],
+    'Outros': [],
+}
+
+# Modelo
+# v1
+# model_grouping = {
+#     'i20': [],
+#     'kauai': [],
+#     'tucson': [],
+#     'i10': [],
+#     'hr-v': [],
+#     'civic': [],
+# }
+
 # Transmissão
 transmission_translation = {
     'Manual': ['manual 6 velocidades', 'manual 5 velocidades', 'mt'],
     'Auto': ['at', 's/info', 'caixa automática 4 velocidades', 'caixa automática 6 velocidades', 'caixa automática 8 velocidades'],
     'CVT': ['cvt'],
     'DCT': ['dct', 'automática de dupla embraiagem de 6 velocidades (6 dct)', 'automática de dupla embraiagem de 7 velocidades (7 dct)'],
+}
+
+# v1
+transmission_grouping = {
+    'Manual': ['Manual'],
+    'Auto/CVT/DCT': ['Auto', 'CVT', 'DCT'],
 }
 
 # Versão
@@ -109,6 +154,19 @@ version_translation = {
     'NÃO_PARAMETRIZADOS': ['dynamic + connect navi ', 'auto ribeiro', 'teclife', 'van 6 lugares', 'turbo', 'led', 'panorama', 'style + navi', '250cv', 'my18']
 }
 
+# v1
+version_grouping = {
+    'Premium': ['Premium'],
+    'Comfort': ['Comfort'],
+    'Style': ['Style'],
+    'Access': ['Access'],
+    'Elegance': ['Elegance'],
+    'Executive': ['Executive'],
+    'EV/HEV/PHEV': ['HEV', 'EV', 'PHEV'],
+    'GO/Sport': ['GO', 'Sport'],
+    'Outros': ['Launch', 'Type R', 'Lifestyle', 'Creative', 'Performance', 'Trend', 'Pro', 'Prestige', 'Dynamic', 'X-Road']
+}
+
 # Cor Exterior
 ext_color_translation = {
     'Amarelo': ['acid yellow', 'acid yellow (tt)', 'ral1016'],
@@ -121,6 +179,15 @@ ext_color_translation = {
     'Preto': ['midnight burgundy p.', 'crystal black p.', 'ruse black m.', 'phantom black'],
     'Vermelho': ['ral3000', 'rallye red', 'milano red', 'fiery red', 'passion red', 'tomato red', 'pulse red', 'engine red', 'magma red', 'pulse red (tt)', 'passion red p.'],
     'NÃO_PARAMETRIZADOS': [],
+}
+
+ext_color_grouping = {
+    'Branco': ['Branco'],
+    'Cinzento': ['Cinzento'],
+    'Prateado': ['Prateado'],
+    'Preto': ['Preto'],
+    'Vermelho/Azul': ['Vermelho', 'Azul'],
+    'Castanho/Laranja/Amarelo': ['Castanho', 'Amarelo', 'Laranja'],
 }
 
 int_color_translation = {
@@ -139,5 +206,24 @@ int_color_translation = {
     'NÃO_PARAMETRIZADOS': [],
 }
 
+int_color_grouping = {
+    'Interior Standard': ['Preto'],
+    'Interior Customizado': ['Cinzento', 'Vermelho', 'Preto/Laranja', 'Azul', 'Bege', 'Castanho', 'Preto/Castanho', 'Laranja', 'Branco', 'Preto/Cinzento']
+}
+
+classification_models = {
+    'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
+    'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100, 200, 500, 1000], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
+    'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear']}]],
+    'knn': [neighbors.KNeighborsClassifier, [{'n_neighbors': np.arange(1, 50, 1)}]],
+    'svm': [svm.SVC, [{'C': np.logspace(-2, 2, 10)}]],
+    'ab': [AdaBoostClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
+    'gc': [GradientBoostingClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
+    'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100]}]],  # ToDo: need to add L1 (reg_alpha) and L2 (reg_lambda) regularization to counter the overfitting
+    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50], 'n_estimators': [50, 100, 200], 'objective': ['binary'], 'metric': ['auc']}]],
+    'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
+    'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100), 'solver': ['sgd'], 'max_iter': [1000]}]],
+    'voting': [VotingClassifier, [{'voting': ['soft']}]]
+}
 
 

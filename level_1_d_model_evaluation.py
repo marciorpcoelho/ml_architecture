@@ -100,14 +100,15 @@ def probability_evaluation(models_name, models, train_x, test_x):
     return probabilities
 
 
-def feature_contribution(df, configuration_parameters, options_file, project_id):
-    configuration_parameters.remove('Modelo')
+def feature_contribution(df, configuration_parameters, col_to_group_by, options_file, project_id):
+    configuration_parameters.remove(col_to_group_by)
+
     boolean_parameters = [x for x in configuration_parameters if list(df[x].unique()) == [0, 1] or list(df[x].unique()) == [1, 0]]
     non_boolean_parameters = [x for x in configuration_parameters if x not in boolean_parameters]
     df_feature_contribution_total = pd.DataFrame()
 
-    for model in df['Modelo'].unique():
-        model_mask = df['Modelo'] == model
+    for model in df[col_to_group_by].unique():
+        model_mask = df[col_to_group_by] == model
         df_model = df.loc[df[model_mask].index, :]
 
         mask_class_1 = df_model['score_class_gt'] == 1
@@ -182,10 +183,10 @@ def feature_contribution(df, configuration_parameters, options_file, project_id)
 
         df_feature_contribution_total = pd.concat([df_feature_contribution_total, df_feature_contribution])
 
-    sql_inject(df_feature_contribution_total, options_file.DSN_MLG, options_file.sql_info['database'], options_file.sql_info['feature_contribution'], options_file, list(df_feature_contribution_total), truncate=1)
+    sql_inject(df_feature_contribution_total, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['feature_contribution'], options_file, list(df_feature_contribution_total), truncate=1)
 
 
-def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datasets, configuration_parameters):
+def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datasets, configuration_parameters, project_id):
     train_x['proba_0'] = [x[0] for x in probabilities['proba_train']]
     train_x['proba_1'] = [x[1] for x in probabilities['proba_train']]
     train_x['score_class_gt'] = datasets['train_y']
@@ -204,13 +205,14 @@ def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datas
     df['score_class_gt'] = train_test_datasets['score_class_gt'].astype(int, copy=False)
     df['score_class_pred'] = train_test_datasets['score_class_pred']
 
-    df_grouped = df.groupby(configuration_parameters)
-    df = df_grouped.apply(additional_info, ('',))
-    df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda'])
-    # df = df_grouped2.apply(additional_info_local)
-    df = df_grouped2.apply(additional_info, ('_local',))
-    df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda_v2'])
-    df = df_grouped3.apply(additional_info, ('_local_v2',))
+    if project_id == 2162:
+        df_grouped = df.groupby(configuration_parameters)
+        df = df_grouped.apply(additional_info, ('',))
+        df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda'])
+        # df = df_grouped2.apply(additional_info_local)
+        df = df_grouped2.apply(additional_info, ('_local',))
+        df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda_v2'])
+        df = df_grouped3.apply(additional_info, ('_local_v2',))
 
     return df
 
@@ -377,7 +379,7 @@ def multiprocess_evaluation(args):
     log_record('Evaluating model {} @ {}...'.format(model_name, time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
     train_x_copy, test_x_copy = datasets['train_x'].copy(deep=True), datasets['test_x'].copy(deep=True)
     probabilities = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
-    df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], train_x_copy, test_x_copy, datasets, configuration_parameters)
+    df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], train_x_copy, test_x_copy, datasets, configuration_parameters, project_id)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
     # log_record('Model ' + str(model_name) + ' finished @ ' + time.strftime("%H:%M:%S @ %d/%m/%y"), project_id)

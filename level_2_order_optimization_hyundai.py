@@ -1,27 +1,36 @@
 import os
 import sys
-import numpy as np
 import time
+import logging
+import numpy as np
 import pandas as pd
 from level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv
-from level_1_b_data_processing import value_count_histogram, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, lowercase_column_convertion, value_count_histogram, value_substitution, na_fill_hyundai, remove_columns, measures_calculation_hyundai
+from level_1_b_data_processing import value_count_histogram, ohe, constant_columns_removal, dataset_split, datasets_dictionary_function, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, value_count_histogram, value_substitution, na_fill_hyundai, remove_columns, measures_calculation_hyundai
+from level_1_c_data_modelling import model_training, save_model
+from level_1_d_model_evaluation import performance_evaluation, plot_roc_curve, multiprocess_model_evaluation, model_choice, feature_contribution
 from level_1_e_deployment import sql_inject_v2, time_tags
-import level_0_performance_report
+from level_0_performance_report import log_record
 import level_2_order_optimization_hyundai_options as options_file
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
+logging.Logger('errors')
+# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
 
 
 def main():
-    models = ['dt', 'rf', 'lr', 'ab', 'xgb', 'lgb']
+    models = ['dt', 'lr', 'ab', 'xgb', 'lgb']
     configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 
     df_sales, df_stock, df_pdb_dim = data_acquisition()
-    df_sales = data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters)
-    best_models, running_times = data_modelling(df_sales, models)
+    df_sales, datasets = data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters)
+    classes, best_models, running_times = data_modelling(df_sales, datasets, models)
+    model_evaluation(df_sales, models, best_models, running_times, classes, datasets, options_file, configuration_parameters, options_file.project_id)
     # deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
 
 def data_acquisition():
-    print('Starting section A...')
+    log_record('Starting section A...', options_file.project_id)
     start = time.time()
 
     sales_info = ['dbs/df_sales', options_file.sales_query]
@@ -56,11 +65,14 @@ def data_acquisition():
     # df_sales['Movement_Date'] = pd.to_datetime(df_sales['Movement_Date'], format='%Y%m%d')
 
     print('Ended section A - Elapsed time: {:.2f}'.format(time.time() - start))
-
+    log_record('Ended section A...', options_file.project_id)
     return df_sales, df_stock, df_pdb
 
 
 def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_cols):
+    # print('Starting section B...')
+    log_record('Starting section B...', options_file.project_id)
+    start = time.time()
     current_date, _ = time_tags()
 
     try:
@@ -137,7 +149,8 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
                                          'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'Location_Code', 'VehicleData_Key',
                                          'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
                                          'Dispatch_Type_Code', 'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
-                                         'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'SLR_Account_Dealer_Code', 'Salesman_Dealer_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Vehicle_Code'], options_file.project_id)
+                                         'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'SLR_Account_Dealer_Code', 'Salesman_Dealer_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Vehicle_Code',
+                                         'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS'], options_file.project_id)
 
     # Specific Measures Calculation
     df_sales = measures_calculation_hyundai(df_sales)
@@ -151,35 +164,79 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     df_sales = parameter_processing_hyundai(df_sales, options_file, configuration_parameters_cols)
 
     translation_dictionaries = [options_file.motor_translation, options_file.transmission_translation, options_file.version_translation, options_file.ext_color_translation, options_file.int_color_translation]
+    grouping_dictionaries = [options_file.motor_grouping, options_file.transmission_grouping, options_file.version_grouping, options_file.ext_color_grouping, options_file.int_color_grouping]
+
+    # Parameter Translation
     df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], translation_dictionaries, options_file.project_id)
+    df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']  # Temporary filtering while this translation is not complete
 
     # Target Variable Calculation
     df_sales = score_calculation(df_sales, options_file.stock_days_threshold, options_file.margin_threshold, options_file.project_id)
 
-    value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406')
+    # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_translation')
 
-    # print(df_sales.head())
-    # print(df_sales.describe())
-    # null_analysis(df_sales)
+    # Parameter Grouping
+    df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], grouping_dictionaries, options_file.project_id)
+    # print(df_sales.head(10))
+    print('Number of Different Configurations: {}'.format(df_sales['VehicleData_Code'].nunique()))
+    # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_grouping')
 
-    # print(df_sales.shape)
-    # print(df_sales['Chassis_Number'].nunique())
-    # print(df_sales['Chassis_Number'].value_counts())
-    # print(df_sales[df_sales['Chassis_Number'] == 'KMHC851CGJU091903'])
-    # print('Number of rows with infinity: {}'.format(df_sales[df_sales['Fixed_Margin_I_%'].isin([np.inf, -np.inf])].shape[0]))
+    df_ohe = ohe(df_sales.copy(), configuration_parameters_cols + ['Sales_Type_Dealer_Code'])
+    df_ohe = constant_columns_removal(df_ohe, options_file.project_id)
 
-    return df_sales
+    columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 29, 30, 31, 34, 35, 36, 37, 39, 41, 42, 44, 45, 46]] + \
+                                 ['Chassis_Number', 'Total_Sales', 'Total_Discount', 'Total_Discount_%', 'Total_Net_Sales', 'Fixed_Margin_I', 'Fixed_Margin_I_%', 'stock_days_class']
+    df_ohe = remove_columns(df_ohe, columns_with_too_much_info, options_file.project_id)
+
+    df_ohe.to_csv('output/df_hyundai_ohe.csv')
+
+    # null_analysis(df_ohe)
+    # inf_analysis(df_ohe)
+
+    train_x, train_y, test_x, test_y = dataset_split(df_ohe, ['target_class'], 0)
+
+    datasets = datasets_dictionary_function(train_x, train_y, test_x, test_y)
+
+    print('Ended section B - Elapsed time: {:.2f}'.format(time.time() - start))
+    log_record('Ended section B...', options_file.project_id)
+    return df_sales, datasets
 
 
-def data_modelling(df_sales, models):
-    print('Started Step C...')
+def data_modelling(df_sales, datasets, models):
+    # print('Starting Step C...')
+    log_record('Starting section C...', options_file.project_id)
+    start = time.time()
 
-    print('Finished Step C.')
-    a, b = 1, 2
-    return a, b
+    classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'], options_file.classification_models, options_file.k, options_file.gridsearch_score, options_file.project_id)
+    save_model(best_models, models)
+
+    print('Ended section C - Elapsed time: {:.2f}'.format(time.time() - start))
+    log_record('Ended section C...', options_file.project_id)
+    return classes, best_models, running_times
+
+
+def model_evaluation(df_sales, models, best_models, running_times, classes, datasets, in_options_file, configuration_parameters, project_id):
+    # print('Starting Step D...')
+    log_record('Starting section D...', options_file.project_id)
+    start = time.time()
+
+    results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, in_options_file, project_id)  # Creates a df with the performance of each model evaluated in various metrics
+    plot_roc_curve(best_models, models, datasets, 'roc_curve_temp')
+
+    df_model_dict = multiprocess_model_evaluation(df_sales, models, datasets, best_models, predictions, configuration_parameters, project_id)
+    model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)
+
+    best_model = df_model_dict[best_model_name]
+    # feature_contribution(best_model, configuration_parameters, 'PT_PDB_Model_Desc', options_file, project_id)
+
+    print('Ended section D - Elapsed time: {:.2f}'.format(time.time() - start))
+    log_record('Ended section D...', options_file.project_id)
+    return model_choice_message, best_model
 
 
 def deployment(df, db, view):
+    log_record('Starting section E...', options_file.project_id)
+    start = time.time()
 
     columns_to_convert_to_datetime = ['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Record_Date']
     columns_to_convert_to_int = ['SLR_Document_Period_CHS', 'Quantity_Sold', 'SLR_Document_Year_CHS']
@@ -204,6 +261,9 @@ def deployment(df, db, view):
     if df is not None:
         sql_inject_v2(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
         # sql_inject_v1(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
+
+    print('Ended section E - Elapsed time: {:.2f}'.format(time.time() - start))
+    log_record('Ended section E...', options_file.project_id)
 
 
 if __name__ == '__main__':
