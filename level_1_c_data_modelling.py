@@ -16,8 +16,8 @@ from sklearn.preprocessing import StandardScaler
 from dateutil.relativedelta import relativedelta
 from level_1_a_data_acquisition import sql_mapping_retrieval
 from sklearn.metrics import silhouette_score, calinski_harabaz_score
-from level_0_performance_report import log_record, pool_workers_count
 from level_1_b_data_processing import remove_punctuation_and_digits, col_group
+from level_0_performance_report import log_record, pool_workers_count, dict_models_name_conversion
 pd.set_option('display.expand_frame_repr', False)
 
 
@@ -97,7 +97,7 @@ def model_training(models, train_x, train_y, classification_models, k, gridsearc
     clf, classes = None, None
 
     for model in models:
-        log_record('MODEL: {}'.format(model), project_id)
+        log_record('Modelo: {}'.format(dict_models_name_conversion[model][0]), project_id)
         if model == 'voting':
             start = time.time()
             parameters = {'estimators': [(x, y) for x, y in zip(best_models_pre_fit.keys(), best_models_pre_fit.values())]}
@@ -241,7 +241,7 @@ def new_request_type(df, df_top_words, options_file):
                         df_top_words.loc[df_top_words[stemmer_pt.stem(keywords)] == 1, 'Label'] = label
                         requests_dict_2 = request_matches(label, keywords, rank, df_top_words[df_top_words[stemmer_pt.stem(keywords)] == 1].index.values, requests_dict_2)
                     except KeyError:
-                        log_record('Keyword not found: {}'.format(keywords), options_file.project_id, flag=1)
+                        log_record('Palavra chave não encontrada: {}'.format(keywords), options_file.project_id, flag=1)
                         continue
 
     df = requests_draw_handling(df, requests_dict_2, ranking_dict)

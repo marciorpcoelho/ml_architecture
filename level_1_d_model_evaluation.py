@@ -3,6 +3,7 @@ import time
 import numpy as np
 from math import pi
 import pandas as pd
+import seaborn as sns
 import multiprocessing
 import matplotlib.pyplot as plt
 from level_1_e_deployment import sql_inject, save_csv, sql_second_highest_date_checkup
@@ -88,6 +89,9 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
     df_results_test['Algorithms'] = df_results_test.index
     df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
     df_results_test['Project_Id'] = [project_id] * df_results_train.shape[0]
+
+    metric_bar_plot(df_results_train, 'Project {} Test Dataset'.format(project_id))
+    metric_bar_plot(df_results_test, 'Project {} Train Dataset'.format(project_id))
 
     sql_inject(pd.concat([df_results_train, df_results_test]), performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
 
@@ -217,28 +221,6 @@ def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datas
     return df
 
 
-# def additional_info_local(x):
-#     x['nr_cars_sold_local'] = len(x)
-#     x['average_percentage_margin_local'] = x['margem_percentagem'].mean()
-#     x['average_stock_days_local'] = x['stock_days'].mean()
-#     x['average_score_local'] = x['score_class_gt'].mean()
-#     x['average_score_pred_local'] = x['score_class_pred'].mean()
-#     x['average_score_euros_local'] = x['score_euros'].mean()
-#
-#     return x
-
-
-# def additional_info(x):
-#     x['nr_cars_sold'] = len(x)
-#     x['average_percentage_margin'] = x['margem_percentagem'].mean()
-#     x['average_stock_days'] = x['stock_days'].mean()
-#     x['average_score'] = x['score_class_gt'].mean()
-#     x['average_score_pred'] = x['score_class_pred'].mean()
-#     x['average_score_euros'] = x['score_euros'].mean()
-#
-#     return x
-
-
 def additional_info(x, tag):
     x['nr_cars_sold' + str(tag[0])] = len(x)
     x['average_percentage_margin' + str(tag[0])] = x['margem_percentagem'].mean()
@@ -254,6 +236,17 @@ def df_decimal_places_rounding(df, dictionary):
     df = df.round(dictionary)
 
     return df
+
+
+def heatmap_correlation_function(df, target_col, heatmap_name):
+
+    df = df[[x for x in list(df) if x != target_col] + [target_col]]  # Changes the order of the df columns, so its easier to identify the target column in the heat map
+    corr = df.corr()
+
+    # sns.heatmap(corr, xticklabels=corr.columns, yticklabels=corr.columns, annot=True)
+    sns.heatmap(corr, xticklabels=corr.columns, yticklabels=corr.columns)
+    save_fig(heatmap_name)
+    # plt.show()
 
 
 def model_choice(dsn, options_file, df_results):
@@ -376,14 +369,14 @@ def multiprocess_evaluation(args):
     df, model_name, datasets, best_models, predictions, configuration_parameters, project_id = args
 
     # log_record('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...', project_id)
-    log_record('Evaluating model {} @ {}...'.format(model_name, time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
+    log_record('A avaliar o modelo {} @ {}...'.format(dict_models_name_conversion[model_name][0], time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
     train_x_copy, test_x_copy = datasets['train_x'].copy(deep=True), datasets['test_x'].copy(deep=True)
     probabilities = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
     df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], train_x_copy, test_x_copy, datasets, configuration_parameters, project_id)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
     save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
     # log_record('Model ' + str(model_name) + ' finished @ ' + time.strftime("%H:%M:%S @ %d/%m/%y"), project_id)
-    log_record('Model {} finished @ {}'.format(model_name, time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
+    log_record('Modelo {} terminou @ {}'.format(dict_models_name_conversion[model_name][0], time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
 
     return model_name, df_model
 
@@ -449,3 +442,31 @@ def radial_chart_preprocess(df, model):
         df_cluster_center.loc[label, :] = model.cluster_centers_[label]
 
     return df_cluster_center
+
+
+def metric_bar_plot(df, tag):
+
+    fig, ax = plt.subplots(2, 5, figsize=(1400 / my_dpi, 1000 / my_dpi), dpi=my_dpi)
+    algorithms = df['Algorithms'].values
+
+    i, j = 0, 0
+    for metric in ['Micro_F1', 'Average_F1', 'Macro_F1', 'Accuracy', 'ROC_Curve', 'Precision_Class_0', 'Precision_Class_1', 'Recall_Class_0', 'Recall_Class_1', 'Running_Time']:
+        ax[j, i].bar(range(0, 5), df[metric].values)
+        ax[j, i].set_title(metric)
+        ax[j, i].grid()
+        plt.setp(ax[j, i], xticks=range(0, 5), xticklabels=algorithms)
+        if metric != 'Running_Time':
+            ax[j, i].set_ylim(0, 1.01)
+        k = 0
+        for value in df[metric].values:
+            ax[j, i].text(k - 0.45, round(value, 2) + 0.01, '{:.2f}'.format(value), color='red')
+            k += 1
+
+        i += 1
+        if i == 5:
+            i = 0
+            j += 1
+
+    plt.tight_layout()
+    save_fig('bar_plot_'.format(tag))
+    # plt.show()

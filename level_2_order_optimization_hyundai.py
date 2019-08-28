@@ -7,7 +7,7 @@ import pandas as pd
 from level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv
 from level_1_b_data_processing import value_count_histogram, ohe, constant_columns_removal, dataset_split, datasets_dictionary_function, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, value_count_histogram, value_substitution, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from level_1_c_data_modelling import model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation, plot_roc_curve, multiprocess_model_evaluation, model_choice, feature_contribution
+from level_1_d_model_evaluation import performance_evaluation, plot_roc_curve, multiprocess_model_evaluation, model_choice, feature_contribution, heatmap_correlation_function
 from level_1_e_deployment import sql_inject_v2, time_tags
 from level_0_performance_report import log_record
 import level_2_order_optimization_hyundai_options as options_file
@@ -181,17 +181,21 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     print('Number of Different Configurations: {}'.format(df_sales['VehicleData_Code'].nunique()))
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_grouping')
 
+    columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 40, 41, 42, 43]] + \
+                                 ['Chassis_Number', 'Total_Sales', 'Total_Discount', 'Total_Discount_%', 'Total_Net_Sales', 'Fixed_Margin_I', 'Fixed_Margin_I_%', 'stock_days_class', 'DaysInStock_Dealer',
+                                  'DaysInStock_Distributor', 'Average_DaysInStock_Global', 'DaysInStock_Global', 'HME_Support']
+
+    df_sales = remove_columns(df_sales, columns_with_too_much_info, options_file.project_id)
+    df_sales = constant_columns_removal(df_sales, options_file.project_id)
+
+    heatmap_correlation_function(df_sales, 'target_class', 'heatmap_hyundai_v1')
+
     df_ohe = ohe(df_sales.copy(), configuration_parameters_cols + ['Sales_Type_Dealer_Code'])
-    df_ohe = constant_columns_removal(df_ohe, options_file.project_id)
-
-    columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 25, 27, 29, 30, 31, 34, 35, 36, 37, 39, 41, 42, 44, 45, 46]] + \
-                                 ['Chassis_Number', 'Total_Sales', 'Total_Discount', 'Total_Discount_%', 'Total_Net_Sales', 'Fixed_Margin_I', 'Fixed_Margin_I_%', 'stock_days_class']
-    df_ohe = remove_columns(df_ohe, columns_with_too_much_info, options_file.project_id)
-
+    print('Base line accuracy performance (majority class %) is: {:.4f}'.format(df_ohe[df_ohe['target_class'] == 1].shape[0] / df_ohe.shape[0]))
     df_ohe.to_csv('output/df_hyundai_ohe.csv')
 
-    # null_analysis(df_ohe)
-    # inf_analysis(df_ohe)
+    heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_ohe_v1')
+    # sys.exit()
 
     train_x, train_y, test_x, test_y = dataset_split(df_ohe, ['target_class'], 0)
 

@@ -21,7 +21,7 @@ update_frequency_days = 0
 stock_days_threshold = 150  # DaysInStock_Global
 margin_threshold = "nan"  # Currently there is no threshold;
 
-metric, metric_threshold = 'ROC_Curve', 0.70  # The metric to compare on the final models and the minimum threshold to consider;
+metric, metric_threshold = 'Accuracy', 0.70  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 5, 'recall'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 
 
