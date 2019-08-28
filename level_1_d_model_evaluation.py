@@ -90,8 +90,8 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
     df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
     df_results_test['Project_Id'] = [project_id] * df_results_train.shape[0]
 
-    metric_bar_plot(df_results_train, 'Project {} Test Dataset'.format(project_id))
-    metric_bar_plot(df_results_test, 'Project {} Train Dataset'.format(project_id))
+    metric_bar_plot(df_results_train, 'project_{}_train_dataset'.format(project_id))
+    metric_bar_plot(df_results_test, 'project_{}_test_dataset'.format(project_id))
 
     sql_inject(pd.concat([df_results_train, df_results_test]), performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
 
@@ -468,5 +468,5 @@ def metric_bar_plot(df, tag):
             j += 1
 
     plt.tight_layout()
-    save_fig('bar_plot_'.format(tag))
+    save_fig('bar_plot_' + tag)
     # plt.show()
