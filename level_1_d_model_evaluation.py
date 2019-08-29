@@ -190,11 +190,23 @@ def feature_contribution(df, configuration_parameters, col_to_group_by, options_
     sql_inject(df_feature_contribution_total, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['feature_contribution'], options_file, list(df_feature_contribution_total), truncate=1)
 
 
-def add_new_columns_to_df(df, probabilities, predictions, train_x, test_x, datasets, configuration_parameters, project_id):
+def add_new_columns_to_df(df, probabilities, predictions, datasets, configuration_parameters, oversample_check, project_id):
+
+    if oversample_check:
+        train_x = datasets['train_x_oversampled_original']
+    else:
+        train_x = datasets['train_x']
+
+    test_x = datasets['test_x']
+
     train_x['proba_0'] = [x[0] for x in probabilities['proba_train']]
     train_x['proba_1'] = [x[1] for x in probabilities['proba_train']]
     train_x['score_class_gt'] = datasets['train_y']
     train_x['score_class_pred'] = predictions[0]
+
+    # Train_x oversample fix:
+    if oversample_check:
+        train_x.drop_duplicates(subset='original_index', keep='first', inplace=True)
 
     test_x['proba_0'] = [x[0] for x in probabilities['proba_test']]
     test_x['proba_1'] = [x[1] for x in probabilities['proba_test']]
@@ -322,8 +334,9 @@ def model_choice_upload(flag, name, value, options_file):
 
 def plot_roc_curve(models, models_name, datasets, save_name):
     plt.subplots(figsize=(800 / my_dpi, 800 / my_dpi), dpi=my_dpi)
+
     for model in models_name:
-        prob_train_init = models[model].fit(datasets['train_x'], datasets['train_y'][list(datasets['train_y'])[0]]).predict_proba(datasets['test_x'])
+        prob_train_init = models[model].fit(datasets['train_x'], np.ravel(datasets['train_y'])).predict_proba(datasets['test_x'])
         prob_test_1 = [x[1] for x in prob_train_init]
         fpr, tpr, _ = roc_curve(datasets['test_y'], prob_test_1, pos_label=1)
         roc_auc = auc(fpr, tpr)
@@ -352,11 +365,11 @@ def save_fig(name, save_dir='plots/'):
     plt.savefig(save_dir + str(name) + '.pdf')
 
 
-def multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, project_id):
+def multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, oversample_check, project_id):
     start = time.time()
     workers = pool_workers_count
     pool = multiprocessing.Pool(processes=workers)
-    results = pool.map(multiprocess_evaluation, [(df, model_name, datasets, best_models, predictions, configuration_parameters, project_id) for model_name in models])
+    results = pool.map(multiprocess_evaluation, [(df, model_name, datasets, best_models, predictions, configuration_parameters, oversample_check, project_id) for model_name in models])
     pool.close()
     df_model_dict = {key: value for (key, value) in results}
 
@@ -366,18 +379,18 @@ def multiprocess_model_evaluation(df, models, datasets, best_models, predictions
 
 
 def multiprocess_evaluation(args):
-    df, model_name, datasets, best_models, predictions, configuration_parameters, project_id = args
-
-    # log_record('Evaluating model ' + str(model_name) + ' @ ' + time.strftime("%H:%M:%S @ %d/%m/%y") + '...', project_id)
+    df, model_name, datasets, best_models, predictions, configuration_parameters, oversample_check, project_id = args
     log_record('A avaliar o modelo {} @ {}...'.format(dict_models_name_conversion[model_name][0], time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
-    train_x_copy, test_x_copy = datasets['train_x'].copy(deep=True), datasets['test_x'].copy(deep=True)
-    probabilities = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
-    df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], train_x_copy, test_x_copy, datasets, configuration_parameters, project_id)
-    df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
-    save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
-    # log_record('Model ' + str(model_name) + ' finished @ ' + time.strftime("%H:%M:%S @ %d/%m/%y"), project_id)
-    log_record('Modelo {} terminou @ {}'.format(dict_models_name_conversion[model_name][0], time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
 
+    train_x_copy, test_x_copy = datasets['train_x'].copy(deep=True), datasets['test_x'].copy(deep=True)
+
+    probabilities = probability_evaluation(model_name, best_models, train_x_copy, test_x_copy)
+    df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], datasets, configuration_parameters, oversample_check, project_id)
+    df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
+
+    save_csv([df_model], ['output/' + 'db_final_classification_' + model_name])
+
+    log_record('Modelo {} terminou @ {}'.format(dict_models_name_conversion[model_name][0], time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
     return model_name, df_model
 
 

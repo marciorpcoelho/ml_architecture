@@ -513,8 +513,29 @@ def options_scraping_per_group(args):
     return group, (end_nav - start_nav), (end_barras - start_barras), (end_alarme - start_alarme), (end_7_lug - start_7_lug), (end_prot - start_prot), (end_ac - start_ac), (end_teto - start_teto), (end_cor_ext - start_cor_ext), (end_cor_int - start_cor_int), (end_int_type - start_int_type), duration_trans, duration_sens, duration_versao, duration_farois, duration_jantes
 
 
-def datasets_dictionary_function(train_x, train_y, test_x, test_y):
-    dataset_dict = {'train_x': train_x, 'train_y': train_y, 'test_x': test_x, 'test_y': test_y}
+def datasets_dictionary_function(train_x, train_y, test_x, test_y, train_x_oversampled=pd.DataFrame(), train_y_oversampled=pd.Series()):
+
+    if train_x_oversampled.shape[0]:
+        dataset_dict = {
+            'train_x': train_x_oversampled[[col for col in list(train_x) if col not in ['oversample_flag', 'original_index']]],
+            'train_y': train_y_oversampled,
+            'test_x': test_x,
+            'test_y': test_y,
+            'train_x_original': train_x,
+            'train_y_original': train_y,
+            'train_x_oversampled_original': train_x_oversampled,
+        }
+    # The column removal in train_x is due to oversampling. When oversample is on, additional (columns oversample_flag and original_index) are created in order to control which rows are
+    # from the original dataset and which are oversampled. But those two columns aren't added to the test_x dataset (no oversample in the test dataset) and therefore train and test datasets
+    # won't match, hence why i need to remove the two extra columns;
+
+    else:
+        dataset_dict = {
+            'train_x': train_x,
+            'train_y': train_y,
+            'test_x': test_x,
+            'test_y': test_y
+        }
 
     return dataset_dict
 
@@ -568,9 +589,8 @@ def col_group(df, columns_to_replace, dictionaries, project_id):
                 elif project_id == 2406:
                     level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetados em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VehicleData_Code(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['VehicleData_Code'].unique()), project_id, flag=1)
             df.drop(column, axis=1, inplace=True)
-            df.rename(index=str, columns={column + '_new': column}, inplace=True)
+            df.rename(index=int, columns={column + '_new': column}, inplace=True)
         except KeyError:
-            # level_0_performance_report.performance_warnings_append('Column Grouping Warning - Column {} not found.'.format(column))
             level_0_performance_report.log_record('Aviso no Agrupamento de Colunas - Coluna {} não encontrada.'.format(column), project_id, flag=1)
 
     if non_parametrized_data_flag:
@@ -755,17 +775,20 @@ def dataset_split(df, target, oversample=0):
 
     if oversample:
         print('Oversampling small classes...')
-        df_train_x, df_train_y = oversample_data(df_train_x, df_train_y)
+        df_train_x_oversampled, df_train_y_oversampled = oversample_data(df_train_x, df_train_y)
+        datasets = datasets_dictionary_function(df_train_x, df_train_y, df_test_x, df_test_y, df_train_x_oversampled, df_train_y_oversampled)
 
-    return df_train_x, df_train_y, df_test_x, df_test_y
+        return datasets
+
+    datasets = datasets_dictionary_function(df_train_x, df_train_y, df_test_x, df_test_y)
+
+    return datasets
 
 
 def oversample_data(train_x, train_y):
 
     train_x['oversample_flag'] = range(train_x.shape[0])
-    train_x['original_index'] = train_x.index
-
-    print(train_x, train_y)
+    train_x['original_index'] = pd.to_numeric(train_x.index)
 
     ros = RandomOverSampler(random_state=42)
     train_x_resampled, train_y_resampled = ros.fit_sample(train_x, train_y.values.ravel())
@@ -774,7 +797,7 @@ def oversample_data(train_x, train_y):
     train_y_resampled = pd.Series(train_y_resampled)
     for column in list(train_x_resampled):
         if train_x_resampled[column].dtype != train_x[column].dtype:
-            print('Problem found with dtypes, fixing it...', )
+            print('Problem found with dtypes, fixing it...')
             dtype_checkup(train_x_resampled, train_x)
         break
 

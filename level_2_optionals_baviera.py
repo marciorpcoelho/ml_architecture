@@ -154,10 +154,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     df_ohe = remove_columns(df_ohe, removed_columns, project_id)
     df_ohe = constant_columns_removal(df_ohe, project_id)
 
-    train_x, train_y, test_x, test_y = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Local da Venda_v2', 'Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
+    datasets = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Local da Venda_v2', 'Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
     # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed
-
-    datasets = datasets_dictionary_function(train_x, train_y, test_x, test_y)
 
     log_record('Finished Step B.', project_id)
 

@@ -17,6 +17,8 @@ logging.Logger('errors')
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
 
+oversample_flag = 0
+
 
 def main():
     models = ['dt', 'lr', 'ab', 'xgb', 'lgb']
@@ -168,8 +170,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
     # Parameter Translation
     df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], translation_dictionaries, options_file.project_id)
-    df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']  # Temporary filtering while this translation is not complete
-
+    df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']  # ToDo: Temporary filtering while this translation is not complete
     # Target Variable Calculation
     df_sales = score_calculation(df_sales, options_file.stock_days_threshold, options_file.margin_threshold, options_file.project_id)
 
@@ -177,7 +178,6 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
     # Parameter Grouping
     df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], grouping_dictionaries, options_file.project_id)
-    # print(df_sales.head(10))
     print('Number of Different Configurations: {}'.format(df_sales['VehicleData_Code'].nunique()))
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_grouping')
 
@@ -185,21 +185,18 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
                                  ['Chassis_Number', 'Total_Sales', 'Total_Discount', 'Total_Discount_%', 'Total_Net_Sales', 'Fixed_Margin_I', 'Fixed_Margin_I_%', 'stock_days_class', 'DaysInStock_Dealer',
                                   'DaysInStock_Distributor', 'Average_DaysInStock_Global', 'DaysInStock_Global', 'HME_Support']
 
-    df_sales = remove_columns(df_sales, columns_with_too_much_info, options_file.project_id)
-    df_sales = constant_columns_removal(df_sales, options_file.project_id)
+    df_ohe = remove_columns(df_sales, columns_with_too_much_info, options_file.project_id)
+    df_ohe = constant_columns_removal(df_ohe, options_file.project_id)
 
-    heatmap_correlation_function(df_sales, 'target_class', 'heatmap_hyundai_v1')
+    heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_v1')
 
-    df_ohe = ohe(df_sales.copy(), configuration_parameters_cols + ['Sales_Type_Dealer_Code'])
+    df_ohe = ohe(df_ohe, configuration_parameters_cols + ['Sales_Type_Dealer_Code'])
     print('Base line accuracy performance (majority class %) is: {:.4f}'.format(df_ohe[df_ohe['target_class'] == 1].shape[0] / df_ohe.shape[0]))
     df_ohe.to_csv('output/df_hyundai_ohe.csv')
 
     heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_ohe_v1')
-    # sys.exit()
 
-    train_x, train_y, test_x, test_y = dataset_split(df_ohe, ['target_class'], 0)
-
-    datasets = datasets_dictionary_function(train_x, train_y, test_x, test_y)
+    datasets = dataset_split(df_ohe, ['target_class'], oversample_flag)
 
     print('Ended section B - Elapsed time: {:.2f}'.format(time.time() - start))
     log_record('Ended section B...', options_file.project_id)
@@ -227,7 +224,7 @@ def model_evaluation(df_sales, models, best_models, running_times, classes, data
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, in_options_file, project_id)  # Creates a df with the performance of each model evaluated in various metrics
     plot_roc_curve(best_models, models, datasets, 'roc_curve_temp')
 
-    df_model_dict = multiprocess_model_evaluation(df_sales, models, datasets, best_models, predictions, configuration_parameters, project_id)
+    df_model_dict = multiprocess_model_evaluation(df_sales, models, datasets, best_models, predictions, configuration_parameters, oversample_flag, project_id)
     model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)
 
     best_model = df_model_dict[best_model_name]
