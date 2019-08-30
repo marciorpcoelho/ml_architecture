@@ -5,7 +5,7 @@ import pandas as pd
 import level_2_optionals_baviera_options
 from level_2_optionals_baviera_options import project_id, classification_models, k, gridsearch_score
 from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
-from level_1_b_data_processing import datasets_dictionary_function, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features_optionals_baviera, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
+from level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
 from level_1_e_deployment import sql_inject, sql_age_comparison, sql_mapping_upload
@@ -125,7 +125,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = col_group(df, cols_to_group_layer_2, mapping_dictionaries, project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
         # groups are shown in level_2_optionals_baviera_options
 
-        df = new_features_optionals_baviera(df, sel_cols=configuration_parameters)  # Creates a series of new features, explained in the provided pdf
+        df = new_features(df, configuration_parameters, project_id)  # Creates a series of new features, explained in the provided pdf
 
         global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
 

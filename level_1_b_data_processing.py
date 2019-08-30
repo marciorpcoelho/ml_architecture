@@ -10,6 +10,7 @@ from scipy import stats
 from langdetect import detect
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
+from dateutil.relativedelta import relativedelta
 from nltk.stem.snowball import SnowballStemmer
 from sklearn.feature_selection import f_classif, SelectKBest
 from sklearn.model_selection import train_test_split
@@ -568,7 +569,6 @@ def constant_columns_removal(df, project_id, value=None):
     if len(features_removed):
         columns_string = sql_string_preparation_v2(features_removed)
         level_0_performance_report.log_record('A(s) seguinte(s) coluna(s) sem variação de valores foram removida(s): ' + str(columns_string), project_id, flag=1)
-        # level_0_performance_report.performance_warnings_append('Removed the following constant columns: ' + str(features_removed))
 
     return df[list_after]
 
@@ -678,16 +678,67 @@ def value_substitution(df, non_null_column=None, null_column=None):
     return df
 
 
-def new_features_optionals_baviera(df, sel_cols):
-    df.dropna(inplace=True)  # This is here for the cases where a value is not grouped. So it doesn't stop the code. Warning will still be uploaded to SQL.
-    df_grouped = df.sort_values(by=['Data Venda']).groupby(sel_cols)
-    print('Number of Configurations: {}'.format(len(df_grouped)))
-    df = df_grouped.apply(previous_sales_info_optionals_baviera)
+def new_features(df, sel_cols, project_id):
 
-    return df.fillna(0)
+    if project_id == 2162:
+        df.dropna(inplace=True)  # This is here for the cases where a value is not grouped. So it doesn't stop the code. Warning will still be uploaded to SQL.
+        df_grouped = df.sort_values(by=['Data Venda']).groupby(sel_cols)
+        print('Number of Configurations: {}'.format(len(df_grouped)))
+        df = df_grouped.apply(previous_sales_info_optionals_baviera)
+
+        return df.fillna(0)
+
+    if project_id == 2406:
+        df_grouped = df.sort_values(by='Registration_Request_Date').groupby(sel_cols)
+        df = df_grouped.apply(additional_info_optimization_hyundai)
+
+        return df
+
+
+def additional_info_optimization_hyundai(x):
+    # Project_ID = 2406
+
+    # print(len(x), '\n', x)
+
+    if len(x) > 1:
+        x['prev_sales_check'] = [0] + [1] * (len(x) - 1)
+        x['number_prev_sales'] = list(range(len(x)))
+
+        for key, row in x.iterrows():
+            last_date = row['Registration_Request_Date']
+
+            month_minus_1 = last_date - relativedelta(months=1)
+            month_minus_2 = last_date - relativedelta(months=2)
+            month_minus_3 = last_date - relativedelta(months=3)
+            month_minus_4 = last_date - relativedelta(months=4)
+            month_minus_5 = last_date - relativedelta(months=5)
+            month_minus_6 = last_date - relativedelta(months=6)
+
+            x.loc[x.index == key, 'sales_month-1'] = x[(x['Registration_Request_Date'] > month_minus_1) & (x['Registration_Request_Date'] < last_date)].shape[0]
+            x.loc[x.index == key, 'sales_month-2'] = x[(x['Registration_Request_Date'] > month_minus_2) & (x['Registration_Request_Date'] < month_minus_1)].shape[0]
+            x.loc[x.index == key, 'sales_month-3'] = x[(x['Registration_Request_Date'] > month_minus_3) & (x['Registration_Request_Date'] < month_minus_2)].shape[0]
+            x.loc[x.index == key, 'sales_month-4'] = x[(x['Registration_Request_Date'] > month_minus_4) & (x['Registration_Request_Date'] < month_minus_3)].shape[0]
+            x.loc[x.index == key, 'sales_month-5'] = x[(x['Registration_Request_Date'] > month_minus_5) & (x['Registration_Request_Date'] < month_minus_4)].shape[0]
+            x.loc[x.index == key, 'sales_month-6'] = x[(x['Registration_Request_Date'] > month_minus_6) & (x['Registration_Request_Date'] < month_minus_5)].shape[0]
+
+            x.loc[x.index == key, 'sales_month-1_cum'] = x[(x['Registration_Request_Date'] > month_minus_1)].shape[0]
+            x.loc[x.index == key, 'sales_month-2_cum'] = x[(x['Registration_Request_Date'] > month_minus_2)].shape[0]
+            x.loc[x.index == key, 'sales_month-3_cum'] = x[(x['Registration_Request_Date'] > month_minus_3)].shape[0]
+            x.loc[x.index == key, 'sales_month-4_cum'] = x[(x['Registration_Request_Date'] > month_minus_4)].shape[0]
+            x.loc[x.index == key, 'sales_month-5_cum'] = x[(x['Registration_Request_Date'] > month_minus_5)].shape[0]
+            x.loc[x.index == key, 'sales_month-6_cum'] = x[(x['Registration_Request_Date'] > month_minus_6)].shape[0]
+
+    elif len(x) <= 1:
+        x['prev_sales_check'] = 0
+        x['number_prev_sales'] = 0
+        x['sales_month-1'], x['sales_month-2'], x['sales_month-3'], x['sales_month-4'], x['sales_month-5'], x['sales_month-6'] = 0, 0, 0, 0, 0, 0
+        x['sales_month-1_cum'], x['sales_month-2_cum'], x['sales_month-3_cum'], x['sales_month-4_cum'], x['sales_month-5_cum'], x['sales_month-6_cum'] = 0, 0, 0, 0, 0, 0
+
+    return x
 
 
 def previous_sales_info_optionals_baviera(x):
+    # Project_ID = 2162
 
     prev_scores, i = [], 0
     if len(x) > 1:

@@ -5,7 +5,7 @@ import logging
 import numpy as np
 import pandas as pd
 from level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv
-from level_1_b_data_processing import value_count_histogram, ohe, constant_columns_removal, dataset_split, datasets_dictionary_function, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, value_count_histogram, value_substitution, na_fill_hyundai, remove_columns, measures_calculation_hyundai
+from level_1_b_data_processing import value_count_histogram, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, value_count_histogram, value_substitution, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from level_1_c_data_modelling import model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation, plot_roc_curve, multiprocess_model_evaluation, model_choice, feature_contribution, heatmap_correlation_function
 from level_1_e_deployment import sql_inject_v2, time_tags
@@ -17,7 +17,7 @@ logging.Logger('errors')
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
 
-oversample_flag = 0
+oversample_flag = 1
 
 
 def main():
@@ -32,7 +32,7 @@ def main():
 
 
 def data_acquisition():
-    log_record('Starting section A...', options_file.project_id)
+    log_record('A iniciar secção A...', options_file.project_id)
     start = time.time()
 
     sales_info = ['dbs/df_sales', options_file.sales_query]
@@ -65,20 +65,22 @@ def data_acquisition():
     # df_sales['SLR_Document_Date'] = pd.to_datetime(df_sales['SLR_Document_Date'], format='%Y%m%d')
     # df_sales['WIP_Date_Created'] = pd.to_datetime(df_sales['WIP_Date_Created'], format='%Y%m%d')
     # df_sales['Movement_Date'] = pd.to_datetime(df_sales['Movement_Date'], format='%Y%m%d')
+    df_sales['NLR_Code'] = pd.to_numeric(df_sales['NLR_Code'], errors='ignore')
+    df_sales['Product_Code'] = pd.to_numeric(df_sales['Product_Code'], errors='ignore')
 
     print('Ended section A - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Ended section A...', options_file.project_id)
+    log_record('Secção A terminada.', options_file.project_id)
     return df_sales, df_stock, df_pdb
 
 
 def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_cols):
     # print('Starting section B...')
-    log_record('Starting section B...', options_file.project_id)
+    log_record('A iniciar secção B...', options_file.project_id)
     start = time.time()
     current_date, _ = time_tags()
 
     try:
-        df_sales = read_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date), index_col=0, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date'])
+        df_sales = read_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date), index_col=0, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
         print('Current day file found. Skipping to step 2...')
     except FileNotFoundError:
         print('Current day file not found. Processing...')
@@ -123,9 +125,6 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
         df_sales.to_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date))
 
-    # description_cols = [x for x in list(df_pdb_dim) if x.endswith('_Desc')]
-    # description_cols = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
-
     # Step 2: ML Processing
     # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_join_function(df_sales, df_pdb_dim[['VehicleData_Code'] + configuration_parameters_cols].set_index('VehicleData_Code'), on='VehicleData_Code', how='left')
@@ -143,6 +142,8 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['DaysInStock_Global'] >= 0]  # Filters rows where, for some odd reason, the days in stock are negative
     # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+
+    df_sales = new_features(df_sales, configuration_parameters_cols, options_file.project_id)
 
     # Remove unnecessary columns:
     df_sales = remove_columns(df_sales, ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type', 'Registration_Number',
@@ -178,7 +179,12 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
     # Parameter Grouping
     df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], grouping_dictionaries, options_file.project_id)
-    print('Number of Different Configurations: {}'.format(df_sales['VehicleData_Code'].nunique()))
+
+    print('Number of Different VehicleData_Code: {}'.format(df_sales['VehicleData_Code'].nunique()))
+    df_sales_grouped_conf_cols = df_sales.groupby(configuration_parameters_cols)
+
+    print('Number of Different Configurations: {}'.format(len(df_sales_grouped_conf_cols)))
+
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_grouping')
 
     columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 40, 41, 42, 43]] + \
@@ -199,26 +205,26 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     datasets = dataset_split(df_ohe, ['target_class'], oversample_flag)
 
     print('Ended section B - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Ended section B...', options_file.project_id)
+    log_record('Secção B terminada.', options_file.project_id)
     return df_sales, datasets
 
 
 def data_modelling(df_sales, datasets, models):
     # print('Starting Step C...')
-    log_record('Starting section C...', options_file.project_id)
+    log_record('A iniciar secção C...', options_file.project_id)
     start = time.time()
 
     classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'], options_file.classification_models, options_file.k, options_file.gridsearch_score, options_file.project_id)
     save_model(best_models, models)
 
     print('Ended section C - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Ended section C...', options_file.project_id)
+    log_record('Secção C terminada.', options_file.project_id)
     return classes, best_models, running_times
 
 
 def model_evaluation(df_sales, models, best_models, running_times, classes, datasets, in_options_file, configuration_parameters, project_id):
     # print('Starting Step D...')
-    log_record('Starting section D...', options_file.project_id)
+    log_record('A iniciar secção D...', options_file.project_id)
     start = time.time()
 
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, in_options_file, project_id)  # Creates a df with the performance of each model evaluated in various metrics
@@ -231,12 +237,12 @@ def model_evaluation(df_sales, models, best_models, running_times, classes, data
     # feature_contribution(best_model, configuration_parameters, 'PT_PDB_Model_Desc', options_file, project_id)
 
     print('Ended section D - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Ended section D...', options_file.project_id)
+    log_record('Secção D terminada.', options_file.project_id)
     return model_choice_message, best_model
 
 
 def deployment(df, db, view):
-    log_record('Starting section E...', options_file.project_id)
+    log_record('A iniciar secção E...', options_file.project_id)
     start = time.time()
 
     columns_to_convert_to_datetime = ['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Record_Date']
@@ -263,8 +269,8 @@ def deployment(df, db, view):
         sql_inject_v2(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
         # sql_inject_v1(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
 
-    print('Ended section E - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Ended section E...', options_file.project_id)
+    print('Secção E terminada - Duração: {:.2f}'.format(time.time() - start))
+    log_record('Secção E terminada.', options_file.project_id)
 
 
 if __name__ == '__main__':

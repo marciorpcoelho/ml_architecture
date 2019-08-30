@@ -83,23 +83,23 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
         if check_date:
             time_result = sql_date_comparison(df, dsn, options_file, database, view, 'Date', time_to_last_update)
             if time_result:
-                level_0_performance_report.log_record('Uploading to SQL Server to DB {} and view {}...'.format(database, view), options_file.project_id)
+                level_0_performance_report.log_record('A fazer upload para SQL, Database {} e view {}...'.format(database, view), options_file.project_id)
 
                 for index, row in df.iterrows():
                     # continue
                     cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
             elif not time_result:
-                level_0_performance_report.log_record('Newer data already exists.', options_file.project_id)
+                level_0_performance_report.log_record('Já existem dados mais recentes.', options_file.project_id)
         if not check_date:
-            level_0_performance_report.log_record('Uploading to SQL Server to DB {} and view {}...'.format(database, view), options_file.project_id)
+            level_0_performance_report.log_record('A fazer upload para SQL, Database {} e view {}...'.format(database, view), options_file.project_id)
             for index, row in df.iterrows():
                 # continue
                 cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
 
-        print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
+        print('Duração: {:.2f} segundos.'.format(time.time() - start))
     except (pyodbc.ProgrammingError, pyodbc.DataError):
         save_csv([df], ['output/' + view + '_backup'])
-        level_0_performance_report.log_record('Error in uploading to database. Saving locally...', options_file.project_id, flag=1)
+        level_0_performance_report.log_record('Erro ao fazer upload. A gravar localmente...', options_file.project_id, flag=1)
 
     cnxn.commit()
     cursor.close()
@@ -145,7 +145,7 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
                     cursor.execute(insert_rows)
 
             elif not time_result:
-                level_0_performance_report.log_record('Newer data already exists.', options_file.project_id)
+                level_0_performance_report.log_record('Já existem dados mais recentes.', options_file.project_id)
         if not check_date:
             values_string = [str(tuple(x)) for x in df.values]
             for batch in chunker(values_string, 1000):
@@ -155,10 +155,10 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
                 insert_rows = insert_ + rows + query_convert_datetimes
                 cursor.execute(insert_rows)
 
-        print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
+        print('Duração: {:.2f} segundos.'.format(time.time() - start))
     except (pyodbc.ProgrammingError, pyodbc.DataError):
         save_csv([df], ['output/' + view + '_backup'])
-        level_0_performance_report.log_record('Error in uploading to database. Saving locally...', options_file.project_id, flag=1)
+        level_0_performance_report.log_record('Erro ao fazer upload. A gravar localmente...', options_file.project_id, flag=1)
 
     cnxn.commit()
     cursor.close()
@@ -217,7 +217,7 @@ def sql_join(df, dsn, database, view, options_file):
 
         # print(query)
 
-    print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
+    print('Duração: {:.2f} segundos.'.format(time.time() - start))
 
     cnxn.commit()
     cursor.close()
@@ -245,7 +245,7 @@ def sql_string_preparation_v1(values_list):
 
 
 def sql_truncate(dsn, options_file, database, view):
-    level_0_performance_report.log_record('Truncating view {} from DB {}.'.format(view, database), options_file.project_id)
+    level_0_performance_report.log_record('A truncar view {} da DB {}.'.format(view, database), options_file.project_id)
     cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
     query = "TRUNCATE TABLE " + view
     cursor = cnxn.cursor()
@@ -344,7 +344,7 @@ def sql_mapping_upload(dsn, options_file, dictionaries):
         values_string = [str(tuple(x)) for x in df_map.values]
 
         sql_truncate(dsn, options_file, 'BI_MLG', view)
-        print('Uploading to SQL Server to DB ' + 'BI_MLG' + ' and view ' + view + '...')
+        print('A fazer upload para SQL, Database ' + 'BI_MLG' + ' e view ' + view + '...')
 
         insert_ = '''INSERT INTO {}
         ({}) VALUES '''.format(view, columns_string)
