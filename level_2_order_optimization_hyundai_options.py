@@ -214,7 +214,7 @@ int_color_grouping = {
 classification_models = {
     'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
     'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100, 200, 500, 1000], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
-    'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear']}]],
+    'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear'], 'max_iter': [1000]}]],
     'knn': [neighbors.KNeighborsClassifier, [{'n_neighbors': np.arange(1, 50, 1)}]],
     'svm': [svm.SVC, [{'C': np.logspace(-2, 2, 10)}]],
     'ab': [AdaBoostClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],

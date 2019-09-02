@@ -44,7 +44,7 @@ def main():
     df = data_acquistion(input_file, query_filters, local=0)
     df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
     classes, best_models, running_times = data_modelling(df, datasets, models)
-    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, project_id)
+    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, oversample_check, project_id)
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options, model_choice_message, vehicle_count, running_times_upload_flag)
@@ -179,7 +179,7 @@ def data_modelling(df, datasets, models):
     return classes, best_models, running_times
 
 
-def model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, options_file, proj_id):
+def model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, options_file, oversample_check, proj_id):
     performance_info_append(time.time(), 'start_section_d')
     log_record('Started Step D...', proj_id)
 
@@ -187,7 +187,7 @@ def model_evaluation(df, models, best_models, running_times, classes, datasets, 
     # in the provided pdf
     plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features))
 
-    df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, proj_id)
+    df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, oversample_check, proj_id)
     model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)
 
     if not section_e_upload_flag:

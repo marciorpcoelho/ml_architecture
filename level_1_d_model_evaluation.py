@@ -458,13 +458,16 @@ def radial_chart_preprocess(df, model):
 
 
 def metric_bar_plot(df, tag):
-
-    fig, ax = plt.subplots(2, 5, figsize=(1400 / my_dpi, 1000 / my_dpi), dpi=my_dpi)
     algorithms = df['Algorithms'].values
+    algorithms_count = len(algorithms)
 
     i, j = 0, 0
-    for metric in ['Micro_F1', 'Average_F1', 'Macro_F1', 'Accuracy', 'ROC_Curve', 'Precision_Class_0', 'Precision_Class_1', 'Recall_Class_0', 'Recall_Class_1', 'Running_Time']:
-        ax[j, i].bar(range(0, 5), df[metric].values)
+    metrics_available = ['Micro_F1', 'Average_F1', 'Macro_F1', 'Accuracy', 'ROC_Curve', 'Precision_Class_0', 'Precision_Class_1', 'Recall_Class_0', 'Recall_Class_1', 'Running_Time']
+
+    fig, ax = plt.subplots(2, 5, figsize=(1400 / my_dpi, 1000 / my_dpi), dpi=my_dpi)
+
+    for metric in metrics_available:
+        ax[j, i].bar(range(0, algorithms_count), df[metric].values)
         ax[j, i].set_title(metric)
         ax[j, i].grid()
         plt.setp(ax[j, i], xticks=range(0, 5), xticklabels=algorithms)

@@ -132,6 +132,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     df_sales = lowercase_column_convertion(df_sales, configuration_parameters_cols)
 
     # Filtering rows with no relevant information
+    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['VehicleData_Code'] != 1]
     # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['Sales_Type_Dealer_Code'] != 'Demo']
