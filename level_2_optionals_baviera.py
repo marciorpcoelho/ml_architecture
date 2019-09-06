@@ -171,7 +171,7 @@ def data_modelling(df, datasets, models):
     df.sort_index(inplace=True)
 
     classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'], classification_models, k, gridsearch_score, project_id)  # Training of each referenced model
-    save_model(best_models, models)
+    save_model(best_models, models, project_id)
 
     log_record('Finished Step C.', project_id)
     performance_info_append(time.time(), 'end_section_c')

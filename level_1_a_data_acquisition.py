@@ -177,7 +177,7 @@ def autoline_data_retrieval(pse_code, current_date):
             print('dbs/auto_line_part_ref_history_{}_{} created and saved.'.format(pse_code, current_date))
 
         except FileNotFoundError:
-            raise FileNotFoundError('AutoLine file for PSE_Code={} and date={} was not found!'.format(pse_code, current_date))
+            print('AutoLine file for PSE_Code={} and date={} was not found!'.format(pse_code, current_date))
 
     df_al.rename(index=str, columns={'Data Mov': 'Movement_Date', 'Refª da peça': 'Part_Ref', 'Descrição': 'Part_Desc', 'Nº de factura': 'SLR_Document_Number', 'WIP nº': 'WIP_Number', 'Sugestão nº  (Enc)': 'Encomenda', 'Conta': 'SLR_Document_Account', 'Nº auditoria stock': 'Audit_Number', 'GPr': 'TA'}, inplace=True)
     df_al['Movement_Date'] = pd.to_datetime(df_al['Movement_Date'], format='%d/%m/%Y')

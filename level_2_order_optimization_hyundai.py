@@ -179,7 +179,8 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_translation')
 
     # Parameter Grouping
-    df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], grouping_dictionaries, options_file.project_id)
+    print('### NO GROUPING ###')
+    # df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], grouping_dictionaries, options_file.project_id)
 
     print('Number of Different VehicleData_Code: {}'.format(df_sales['VehicleData_Code'].nunique()))
     df_sales_grouped_conf_cols = df_sales.groupby(configuration_parameters_cols)
@@ -197,6 +198,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
     heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_v1')
 
+    df_ohe.to_csv('output/df_hyundai_dataset.csv')
     df_ohe = ohe(df_ohe, configuration_parameters_cols + ['Sales_Type_Dealer_Code'])
     print('Base line accuracy performance (majority class %) is: {:.4f}'.format(df_ohe[df_ohe['target_class'] == 1].shape[0] / df_ohe.shape[0]))
     df_ohe.to_csv('output/df_hyundai_ohe.csv')
@@ -216,7 +218,7 @@ def data_modelling(df_sales, datasets, models):
     start = time.time()
 
     classes, best_models, running_times = model_training(models, datasets['train_x'], datasets['train_y'], options_file.classification_models, options_file.k, options_file.gridsearch_score, options_file.project_id)
-    save_model(best_models, models)
+    save_model(best_models, models, options_file.project_id)
 
     print('Ended section C - Elapsed time: {:.2f}'.format(time.time() - start))
     log_record('Secção C terminada.', options_file.project_id)

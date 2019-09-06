@@ -17,7 +17,7 @@ from dateutil.relativedelta import relativedelta
 from level_1_a_data_acquisition import sql_mapping_retrieval
 from sklearn.metrics import silhouette_score, calinski_harabaz_score
 from level_1_b_data_processing import remove_punctuation_and_digits, col_group
-from level_0_performance_report import log_record, pool_workers_count, dict_models_name_conversion
+from level_0_performance_report import log_record, pool_workers_count, dict_models_name_conversion, project_dict
 pd.set_option('display.expand_frame_repr', False)
 
 
@@ -167,13 +167,13 @@ def between_clusters_distance(df, centroid):
     return between_clusters
 
 
-def save_model(clfs, model_name):
+def save_model(clfs, model_name, project_id):
 
     timestamp = str(datetime.datetime.now().day) + '_' + str(datetime.datetime.now().month) + '_' + str(datetime.datetime.now().year)
 
     i = 0
     for clf in clfs.values():
-        file_name = 'models/' + str(model_name[i]) + '_best_' + str(timestamp) + '.sav'
+        file_name = 'models/project_{}_{}_best_{}.sav'.format(project_id, model_name[i], timestamp)
         i += 1
 
         file_handler = open(file_name, 'wb')
@@ -722,7 +722,79 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
     return df_al
 
 
-def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings, project_id):
+# def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings, project_id):
+#     print('Fetching TA for each part_reference...')
+#     start = time.time()
+#
+#     try:
+#         df_part_ref_ta_grouped = pd.read_csv('output/part_ref_ta_{}.csv'.format(max_date), index_col=0)
+#         print('TA Grouping found.')
+#
+#     except FileNotFoundError:
+#         df_part_ref_ta = pd.DataFrame(columns={'Part_Ref', 'TA'})
+#         part_refs, part_ref_tas = [], []
+#
+#         df_al = df_al[df_al['TA'].notnull()]
+#
+#         i, parts_count, positions = 1, len(selected_parts), []
+#
+#         for part_ref in selected_parts:
+#             if part_ref.startswith('BM83.'):
+#                 if not part_ref.startswith('BM83.25.1.1') or not part_ref.startswith('BM83.25.1.3'):
+#                     part_refs.append(part_ref)
+#                     part_ref_tas.append('Chemical')
+#
+#             else:
+#                 part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].unique()
+#
+#                 if len(part_ref_ta) == 1:
+#                     try:
+#                         part_ref_tas.append(part_ref_ta[0][1])
+#                         part_refs.append(part_ref)
+#                     except IndexError:
+#                         # Cases where only the part_ref only has one TA but it is only a letter and not letter + number, which provides no information
+#                         continue
+#
+#                 elif len(part_ref_ta) > 1:
+#                     try:
+#                         # Ill try to use the most common TA for each part_ref. Even then, some parts will not match between their TA's (part_ref BM should have a Bx reference, MN should have a Mx, etc), hence why I should only take the number from the TA group
+#                         part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].value_counts().head(1).index.values[0][1]  # Get the second character of the first TA
+#                     except IndexError:
+#                         try:
+#                             part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].value_counts().head(2).index.values[1][1]  # Get the second character of the second TA
+#                         except (ValueError, IndexError):
+#                             continue  # I won't consider TA past this point
+#
+#                     part_ref_tas.append(part_ref_ta)
+#                     part_refs.append(part_ref)
+#
+#                 elif not part_ref_ta:
+#                     print('{} has no TA.'.format(part_ref))
+#
+#                 position = int((i / parts_count) * 100)
+#                 if not position % 1:
+#                     if position not in positions:
+#                         print('{}% completed'.format(position))
+#                         positions.append(position)
+#
+#             i += 1
+#
+#         df_part_ref_ta['Part_Ref'] = part_refs
+#         df_part_ref_ta['TA'] = part_ref_tas
+#         df_part_ref_ta['Group'] = part_ref_tas
+#
+#         df_bmw = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')], ['Group'], [mappings[0]], project_id)
+#         df_mini = col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')], ['Group'], [mappings[1]], project_id)
+#
+#         df_part_ref_ta_grouped = pd.concat([df_bmw, df_mini])
+#
+#         df_part_ref_ta_grouped.to_csv('output/part_ref_ta_{}.csv'.format(max_date))
+#
+#     print('Elapsed Time: {:.2f}'.format(time.time() - start))
+#     return df_part_ref_ta_grouped
+
+
+def part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, mappings, project_id):  # From PSE_Sales
     print('Fetching TA for each part_reference...')
     start = time.time()
 
@@ -734,8 +806,7 @@ def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings, 
         df_part_ref_ta = pd.DataFrame(columns={'Part_Ref', 'TA'})
         part_refs, part_ref_tas = [], []
 
-        df_al = df_al[df_al['TA'].notnull()]
-
+        df_sales = df_sales[df_sales['Product_Group'].notnull()]
         i, parts_count, positions = 1, len(selected_parts), []
 
         for part_ref in selected_parts:
@@ -745,31 +816,15 @@ def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings, 
                     part_ref_tas.append('Chemical')
 
             else:
-                part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].unique()
+                part_ref_ta = ta_selection(df_sales, part_ref, product_group_col='Product_Group')
+                if part_ref_ta in ['NO_TA', 'NO_SAME_BRAND_TA']:
+                    part_ref_ta = ta_selection(df_al, part_ref, product_group_col='GPr')
 
-                if len(part_ref_ta) == 1:
-                    try:
-                        part_ref_tas.append(part_ref_ta[0][1])
-                        part_refs.append(part_ref)
-                    except IndexError:
-                        # Cases where only the part_ref only has one TA but it is only a letter and not letter + number, which provides no information
-                        continue
+                if part_ref in ['NO_TA', 'NO_SAME_BRAND_TA']:
+                    print('part_ref {} has the following result: {}'.format(part_ref, part_ref_ta))
 
-                elif len(part_ref_ta) > 1:
-                    try:
-                        # Ill try to use the most common TA for each part_ref. Even then, some parts will not match between their TA's (part_ref BM should have a Bx reference, etc), hence why I should only take the number from the TA group
-                        part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].value_counts().head(1).index.values[0][1]  # Get the second character of the first TA
-                    except IndexError:
-                        try:
-                            part_ref_ta = df_al[df_al['Part_Ref'] == part_ref]['TA'].value_counts().head(2).index.values[1][1]  # Get the second character of the second TA
-                        except (ValueError, IndexError):
-                            continue  # I won't consider TA past this point
-
-                    part_ref_tas.append(part_ref_ta)
-                    part_refs.append(part_ref)
-
-                elif not part_ref_ta:
-                    print('{} has no TA.'.format(part_ref))
+                part_refs.append(part_ref)
+                part_ref_tas.append(part_ref_ta)
 
                 position = int((i / parts_count) * 100)
                 if not position % 1:
@@ -792,3 +847,48 @@ def part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, mappings, 
 
     print('Elapsed Time: {:.2f}'.format(time.time() - start))
     return df_part_ref_ta_grouped
+
+
+def ta_selection(df, part_ref, product_group_col):
+    part_ref_ta = 'NO_TA'
+
+    part_ref_unique_ta = df[df['Part_Ref'] == part_ref][product_group_col].unique()
+
+    if len(part_ref_unique_ta) == 1:
+        try:
+            part_ref_ta = part_ref_unique_ta[0][1]
+        except (IndexError, TypeError):
+            print('part_ref {} with part_ref_ta {} has no TA'.format(part_ref, part_ref_unique_ta))
+            return 'NO_TA'
+            # Cases where only the part_ref only has one TA but it is only a letter and not letter + number, which provides no information
+
+    elif len(part_ref_unique_ta) > 1:
+        part_ref_brand = part_ref[0]
+        part_ref_ta_value_counts = df[df['Part_Ref'] == part_ref][product_group_col].value_counts().index.values
+
+        try:
+            part_ref_ta = next((x for x in part_ref_ta_value_counts if x.startswith(part_ref_brand) and len(x) > 1), None)[1]  # Fetches the first (ordered by value counts) TA of the same group of the part_ref while also discarding cases of B or M and not B1 or M1
+        except (TypeError, IndexError):
+            print('{} has no TA for the same brand.'.format(part_ref))
+            return 'NO_SAME_BRAND_TA'
+
+    elif not part_ref_unique_ta:
+        # print('{} has no TA.'.format(part_ref))
+        return 'NO_TA'
+
+    return part_ref_ta
+
+
+def load_model(model_name, project_id):
+    print('Loading model(s) for Project {} - {}...'.format(project_id, project_dict[project_id]))
+
+    last_date = '4_9_2019'
+    # ToDo: this function needs to fetch the max date available
+
+    file_name = 'models/project_{}_{}_best_{}.sav'.format(project_id, model_name, last_date)
+
+    model = pickle.load(file_name)
+    print(model)
+
+    return
+

@@ -588,6 +588,10 @@ def col_group(df, columns_to_replace, dictionaries, project_id):
                     level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetados em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VHE_Number(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Nº Stock'].unique()), project_id, flag=1)
                 elif project_id == 2406:
                     level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetados em: {}_new, valor(es) não agrupados: {} nos veículos(s) com VehicleData_Code(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['VehicleData_Code'].unique()), project_id, flag=1)
+                elif project_id == 2259:
+                    level_0_performance_report.log_record('Aviso no Agrupamento de Colunas  - NaNs detetados em: {}_new, valor(es) não agrupados: {} nos veículos(s) com Group(s): {}'.format(columns_to_replace[dictionaries.index(dictionary)], variable, df[df[column + '_new'].isnull()]['Group'].unique()), project_id, flag=1)
+                else:
+                    null_analysis(df)
             df.drop(column, axis=1, inplace=True)
             df.rename(index=int, columns={column + '_new': column}, inplace=True)
         except KeyError:

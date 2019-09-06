@@ -34,6 +34,8 @@ bmw_ta_mapping = {
     'BMW_Bonus_Group_4': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
     'BMW_Bonus_Group_5': ['8'],  # Pneus
     'Outros': ['4', '6', '9'],
+    'NO_SAME_BRAND_TA': ['NO_SAME_BRAND_TA'],
+    'NO_TA': ['NO_TA'],
 }
 
 # The cost goals for group 1 and 2, as well as the sale goals for groups 3, 4 and 5 are taken from the provided files.
@@ -71,6 +73,8 @@ mini_ta_mapping = {
     'MINI_Bonus_Group_3': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
     'MINI_Bonus_Group_4': ['8'],  # Pneus
     'Outros': ['4', '6', '9'],
+    'NO_SAME_BRAND_TA': ['NO_SAME_BRAND_TA'],
+    'NO_TA': ['NO_TA'],
 }
 
 
@@ -79,7 +83,8 @@ sales_query = '''
         Sales.Movement_Date,  
         Sales.SLR_Document, 
         Sales.Part_Ref,  
-        Sales.Part_Desc, 
+        Sales.Part_Desc,
+        Sales.Product_Group, 
         Sales.Client_Id, 
         Sales.NLR_Code, 
         Sales.PSE_Code, 
@@ -98,6 +103,7 @@ sales_query = '''
         Sales.SLR_Document, 
         Sales.Part_Ref,  
         Sales.Part_Desc, 
+        Sales.Product_Group, 
         Sales.Client_Id, 
         Sales.NLR_Code, 
         Sales.PSE_Code, 
@@ -109,6 +115,7 @@ sales_query = '''
         Sales.SLR_Document, 
         Sales.Part_Ref,  
         Sales.Part_Desc,  
+        Sales.Product_Group, 
         Sales.Client_Id, 
         Sales.NLR_Code, 
         Sales.PSE_Code, 
@@ -127,6 +134,7 @@ sales_query = '''
         Sales.SLR_Document, 
         Sales.Part_Ref,  
         Sales.Part_Desc, 
+        Sales.Product_Group, 
         Sales.Client_Id, 
         Sales.NLR_Code, 
         Sales.PSE_Code, 
