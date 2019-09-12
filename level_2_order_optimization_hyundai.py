@@ -40,6 +40,7 @@ def data_acquisition():
     product_db = ['dbs/df_pdb', options_file.product_db_query]
 
     current_date, _ = time_tags()
+    # current_date = '2019-09-02'
 
     dfs = []
 
@@ -78,6 +79,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     log_record('A iniciar secção B...', options_file.project_id)
     start = time.time()
     current_date, _ = time_tags()
+    # current_date = '2019-09-02'
 
     try:
         df_sales = read_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date), index_col=0, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
@@ -178,6 +180,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_translation')
 
+    # df_sales.to_csv('output/processing_test.csv')
     # Parameter Grouping
     # df_sales.to_csv('output/df_test_unit.csv')
     print('### NO GROUPING ###')
