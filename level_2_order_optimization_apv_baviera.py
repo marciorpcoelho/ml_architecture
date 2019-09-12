@@ -48,7 +48,7 @@ def data_acquistion(options_info, current_date):
 
 
 def data_processing(df_sales, df_purchases, df_stock, options_info):
-    log_record('Sarted Step B...', options_file.project_id)
+    log_record('Started Step B...', options_file.project_id)
     start_treatment = time.time()
 
     df_sales, df_purchases, df_stock = apv_dataset_treatment(df_sales, df_purchases, df_stock, options_info.pse_code, options_info.urgent_purchases_flags, update, options_info.project_id)
@@ -70,7 +70,7 @@ def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_pu
 
     selected_parts = part_ref_selection(df_al, min_date, max_date, options_file.project_id)
     results = apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date, options_file.project_id)
-    part_ref_ta_definition(df_al, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping], project_id)  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
+    part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping], options_file.regex_dict, options_file.bmw_original_oil_words, options_file.project_id)  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
     # sales_solver(results)
 
     print('Elapsed time: {:.2f}'.format(time.time() - start))

@@ -1,3 +1,4 @@
+import re
 import nltk
 import time
 import pickle
@@ -793,8 +794,7 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
 #     print('Elapsed Time: {:.2f}'.format(time.time() - start))
 #     return df_part_ref_ta_grouped
 
-
-def part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, mappings, project_id):  # From PSE_Sales
+def part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, mappings, regex_dict, bmw_original_oil_words, project_id):  # From PSE_Sales
     print('Fetching TA for each part_reference...')
     start = time.time()
 
@@ -816,9 +816,9 @@ def part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, 
                     part_ref_tas.append('Chemical')
 
             else:
-                part_ref_ta = ta_selection(df_sales, part_ref, product_group_col='Product_Group')
+                part_ref_ta = ta_selection(df_sales, part_ref, regex_dict, bmw_original_oil_words, product_group_col='Product_Group')
                 if part_ref_ta in ['NO_TA', 'NO_SAME_BRAND_TA']:
-                    part_ref_ta = ta_selection(df_al, part_ref, product_group_col='GPr')
+                    part_ref_ta = ta_selection(df_al, part_ref, regex_dict, bmw_original_oil_words, product_group_col='GPr')
 
                 if part_ref in ['NO_TA', 'NO_SAME_BRAND_TA']:
                     print('part_ref {} has the following result: {}'.format(part_ref, part_ref_ta))
@@ -849,8 +849,39 @@ def part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, 
     return df_part_ref_ta_grouped
 
 
-def ta_selection(df, part_ref, product_group_col):
+# def ta_selection(df, part_ref, product_group_col):
+#     part_ref_ta = 'NO_TA'
+#
+#     part_ref_unique_ta = df[df['Part_Ref'] == part_ref][product_group_col].unique()
+#
+#     if len(part_ref_unique_ta) == 1:
+#         try:
+#             part_ref_ta = part_ref_unique_ta[0][1]
+#         except (IndexError, TypeError):
+#             print('part_ref {} with part_ref_ta {} has no TA'.format(part_ref, part_ref_unique_ta))
+#             return 'NO_TA'
+#             # Cases where only the part_ref only has one TA but it is only a letter and not letter + number, which provides no information
+#
+#     elif len(part_ref_unique_ta) > 1:
+#         part_ref_brand = part_ref[0]
+#         part_ref_ta_value_counts = df[df['Part_Ref'] == part_ref][product_group_col].value_counts().index.values
+#
+#         try:
+#             part_ref_ta = next((x for x in part_ref_ta_value_counts if x.startswith(part_ref_brand) and len(x) > 1), None)[1]  # Fetches the first (ordered by value counts) TA of the same group of the part_ref while also discarding cases of B or M and not B1 or M1
+#         except (TypeError, IndexError):
+#             print('{} has no TA for the same brand.'.format(part_ref))
+#             return 'NO_SAME_BRAND_TA'
+#
+#     elif not part_ref_unique_ta:
+#         # print('{} has no TA.'.format(part_ref))
+#         return 'NO_TA'
+#
+#     return part_ref_ta
+
+
+def ta_selection(df, part_ref, regex_dict, bmw_original_oil_words, product_group_col):
     part_ref_ta = 'NO_TA'
+    part_ref_desc = df[df['Part_Ref'] == part_ref]['Part_Desc'].value_counts().head(1).index  # Gets the most common Part_Desc, for the part_ref which have multiple descriptions;
 
     part_ref_unique_ta = df[df['Part_Ref'] == part_ref][product_group_col].unique()
 
@@ -863,17 +894,19 @@ def ta_selection(df, part_ref, product_group_col):
             # Cases where only the part_ref only has one TA but it is only a letter and not letter + number, which provides no information
 
     elif len(part_ref_unique_ta) > 1:
-        part_ref_brand = part_ref[0]
-        part_ref_ta_value_counts = df[df['Part_Ref'] == part_ref][product_group_col].value_counts().index.values
+        part_ref_ta_value_counts = df[df['Part_Ref'] == part_ref][product_group_col].value_counts()
 
         try:
-            part_ref_ta = next((x for x in part_ref_ta_value_counts if x.startswith(part_ref_brand) and len(x) > 1), None)[1]  # Fetches the first (ordered by value counts) TA of the same group of the part_ref while also discarding cases of B or M and not B1 or M1
+            part_ref_ta = part_ref_ta_value_counts.head(1).index.values[0][1]  # Get the second character of the most common TA
         except (TypeError, IndexError):
-            print('{} has no TA for the same brand.'.format(part_ref))
-            return 'NO_SAME_BRAND_TA'
+            if len(re.findall(regex_dict['bmw_part_ref_format'], part_ref)):
+                if len(part_ref_desc.values[0]) and any(x in part_ref_desc for x in bmw_original_oil_words):
+                    part_ref_ta = '1'
+            else:
+                print('Problematic Part - {} and: \n{}'.format(part_ref, part_ref_desc))
+                return 'NO_TA'
 
     elif not part_ref_unique_ta:
-        # print('{} has no TA.'.format(part_ref))
         return 'NO_TA'
 
     return part_ref_ta

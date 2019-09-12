@@ -29,7 +29,7 @@ log_files = {
 
 bmw_ta_mapping = {
     'BMW_Bonus_Group_1': ['1', '2'],  # Peças + Óleos
-    'BMW_Bonus_Group_2': ['-'],  # Vendas de 4º Nível - No idea on this one...
+    'BMW_Bonus_Group_2': ['-'],  # Vendas de 4º Nível - Can be ignored
     'BMW_Bonus_Group_3': ['Chemical'],  # Químicos
     'BMW_Bonus_Group_4': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
     'BMW_Bonus_Group_5': ['8'],  # Pneus
@@ -55,16 +55,29 @@ bmw_ta_mapping = {
 # }
 
 group_goals = {
-    'dtss_goal': 22,  # Weekdays only!
-    'BMW_Bonus_Group_1': [640345 - 399127, 253279],  # Cost, Sales (Values are for a single month, using the goal for the 3-month period minus the already sold in the first two months
-    'BMW_Bonus_Group_2': [155713 - 93374, 3655],  # Cost, Sales
-    'BMW_Bonus_Group_3': [12893 - 10808, 2189],  # Cost, Sales
-    'BMW_Bonus_Group_4': [25445 - 16152, 9758],  # Cost, Sales
-    'BMW_Bonus_Group_5': [23143 - 14146, 9447],  # Cost, Sales
+    'dtss_goal': 30,  # Weekdays only!
+    'number_of_unique_parts': 50,
+    'number_of_total_parts': 50,
+    # 'BMW_Bonus_Group_1': [640345 - 399127, 253279],  # Cost, Sales (Values are for a single month, using the goal for the 3-month period minus the already sold in the first two months
+    # 'BMW_Bonus_Group_2': [155713 - 93374, 3655],  # Cost, Sales
+    # 'BMW_Bonus_Group_3': [12893 - 10808, 2189],  # Cost, Sales
+    # 'BMW_Bonus_Group_4': [25445 - 16152, 9758],  # Cost, Sales
+    # 'BMW_Bonus_Group_5': [23143 - 14146, 9447],  # Cost, Sales
+    'BMW_Bonus_Group_1': [229979 * 1.05],  # Purchase - September Goal
+    'BMW_Bonus_Group_3': [4630 * 1.05],  # Purchase
+    'BMW_Bonus_Group_4': [9139 * 1.05],  # Sales
+    'BMW_Bonus_Group_5': [8132 * 1.05],  # Sales
     'MINI_Bonus_Group_1': [0, 0],
     'MINI_Bonus_Group_2': [0, 0],
     'MINI_Bonus_Group_3': [0, 0],
     'MINI_Bonus_Group_4': [0, 0],
+}
+
+group_goals_type = {
+    'BMW_Bonus_Group_1': 'Cost',  # Purchase
+    'BMW_Bonus_Group_3': 'Cost',  # Purchase
+    'BMW_Bonus_Group_4': 'PVP',  # Sales
+    'BMW_Bonus_Group_5': 'PVP',  # Sales
 }
 
 mini_ta_mapping = {
@@ -205,3 +218,9 @@ reg_autoline_clients = '''
     SELECT *  
     FROM [BI_CRP].dbo.[PSE_Mapping_Adjustments_SLR_Accounts] WITH (NOLOCK)  
     WHERE nlr_code = '701' '''
+
+regex_dict = {
+    'bmw_part_ref_format': r'BM\d{2}\.\d{2}\.\d{1}\.\d{3}.\d{3}'
+}
+
+bmw_original_oil_words = ['óleo', 'oleo', 'oil', 'óleos', 'oleos', 'oils']

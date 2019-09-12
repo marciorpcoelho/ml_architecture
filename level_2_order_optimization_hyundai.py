@@ -179,6 +179,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_translation')
 
     # Parameter Grouping
+    # df_sales.to_csv('output/df_test_unit.csv')
     print('### NO GROUPING ###')
     # df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], grouping_dictionaries, options_file.project_id)
 
