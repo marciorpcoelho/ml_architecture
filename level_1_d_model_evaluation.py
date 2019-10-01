@@ -1,10 +1,12 @@
 import os
 import time
+import itertools
 import numpy as np
 from math import pi
 import pandas as pd
 import seaborn as sns
 import multiprocessing
+from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 from level_1_e_deployment import sql_inject, save_csv, sql_second_highest_date_checkup
 from level_0_performance_report import log_record, performance_sql_info, pool_workers_count, dict_models_name_conversion
@@ -23,7 +25,14 @@ class ClassificationEvaluation(object):
         self.precision = precision_score(groundtruth, np.round(prediction), average=None)
         self.recall = recall_score(groundtruth, np.round(prediction), average=None)
         self.classification_report = classification_report(groundtruth, np.round(prediction))
-        self.roc_auc_curve = roc_auc_score(groundtruth, np.round(prediction))
+        # self.roc_auc_curve = roc_auc_score(groundtruth, np.round(prediction))  # Note: this implementation is restricted to the binary classification task or multilabel classification task in label indicator format.
+
+        self.precision_multiclass_micro = precision_score(groundtruth, np.round(prediction), average='micro')
+        self.precision_multiclass_macro = precision_score(groundtruth, np.round(prediction), average='macro')
+        self.precision_multiclass_average = precision_score(groundtruth, np.round(prediction), average='weighted')
+        self.recall_multiclass_micro = recall_score(groundtruth, np.round(prediction), average='micro')
+        self.recall_multiclass_macro = recall_score(groundtruth, np.round(prediction), average='macro')
+        self.recall_multiclass_average = recall_score(groundtruth, np.round(prediction), average='weighted')
 
 
 class ClusterEvaluation(object):
@@ -49,6 +58,9 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
         evaluation_training = ClassificationEvaluation(groundtruth=datasets['train_y'], prediction=prediction_train)
         evaluation_test = ClassificationEvaluation(groundtruth=datasets['test_y'], prediction=prediction_test)
         predictions[model] = [prediction_train.astype(int, copy=False), prediction_test.astype(int, copy=False)]
+
+        # plot_conf_matrix(datasets['train_y'], prediction_train, classes, model, project_id)
+        # plot_conf_matrix(datasets['test_y'], prediction_test, classes, model, project_id)
         try:
             feat_importance['Importance'] = best_models[model].feature_importances_
             feat_importance.sort_values(by='Importance', ascending=False, inplace=True)
@@ -65,6 +77,19 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
                      ('Precision_Class_' + str(classes[1])): getattr(evaluation_training, 'precision')[1],
                      ('Recall_Class_' + str(classes[0])): getattr(evaluation_training, 'recall')[0],
                      ('Recall_Class_' + str(classes[1])): getattr(evaluation_training, 'recall')[1],
+                     # 'Precision_Micro_Class_' + str(classes[0]): getattr(evaluation_training, 'precision_multiclass_micro')[0],
+                     # 'Precision_Micro_Class_' + str(classes[1]): getattr(evaluation_training, 'precision_multiclass_micro')[1],
+                     # 'Precision_Macro_Class_' + str(classes[0]): getattr(evaluation_training, 'precision_multiclass_macro')[0],
+                     # 'Precision_Macro_Class_' + str(classes[1]): getattr(evaluation_training, 'precision_multiclass_macro')[1],
+                     # 'Precision_Average_Class_' + str(classes[0]): getattr(evaluation_training, 'precision_multiclass_average')[0],
+                     # 'Precision_Average_Class_' + str(classes[1]): getattr(evaluation_training, 'precision_multiclass_average')[1],
+                     #
+                     # 'Recall_Micro_Class_' + str(classes[0]): getattr(evaluation_training, 'recall_multiclass_micro')[0],
+                     # 'Recall_Micro_Class_' + str(classes[1]): getattr(evaluation_training, 'recall_multiclass_micro')[1],
+                     # 'Recall_Macro_Class_' + str(classes[0]): getattr(evaluation_training, 'recall_multiclass_macro')[0],
+                     # 'Recall_Macro_Class_' + str(classes[1]): getattr(evaluation_training, 'recall_multiclass_macro')[1],
+                     # 'Recall_Average_Class_' + str(classes[0]): getattr(evaluation_training, 'recall_multiclass_average')[0],
+                     # 'Recall_Average_Class_' + str(classes[1]): getattr(evaluation_training, 'recall_multiclass_average')[1],
                      'Running_Time': running_times[model]}
 
         row_test = {'Micro_F1': getattr(evaluation_test, 'micro'),
@@ -76,6 +101,19 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
                     ('Precision_Class_' + str(classes[1])): getattr(evaluation_test, 'precision')[1],
                     ('Recall_Class_' + str(classes[0])): getattr(evaluation_test, 'recall')[0],
                     ('Recall_Class_' + str(classes[1])): getattr(evaluation_test, 'recall')[1],
+                    # 'Precision_Micro_Class_' + str(classes[0]): getattr(evaluation_test, 'precision_multiclass_micro')[0],
+                    # 'Precision_Micro_Class_' + str(classes[1]): getattr(evaluation_test, 'precision_multiclass_micro')[1],
+                    # 'Precision_Macro_Class_' + str(classes[0]): getattr(evaluation_test, 'precision_multiclass_macro')[0],
+                    # 'Precision_Macro_Class_' + str(classes[1]): getattr(evaluation_test, 'precision_multiclass_macro')[1],
+                    # 'Precision_Average_Class_' + str(classes[0]): getattr(evaluation_test, 'precision_multiclass_average')[0],
+                    # 'Precision_Average_Class_' + str(classes[1]): getattr(evaluation_test, 'precision_multiclass_average')[1],
+                    #
+                    # 'Recall_Micro_Class_' + str(classes[0]): getattr(evaluation_test, 'recall_multiclass_micro')[0],
+                    # 'Recall_Micro_Class_' + str(classes[1]): getattr(evaluation_test, 'recall_multiclass_micro')[1],
+                    # 'Recall_Macro_Class_' + str(classes[0]): getattr(evaluation_test, 'recall_multiclass_macro')[0],
+                    # 'Recall_Macro_Class_' + str(classes[1]): getattr(evaluation_test, 'recall_multiclass_macro')[1],
+                    # 'Recall_Average_Class_' + str(classes[0]): getattr(evaluation_test, 'recall_multiclass_average')[0],
+                    # 'Recall_Average_Class_' + str(classes[1]): getattr(evaluation_test, 'recall_multiclass_average')[1],
                     'Running_Time': running_times[model]}
 
         results_train.append(row_train)
@@ -92,6 +130,9 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
 
     metric_bar_plot(df_results_train, 'project_{}_train_dataset'.format(project_id))
     metric_bar_plot(df_results_test, 'project_{}_test_dataset'.format(project_id))
+
+    # performance_df = pd.concat([df_results_train, df_results_test])
+    # performance_df.to_csv('output/performance_hyundai_multiclass.csv')
 
     sql_inject(pd.concat([df_results_train, df_results_test]), performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
 
@@ -273,7 +314,7 @@ def model_choice(dsn, options_file, df_results):
 
         df_previous_performance_results = sql_second_highest_date_checkup(dsn, options_file, performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'])
         if df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)].shape[0]:
-            log_record('Resultados mais antigos são melhores na métrica em avaliação: {:.4f} > {:.4f} para o algoritmo {}.'.format(df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].max(), best_model_value, df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].idxmax()), options_file.project_id, flag=1)
+            log_record('Resultados mais antigos são melhores na métrica em avaliação: {:.4f} > {:.4f} para o algoritmo {}. Os últimos dados serão mantidos - Não haverá update dos mesmos.'.format(df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].max(), best_model_value, df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].idxmax()), options_file.project_id, flag=1)
 
             model_choice_flag = 1
             if df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].max() - best_model_value < performance_threshold_interval:
@@ -486,3 +527,52 @@ def metric_bar_plot(df, tag):
     plt.tight_layout()
     save_fig('bar_plot_' + tag)
     # plt.show()
+
+
+def plot_conf_matrix(groundtruth, prediction, classes, model, project_id):
+
+    cm = confusion_matrix(groundtruth, prediction)
+
+    # w/o normalization
+    # plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    # plt.title('Confusion matrix - ' + str(type))
+    # plt.colorbar()
+    # tick_marks = np.arange(len(classes))
+    # plt.xticks(tick_marks, classes, rotation=70)
+    # plt.yticks(tick_marks, classes)
+    #
+    # thresh = cm.max() / 2.
+    # for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+    # 	plt.text(j, i, cm[i, j], horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
+    #
+    # plt.tight_layout()
+    # plt.ylabel('True label')
+    # plt.xlabel('Predicted label')
+
+    # plt.savefig(directory + 'confusion_matrix_' + str(type) + '_' + str(method) + '_Set_' + str(set) + '_' + str(class_weight) + '_Fold=' + '_' + identifier + '.png')
+    # plt.show()
+    # plt.clf()
+    # plt.close()
+
+    # w/ normalization
+    plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Confusion matrix - ' + str(type))
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=70)
+    plt.yticks(tick_marks, classes)
+
+    cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    thresh = cm.max() / 2.
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        plt.text(j, i, format(cm[i, j], '.2f'), horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+
+    save_fig('project_{}_confusion_matrix_{}'.format(project_id, model))
+    # plt.show()
+    plt.clf()
+    plt.close()

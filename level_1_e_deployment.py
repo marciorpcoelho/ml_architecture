@@ -299,7 +299,7 @@ def sql_second_highest_date_checkup(dsn, options_file, database, view, date_colu
             'SELECT Error_log.* ' \
             'FROM [' + str(database) + '].[dbo].[' + str(view) + '] as Error_log ' \
             'cross join second_date ' \
-            'WHERE second_date.max_date = Error_log.[' + str(date_column) + '] and [Dataset] = \'Test\''
+            'WHERE second_date.max_date = Error_log.[' + str(date_column) + '] and [Dataset] = \'Test\' and Project_Id = \'' + str(options_file.project_id) + '\''
 
     df = pd.read_sql(query, cnxn, index_col='Algorithms')
 

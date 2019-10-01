@@ -655,7 +655,7 @@ def score_calculation(df, stockdays_threshold, margin_threshold, project_id):
         df.loc[df['stock_days'].lt(0), 'stock_days'] = 0
 
         df['stock_days_class'] = 0
-        df.loc[df['stock_days'] <= stockdays_threshold, 'stock_days_class'] = 1
+        df.loc[df['stock_days'] <= stockdays_threshold[0], 'stock_days_class'] = 1
         df['margin_class'] = 0
         df.loc[df['margem_percentagem'] >= margin_threshold, 'margin_class'] = 1
 
@@ -666,11 +666,24 @@ def score_calculation(df, stockdays_threshold, margin_threshold, project_id):
         df['score_euros'] = df['Margem'] - df['days_stock_price']
 
     elif project_id == 2406:
+        # Binary Approach
         df['stock_days_class'] = 0
         df.loc[df['DaysInStock_Global'] <= stockdays_threshold, 'stock_days_class'] = 1
 
         df['target_class'] = 0
         df.loc[(df['stock_days_class'] == 1), 'target_class'] = 1
+
+        # MultiCLass Approach v1
+        # df['target_class'] = 0
+        # number_of_classes = len(stockdays_threshold)
+        #
+        # df.loc[df['DaysInStock_Global'] <= stockdays_threshold[0], 'target_class'] = 0
+        # df.loc[(df['DaysInStock_Global'] > 90) & (df['DaysInStock_Global'] <= 120), 'target_class'] = 1
+        # df.loc[(df['DaysInStock_Global'] > 120) & (df['DaysInStock_Global'] <= 150), 'target_class'] = 2
+        # df.loc[(df['DaysInStock_Global'] > 150) & (df['DaysInStock_Global'] <= 180), 'target_class'] = 3
+        # df.loc[(df['DaysInStock_Global'] > 180) & (df['DaysInStock_Global'] <= 270), 'target_class'] = 4
+        # df.loc[(df['DaysInStock_Global'] > 270) & (df['DaysInStock_Global'] <= 365), 'target_class'] = 5
+        # df.loc[df['DaysInStock_Global'] > stockdays_threshold[number_of_classes - 1], 'target_class'] = number_of_classes
 
     return df
 
@@ -1382,27 +1395,41 @@ def na_fill_hyundai(df_grouped):
 
 def na_group_fill_hyundai(args):
     # project_id = 2406
-    _, group = args
+    key, group = args
     slr_document_date_chs_min_idx, slr_document_date_chs_min = 0, 0
 
     cols_to_fill = ['Quantity_CHS']
     measure_cols = ['Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12']
     support_measure_cols = ['Measure_13', 'Measure_14', 'Measure_15']
+    # print('group.shape:', group.shape)
+    # print('Quantity_CHS:', group['Quantity_CHS'].values)
 
-    if group.shape[0] == 1 and group['Quantity_CHS'].values == 0:
+    if group[measure_cols].sum(axis=0).sum(axis=0) == 0:
+        # print('inside case 0 - ', key)
         return None
 
-    if sum(group['SLR_Document_Date_CHS'].isnull()) == group['SLR_Document_Date_CHS'].shape[0]:
+    if group.shape[0] == 1 and group['Quantity_CHS'].values == 0:
+        # print('inside case 1')
+        return None
+
+    if sum(group['SLR_Document_Date_CHS'].isnull()) == group['SLR_Document_Date_CHS'].shape[0]:  # Sem data de fatura de chassis
+        # print('inside case 2')
         # print('No SLR_Document_Date_CHS: \n', group)
         return None
 
     if group['SLR_Document_Date_CHS'].nunique() > 1:
+        # print('inside case 3')
         slr_document_date_chs_min = group['SLR_Document_Date_CHS'].min()
+        # print('min slr_document_date_chs found:', slr_document_date_chs_min)
         try:
             slr_document_date_chs_min_idx = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) & (group['Quantity_CHS'] == 1)].index.values[0]
+            # print('case 3 - min date found which follows the requirements')
+            # print('the line found was: \n', group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) & (group['Quantity_CHS'] == 1)][['Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12']])
         except IndexError:
             slr_document_date_chs_min_idx = group['SLR_Document_Date_CHS'].idxmin()
+            # print('case 3 - min date not found')
     elif group['SLR_Document_Date_CHS'].nunique() == 1:
+        # print('inside case 4')
         # slr_document_date_chs_min = group['SLR_Document_Date_CHS'].head(1).values[0]
         slr_document_date_chs_min = group['SLR_Document_Date_CHS'].min()
         # slr_document_date_chs_min_idx = group[group['Quantity_CHS'] == 1].head(1).index.values[0]
@@ -1413,16 +1440,36 @@ def na_group_fill_hyundai(args):
     check_for_slr_document_rgn = group['SLR_Document_RGN'].nunique()
 
     group.loc[:, cols_to_fill] = group[group.index == slr_document_date_chs_min_idx][cols_to_fill]
+    # print('outside case 3, part1, \n', group[['SLR_Document_Date_CHS', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Measure_13', 'Measure_14', 'Measure_15', 'Quantity_CHS']])
+
+    # exception_check = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) & (group['Quantity_CHS'] == 1)]['Measure_2'].sum(axis=0)
+    exception_check = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) | (group['SLR_Document_Date_CHS'].isnull())]['Measure_2'].sum(axis=0)
+    second_exception_check = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) | (group['Quantity_CHS'] == 1)]['Measure_2'].sum(axis=0)
 
     for col_o in measure_cols:
-        group[col_o] = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) | (group['SLR_Document_Date_CHS'].isnull())][col_o].sum(axis=0)
+        if exception_check:
+            group[col_o] = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) | (group['SLR_Document_Date_CHS'].isnull())][col_o].sum(axis=0)
+            # print('passed exception')
+        else:
+            if not second_exception_check:
+                group[col_o] = group[col_o].sum(axis=0)
+            else:
+                group[col_o] = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) & (group['Quantity_CHS'] == 1)][col_o].sum(axis=0)
+            # print('caught by exception')
+
     for col_s in support_measure_cols:
         group[col_s] = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min)][col_s].sum(axis=0)
+
+    # print('outside case 3, part2, \n', group[['SLR_Document_Date_CHS', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Measure_13', 'Measure_14', 'Measure_15', 'Quantity_CHS']])
+
+    # print('sum of measure_2 axis=0:', group['Measure_2'].sum(axis=0))
 
     group['SLR_Document_Date_CHS'] = group['SLR_Document_Date_CHS'].min()
     group['SLR_Document_Date_RGN'] = group['SLR_Document_Date_RGN'].min()
 
     [group[x].fillna(method='bfill', inplace=True) for x in cols_to_fill]
+
+    # print('outside case 3, part3, \n', group[['SLR_Document_Date_CHS', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Quantity_CHS']])
 
     if not check_for_registration_number and check_for_slr_document_chs:
         group['No_Registration_Number_Flag'] = 1
@@ -1433,6 +1480,9 @@ def na_group_fill_hyundai(args):
     else:
         group['Undefined_VHE_Status'] = 1
 
+    # print('outside case 3, part4, \n', group[['SLR_Document_Date_CHS', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Quantity_CHS']])
+    # print('returned: \n', group.head(1))
+
     return group.head(1)
 
 
@@ -1442,6 +1492,10 @@ def measures_calculation_hyundai(df):
     measure_5, measure_6, measure_7 = df['Measure_5'], df['Measure_6'], df['Measure_7']
     measure_9, measure_10, measure_11, measure_12 = df['Measure_9'], df['Measure_10'], df['Measure_11'], df['Measure_12']
     measure_13, measure_14, measure_15 = df['Measure_13'], df['Measure_14'], df['Measure_15']
+    measure_17, measure_18, measure_19, measure_20 = df['Measure_17'], df['Measure_18'], df['Measure_19'], df['Measure_20']
+    measure_40, measure_41, measure_42, measure_43 = df['Measure_40'], df['Measure_41'], df['Measure_42'], df['Measure_43']
+    measure_21, measure_22, measure_23, measure_24, measure_25 = df['Measure_21'], df['Measure_22'], df['Measure_23'], df['Measure_24'], df['Measure_25']
+    measure_26, measure_27, measure_28, measure_29, measure_30 = df['Measure_26'], df['Measure_27'], df['Measure_28'], df['Measure_29'], df['Measure_30']
 
     df['Total_Sales'] = measure_2 + measure_3 + measure_4
     df['Total_Discount'] = measure_5 + measure_6 + measure_7
@@ -1450,7 +1504,11 @@ def measures_calculation_hyundai(df):
     df['Total_Cost'] = measure_9 + measure_10 + measure_11 + measure_12
     df['Fixed_Margin_I'] = (((measure_2 - measure_5) + (measure_3 - measure_6)) + (measure_4 - measure_7)) + ((measure_9 + measure_10) + (measure_11 + measure_12)) + ((measure_13 + measure_14) + measure_15)
     df['Fixed_Margin_I_%'] = df['Fixed_Margin_I'] / df['Total_Net_Sales']
-    df['HME_Support'] = measure_13
+    df['Quality_Margin'] = measure_17 + measure_18 + measure_19 + measure_20 + measure_40 + measure_41 + measure_42
+    df['Total_Network_Support'] = df['Quality_Margin'] + measure_21 + measure_22 + measure_23 + measure_24 + measure_25 + measure_26 + measure_27 + measure_28 + measure_29 + measure_30 + measure_40 + measure_41 + measure_42 + measure_43
+    df['Fixed_Margin_II'] = df['Fixed_Margin_I'] + df['Total_Network_Support']
+    df['Fixed_Margin_II_%'] = df['Fixed_Margin_II'] / df['Total_Net_Sales']
+    df['HME_Support'] = measure_13 + measure_14 + measure_15
 
     return df
 

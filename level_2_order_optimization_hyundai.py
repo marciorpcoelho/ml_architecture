@@ -24,10 +24,10 @@ def main():
     models = ['dt', 'lr', 'ab', 'xgb', 'lgb']
     configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 
-    df_sales, df_stock, df_pdb_dim = data_acquisition()
+    df_sales, df_stock, df_pdb_dim, df_customers, df_dealers = data_acquisition()
     df_sales, datasets = data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters)
-    classes, best_models, running_times = data_modelling(df_sales, datasets, models)
-    model_evaluation(df_sales, models, best_models, running_times, classes, datasets, options_file, configuration_parameters, options_file.project_id)
+    # classes, best_models, running_times = data_modelling(df_sales, datasets, models)
+    # model_evaluation(df_sales, models, best_models, running_times, classes, datasets, options_file, configuration_parameters, options_file.project_id)
     # deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
 
@@ -39,8 +39,8 @@ def data_acquisition():
     stock_info = ['dbs/df_stock', options_file.stock_query]
     product_db = ['dbs/df_pdb', options_file.product_db_query]
 
-    current_date, _ = time_tags()
-    # current_date = '2019-09-02'
+    # current_date, _ = time_tags()
+    current_date = '2019-09-02'
 
     dfs = []
 
@@ -69,17 +69,39 @@ def data_acquisition():
     df_sales['NLR_Code'] = pd.to_numeric(df_sales['NLR_Code'], errors='ignore')
     df_sales['Product_Code'] = pd.to_numeric(df_sales['Product_Code'], errors='ignore')
 
+    df_customers = pd.read_csv('dbs/customers_group.csv', encoding='latin-1', sep=';')
+    df_dealers = pd.read_csv('dbs/dealers_dtr.csv', encoding='latin-1', sep=';')
+
+    # Adding missing information regarding customers
+    missing_customer_info_treatment(df_sales)
+
+    # Addition of customer information
+    df_customers_and_dealers = df_join_function(df_dealers, df_customers[['Customer_Group_Code', 'Customer_Group_Desc']].set_index('Customer_Group_Code'), on='Customer_Group_Code', how='left')
+    df_sales = df_join_function(df_sales, df_customers_and_dealers[['SLR_Account_CHS_Key', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Code', 'Customer_Group_Desc']].set_index('SLR_Account_CHS_Key'), on='SLR_Account_CHS_Key', how='left')
+
     print('Ended section A - Elapsed time: {:.2f}'.format(time.time() - start))
     log_record('Secção A terminada.', options_file.project_id)
-    return df_sales, df_stock, df_pdb
+    return df_sales, df_stock, df_pdb, df_customers, df_dealers
+
+
+def missing_customer_info_treatment(df_sales):
+
+    df_vehicles_wo_clients = pd.read_excel('dbs/viaturas_sem_cliente_final rb.xlsx', usecols=['Chassis_Number', 'Registration_Number', 'conc / nº cliente navision'], dtype={'conc / nº cliente navision': str}).dropna()
+    df_vehicles_wo_clients.rename(index=str, columns={'conc / nº cliente navision': 'SLR_Account_CHS_Key'}, inplace=True)
+    df_vehicles_wo_clients['SLR_Account_CHS_Key'] = '702_' + df_vehicles_wo_clients['SLR_Account_CHS_Key']
+    df_sales = df_join_function(df_sales, df_vehicles_wo_clients[['Chassis_Number', 'SLR_Account_CHS_Key']].set_index('Chassis_Number'), on='Chassis_Number', rsuffix='_new', how='left')
+    df_sales = value_substitution(df_sales, non_null_column='SLR_Account_CHS_Key_new', null_column='SLR_Account_CHS_Key')  # Replaces description by summary when the first is null and second exists
+    df_sales.drop(['SLR_Account_CHS_Key_new'], axis=1, inplace=True)
+
+    return df_sales
 
 
 def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_cols):
     # print('Starting section B...')
     log_record('A iniciar secção B...', options_file.project_id)
     start = time.time()
-    current_date, _ = time_tags()
-    # current_date = '2019-09-02'
+    # current_date, _ = time_tags()
+    current_date = '2019-09-30'
 
     try:
         df_sales = read_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date), index_col=0, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
@@ -134,28 +156,43 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     df_sales = lowercase_column_convertion(df_sales, configuration_parameters_cols)
 
     # Filtering rows with no relevant information
-    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    # print('1 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    # df_sales = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viatuas apenas Hyundai
+    print('2 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['VehicleData_Code'] != 1]
-    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    print('3 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['Sales_Type_Dealer_Code'] != 'Demo']
-    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    print('4 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['Sales_Type_Code_DMS'].isin(['RAC', 'STOCK', 'VENDA'])]
-    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    print('5 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[~df_sales['Dispatch_Type_Code'].isin(['AMBULÂNCIA', 'TAXI', 'PSP'])]
-    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    print('6 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
     df_sales = df_sales[df_sales['DaysInStock_Global'] >= 0]  # Filters rows where, for some odd reason, the days in stock are negative
-    # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    print('7 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    df_sales = df_sales[df_sales['Registration_Number'] != 'G.FORCE']  # Filters rows where, for some odd reason, the days in stock are negative
+    print('8 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+    df_sales = df_sales[df_sales['Customer_Group_Code'].notnull()]  # Filters rows where there is not client information;
+    print('9 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
 
     df_sales = new_features(df_sales, configuration_parameters_cols, options_file.project_id)
 
     # Remove unnecessary columns:
-    df_sales = remove_columns(df_sales, ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type', 'Registration_Number',
-                                         'NLR_Posting_Date', 'SLR_Document_Category', 'Chassis_Flag', 'SLR_Document_Date_CHS', 'SLR_Document_Period_CHS', 'SLR_Document_Year_CHS', 'SLR_Document_CHS', 'SLR_Document_Type_CHS',
-                                         'SLR_Account_CHS', 'SLR_Account_CHS_Key', 'Quantity_CHS', 'Registration_Flag', 'Analysis_Date_RGN', 'Analysis_Period_RGN', 'Analysis_Year_RGN', 'SLR_Document_Date_RGN',
-                                         'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'Location_Code', 'VehicleData_Key',
+    # df_sales = remove_columns(df_sales, ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type', 'Registration_Number',
+    #                                      'NLR_Posting_Date', 'SLR_Document_Category', 'Chassis_Flag', 'SLR_Document_Date_CHS', 'SLR_Document_Period_CHS', 'SLR_Document_Year_CHS', 'SLR_Document_CHS', 'SLR_Document_Type_CHS',
+    #                                      'SLR_Account_CHS', 'SLR_Account_CHS_Key', 'Quantity_CHS', 'Registration_Flag', 'Analysis_Date_RGN', 'Analysis_Period_RGN', 'Analysis_Year_RGN', 'SLR_Document_Date_RGN',
+    #                                      'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'Location_Code', 'VehicleData_Key',
+    #                                      'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
+    #                                      'Dispatch_Type_Code', 'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
+    #                                      'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'SLR_Account_Dealer_Code', 'Salesman_Dealer_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Vehicle_Code',
+    #                                      'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS'], options_file.project_id)
+
+    df_sales = remove_columns(df_sales, ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type',
+                                         'SLR_Document_Category', 'Chassis_Flag', 'SLR_Document_Period_CHS', 'SLR_Document_Year_CHS', 'SLR_Document_CHS', 'SLR_Document_Type_CHS',
+                                         'SLR_Account_CHS', 'Quantity_CHS', 'Registration_Flag', 'Analysis_Date_RGN', 'Analysis_Period_RGN', 'Analysis_Year_RGN',
+                                         'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'VehicleData_Key',
                                          'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
-                                         'Dispatch_Type_Code', 'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
-                                         'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'SLR_Account_Dealer_Code', 'Salesman_Dealer_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Vehicle_Code',
+                                         'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
+                                         'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
                                          'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS'], options_file.project_id)
 
     # Specific Measures Calculation
@@ -174,9 +211,11 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
     # Parameter Translation
     df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], translation_dictionaries, options_file.project_id)
-    df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']  # ToDo: Temporary filtering while this translation is not complete
+    df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']
+    print('10 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+
     # Target Variable Calculation
-    df_sales = score_calculation(df_sales, options_file.stock_days_threshold, options_file.margin_threshold, options_file.project_id)
+    # df_sales = score_calculation(df_sales, options_file.stock_days_threshold, options_file.margin_threshold, options_file.project_id)
 
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_translation')
 
@@ -193,11 +232,17 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_grouping')
 
+    # New VehicleData_Code Creation
+    df_sales['ML_VehicleData_Code'] = df_sales.groupby(configuration_parameters_cols).ngroup()
+    df_sales.to_csv('output/df_hyundai_testing.csv')
+
     columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 40, 41, 42, 43]] + \
                                  ['Chassis_Number', 'Total_Sales', 'Total_Discount', 'Total_Discount_%', 'Total_Net_Sales', 'Fixed_Margin_I', 'Fixed_Margin_I_%', 'stock_days_class', 'DaysInStock_Dealer',
                                   'DaysInStock_Distributor', 'Average_DaysInStock_Global', 'DaysInStock_Global', 'HME_Support']
 
     df_ohe = remove_columns(df_sales, columns_with_too_much_info, options_file.project_id)
+    df_sales.to_csv('output/df_hyundai_testing.csv')
+
     df_ohe = constant_columns_removal(df_ohe, options_file.project_id)
 
     heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_v1')
@@ -235,7 +280,7 @@ def model_evaluation(df_sales, models, best_models, running_times, classes, data
     start = time.time()
 
     results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, in_options_file, project_id)  # Creates a df with the performance of each model evaluated in various metrics
-    plot_roc_curve(best_models, models, datasets, 'roc_curve_temp')
+    # plot_roc_curve(best_models, models, datasets, 'roc_curve_temp')
 
     df_model_dict = multiprocess_model_evaluation(df_sales, models, datasets, best_models, predictions, configuration_parameters, oversample_flag, project_id)
     model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)

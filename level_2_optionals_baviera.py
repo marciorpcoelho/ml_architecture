@@ -116,7 +116,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_rows(df, [df.loc[df['Local da Venda'] == 'DCV - Viat.Toy Viseu', :].index], project_id)  # Removes the vehicles sold here, as they are from another brand (Toyota)
 
         df = margin_calculation(df)  # Calculates the margin in percentage of the total price
-        df = score_calculation(df, level_2_optionals_baviera_options.stock_days_threshold, level_2_optionals_baviera_options.margin_threshold, level_2_optionals_baviera_options.project_id)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
+        df = score_calculation(df, [level_2_optionals_baviera_options.stock_days_threshold], level_2_optionals_baviera_options.margin_threshold, level_2_optionals_baviera_options.project_id)  # Classifies the stockdays and margin based in their respective thresholds in tow classes (0 or 1) and then creates a new_score metric,
         # where only configurations with 1 in both dimension, have 1 as new_score
         df = new_column_creation(df, ['Local da Venda_v2'], df['Local da Venda'])
 

@@ -18,11 +18,12 @@ PWD = os.getenv('PWD')
 
 project_id = 2406
 update_frequency_days = 0
-stock_days_threshold = 150  # DaysInStock_Global
+# stock_days_threshold = 150  # DaysInStock_Global
+stock_days_threshold = [90, 120, 150, 180, 270, 365]
 margin_threshold = "nan"  # Currently there is no threshold;
 
 metric, metric_threshold = 'Accuracy', 0.70  # The metric to compare on the final models and the minimum threshold to consider;
-k, gridsearch_score = 5, 'recall'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
+k, gridsearch_score = 5, 'f1_weighted'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 
 
 sql_info = {
@@ -225,7 +226,7 @@ classification_models = {
     'ab': [AdaBoostClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
     'gc': [GradientBoostingClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
     'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100]}]],  # ToDo: need to add L1 (reg_alpha) and L2 (reg_lambda) regularization to counter the overfitting
-    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50], 'n_estimators': [50, 100, 200], 'objective': ['binary'], 'metric': ['auc']}]],
+    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50], 'n_estimators': [50, 100, 200], 'objective': ['multiclass']}]],
     'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
     'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100), 'solver': ['sgd'], 'max_iter': [1000]}]],
     'voting': [VotingClassifier, [{'voting': ['soft']}]]
