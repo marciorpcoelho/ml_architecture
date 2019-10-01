@@ -667,23 +667,23 @@ def score_calculation(df, stockdays_threshold, margin_threshold, project_id):
 
     elif project_id == 2406:
         # Binary Approach
-        df['stock_days_class'] = 0
-        df.loc[df['DaysInStock_Global'] <= stockdays_threshold, 'stock_days_class'] = 1
-
-        df['target_class'] = 0
-        df.loc[(df['stock_days_class'] == 1), 'target_class'] = 1
+        # df['stock_days_class'] = 0
+        # df.loc[df['DaysInStock_Global'] <= stockdays_threshold, 'stock_days_class'] = 1
+        #
+        # df['target_class'] = 0
+        # df.loc[(df['stock_days_class'] == 1), 'target_class'] = 1
 
         # MultiCLass Approach v1
-        # df['target_class'] = 0
-        # number_of_classes = len(stockdays_threshold)
-        #
-        # df.loc[df['DaysInStock_Global'] <= stockdays_threshold[0], 'target_class'] = 0
-        # df.loc[(df['DaysInStock_Global'] > 90) & (df['DaysInStock_Global'] <= 120), 'target_class'] = 1
-        # df.loc[(df['DaysInStock_Global'] > 120) & (df['DaysInStock_Global'] <= 150), 'target_class'] = 2
-        # df.loc[(df['DaysInStock_Global'] > 150) & (df['DaysInStock_Global'] <= 180), 'target_class'] = 3
-        # df.loc[(df['DaysInStock_Global'] > 180) & (df['DaysInStock_Global'] <= 270), 'target_class'] = 4
-        # df.loc[(df['DaysInStock_Global'] > 270) & (df['DaysInStock_Global'] <= 365), 'target_class'] = 5
-        # df.loc[df['DaysInStock_Global'] > stockdays_threshold[number_of_classes - 1], 'target_class'] = number_of_classes
+        df['target_class'] = 0
+        number_of_classes = len(stockdays_threshold)
+
+        df.loc[df['DaysInStock_Global'] <= stockdays_threshold[0], 'target_class'] = 0
+        df.loc[(df['DaysInStock_Global'] > 90) & (df['DaysInStock_Global'] <= 120), 'target_class'] = 1
+        df.loc[(df['DaysInStock_Global'] > 120) & (df['DaysInStock_Global'] <= 150), 'target_class'] = 2
+        df.loc[(df['DaysInStock_Global'] > 150) & (df['DaysInStock_Global'] <= 180), 'target_class'] = 3
+        df.loc[(df['DaysInStock_Global'] > 180) & (df['DaysInStock_Global'] <= 270), 'target_class'] = 4
+        df.loc[(df['DaysInStock_Global'] > 270) & (df['DaysInStock_Global'] <= 365), 'target_class'] = 5
+        df.loc[df['DaysInStock_Global'] > stockdays_threshold[number_of_classes - 1], 'target_class'] = number_of_classes
 
     return df
 

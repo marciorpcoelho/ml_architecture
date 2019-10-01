@@ -215,7 +215,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     print('10 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
 
     # Target Variable Calculation
-    # df_sales = score_calculation(df_sales, options_file.stock_days_threshold, options_file.margin_threshold, options_file.project_id)
+    df_sales = score_calculation(df_sales, options_file.stock_days_threshold, options_file.margin_threshold, options_file.project_id)
 
     # value_count_histogram(df_sales, configuration_parameters_cols + ['target_class'] + ['DaysInStock_Global'], 'hyundai_2406_translation')
 
@@ -243,13 +243,17 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     df_ohe = remove_columns(df_sales, columns_with_too_much_info, options_file.project_id)
     df_sales.to_csv('output/df_hyundai_testing.csv')
 
+    df_ohe = remove_columns(df_ohe, ['Registration_Number', 'NLR_Posting_Date', 'SLR_Document_Date_CHS', 'SLR_Account_CHS_Key', 'SLR_Document_Date_RGN', 'Location_Code',
+                                     'Dispatch_Type_Code', 'SLR_Account_Dealer_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date'], options_file.project_id)
+
     df_ohe = constant_columns_removal(df_ohe, options_file.project_id)
 
     heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_v1')
 
     df_ohe.to_csv('output/df_hyundai_dataset.csv')
     df_ohe = ohe(df_ohe, configuration_parameters_cols + ['Sales_Type_Dealer_Code'])
-    print('Base line accuracy performance (majority class %) is: {:.4f}'.format(df_ohe[df_ohe['target_class'] == 1].shape[0] / df_ohe.shape[0]))
+    majority_class = df_ohe['target_class'].value_counts().index[0]
+    print('Base line accuracy performance (majority class %) is: {:.4f}'.format(df_ohe[df_ohe['target_class'] == majority_class].shape[0] / df_ohe.shape[0]))
     df_ohe.to_csv('output/df_hyundai_ohe.csv')
 
     heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_ohe_v1')
