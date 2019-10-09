@@ -122,10 +122,11 @@ def dw_data_retrieval(pse_code, current_date, options_info, update):
     stock_info = ['dbs/df_stock', options_info.stock_query]
     reg_info = ['dbs/df_reg', options_info.reg_query]
     reg_al_info = ['dbs/df_reg_al_client', options_info.reg_autoline_clients]
+    product_group_dw = ['dbs/df_product_group_dw', options_info.dim_product_group_dw]
 
     dfs = []
 
-    for dimension in [sales_info, purchases_info, stock_info, reg_info, reg_al_info]:
+    for dimension in [sales_info, purchases_info, stock_info, reg_info, reg_al_info, product_group_dw]:
 
         if update:
             file_name = dimension[0] + '_' + str(pse_code) + '_' + str(current_date)
@@ -147,6 +148,7 @@ def dw_data_retrieval(pse_code, current_date, options_info, update):
     df_stock = dfs[2]
     df_reg = dfs[3]
     df_reg_al_clients = dfs[4]
+    df_product_group_dw = dfs[5]
 
     df_purchases['Movement_Date'] = pd.to_datetime(df_purchases['Movement_Date'], format='%Y%m%d')
     df_purchases['WIP_Date_Created'] = pd.to_datetime(df_purchases['WIP_Date_Created'], format='%Y%m%d')
@@ -158,7 +160,7 @@ def dw_data_retrieval(pse_code, current_date, options_info, update):
     df_stock['Record_Date'] = pd.to_datetime(df_stock['Record_Date'], format='%Y%m%d')
     df_stock.rename(index=str, columns={'Quantity': 'Stock_Qty'}, inplace=True)
 
-    return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients
+    return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_product_group_dw
 
 
 def autoline_data_retrieval(pse_code, current_date):

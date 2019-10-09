@@ -284,6 +284,17 @@ def additional_info(x, tag):
     return x
 
 
+def additional_info_temp(x, tag):
+    # This function is very similar to additional_info with exception to average_score_pred, as this function was created to deal with a non-trained approach;
+
+    x['nr_cars_sold' + str(tag[0])] = len(x)
+    x['average_percentage_margin' + str(tag[0])] = x['margem_percentagem'].mean()
+    x['average_stock_days' + str(tag[0])] = x['stock_days'].mean()
+    x['average_score' + str(tag[0])] = x['score_class_gt'].mean()
+    x['average_score_euros' + str(tag[0])] = x['score_euros'].mean()
+    return x
+
+
 def df_decimal_places_rounding(df, dictionary):
 
     df = df.round(dictionary)
@@ -576,3 +587,21 @@ def plot_conf_matrix(groundtruth, prediction, classes, model, project_id):
     # plt.show()
     plt.clf()
     plt.close()
+
+
+def data_grouping_by_locals_temp(df, configuration_parameters):
+    df['score_class_gt'] = df['new_score']
+
+    df_grouped = df.groupby(configuration_parameters)
+    df = df_grouped.apply(additional_info_temp, ('',))
+
+    df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda'])
+    df = df_grouped2.apply(additional_info_temp, ('_local',))
+
+    df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda_v2'])
+    df = df_grouped3.apply(additional_info_temp, ('_local_v2',))
+
+    print(df.head())
+    df.to_csv('output/bmw_dataset.csv')
+
+    return 'N/A', df, df.shape[0]

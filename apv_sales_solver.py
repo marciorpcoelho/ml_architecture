@@ -1,5 +1,6 @@
 import sys
 import time
+import cvxpy as cp
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -33,7 +34,7 @@ def main():
     current_date = '20190816'
     try:
         # df_solve = pd.read_csv('output/df_solve_0B_filtered.csv', index_col=0)
-        df_solve = pd.read_csv('output/df_solve_0B.csv', index_col=0)
+        df_solve = pd.read_csv('output/df_solve_0B_backup.csv', index_col=0)
         print('df_solve found...')
     except FileNotFoundError:
         print('df_solve file not found, processing a new one...')
@@ -44,9 +45,11 @@ def main():
     dtss_goal = group_goals['dtss_goal']
     number_of_parts_goal = group_goals['number_of_unique_parts']
 
-    df_solve = df_solve[df_solve['DaysToSell_1_Part'] <= dtss_goal]  # 6110 to 650
+    # df_solve = df_solve[df_solve['DaysToSell_1_Part'] <= dtss_goal]  # 6110 to 650
+    df_solve = df_solve[df_solve['DaysToSell_1_Part'] > 0]
+    df_solve = df_solve[df_solve['Group'] != 'NO_TA']
     for key, group in df_solve.groupby('Group'):
-        if key in ['BMW_Bonus_Group_1', 'Outros', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4']:
+        if key in ['Outros', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4']:
             continue
         else:
             goal_value = group_goals[key][0]
@@ -57,10 +60,91 @@ def main():
             print('There are {} unique part_refs for {}'.format(len(group), key))
             # print('Cost goal: {}, Sale Goal: {}, DTSS Goal: {}'.format(cost_goal, sales_goal, dtss_goal))
             print('{} goal: {}, DTSS Goal: {}'.format(goal_type, goal_value, dtss_goal))
-            solver(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_type, dtss_goal, number_of_parts_goal, total_number_of_parts_goal)
+            # solver_lp(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_type, dtss_goal, number_of_parts_goal, total_number_of_parts_goal)
+            # solver_ip_example()
+            solver_ip(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_type, dtss_goal, number_of_parts_goal, total_number_of_parts_goal)
 
 
-def solver(df_solve, group, goal_value, goal_type, dtss_goal, number_of_unique_parts_goal, total_number_of_parts_goal):
+def solver_ip_example():
+    P = 165
+    weights = np.array([23, 31, 29, 44, 53, 38, 63, 85, 89, 82])
+    utilities = np.array([92, 57, 49, 68, 60, 43, 67, 84, 87, 72])
+
+    # The variable we are solving for
+    selection = cp.Variable(len(weights), boolean=True)
+    print('a', selection)
+
+    # The sum of the weights should be less than or equal to P
+    weight_constraint = weights * selection <= P
+    print('a', weight_constraint)
+
+    # Our total utility is the sum of the item utilities
+    total_utility = utilities * selection
+
+    # We tell cvxpy that we want to maximize total utility
+    # subject to weight_constraint. All constraints in
+    # cvxpy must be passed as a list
+    knapsack_problem = cp.Problem(cp.Maximize(total_utility), [weight_constraint])
+
+    # Solving the problem
+    result = knapsack_problem.solve(solver=cp.GLPK_MI)
+    print('Result of optimization:', result)
+
+    print('Result:', selection.value)
+
+
+def solver_ip(df_solve, group, goal_value, goal_type, dtss_goal, number_of_unique_parts_goal, total_number_of_parts_goal):
+    print('Solving for {}...'.format(group))
+    unique_parts = df_solve['Part_Ref'].unique()
+    df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
+    start = time.time()
+
+    n_size = df_solve['Part_Ref'].nunique()  # Number of different parts
+    # dtss_goals = np.array([dtss_goal] * n_size)
+
+    values = np.array(df_solve[goal_type].values.tolist())  # Costs/Sale prices for each reference, info#1
+    dtss = np.array(df_solve['DaysToSell_1_Part'].values.tolist())  # Days to Sell of each reference, info#2
+
+    selection = cp.Variable(n_size, integer=True)
+    # dtss_list = [sel * dts for sel, dts in zip(selection, dtss)]
+
+    # dtss_constraint = dtss_list <= 10  # Constraint#1
+    # value_constraint = selection * values >= goal_value
+    # dtss_constraint = selection * dtss <= 2000
+    # dtss_constraint = cp.max(selection * dtss, axis=0) <= dtss_goal
+    # dtss_constraint = cp.max([x * y for x, y in zip(selection, dtss)], axis=0) <= dtss_goal
+
+    # dtss_constraint = cp.max(cp.bmat([selection, dtss])) <= dtss_goal
+    dtss_constraint = cp.max(cp.diag(cp.matmul(selection.T, dtss)))
+    # print(dtss_constraint)
+    # print()
+
+    total_value = values * selection
+    # print('b', total_value)
+
+    # value_constraint = total_value >= goal_value
+    # print('b', value_constraint)
+    problem_testing_2 = cp.Problem(cp.Maximize(total_value), [total_value >= goal_value, dtss_constraint <= dtss_goal, selection >= 0, selection <= 1000])
+
+    result = problem_testing_2.solve(verbose=False)
+
+    print('Status of optimization:', problem_testing_2.status)
+    print('Result of optimization:', result)
+    print('Part Order:\n', selection.value)
+    if selection.value is not None:
+        print('Solution Found :D')
+        [print(part + ': ' + str(qty) + ' and cost/sell value of {}, DTSS: {:.2f}'.format(value, dts)) for part, value, qty, dts in zip(unique_parts, values, selection.value, dtss) if qty >= 1]
+        print(np.matmul(selection.value, values))
+
+        print('Total {} of: {:.2f} / {:.2f} ({:.2f}%) \nDays to Sell: {:.2f} / {:.2f} ({:.2f}%)'
+              .format(goal_type, np.sum(values), goal_value, (np.sum(values) / goal_value) * 100, np.max([dts * qty for dts, qty in zip(dtss, selection.value)]), dtss_goal, (np.max(dtss) / dtss_goal) * 100))
+    else:
+        print('No Solution found :(')
+
+    print('Elapsed time: {:.2f} seconds.\n'.format(time.time() - start))
+
+
+def solver_lp(df_solve, group, goal_value, goal_type, dtss_goal, number_of_unique_parts_goal, total_number_of_parts_goal):
     print('Solving for {}...'.format(group))
     unique_parts = df_solve['Part_Ref'].unique()
     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
@@ -235,7 +319,7 @@ def days_to_sell_calculation(ns, dtss, dtss_goal):
     # days_to_sell = [n * dts for n, dts in zip(ns, dtss)]
     # max_days_to_sell = dtss_goal - np.max(days_to_sell)
 
-    days_to_sell = np.matmul(ns, dtss)
+    days_to_sell = np.matmul(ns, dtss)  # This is wrong. It returns a single value, which is the sum of all the multiplications, which is not the value we want, is it? 02/10/19
     current_days_to_sell = dtss_goal - days_to_sell  # Goal - DTS >= 0
 
     dtss_evolution.append(current_days_to_sell)
@@ -322,7 +406,6 @@ def solver_metrics_per_part_ref(args):
     # final_df = pd.DataFrame()
 
     if df_sales_filtered['Qty_Sold_sum_al'].sum() >= 0 and df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:  # This checkup is needed as I can not enforce it before when processing a time interval, only when processing all data
-
         df_sales_filtered.set_index('index', inplace=True)
         # I should use last purchase date/cost, but first: not all parts have purchases (e.g. BM83.13.9.415.965) and second, they should give the same value.
 
@@ -382,6 +465,32 @@ def solver_metrics_per_part_ref(args):
 
                 # print('Part_Ref: {}, Cost: {:.2f}, PVP: {:.2f}, Margin: {:.2f}, Last Stock Value: {}, Last Year COGS: {}, DII Year: {:.2f}, Last Stock: {}, Last Year Sales Avg: {}, DII Year weekdays: {:.2f}, DaysToSell_1_Part: {:.2f},'
                 #       .format(part_ref, last_cost, last_pvp, margin, last_stock_value, last_year_cogs, dii_year, last_stock, last_year_sales_avg, avg_sales_per_day, days_to_sell_1_part))
+
+    elif df_sales_filtered['Qty_Sold_sum_al'].sum() >= 0 and df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0].shape[0] == 1:  # For these cases ill try to fetch the last purchase for this part;
+        df_sales_filtered.set_index('index', inplace=True)
+
+        df_sales_filtered_positive_sales_mask = df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0]
+
+        unique_sale_date = df_sales_filtered_positive_sales_mask.index.values[0]
+        quantity_sold = df_sales_filtered_positive_sales_mask['Qty_Sold_sum_al'].sum()
+        purchases = df_sales_filtered[(df_sales_filtered['Qty_Purchased_sum'] > 0) & (df_sales_filtered.index < unique_sale_date)].index.values  # Select the purchases with date inferior to the sale date. Less than and not less or equal, as I will ignore the (weird) same day-purchase-sales
+
+        df_last_sale = df_sales_filtered.loc[unique_sale_date, ['Cost_Sale_avg', 'PVP_avg']].values
+        last_cost = df_last_sale[0]
+        last_pvp = df_last_sale[1]
+        margin = (last_pvp - last_cost)
+
+        if not len(purchases):
+            return None
+
+        last_purchase_date = max(purchases)
+        days_to_sell_1_part_unique_sale = pd.to_timedelta(unique_sale_date - last_purchase_date, unit='D').days / quantity_sold
+
+        if margin < 0:
+            return None
+
+        df_solve.loc[0, ['Part_Ref', 'Cost', 'PVP', 'Margin', 'DII Year', 'DII Year weekdays', 'DaysToSell_1_Part', 'DTS_Total_Qty_Sold', 'DTS_Min_Total_Qty_Sold', 'DTS_Max_Total_Qty_Sold']] = \
+            [part_ref, last_cost, last_pvp, margin, np.NaN, np.NaN, days_to_sell_1_part_unique_sale, np.NaN, quantity_sold, quantity_sold]
 
     return df_solve
 

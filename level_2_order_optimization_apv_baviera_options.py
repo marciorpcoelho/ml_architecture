@@ -219,6 +219,15 @@ reg_autoline_clients = '''
     FROM [BI_CRP].dbo.[PSE_Mapping_Adjustments_SLR_Accounts] WITH (NOLOCK)  
     WHERE nlr_code = '701' '''
 
+dim_product_group_dw = '''
+    SELECT Product_Group_Code,
+        Product_Group_Level_1_Code,
+        Product_Group_Level_2_Code,
+        PT_Product_Group_Level_1_Desc,
+        PT_Product_Group_Level_2_Desc,
+        PT_Product_Group_Desc
+    FROM [BI_CRP].dbo.[PSE_Dim_Product_Groups_GSC] '''
+
 regex_dict = {
     'bmw_part_ref_format': r'BM\d{2}\.\d{2}\.\d{1}\.\d{3}.\d{3}'
 }

@@ -7,7 +7,7 @@ from level_2_optionals_baviera_options import project_id, classification_models,
 from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
 from level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
 from level_1_c_data_modelling import model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation
+from level_1_d_model_evaluation import performance_evaluation, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
 from level_1_e_deployment import sql_inject, sql_age_comparison, sql_mapping_upload
 from level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
 pd.set_option('display.expand_frame_repr', False)
@@ -21,6 +21,7 @@ configuration_parameters = level_2_optionals_baviera_options.selected_configurat
 
 running_times_upload_flag = 1
 dict_sql_upload_flag = 0
+model_training_check = 0  # Check that disables the model training. This was placed in order to disable the machine learning grouping and respective training.
 
 if dict_sql_upload_flag:
     dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.sales_place_dict_v2, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.motor_dict_v2]
@@ -43,8 +44,13 @@ def main():
     number_of_features = 'all'
     df = data_acquistion(input_file, query_filters, local=0)
     df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
-    classes, best_models, running_times = data_modelling(df, datasets, models)
-    model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, oversample_check, project_id)
+
+    if model_training_check:
+        classes, best_models, running_times = data_modelling(df, datasets, models)
+        model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, oversample_check, project_id)
+    else:
+        model_choice_message, best_model, vehicle_count = data_grouping_by_locals_temp(df, configuration_parameters)
+
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
     performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options, model_choice_message, vehicle_count, running_times_upload_flag)
@@ -120,10 +126,14 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         # where only configurations with 1 in both dimension, have 1 as new_score
         df = new_column_creation(df, ['Local da Venda_v2'], df['Local da Venda'])
 
-        cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Exterior', 'Cor_Interior', 'Motor']
-        mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings'], 'Mapped_Value', level_2_optionals_baviera_options)
-        df = col_group(df, cols_to_group_layer_2, mapping_dictionaries, project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective
-        # groups are shown in level_2_optionals_baviera_options
+        if model_training_check:
+            cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Exterior', 'Cor_Interior', 'Motor']
+            mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings'], 'Mapped_Value', level_2_optionals_baviera_options)
+        else:
+            cols_to_group_layer_2 = ['Local da Venda', 'Local da Venda_v2']
+            mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings_temp'], 'Mapped_Value', level_2_optionals_baviera_options)
+
+        df = col_group(df, cols_to_group_layer_2, mapping_dictionaries, project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective groups are shown in level_2_optionals_baviera_options
 
         df = new_features(df, configuration_parameters, project_id)  # Creates a series of new features, explained in the provided pdf
 
@@ -183,8 +193,7 @@ def model_evaluation(df, models, best_models, running_times, classes, datasets, 
     performance_info_append(time.time(), 'start_section_d')
     log_record('Started Step D...', proj_id)
 
-    results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, options_file, proj_id)  # Creates a df with the performance of each model evaluated in various metrics, explained
-    # in the provided pdf
+    results_training, results_test, predictions = performance_evaluation(models, best_models, classes, running_times, datasets, options_file, proj_id)  # Creates a df with the performance of each model evaluated in various metrics, explained in the provided pdf
     plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features))
 
     df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, oversample_check, proj_id)
@@ -208,7 +217,10 @@ def deployment(df, db, view):
 
     if df is not None:
         df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
-        sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql, truncate=1, check_date=1)
+        if model_training_check:
+            sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql, truncate=1, check_date=1)
+        else:
+            sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql_temp, truncate=1, check_date=1)
 
     log_record('Finished Step E.', project_id)
     performance_info_append(time.time(), 'end_section_e')

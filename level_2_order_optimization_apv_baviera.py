@@ -38,7 +38,7 @@ def data_acquistion(options_info, current_date):
     pse_code = options_info.pse_code
     start = time.time()
 
-    df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients = dw_data_retrieval(pse_code, current_date, options_info, update)
+    df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_product_group_dw = dw_data_retrieval(pse_code, current_date, options_info, update)
     df_al = autoline_data_retrieval(pse_code, current_date)
 
     print('Elapsed time: {:.2f}'.format(time.time() - start))

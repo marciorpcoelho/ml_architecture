@@ -34,8 +34,9 @@ sql_info = {
     'vhe_number_history': 'VHE_NrVehicles_History',
     'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
-    'final_table': 'VHE_Fact_BI_OrderOptimization',
+    'final_table': 'VHE_Fact_BI_OrderOptimization_copy',
     'mappings': ['VHE_MapBI_Rims_Size', 'VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Model', 'VHE_MapBI_Version', 'VHE_MapBI_Interior_Type', 'VHE_MapBI_Color_Ext', 'VHE_MapBI_Color_Int', 'VHE_MapBI_Motor_Desc'],
+    'mappings_temp': ['VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2'],  # When no training is needed in this project
 }
 
 project_id = 2162
@@ -283,6 +284,16 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
                    'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2',
                    'Average_Score_Class_Pred_Local', 'Average_Score_Class_Pred_Local_v2', 'Registration_Number', 'VHE_Number']
+
+columns_for_sql_temp = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
+                        'Sales_Place_v2', 'Model_Code', 'Margin', 'Margin_Percentage',
+                        'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value',
+                        'Sell_Date', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
+                        'Xenon_Lights', 'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
+                        'Average_Stock_Days', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
+                        'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
+                        'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Registration_Number', 'VHE_Number',
+                        'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2', 'Score_Class_GT']
 
 column_performance_sql_renaming = {
     'start_section_a': 'Section_A_Start',
