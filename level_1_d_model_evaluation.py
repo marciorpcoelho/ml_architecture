@@ -45,10 +45,10 @@ class ClusterEvaluation(object):
 class RegressionEvaluation(object):
     def __init__(self, groundtruth, prediction):
         self.mse = mean_squared_error(groundtruth, prediction)  # Mean Square Error
-        self.score = r2_score(groundtruth, prediction)
+        self.r2_score = r2_score(groundtruth, prediction)
 
 
-def performance_evaluation(models, best_models, classes, running_times, datasets, options_file, project_id):
+def performance_evaluation_classification(models, best_models, classes, running_times, datasets, options_file, project_id):
 
     results_train, results_test = [], []
     predictions, feat_importance = {}, pd.DataFrame(index=list(datasets['train_x']), columns={'Importance'})
@@ -133,6 +133,54 @@ def performance_evaluation(models, best_models, classes, running_times, datasets
 
     # performance_df = pd.concat([df_results_train, df_results_test])
     # performance_df.to_csv('output/performance_hyundai_multiclass.csv')
+
+    sql_inject(pd.concat([df_results_train, df_results_test]), performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
+
+    return df_results_train, df_results_test, predictions
+
+
+def performance_evaluation_regression(models, best_models, running_times, datasets, options_file, project_id):
+
+    results_train, results_test = [], []
+    predictions, feat_importance = {}, pd.DataFrame(index=list(datasets['train_x']), columns={'Importance'})
+    for model in models:
+        prediction_train = best_models[model].predict(datasets['train_x'])
+        prediction_test = best_models[model].predict(datasets['test_x'])
+        evaluation_training = RegressionEvaluation(groundtruth=datasets['train_y'], prediction=prediction_train)
+        evaluation_test = RegressionEvaluation(groundtruth=datasets['test_y'], prediction=prediction_test)
+        predictions[model] = [prediction_train.astype(int, copy=False), prediction_test.astype(int, copy=False)]
+
+        try:
+            feat_importance['Importance'] = best_models[model].feature_importances_
+            feat_importance.sort_values(by='Importance', ascending=False, inplace=True)
+            feat_importance.to_csv('output/' + 'feature_importance_' + str(model) + '.csv')
+        except AttributeError:
+            pass
+
+        row_train = {'R2': getattr(evaluation_training, 'r2_score'),
+                     'MSE': getattr(evaluation_training, 'mse'),
+                     'RMSE': np.sqrt(getattr(evaluation_training, 'mse')),
+                     'Running_Time': running_times[model]}
+
+        row_test = {'R2': getattr(evaluation_test, 'r2_score'),
+                    'MSE': getattr(evaluation_test, 'mse'),
+                    'RMSE': np.sqrt(getattr(evaluation_test, 'mse')),
+                    'Running_Time': running_times[model]}
+
+        results_train.append(row_train)
+        results_test.append(row_test)
+
+    df_results_train = pd.DataFrame(results_train, index=models)
+    df_results_train['Algorithms'] = df_results_train.index
+    df_results_train['Dataset'] = ['Train'] * df_results_train.shape[0]
+    df_results_train['Project_Id'] = [project_id] * df_results_train.shape[0]
+    df_results_test = pd.DataFrame(results_test, index=models)
+    df_results_test['Algorithms'] = df_results_test.index
+    df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
+    df_results_test['Project_Id'] = [project_id] * df_results_train.shape[0]
+
+    # metric_bar_plot(df_results_train, 'project_{}_train_dataset'.format(project_id))
+    # metric_bar_plot(df_results_test, 'project_{}_test_dataset'.format(project_id))
 
     sql_inject(pd.concat([df_results_train, df_results_test]), performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
 

@@ -6,7 +6,7 @@ from py_dotenv import read_dotenv
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
 from sklearn import tree, linear_model, neighbors, svm
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
 
 dotenv_path = 'info.env'
 read_dotenv(dotenv_path)
@@ -22,8 +22,8 @@ update_frequency_days = 0
 stock_days_threshold = [90, 120, 150, 180, 270, 365]
 margin_threshold = "nan"  # Currently there is no threshold;
 
-metric, metric_threshold = 'Accuracy', 0.70  # The metric to compare on the final models and the minimum threshold to consider;
-k, gridsearch_score = 5, 'f1_weighted'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
+metric, metric_threshold = 'r2_score', 0.60  # The metric to compare on the final models and the minimum threshold to consider;
+k, gridsearch_score = 2, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 
 
 sql_info = {
@@ -230,6 +230,12 @@ classification_models = {
     'bayes': [GaussianNB],  # ToDo: Need to create an exception for this model
     'ann': [MLPClassifier, [{'activation': ['identity', 'logistic', 'tanh', 'relu'], 'hidden_layer_sizes': (100, 100), 'solver': ['sgd'], 'max_iter': [1000]}]],
     'voting': [VotingClassifier, [{'voting': ['soft']}]]
+}
+
+regression_models = {
+    'rf': [RandomForestRegressor, [{'max_depth': [3, 5, 7, 9, 11, 13], 'n_estimators': [50, 100, 200, 250, 500]}]],
+    'lgb': [lgb.LGBMRegressor, [{'num_leaves': [5, 10, 15, 20, 25, 30, 35, 50, 100], 'max_depth': [3, 5, 7, 9, 11, 13], 'n_estimators': [50, 100, 200, 250, 500]}]],
+    'xgb': [xgb.XGBRegressor, [{'objective': ['reg:squarederror'], 'max_depth': [3, 5, 7, 9, 11, 13], 'n_estimators': [50, 100, 200, 250, 500]}]],
 }
 
 

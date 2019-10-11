@@ -32,7 +32,7 @@ class ClassificationTraining(object):
     def grid_search(self, parameters, k, score):
         self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, iid=True, n_jobs=-1)
 
-    def clf_fit(self, x, y):
+    def clf_grid_fit(self, x, y):
         self.grid.fit(x, y)
 
     def predict(self, x):
@@ -84,7 +84,7 @@ class RegressionTraining(object):
         return self.clf.predict(x)
 
     def grid_search(self, parameters, k, score):
-        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, iid=True, scoring=score)
+        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, iid=True, scoring=score, n_jobs=-1)
 
     def clf_grid_fit(self, x, y):
         self.grid.fit(x, y)
@@ -93,7 +93,7 @@ class RegressionTraining(object):
         self.clf.fit(x, y)
 
 
-def model_training(models, train_x, train_y, classification_models, k, gridsearch_score, project_id):
+def classification_model_training(models, train_x, train_y, classification_models, k, gridsearch_score, project_id):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
     clf, classes = None, None
 
@@ -104,7 +104,7 @@ def model_training(models, train_x, train_y, classification_models, k, gridsearc
             parameters = {'estimators': [(x, y) for x, y in zip(best_models_pre_fit.keys(), best_models_pre_fit.values())]}
             vote_clf = ClassificationTraining(clf=classification_models['voting'][0], params=parameters)
             vote_clf.grid_search(parameters=classification_models['voting'][1], k=k, score=gridsearch_score)
-            vote_clf.clf_fit(x=train_x, y=train_y.values.ravel())
+            vote_clf.clf_grid_fit(x=train_x, y=train_y.values.ravel())
             vote_clf_best = vote_clf.grid.best_estimator_
             vote_clf_best.fit(train_x, train_y.values.ravel())
             best_models_pos_fit['voting'] = vote_clf_best
@@ -113,7 +113,7 @@ def model_training(models, train_x, train_y, classification_models, k, gridsearc
             start = time.time()
             clf = ClassificationTraining(clf=classification_models[model][0])
             clf.grid_search(parameters=classification_models[model][1], k=k, score=gridsearch_score)
-            clf.clf_fit(x=train_x, y=train_y.values.ravel())
+            clf.clf_grid_fit(x=train_x, y=train_y.values.ravel())
             clf_best = clf.grid.best_estimator_
 
             best_models_pre_fit[model] = clf_best
@@ -125,6 +125,32 @@ def model_training(models, train_x, train_y, classification_models, k, gridsearc
         classes = clf.grid.classes_
 
     return classes, best_models_pos_fit, running_times
+
+
+def regression_model_training(models, train_x, train_y, regression_models, k, gridsearch_score, project_id):
+    best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
+    clf, classes = None, None
+
+    print(train_x.shape)
+    print(train_y.shape)
+
+    print(train_x.head())
+
+    for model in models:
+        log_record('Modelo: {}'.format(dict_models_name_conversion[model][0]), project_id)
+        start = time.time()
+        clf = RegressionTraining(clf=regression_models[model][0])
+        clf.grid_search(parameters=regression_models[model][1], k=k, score=gridsearch_score)
+        clf.clf_grid_fit(x=train_x, y=train_y.values.ravel())
+        clf_best = clf.grid.best_estimator_
+
+        best_models_pre_fit[model] = clf_best
+        clf_best.fit(train_x, train_y.values.ravel())
+        best_models_pos_fit[model] = clf_best
+
+        running_times[model] = time.time() - start
+
+    return best_models_pos_fit, running_times
 
 
 def clustering_training(df, max_n_clusters):

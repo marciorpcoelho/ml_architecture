@@ -35,6 +35,18 @@ def vehicle_count_checkup(df, options_file, sql_check=0):
     return
 
 
+def missing_customer_info_treatment(df_sales):
+
+    df_vehicles_wo_clients = pd.read_excel('dbs/viaturas_sem_cliente_final rb.xlsx', usecols=['Chassis_Number', 'Registration_Number', 'conc / nº cliente navision'], dtype={'conc / nº cliente navision': str}).dropna()
+    df_vehicles_wo_clients.rename(index=str, columns={'conc / nº cliente navision': 'SLR_Account_CHS_Key'}, inplace=True)
+    df_vehicles_wo_clients['SLR_Account_CHS_Key'] = '702_' + df_vehicles_wo_clients['SLR_Account_CHS_Key']
+    df_sales = level_b.df_join_function(df_sales, df_vehicles_wo_clients[['Chassis_Number', 'SLR_Account_CHS_Key']].set_index('Chassis_Number'), on='Chassis_Number', rsuffix='_new', how='left')
+    df_sales = level_b.value_substitution(df_sales, non_null_column='SLR_Account_CHS_Key_new', null_column='SLR_Account_CHS_Key')  # Replaces description by summary when the first is null and second exists
+    df_sales.drop(['SLR_Account_CHS_Key_new'], axis=1, inplace=True)
+
+    return df_sales
+
+
 # This function works really well for one single function on scheduler (provided i had sys.stdout.flush() to the end of each file). But if more than one functions are running at the same time (different threads) the stdout
 # saved is all mixed and saved on the file of the last function; - trying now with logging module
 def log_files(project_name, output_dir='logs/'):

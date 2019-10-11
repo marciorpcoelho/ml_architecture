@@ -14,7 +14,7 @@ from dateutil.relativedelta import relativedelta
 from nltk.stem.snowball import SnowballStemmer
 from sklearn.feature_selection import f_classif, SelectKBest
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, RobustScaler
 from imblearn.over_sampling import RandomOverSampler
 import level_0_performance_report
 from level_1_e_deployment import sql_string_preparation_v2, time_tags
@@ -838,14 +838,26 @@ def df_copy(df):
     return df, copy
 
 
-def dataset_split(df, target, oversample=0):
-    df_train, df_test = train_test_split(df, stratify=df[target], random_state=2)  # This ensures that the classes are evenly distributed by train/test datasets; Default split is 0.75/0.25 train/test
+def dataset_split(df, target, oversample=0, objective='classification'):
+    if objective == 'classification':
+        df_train, df_test = train_test_split(df, stratify=df[target], random_state=2)  # This ensures that the classes are evenly distributed by train/test datasets; Default split is 0.75/0.25 train/test
+        # df_train_x, df_test_x, df_train_y, df_test_y = train_test_split(df, stratify=df[target], random_state=2)
 
-    df_train_y = df_train[target]
-    df_train_x = df_train.drop(target, axis=1)
+        df_train_y = df_train[target]
+        df_train_x = df_train.drop(target, axis=1)
 
-    df_test_y = df_test[target]
-    df_test_x = df_test.drop(target, axis=1)
+        df_test_y = df_test[target]
+        df_test_x = df_test.drop(target, axis=1)
+
+    elif objective == 'regression':
+        df_train_x, df_test_x, df_train_y, df_test_y = train_test_split(df, df[target], test_size=0.2, random_state=5)
+        print(df_train_x.head())
+
+        # ToDo: This is only temporary to make things work:
+        df_train_x.drop('DaysInStock_Global', inplace=True, axis=1)
+        df_train_x.drop('Fixed_Margin_II', inplace=True, axis=1)
+        df_test_x.drop('DaysInStock_Global', inplace=True, axis=1)
+        df_test_x.drop('Fixed_Margin_II', inplace=True, axis=1)
 
     if oversample:
         print('Oversampling small classes...')
@@ -1520,3 +1532,46 @@ def parameter_processing_hyundai(df_sales, options_file, description_cols):
     df_sales.loc[:, 'PT_PDB_Model_Desc'] = df_sales['PT_PDB_Model_Desc'].str.split().str[0]
 
     return df_sales
+
+
+def pandas_object_columns_categorical_conversion(df):
+
+    for c in df.columns:
+        col_type = df[c].dtype
+        if col_type == 'object':
+            df[c] = df[c].astype('category')
+
+    return df
+
+
+def numerical_columns_detection(df):
+    numerical_cols = [x for x in list(df) if df[x].dtypes == 'int64' or df[x].dtypes == 'float64']
+
+    return numerical_cols
+
+
+def skewness_reduction(df):
+    # This function tries to reduce the skewness of each column, using log transformations (can only apply to non-neg valued columns)
+
+    numerical_cols = numerical_columns_detection(df)
+
+    for feature in numerical_cols:
+        if df[feature].sum() == df[feature].abs().sum():  # All values are positive
+            original_skew = df[feature].skew()
+            normalized_col = np.log1p(df[feature])
+            normalized_skew = stats.skew(normalized_col)
+
+            if abs(normalized_skew) < abs(original_skew):
+                df[feature] = normalized_col
+
+    return df
+
+
+def robust_scaler_function(df):
+    # This function applies RobustScaler which is a normalizer robust to outliers
+
+    robust_normalizer = RobustScaler()
+    numerical_cols = numerical_columns_detection(df)
+    df[numerical_cols] = robust_normalizer.fit_transform(df[numerical_cols])
+
+    return df
