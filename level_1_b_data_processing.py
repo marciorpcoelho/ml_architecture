@@ -1529,12 +1529,20 @@ def parameter_processing_hyundai(df_sales, options_file, description_cols):
     return df_sales
 
 
-def pandas_object_columns_categorical_conversion(df):
+def pandas_object_columns_categorical_conversion_auto(df):
 
     for c in df.columns:
         col_type = df[c].dtype
         if col_type == 'object':
             df[c] = df[c].astype('category')
+
+    return df
+
+
+def pandas_object_columns_categorical_conversion(df, columns):
+
+    for c in columns:
+        df[c] = df[c].astype('category')
 
     return df
 

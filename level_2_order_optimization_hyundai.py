@@ -5,7 +5,7 @@ import logging
 import numpy as np
 import pandas as pd
 from level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv, missing_customer_info_treatment
-from level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
+from level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from level_1_c_data_modelling import regression_model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation_regression, plot_roc_curve, multiprocess_model_evaluation, model_choice, feature_contribution, heatmap_correlation_function
 from level_1_e_deployment import sql_inject_v2, time_tags
@@ -29,8 +29,8 @@ def main():
     df_sales, df_stock, df_pdb_dim, df_customers, df_dealers = data_acquisition()
     df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters, target)
     best_models, running_times = data_modelling(df_sales, datasets, datasets_non_ohe, models)
-    model_evaluation(df_sales, models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
-    print(best_models, running_times)
+    model_choice_message, best_model_name = model_evaluation(df_sales, models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
+    print(model_choice_message, best_model_name)
     # deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
 
@@ -70,7 +70,7 @@ def data_acquisition():
     # df_sales['WIP_Date_Created'] = pd.to_datetime(df_sales['WIP_Date_Created'], format='%Y%m%d')
     # df_sales['Movement_Date'] = pd.to_datetime(df_sales['Movement_Date'], format='%Y%m%d')
     df_sales['NLR_Code'] = pd.to_numeric(df_sales['NLR_Code'], errors='ignore')
-    df_sales['Product_Code'] = pd.to_numeric(df_sales['Product_Code'], errors='ignore')
+    # df_sales['Product_Code'] = pd.to_numeric(df_sales['Product_Code'], errors='ignore')
 
     df_customers = pd.read_csv('dbs/customers_group.csv', encoding='latin-1', sep=';')
     df_dealers = pd.read_csv('dbs/dealers_dtr.csv', encoding='latin-1', sep=';')
@@ -95,9 +95,15 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     current_date = '2019-10-10'
 
     try:
-        df_ohe = read_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date), index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category', 'NDB_VHE_PerformGroup_Desc': 'category', 'NDB_VHE_Team_Desc': 'category', 'Customer_Display': 'category', 'Customer_Group_Desc': 'category'})
-        df_non_ohe = read_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date), index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category', 'NDB_VHE_PerformGroup_Desc': 'category', 'NDB_VHE_Team_Desc': 'category', 'Customer_Display': 'category', 'Customer_Group_Desc': 'category'})
-        df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe)
+        df_ohe = read_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date), index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category',
+                                                                                                                   'NDB_VHE_PerformGroup_Desc': 'category', 'NDB_VHE_Team_Desc': 'category', 'Customer_Display': 'category',
+                                                                                                                   'Customer_Group_Desc': 'category', 'SLR_Account_Dealer_Code': 'category', 'Product_Code': 'category',
+                                                                                                                   'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category'})
+        df_non_ohe = read_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date), index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category',
+                                                                                                                   'NDB_VHE_PerformGroup_Desc': 'category', 'NDB_VHE_Team_Desc': 'category', 'Customer_Display': 'category',
+                                                                                                                   'Customer_Group_Desc': 'category', 'SLR_Account_Dealer_Code': 'category', 'Product_Code': 'category',
+                                                                                                                   'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category'})
+        # df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, df_non_ohe.columns + ['SLR_Account_Dealer_Code', 'Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'])
         print('Current day file found and processed. Skipping to Section C...')
     except FileNotFoundError:
         try:
@@ -190,7 +196,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
                                              'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
                                              'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
                                              'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
-                                             'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS'], options_file.project_id)
+                                             'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code'], options_file.project_id)
 
         # Specific Measures Calculation
         df_sales = measures_calculation_hyundai(df_sales)
@@ -244,14 +250,15 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
         # heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_v1')
 
-        df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe)
+        df_non_ohe = pandas_object_columns_categorical_conversion_auto(df_non_ohe)
+        df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, ['SLR_Account_Dealer_Code', 'Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'])
 
         df_non_ohe = skewness_reduction(df_non_ohe)
         df_non_ohe = robust_scaler_function(df_non_ohe, target)
 
         df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date))
 
-        df_ohe = ohe(df_non_ohe, configuration_parameters_cols + ['Sales_Type_Dealer_Code', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc'])
+        df_ohe = ohe(df_non_ohe, configuration_parameters_cols + ['Product_Code', 'Fuel_Type_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Sales_Type_Dealer_Code', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc'])
         df_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date))
 
         # heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_ohe_v1')
@@ -282,19 +289,20 @@ def model_evaluation(df_sales, models, best_models, running_times, datasets, dat
     log_record('A iniciar secção D...', options_file.project_id)
     start = time.time()
 
-    results_training, results_test, predictions = performance_evaluation_regression(models, best_models, running_times, datasets, in_options_file, project_id)  # Creates a df with the performance of each model evaluated in various metrics
+    results_training, results_test, predictions = performance_evaluation_regression(models, best_models, running_times, datasets, datasets_non_ohe, in_options_file, project_id)  # Creates a df with the performance of each model evaluated in various metrics
 
-    sys.exit()
-    df_model_dict = multiprocess_model_evaluation(df_sales, models, datasets, best_models, predictions, configuration_parameters, oversample_flag, project_id)
+    # df_model_dict = multiprocess_model_evaluation(df_sales, models, datasets, best_models, predictions, configuration_parameters, oversample_flag, project_id)
 
     model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)
+    # best_model = df_model_dict[best_model_name]
 
-    best_model = df_model_dict[best_model_name]
+    print('Best Model Name: {}'.format(best_model_name))
+
     # feature_contribution(best_model, configuration_parameters, 'PT_PDB_Model_Desc', options_file, project_id)
 
     print('Ended section D - Elapsed time: {:.2f}'.format(time.time() - start))
     log_record('Secção D terminada.', options_file.project_id)
-    return model_choice_message, best_model
+    return model_choice_message, best_model_name
 
 
 def deployment(df, db, view):
