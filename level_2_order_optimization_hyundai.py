@@ -21,15 +21,15 @@ oversample_flag = 0
 
 
 def main():
-    models = ['lgb']
+    models = ['rf', 'lgb', 'xgb', 'ridge', 'll_cv', 'elastic_cv', 'svr']
     # models = ['rf', 'lgb', 'xgb']  # All Available atm
     target = 'DaysInStock_Global'
     configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 
     df_sales, df_stock, df_pdb_dim, df_customers, df_dealers = data_acquisition()
     df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters, target)
-    best_models, running_times = data_modelling(df_sales, datasets_non_ohe, models)
-    model_evaluation(df_sales, models, best_models, running_times, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
+    best_models, running_times = data_modelling(df_sales, datasets, datasets_non_ohe, models)
+    model_evaluation(df_sales, models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
     print(best_models, running_times)
     # deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
@@ -247,11 +247,11 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
         df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe)
 
         df_non_ohe = skewness_reduction(df_non_ohe)
-        df_non_ohe = robust_scaler_function(df_non_ohe)
+        df_non_ohe = robust_scaler_function(df_non_ohe, target)
 
         df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date))
 
-        df_ohe = ohe(df_non_ohe, configuration_parameters_cols + ['Sales_Type_Dealer_Code'])
+        df_ohe = ohe(df_non_ohe, configuration_parameters_cols + ['Sales_Type_Dealer_Code', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc'])
         df_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date))
 
         # heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_ohe_v1')
@@ -264,13 +264,12 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     return df_sales, datasets, datasets_non_ohe
 
 
-def data_modelling(df_sales, datasets, models):
+def data_modelling(df_sales, datasets, datasets_non_ohe, models):
     # print('Starting Step C...')
     log_record('A iniciar secção C...', options_file.project_id)
     start = time.time()
 
-    print('C', datasets['train_x'].head())
-    best_models, running_times = regression_model_training(models, datasets['train_x'], datasets['train_y'], options_file.regression_models, options_file.k, options_file.gridsearch_score, options_file.project_id)
+    best_models, running_times = regression_model_training(models, datasets['train_x'], datasets_non_ohe['train_x'], datasets['train_y'], datasets_non_ohe['train_y'], options_file.regression_models, options_file.k, options_file.gridsearch_score, options_file.project_id)
     save_model(best_models, models, options_file.project_id)
 
     print('Ended section C - Elapsed time: {:.2f}'.format(time.time() - start))
@@ -278,7 +277,7 @@ def data_modelling(df_sales, datasets, models):
     return best_models, running_times
 
 
-def model_evaluation(df_sales, models, best_models, running_times, datasets, in_options_file, configuration_parameters, project_id):
+def model_evaluation(df_sales, models, best_models, running_times, datasets, datasets_non_ohe, in_options_file, configuration_parameters, project_id):
     # print('Starting Step D...')
     log_record('A iniciar secção D...', options_file.project_id)
     start = time.time()

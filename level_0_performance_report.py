@@ -70,7 +70,13 @@ dict_models_name_conversion = {
     'gc': ['Gradient'],
     'bayes': ['Bayesian'],
     'ann': ['ANN'],
-    'voting': ['Voting']
+    'voting': ['Voting'],
+    'lreg': ['Linear Regression'],
+    'lasso_cv': ['LassoCV'],
+    'ridge': ['Ridge'],
+    'll_cv': ['LassoLarsCV'],
+    'elastic_cv': ['ElasticNetCV'],
+    'svr': ['Support Vector Regression'],
 }
 
 

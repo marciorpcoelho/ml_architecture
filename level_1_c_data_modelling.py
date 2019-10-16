@@ -127,25 +127,31 @@ def classification_model_training(models, train_x, train_y, classification_model
     return classes, best_models_pos_fit, running_times
 
 
-def regression_model_training(models, train_x, train_y, regression_models, k, gridsearch_score, project_id):
+def regression_model_training(models, train_x, train_x_non_ohe, train_y, train_y_non_ohe, regression_models, k, gridsearch_score, project_id):
     best_models_pre_fit, best_models_pos_fit, predictions, running_times = {}, {}, {}, {}
     clf, classes = None, None
-
-    print(train_x.shape)
-    print(train_y.shape)
-
-    print(train_x.head())
 
     for model in models:
         log_record('Modelo: {}'.format(dict_models_name_conversion[model][0]), project_id)
         start = time.time()
         clf = RegressionTraining(clf=regression_models[model][0])
+        print('gridsearching...')
         clf.grid_search(parameters=regression_models[model][1], k=k, score=gridsearch_score)
-        clf.clf_grid_fit(x=train_x, y=train_y.values.ravel())
+
+        if model == 'lgb':
+            clf.clf_grid_fit(x=train_x_non_ohe, y=train_y_non_ohe.values.ravel())
+        else:
+            clf.clf_grid_fit(x=train_x, y=train_y.values.ravel())
         clf_best = clf.grid.best_estimator_
 
+        df_cv = pd.DataFrame(clf.grid.cv_results_)
+        df_cv.to_csv('output/gridsearch_results_{}.csv'.format(model))
+
         best_models_pre_fit[model] = clf_best
-        clf_best.fit(train_x, train_y.values.ravel())
+        if model == 'lgb':
+            clf_best.fit(train_x_non_ohe, train_y_non_ohe.values.ravel())
+        else:
+            clf_best.fit(train_x, train_y.values.ravel())
         best_models_pos_fit[model] = clf_best
 
         running_times[model] = time.time() - start

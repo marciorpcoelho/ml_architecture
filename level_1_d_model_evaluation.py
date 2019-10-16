@@ -139,15 +139,22 @@ def performance_evaluation_classification(models, best_models, classes, running_
     return df_results_train, df_results_test, predictions
 
 
-def performance_evaluation_regression(models, best_models, running_times, datasets, options_file, project_id):
+def performance_evaluation_regression(models, best_models, running_times, datasets, datasets_non_ohe, options_file, project_id):
 
     results_train, results_test = [], []
     predictions, feat_importance = {}, pd.DataFrame(index=list(datasets['train_x']), columns={'Importance'})
     for model in models:
-        prediction_train = best_models[model].predict(datasets['train_x'])
-        prediction_test = best_models[model].predict(datasets['test_x'])
-        evaluation_training = RegressionEvaluation(groundtruth=datasets['train_y'], prediction=prediction_train)
-        evaluation_test = RegressionEvaluation(groundtruth=datasets['test_y'], prediction=prediction_test)
+        if model == 'lgb':
+            train_x, test_x = datasets_non_ohe['train_x'], datasets_non_ohe['test_x']
+            train_y, test_y = datasets_non_ohe['train_y'], datasets_non_ohe['test_y']
+        else:
+            train_x, test_x = datasets['train_x'], datasets['test_x']
+            train_y, test_y = datasets['train_y'], datasets['test_y']
+
+        prediction_train = best_models[model].predict(train_x)
+        prediction_test = best_models[model].predict(test_x)
+        evaluation_training = RegressionEvaluation(groundtruth=train_y, prediction=prediction_train)
+        evaluation_test = RegressionEvaluation(groundtruth=test_y, prediction=prediction_test)
         predictions[model] = [prediction_train.astype(int, copy=False), prediction_test.astype(int, copy=False)]
 
         try:
