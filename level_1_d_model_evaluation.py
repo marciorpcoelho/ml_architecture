@@ -157,12 +157,12 @@ def performance_evaluation_regression(models, best_models, running_times, datase
         evaluation_test = RegressionEvaluation(groundtruth=test_y, prediction=prediction_test)
         predictions[model] = [prediction_train.astype(int, copy=False), prediction_test.astype(int, copy=False)]
 
-        try:
-            feat_importance['Importance'] = best_models[model].feature_importances_
-            feat_importance.sort_values(by='Importance', ascending=False, inplace=True)
-            feat_importance.to_csv('output/' + 'feature_importance_' + str(model) + '.csv')
-        except AttributeError:
-            pass
+        # try:
+        #     feat_importance['Importance'] = best_models[model].feature_importances_
+        #     feat_importance.sort_values(by='Importance', ascending=False, inplace=True)
+        #     feat_importance.to_csv('output/' + 'feature_importance_' + str(model) + '.csv')
+        # except AttributeError:
+        #     pass
 
         row_train = {'R2': getattr(evaluation_training, 'r2_score'),
                      'MSE': getattr(evaluation_training, 'mse'),

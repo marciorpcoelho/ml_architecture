@@ -893,13 +893,13 @@ def dtype_checkup(train_x_resampled, train_x):
 def ohe(df, cols):
 
     for column in cols:
-        if df[column].nunique() > 2 or df[column].nunique() >= 1 and type(df[column].head(1).values[0]) == str:
-            uniques = df[column].unique()
-            for value in uniques:
-                new_column = column + '_' + str(value)
-                df[new_column] = 0
-                df.loc[df[column] == value, new_column] = 1
-            df.drop(column, axis=1, inplace=True)
+        # if df[column].nunique() > 2 or df[column].nunique() >= 1 and type(df[column].head(1).values[0]) == str:
+        uniques = df[column].unique()
+        for value in uniques:
+            new_column = column + '_' + str(value)
+            df[new_column] = 0
+            df.loc[df[column] == value, new_column] = 1
+        df.drop(column, axis=1, inplace=True)
 
     return df
 
@@ -1553,10 +1553,15 @@ def numerical_columns_detection(df):
     return numerical_cols
 
 
-def skewness_reduction(df):
+def skewness_reduction(df, target):
     # This function tries to reduce the skewness of each column, using log transformations (can only apply to non-neg valued columns)
 
     numerical_cols = numerical_columns_detection(df)
+
+    try:
+        numerical_cols.remove(target)
+    except KeyError:
+        pass
 
     for feature in numerical_cols:
         if df[feature].sum() == df[feature].abs().sum():  # All values are positive

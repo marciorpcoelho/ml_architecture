@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 import logging
@@ -98,11 +97,15 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
         df_ohe = read_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date), index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category',
                                                                                                                    'NDB_VHE_PerformGroup_Desc': 'category', 'NDB_VHE_Team_Desc': 'category', 'Customer_Display': 'category',
                                                                                                                    'Customer_Group_Desc': 'category', 'SLR_Account_Dealer_Code': 'category', 'Product_Code': 'category',
-                                                                                                                   'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category'})
+                                                                                                                   'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category',
+                                                                                                                   'PT_PDB_Model_Desc': 'category', 'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
+                                                                                                                   'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
         df_non_ohe = read_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date), index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category',
                                                                                                                    'NDB_VHE_PerformGroup_Desc': 'category', 'NDB_VHE_Team_Desc': 'category', 'Customer_Display': 'category',
                                                                                                                    'Customer_Group_Desc': 'category', 'SLR_Account_Dealer_Code': 'category', 'Product_Code': 'category',
-                                                                                                                   'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category'})
+                                                                                                                   'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category',
+                                                                                                                   'PT_PDB_Model_Desc': 'category', 'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
+                                                                                                                   'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
         # df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, df_non_ohe.columns + ['SLR_Account_Dealer_Code', 'Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'])
         print('Current day file found and processed. Skipping to Section C...')
     except FileNotFoundError:
@@ -251,9 +254,9 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
         # heatmap_correlation_function(df_ohe, 'target_class', 'heatmap_hyundai_v1')
 
         df_non_ohe = pandas_object_columns_categorical_conversion_auto(df_non_ohe)
-        df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, ['SLR_Account_Dealer_Code', 'Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'])
+        df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, ['Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'])
 
-        df_non_ohe = skewness_reduction(df_non_ohe)
+        df_non_ohe = skewness_reduction(df_non_ohe, target)
         df_non_ohe = robust_scaler_function(df_non_ohe, target)
 
         df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date))

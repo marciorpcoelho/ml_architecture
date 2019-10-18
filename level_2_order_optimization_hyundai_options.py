@@ -25,7 +25,7 @@ update_frequency_days = 0
 stock_days_threshold = [90, 120, 150, 180, 270, 365]
 margin_threshold = "nan"  # Currently there is no threshold;
 
-metric, metric_threshold = 'r2_score', 0.50  # The metric to compare on the final models and the minimum threshold to consider;
+metric, metric_threshold = 'R2', 0.50  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 5, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 
 
@@ -246,7 +246,7 @@ regression_models = {
     'll_cv': [LassoLarsCV, [{'max_iter': [15, 20, 25, 50, 100, 250, 500, 1000], 'eps': [1e-15, 1e-13, 1e-11, 1e-9, 1e-7, 1e-5, 1e-3, 1e-1, 1], 'cv': [5]}]],
     # 'll_cv': [LassoLarsCV, [{'max_iter': [15, 20], 'cv': [5]}]],
     'elastic_cv': [ElasticNetCV, [{'eps': [1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13, 1e-14, 1e-15, 1e-16, 1e-17], 'cv': [5]}]],
-    'svr': [SVR, [{'kernel': ['linear', 'rgb'], 'gamma': ['auto', 'scale']}]],
+    'svr': [SVR, [{'kernel': ['linear', 'rbf'], 'gamma': ['auto', 'scale']}]],
 }
 
 
