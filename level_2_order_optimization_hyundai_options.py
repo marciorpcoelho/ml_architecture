@@ -26,7 +26,7 @@ stock_days_threshold = [90, 120, 150, 180, 270, 365]
 margin_threshold = "nan"  # Currently there is no threshold;
 
 metric, metric_threshold = 'R2', 0.50  # The metric to compare on the final models and the minimum threshold to consider;
-k, gridsearch_score = 5, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
+k, gridsearch_score = 10, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 
 
 sql_info = {
@@ -235,7 +235,7 @@ classification_models = {
     'voting': [VotingClassifier, [{'voting': ['soft']}]]
 }
 
-regression_models = {
+regression_models_standard = {
     'rf': [RandomForestRegressor, [{'max_depth': [3, 5, 7, 9, 11, 13], 'n_estimators': [50, 100, 200, 250, 500]}]],
     'lgb': [lgb.LGBMRegressor, [{'num_leaves': [5, 10, 15, 20, 25, 30, 35, 50, 100], 'max_depth': [3, 5, 7, 9, 11, 13], 'n_estimators': [50, 100, 200, 250, 500]}]],
     # 'lgb': [lgb.LGBMRegressor, [{'num_leaves': [5, 10], 'n_estimators': [50]}]],
@@ -247,6 +247,12 @@ regression_models = {
     # 'll_cv': [LassoLarsCV, [{'max_iter': [15, 20], 'cv': [5]}]],
     'elastic_cv': [ElasticNetCV, [{'eps': [1e-8, 1e-9, 1e-10, 1e-11, 1e-12, 1e-13, 1e-14, 1e-15, 1e-16, 1e-17], 'cv': [5]}]],
     'svr': [SVR, [{'kernel': ['linear', 'rbf'], 'gamma': ['auto', 'scale']}]],
+}
+
+regression_models = {
+    'rf': [RandomForestRegressor, [{'max_depth': [11, 13, 15, 17, 19, 21, 23, 25, 27, 29], 'n_estimators': [50, 100, 200, 250, 500, 1000, 2000, 3000, 5000, 10000]}]],
+    'lgb': [lgb.LGBMRegressor, [{'num_leaves': [15, 20, 25, 30, 35, 50, 75, 100], 'max_depth': [11, 13, 15, 17, 19], 'n_estimators': [50, 100, 200, 250, 500, 1000, 1500, 2000, 3000, 5000, 10000]}]],
+    'xgb': [xgb.XGBRegressor, [{'objective': ['reg:squarederror'], 'max_depth': [7, 9, 11, 13, 15, 17], 'n_estimators': [50, 100, 200, 250, 500, 1000, 2000, 3000, 5000, 10000]}]],
 }
 
 

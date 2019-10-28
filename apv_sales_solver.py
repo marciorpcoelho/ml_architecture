@@ -49,20 +49,22 @@ def main():
     df_solve = df_solve[df_solve['DaysToSell_1_Part'] > 0]
     df_solve = df_solve[df_solve['Group'] != 'NO_TA']
     for key, group in df_solve.groupby('Group'):
+        # if key in ['Outros', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4', 'BMW_Bonus_Group_1', 'BMW_Bonus_Group_3', 'BMW_Bonus_Group_4']:
         if key in ['Outros', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4']:
             continue
         else:
             goal_value = group_goals[key][0]
+            goal_value_limit = group_goals[key + '_limit'][0]
             goal_type = group_goals_type[key]
             total_number_of_parts_goal = group_goals['number_of_total_parts']
             # cost_goal = group_goals[key][0]
             # sales_goal = group_goals[key][1]
             print('There are {} unique part_refs for {}'.format(len(group), key))
             # print('Cost goal: {}, Sale Goal: {}, DTSS Goal: {}'.format(cost_goal, sales_goal, dtss_goal))
-            print('{} goal: {}, DTSS Goal: {}'.format(goal_type, goal_value, dtss_goal))
+            print('{} goal: {:.1f}, {} goal limit: {:.1f}, DTSS Goal: {}'.format(goal_type, goal_value, goal_type, goal_value_limit, dtss_goal))
             # solver_lp(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_type, dtss_goal, number_of_parts_goal, total_number_of_parts_goal)
             # solver_ip_example()
-            solver_ip(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_type, dtss_goal, number_of_parts_goal, total_number_of_parts_goal)
+            solver_ip(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_value_limit, goal_type, dtss_goal, number_of_parts_goal, total_number_of_parts_goal)
 
 
 def solver_ip_example():
@@ -93,53 +95,52 @@ def solver_ip_example():
     print('Result:', selection.value)
 
 
-def solver_ip(df_solve, group, goal_value, goal_type, dtss_goal, number_of_unique_parts_goal, total_number_of_parts_goal):
+def solver_ip(df_solve, group, goal_value, goal_value_limit, goal_type, dtss_goal, number_of_unique_parts_goal, total_number_of_parts_goal):
     print('Solving for {}...'.format(group))
+
+    df_solve = df_solve[df_solve['DaysToSell_1_Part'] <= dtss_goal]
+
     unique_parts = df_solve['Part_Ref'].unique()
     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
     start = time.time()
 
     n_size = df_solve['Part_Ref'].nunique()  # Number of different parts
+    print('Number of parts inside initial conditions:', n_size)
     # dtss_goals = np.array([dtss_goal] * n_size)
 
     values = np.array(df_solve[goal_type].values.tolist())  # Costs/Sale prices for each reference, info#1
     dtss = np.array(df_solve['DaysToSell_1_Part'].values.tolist())  # Days to Sell of each reference, info#2
 
     selection = cp.Variable(n_size, integer=True)
-    # dtss_list = [sel * dts for sel, dts in zip(selection, dtss)]
 
-    # dtss_constraint = dtss_list <= 10  # Constraint#1
-    # value_constraint = selection * values >= goal_value
-    # dtss_constraint = selection * dtss <= 2000
-    # dtss_constraint = cp.max(selection * dtss, axis=0) <= dtss_goal
-    # dtss_constraint = cp.max([x * y for x, y in zip(selection, dtss)], axis=0) <= dtss_goal
+    dtss_constraint = cp.max(cp.diag(cp.multiply(selection.T, dtss)))
 
-    # dtss_constraint = cp.max(cp.bmat([selection, dtss])) <= dtss_goal
-    dtss_constraint = cp.max(cp.diag(cp.matmul(selection.T, dtss)))
-    # print(dtss_constraint)
-    # print()
+    total_value = selection * values
 
-    total_value = values * selection
-    # print('b', total_value)
+    problem_testing_2 = cp.Problem(cp.Maximize(total_value), [dtss_constraint <= dtss_goal, selection >= 0, selection <= 100])
 
-    # value_constraint = total_value >= goal_value
-    # print('b', value_constraint)
-    problem_testing_2 = cp.Problem(cp.Maximize(total_value), [total_value >= goal_value, dtss_constraint <= dtss_goal, selection >= 0, selection <= 1000])
-
-    result = problem_testing_2.solve(verbose=False)
+    result = problem_testing_2.solve(solver=cp.GLPK_MI, verbose=False)
 
     print('Status of optimization:', problem_testing_2.status)
     print('Result of optimization:', result)
     print('Part Order:\n', selection.value)
     if selection.value is not None:
-        print('Solution Found :D')
-        [print(part + ': ' + str(qty) + ' and cost/sell value of {}, DTSS: {:.2f}'.format(value, dts)) for part, value, qty, dts in zip(unique_parts, values, selection.value, dtss) if qty >= 1]
-        print(np.matmul(selection.value, values))
+        print('Solution Found :)')
+        if result >= goal_value:
+            print('Solution found and above set goal :D')
+        else:
+            print('Solution does not reach the goal :(')
+
+        # [print(part + ': ' + str(qty) + ' and cost/sell value of {}, DTSS: {:.2f}'.format(value, dts)) for part, value, qty, dts in zip(unique_parts, values, selection.value, dtss)]
+        # print(np.matmul(selection.value, values))
 
         print('Total {} of: {:.2f} / {:.2f} ({:.2f}%) \nDays to Sell: {:.2f} / {:.2f} ({:.2f}%)'
-              .format(goal_type, np.sum(values), goal_value, (np.sum(values) / goal_value) * 100, np.max([dts * qty for dts, qty in zip(dtss, selection.value)]), dtss_goal, (np.max(dtss) / dtss_goal) * 100))
+              .format(goal_type, result, goal_value, (result / goal_value) * 100, np.max([dts * qty for dts, qty in zip(dtss, selection.value)]), dtss_goal, (np.max([dts * qty for dts, qty in zip(dtss, selection.value)]) / dtss_goal) * 100))
     else:
         print('No Solution found :(')
+
+    print('Number of Inequations: {}'.format(problem_testing_2.size_metrics.num_scalar_leq_constr))
+    print(problem_testing_2.size_metrics.max_data_dimension)
 
     print('Elapsed time: {:.2f} seconds.\n'.format(time.time() - start))
 

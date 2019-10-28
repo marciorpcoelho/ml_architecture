@@ -145,7 +145,7 @@ def regression_model_training(models, train_x, train_x_non_ohe, train_y, train_y
         clf_best = clf.grid.best_estimator_
 
         df_cv = pd.DataFrame(clf.grid.cv_results_)
-        df_cv.to_csv('output/gridsearch_results_{}.csv'.format(model))
+        df_cv.to_csv('output/gridsearch_results_{}_{}.csv'.format(model, '18_10_19'))
 
         best_models_pre_fit[model] = clf_best
         if model == 'lgb':

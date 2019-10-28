@@ -20,7 +20,7 @@ def main():
     log_record('Project: Baviera APV Order Optimization', options_file.project_id)
 
     min_date = '20180131'  # This is a placeholder for the minimum possible date - It already searches for the last processed date.
-    # max_date = '20190731'  # This will be replaced by current date
+    # max_date = '20190816'  # This will be replaced by current date
 
     max_date, _ = time_tags(format_date='%Y%m%d')
     print('Full Available Data: {} to {}'.format(min_date, max_date))

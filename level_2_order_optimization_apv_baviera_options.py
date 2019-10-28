@@ -55,7 +55,7 @@ bmw_ta_mapping = {
 # }
 
 group_goals = {
-    'dtss_goal': 30,  # Weekdays only!
+    'dtss_goal': 15,  # Weekdays only!
     'number_of_unique_parts': 50,
     'number_of_total_parts': 50,
     # 'BMW_Bonus_Group_1': [640345 - 399127, 253279],  # Cost, Sales (Values are for a single month, using the goal for the 3-month period minus the already sold in the first two months
@@ -63,10 +63,18 @@ group_goals = {
     # 'BMW_Bonus_Group_3': [12893 - 10808, 2189],  # Cost, Sales
     # 'BMW_Bonus_Group_4': [25445 - 16152, 9758],  # Cost, Sales
     # 'BMW_Bonus_Group_5': [23143 - 14146, 9447],  # Cost, Sales
-    'BMW_Bonus_Group_1': [229979 * 1.05],  # Purchase - September Goal
-    'BMW_Bonus_Group_3': [4630 * 1.05],  # Purchase
-    'BMW_Bonus_Group_4': [9139 * 1.05],  # Sales
-    'BMW_Bonus_Group_5': [8132 * 1.05],  # Sales
+    # 'BMW_Bonus_Group_1': [229979 * 1.05],  # Purchase - September Goal
+    # 'BMW_Bonus_Group_3': [4630 * 1.05],  # Purchase
+    # 'BMW_Bonus_Group_4': [9139 * 1.05],  # Sales
+    # 'BMW_Bonus_Group_5': [8132 * 1.05],  # Sales
+    'BMW_Bonus_Group_1': [223713 - 208239],  # Purchase - September Goal
+    'BMW_Bonus_Group_3': [4504 - 2226],  # Purchase
+    'BMW_Bonus_Group_4': [8890 - 8250],  # Sales
+    'BMW_Bonus_Group_5': [8085 - 3320],  # Sales
+    'BMW_Bonus_Group_1_limit': [223713 * 1.05 - 208239],  # Purchase - September Goal
+    'BMW_Bonus_Group_3_limit': [4504 * 1.05 - 2226],  # Purchase
+    'BMW_Bonus_Group_4_limit': [8890 * 1.05 - 8250],  # Sales
+    'BMW_Bonus_Group_5_limit': [8085 * 1.05 - 3320],  # Sales
     'MINI_Bonus_Group_1': [0, 0],
     'MINI_Bonus_Group_2': [0, 0],
     'MINI_Bonus_Group_3': [0, 0],
