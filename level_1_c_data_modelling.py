@@ -850,7 +850,7 @@ def part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, 
             else:
                 part_ref_ta = ta_selection(df_sales, part_ref, regex_dict, bmw_original_oil_words, product_group_col='Product_Group')
                 if part_ref_ta in ['NO_TA', 'NO_SAME_BRAND_TA']:
-                    part_ref_ta = ta_selection(df_al, part_ref, regex_dict, bmw_original_oil_words, product_group_col='GPr')
+                    part_ref_ta = ta_selection(df_al, part_ref, regex_dict, bmw_original_oil_words, product_group_col='TA')
 
                 if part_ref in ['NO_TA', 'NO_SAME_BRAND_TA']:
                     print('part_ref {} has the following result: {}'.format(part_ref, part_ref_ta))

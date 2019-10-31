@@ -23,7 +23,7 @@ def main():
     # max_date = '20190816'  # This will be replaced by current date
 
     max_date, _ = time_tags(format_date='%Y%m%d')
-    print('Full Available Data: {} to {}'.format(min_date, max_date))
+    print('Processing data from {} to {}'.format(min_date, max_date))
 
     df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al = data_acquistion(options_file, max_date)
     df_sales_cleaned, df_purchases_cleaned, df_stock = data_processing(df_sales, df_purchases, df_stock, options_file)
@@ -41,7 +41,7 @@ def data_acquistion(options_info, current_date):
     df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_product_group_dw = dw_data_retrieval(pse_code, current_date, options_info, update)
     df_al = autoline_data_retrieval(pse_code, current_date)
 
-    print('Elapsed time: {:.2f}'.format(time.time() - start))
+    print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
 
     log_record('Finished Step A.', options_file.project_id)
     return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al
@@ -53,7 +53,7 @@ def data_processing(df_sales, df_purchases, df_stock, options_info):
 
     df_sales, df_purchases, df_stock = apv_dataset_treatment(df_sales, df_purchases, df_stock, options_info.pse_code, options_info.urgent_purchases_flags, update, options_info.project_id)
 
-    print('Elapsed time: {:.2f}'.format(time.time() - start_treatment))
+    print('Elapsed time: {:.2f} seconds.'.format(time.time() - start_treatment))
 
     log_record('Finished Step B.', options_file.project_id)
     return df_sales, df_purchases, df_stock
@@ -83,4 +83,5 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as exception:
+        log_record(exception.args[0], options_file.project_id, flag=2)
         log_record('Failed - Project: {}'.format(project_dict[options_file.project_id]), options_file.project_id)

@@ -75,10 +75,12 @@ group_goals = {
     'BMW_Bonus_Group_3_limit': [4504 * 1.05 - 2226],  # Purchase
     'BMW_Bonus_Group_4_limit': [8890 * 1.05 - 8250],  # Sales
     'BMW_Bonus_Group_5_limit': [8085 * 1.05 - 3320],  # Sales
-    'MINI_Bonus_Group_1': [0, 0],
-    'MINI_Bonus_Group_2': [0, 0],
-    'MINI_Bonus_Group_3': [0, 0],
-    'MINI_Bonus_Group_4': [0, 0],
+    'MINI_Bonus_Group_1': [0],
+    'MINI_Bonus_Group_3': [0],
+    'MINI_Bonus_Group_4': [0],
+    'MINI_Bonus_Group_1_limit': [0],
+    'MINI_Bonus_Group_3_limit': [0],
+    'MINI_Bonus_Group_4_limit': [0],
 }
 
 group_goals_type = {
@@ -86,7 +88,12 @@ group_goals_type = {
     'BMW_Bonus_Group_3': 'Cost',  # Purchase
     'BMW_Bonus_Group_4': 'PVP',  # Sales
     'BMW_Bonus_Group_5': 'PVP',  # Sales
+    'MINI_Bonus_Group_1': 'PVP',  # Sales
+    'MINI_Bonus_Group_3': 'PVP',  # Sales
+    'MINI_Bonus_Group_4': 'PVP',  # Sales
 }
+
+goal_types = ['Cost', 'PVP']
 
 mini_ta_mapping = {
     'MINI_Bonus_Group_1': ['1', '2'],  # Peças + Óleos

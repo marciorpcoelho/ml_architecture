@@ -143,7 +143,7 @@ def dw_data_retrieval(pse_code, current_date, options_info, update):
         if update:
             file_name = dimension[0] + '_' + str(pse_code) + '_' + str(current_date)
         else:
-            file_name = dimension[0] + '_' + str(pse_code) + '_20190813'  # Last time I ran this script and saved these files
+            file_name = dimension[0] + '_' + str(pse_code) + '_20191031'  # Last time I ran this script and saved these files
 
         try:
             df = read_csv(file_name + '.csv', index_col=0)

@@ -1212,18 +1212,18 @@ def top_words_processing(df_facts):
 
 def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_purchases_flags, update, project_id):
     current_date, _ = time_tags(format_date='%Y%m%d')
-    sales_cols_to_keep = ['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']
+    sales_cols_to_keep = ['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov', 'Product_Group', 'Part_Desc']
     stock_cols_to_keep = ['Part_Ref', 'Stock_Qty', 'Record_Date']
 
     if update:
         sales_file_name = 'dbs/df_sales_cleaned_' + str(pse_code) + '_' + str(current_date)
         purchases_file_name = 'dbs/df_purchases_cleaned_' + str(pse_code) + '_' + str(current_date)
     else:
-        sales_file_name = 'dbs/df_sales_cleaned_' + str(pse_code) + '_20190813'
-        purchases_file_name = 'dbs/df_purchases_cleaned_' + str(pse_code) + '_20190813'
+        sales_file_name = 'dbs/df_sales_cleaned_' + str(pse_code) + '_20191031'
+        purchases_file_name = 'dbs/df_purchases_cleaned_' + str(pse_code) + '_20191031'
 
     try:
-        df_sales = pd.read_csv(sales_file_name + '.csv', index_col=0, parse_dates=['Movement_Date', 'WIP_Date_Created', 'SLR_Document_Date'], usecols=['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov']).sort_values(by='Movement_Date')
+        df_sales = pd.read_csv(sales_file_name + '.csv', index_col=0, parse_dates=['Movement_Date', 'WIP_Date_Created', 'SLR_Document_Date'], usecols=sales_cols_to_keep).sort_values(by='Movement_Date')
         # print('{} file found.'.format(sales_file_name))
     except FileNotFoundError:
         print('{} file not found, processing...'.format(sales_file_name))

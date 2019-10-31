@@ -8,7 +8,7 @@ from multiprocessing import Pool
 import level_0_performance_report
 from level_1_d_model_evaluation import save_fig
 from level_1_b_data_processing import df_join_function
-from level_2_order_optimization_apv_baviera_options import group_goals, group_goals_type
+from level_2_order_optimization_apv_baviera_options import group_goals, group_goals_type, goal_types
 from scipy.optimize import minimize, LinearConstraint, Bounds
 from dateutil.relativedelta import relativedelta
 import warnings
@@ -29,6 +29,7 @@ scale_argument = 10000
 
 def main():
     current_date = '20190831'
+    df_solutions = []
     df_part_refs_ta = pd.read_csv('output/part_ref_ta_{}.csv'.format(current_date), index_col=0)
 
     current_date = '20190816'
@@ -50,12 +51,18 @@ def main():
     df_solve = df_solve[df_solve['Group'] != 'NO_TA']
     for key, group in df_solve.groupby('Group'):
         # if key in ['Outros', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4', 'BMW_Bonus_Group_1', 'BMW_Bonus_Group_3', 'BMW_Bonus_Group_4']:
-        if key in ['Outros', 'MINI_Bonus_Group_1', 'MINI_Bonus_Group_2', 'MINI_Bonus_Group_3', 'MINI_Bonus_Group_4']:
+        if key in ['Outros', 'MINI_Bonus_Group_2']:
             continue
         else:
-            goal_value = group_goals[key][0]
+
+            if key[0:4] == 'MINI':
+                goal_value = 0  # Currently have no goals for MINI groups
+            else:
+                goal_value = group_goals[key][0]
+
             goal_value_limit = group_goals[key + '_limit'][0]
             goal_type = group_goals_type[key]
+            non_goal = [x for x in goal_types if x not in goal_type][0]
             total_number_of_parts_goal = group_goals['number_of_total_parts']
             # cost_goal = group_goals[key][0]
             # sales_goal = group_goals[key][1]
@@ -64,7 +71,9 @@ def main():
             print('{} goal: {:.1f}, {} goal limit: {:.1f}, DTSS Goal: {}'.format(goal_type, goal_value, goal_type, goal_value_limit, dtss_goal))
             # solver_lp(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_type, dtss_goal, number_of_parts_goal, total_number_of_parts_goal)
             # solver_ip_example()
-            solver_ip(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_value_limit, goal_type, dtss_goal, number_of_parts_goal, total_number_of_parts_goal)
+            df_solutions.append(solver_ip(df_solve[df_solve['Part_Ref'].isin(group['Part_Ref'].unique())], key, goal_value, goal_value_limit, goal_type, non_goal, dtss_goal, number_of_parts_goal, total_number_of_parts_goal, current_date))
+
+    pd.concat([x for x in df_solutions]).to_csv('output/solver_solutions_{}.csv'.format(current_date))
 
 
 def solver_ip_example():
@@ -95,7 +104,7 @@ def solver_ip_example():
     print('Result:', selection.value)
 
 
-def solver_ip(df_solve, group, goal_value, goal_value_limit, goal_type, dtss_goal, number_of_unique_parts_goal, total_number_of_parts_goal):
+def solver_ip(df_solve, group, goal_value, goal_value_limit, goal_type, non_goal_type, dtss_goal, number_of_unique_parts_goal, total_number_of_parts_goal, current_date):
     print('Solving for {}...'.format(group))
 
     df_solve = df_solve[df_solve['DaysToSell_1_Part'] <= dtss_goal]
@@ -109,6 +118,7 @@ def solver_ip(df_solve, group, goal_value, goal_value_limit, goal_type, dtss_goa
     # dtss_goals = np.array([dtss_goal] * n_size)
 
     values = np.array(df_solve[goal_type].values.tolist())  # Costs/Sale prices for each reference, info#1
+    other_values = df_solve[non_goal_type].values.tolist()
     dtss = np.array(df_solve['DaysToSell_1_Part'].values.tolist())  # Days to Sell of each reference, info#2
 
     selection = cp.Variable(n_size, integer=True)
@@ -127,15 +137,20 @@ def solver_ip(df_solve, group, goal_value, goal_value_limit, goal_type, dtss_goa
     if selection.value is not None:
         print('Solution Found :)')
         if result >= goal_value:
+            above_goal_flag = 1
             print('Solution found and above set goal :D')
         else:
+            above_goal_flag = 0
             print('Solution does not reach the goal :(')
 
         # [print(part + ': ' + str(qty) + ' and cost/sell value of {}, DTSS: {:.2f}'.format(value, dts)) for part, value, qty, dts in zip(unique_parts, values, selection.value, dtss)]
         # print(np.matmul(selection.value, values))
 
-        print('Total {} of: {:.2f} / {:.2f} ({:.2f}%) \nDays to Sell: {:.2f} / {:.2f} ({:.2f}%)'
-              .format(goal_type, result, goal_value, (result / goal_value) * 100, np.max([dts * qty for dts, qty in zip(dtss, selection.value)]), dtss_goal, (np.max([dts * qty for dts, qty in zip(dtss, selection.value)]) / dtss_goal) * 100))
+        # print('Total {} of: {:.2f} / {:.2f} ({:.2f}%) \nDays to Sell: {:.2f} / {:.2f} ({:.2f}%)'
+        #       .format(goal_type, result, goal_value, (result / goal_value) * 100, np.max([dts * qty for dts, qty in zip(dtss, selection.value)]), dtss_goal, (np.max([dts * qty for dts, qty in zip(dtss, selection.value)]) / dtss_goal) * 100))
+
+        df_solution = solution_saving_csv(group, goal_type, non_goal_type, above_goal_flag, selection, unique_parts, values, other_values, dtss, current_date)
+
     else:
         print('No Solution found :(')
 
@@ -143,6 +158,27 @@ def solver_ip(df_solve, group, goal_value, goal_value_limit, goal_type, dtss_goa
     print(problem_testing_2.size_metrics.max_data_dimension)
 
     print('Elapsed time: {:.2f} seconds.\n'.format(time.time() - start))
+
+    return df_solution
+
+
+def solution_saving_csv(group_name, goal_type, non_goal_type, above_goal_flag, selection, unique_parts, values, other_values, dtss, current_date):
+    print(goal_type)
+    print(non_goal_type)
+
+    df_solution = pd.DataFrame(columns={'Part_Ref', 'Qty', goal_type, 'DtS', 'AboveGoal?'})
+
+    df_solution['Part_Ref'] = [part for part in unique_parts]
+    df_solution['Qty'] = [qty for qty in selection.value]
+    df_solution[goal_type] = [value for value in values]
+    df_solution[non_goal_type] = [value for value in other_values]
+    df_solution['DtS'] = [dts for dts in dtss]
+    df_solution['AboveGoal?'] = [above_goal_flag] * len(unique_parts)
+    df_solution['Group_Name'] = [group_name] * len(unique_parts)
+
+    df_solution.to_csv('output/solver_solution_{}_goal_{}_{}.csv'.format(group_name, goal_type, current_date))
+
+    return df_solution
 
 
 def solver_lp(df_solve, group, goal_value, goal_type, dtss_goal, number_of_unique_parts_goal, total_number_of_parts_goal):
