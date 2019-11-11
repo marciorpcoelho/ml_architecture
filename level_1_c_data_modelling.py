@@ -562,7 +562,7 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
 
     df_sales, df_al, df_stock, df_reg_al_clients, df_purchases = dataframes_list[0], dataframes_list[1], dataframes_list[2], dataframes_list[3], dataframes_list[4]
 
-    result, stock_evolution_correct_flag, offset = pd.DataFrame(), 0, 0
+    result, stock_evolution_correct_flag, offset, last_stock_qty_al = pd.DataFrame(), 0, 0, 0
 
     df_sales_filtered = df_sales[(df_sales['Part_Ref'].isin(selected_part)) & (df_sales['Movement_Date'] >= min_date) & (df_sales['Movement_Date'] <= max_date)]
     df_al_filtered = df_al[(df_al['Part_Ref'].isin(selected_part)) & (df_al['Movement_Date'] >= min_date) & (df_al['Movement_Date'] <= max_date)]
@@ -574,7 +574,6 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
         df_last_stock_filtered_first_row = df_stock_filtered[df_stock_filtered['Part_Ref'].isin(selected_part)].sort_values(by='Record_Date').tail(1)
 
     df_al_filtered = auto_line_dataset_cleaning(df_sales_filtered, df_al_filtered, df_purchases_filtered, df_reg_al_clients, pse_code)
-
     df_sales_filtered = df_sales_filtered.drop_duplicates(subset=['Movement_Date', 'Part_Ref']).sort_values(by='Movement_Date')
     df_sales_filtered.set_index('Movement_Date', inplace=True)
 
@@ -582,7 +581,7 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
         # raise ValueError('No data found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
         # print('\nNo data found for part_ref {} and/or selected period {}/{}.\n'.format(selected_part[0], min_date, max_date))
         # no_data_flag = 1
-        return pd.DataFrame(), stock_evolution_correct_flag, offset
+        return pd.DataFrame(), stock_evolution_correct_flag, offset, last_stock_qty_al
     # elif df_al_filtered.shape[0] == 1:
     #     print('im here!')
         # raise ValueError('Only 1 row found for part_ref {} and/or selected period {}/{}'.format(selected_part[0], min_date, max_date))
@@ -634,6 +633,7 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
             last_stock_qty_al = df_last_processed_filtered_last_row['Stock_Qty_al'].values[0]
     except IndexError:
         stock_end = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
+        last_stock_qty_al = 0
 
     reg_value = df_al_filtered['Qty_Regulated_sum'].sum()
     # delta_stock = stock_end - stock_start
@@ -652,7 +652,11 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
     if not preprocessed_data_exists_flag:
         result_al = stock_start + qty_purchased - qty_sold_al - reg_value
     else:
-        result_al = df_last_processed_filtered_last_row['Stock_Qty_al'].values[0] + qty_purchased - qty_sold_al - reg_value
+        try:
+            stock_start_preprocessed = df_last_processed_filtered_last_row['Stock_Qty_al'].values[0]
+        except IndexError:
+            stock_start_preprocessed = 0
+        result_al = stock_start_preprocessed + qty_purchased - qty_sold_al - reg_value
 
     if result_al != stock_end:
         offset = stock_end - result_al
@@ -670,12 +674,18 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
     min_date_next_day = min_date + relativedelta(days=1)
     try:
         if preprocessed_data_exists_flag:
-            sales_evolution_offset = df_last_processed_filtered_last_row['Sales Evolution_al'].values[0]
-            purchases_evolution_offset = df_last_processed_filtered_last_row['Purchases Evolution'].values[0]
-            purchases_urgent_evolution_offset = df_last_processed_filtered_last_row['Purchases Urgent Evolution'].values[0]
-            purchases_non_urgent_evolution_offset = df_last_processed_filtered_last_row['Purchases Non Urgent Evolution'].values[0]
-            regulated_evolution_offset = df_last_processed_filtered_last_row['Regulated Evolution'].values[0]
-            # print(sales_evolution_offset, purchases_evolution_offset, purchases_urgent_evolution_offset, purchases_non_urgent_evolution_offset, regulated_evolution_offset)
+            try:
+                sales_evolution_offset = df_last_processed_filtered_last_row['Sales Evolution_al'].values[0]
+                purchases_evolution_offset = df_last_processed_filtered_last_row['Purchases Evolution'].values[0]
+                purchases_urgent_evolution_offset = df_last_processed_filtered_last_row['Purchases Urgent Evolution'].values[0]
+                purchases_non_urgent_evolution_offset = df_last_processed_filtered_last_row['Purchases Non Urgent Evolution'].values[0]
+                regulated_evolution_offset = df_last_processed_filtered_last_row['Regulated Evolution'].values[0]
+            except IndexError:
+                sales_evolution_offset = 0
+                purchases_evolution_offset = 0
+                purchases_urgent_evolution_offset = 0
+                purchases_non_urgent_evolution_offset = 0
+                regulated_evolution_offset = 0
 
             result['Sales Evolution_al'] = result[result.index > min_date]['Qty_Sold_sum_al'].cumsum() + sales_evolution_offset
             result['Purchases Evolution'] = result[result.index > min_date]['Qty_Purchased_sum'].cumsum() + purchases_evolution_offset
@@ -699,7 +709,6 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
     result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
 
     # result.to_csv('output/{}_stock_evolution.csv'.format(selected_part[0]))
-
     return result, stock_evolution_correct_flag, offset, last_stock_qty_al
 
 
