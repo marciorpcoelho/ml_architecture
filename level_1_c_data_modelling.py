@@ -436,71 +436,67 @@ def part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=1):
 
     [log_record('{} has a weird size!'.format(x), project_id, flag=1) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
 
-    print('{} unique part_refs between {} and {}.'.format(len(all_unique_part_refs), min_date.date(), max_date))
+    print('{} unique part_refs between {} and {}.'.format(len(all_unique_part_refs), min_date, max_date))
 
     return all_unique_part_refs
 
 
-def apv_last_stock_calculation(min_date, max_date, pse_code):
+def apv_last_stock_calculation(min_date_str, max_date_str, pse_code):
     # Proj_ID = 2259
-
     results_files = [datetime.datetime.strptime(f[17:25], format('%Y%m%d')) for f in listdir('output/') if f.startswith('results_merge_{}_'.format(pse_code))]
-    min_date = datetime.datetime.strptime(min_date, format('%Y%m%d'))
-    max_date = datetime.datetime.strptime(max_date, format('%Y%m%d'))
+    min_date_datetime = datetime.datetime.strptime(min_date_str, format('%Y%m%d'))
+    max_date_datetime = datetime.datetime.strptime(max_date_str, format('%Y%m%d'))
     preprocessed_data_exists_flag = 0
 
     try:
         max_file_date = np.max(results_files)
-        if min_date < max_file_date:
-            if max_file_date == max_date:
+        if min_date_datetime < max_file_date:
+            if max_file_date == max_date_datetime:
                 raise Exception('All data has been processed already up to date {}.'.format(max_file_date))
             else:
                 preprocessed_data_exists_flag = 1
-                print('Data already processed from {} to {}. Will adjust accordingly: minimum date to process is now: {}.'.format(min_date, max_file_date, max_file_date))
-            return max_file_date, preprocessed_data_exists_flag
-        else:
-            return min_date, preprocessed_data_exists_flag
-    except ValueError:
-        return min_date, preprocessed_data_exists_flag
+                print('Data already processed from {} to {} for PSE {}. Will adjust accordingly: minimum date to process is now: {}.'.format(min_date_str, max_file_date, pse_code, max_file_date))
+            return datetime.datetime.strftime(max_file_date, format('%Y%m%d')), preprocessed_data_exists_flag
+        else:  # Do nothing
+            return min_date_str, preprocessed_data_exists_flag
+    except ValueError:  # No Files found
+        return min_date_str, preprocessed_data_exists_flag
 
 
 def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date, project_id):
 
     try:
-        results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date), index_col=0)
+        results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date), index_col='index')
         print('File results_merge_{}_{} found.'.format(pse_code, max_date))
 
     except FileNotFoundError:
-        print('File results_merge_{} not found. Processing...'.format(pse_code))
+        print('File results_merge_{}_{} not found. Processing...'.format(pse_code, max_date))
         min_date, preprocessed_data_exists_flag = apv_last_stock_calculation(min_date, max_date, pse_code)
-        if preprocessed_data_exists_flag:
-            selected_parts = part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=0)
 
         df_stock.set_index('Record_Date', inplace=True)
         df_purchases.set_index('Movement_Date', inplace=True)
         df_al['Unit'] = df_al['Unit'] * (-1)  # Turn the values to their symmetrical so it matches the other dfs
 
-        i, parts_count = 1, len(selected_parts)
         dataframes_list = [df_sales, df_al, df_stock, df_reg_al_clients, df_purchases]
         datetime_index = pd.date_range(start=min_date, end=max_date)
         results = pd.DataFrame()
         positions = []
 
+        if preprocessed_data_exists_flag:
+            selected_parts = part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=0)
+            df_last_processed = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0, parse_dates=['index'])
+            dataframes_list.append(df_last_processed)
+
+        i, parts_count = 1, len(selected_parts)
         print('PSE_Code = {}'.format(pse_code))
         for part_ref in selected_parts:
             # start = time.time()
-            result_part_ref, stock_evolution_correct_flag, offset = sql_data([part_ref], pse_code, min_date, max_date, dataframes_list)
+            result_part_ref, stock_evolution_correct_flag, offset, last_processed_stock = sql_data([part_ref], pse_code, datetime.datetime.strptime(min_date, format('%Y%m%d')), max_date, dataframes_list, preprocessed_data_exists_flag)
 
             if result_part_ref.shape[0]:
                 result_part_ref = result_part_ref.reindex(datetime_index).reset_index().rename(columns={'Unnamed: 0': 'Movement_Date'})
 
-                ffill_and_zero_fill_cols = ['Stock_Qty_al', 'Sales Evolution_al', 'Purchases Evolution', 'Regulated Evolution', 'Purchases Urgent Evolution', 'Purchases Non Urgent Evolution']
-                zero_fill_cols = ['Qty_Purchased_sum', 'Qty_Regulated_sum', 'Qty_Sold_sum_al', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg', 'Cost_Reg_avg', 'Cost_Sale_avg', 'PVP_avg']
-                ffill_and_bfill_cols = ['Part_Ref', 'Stock_Qty']
-
-                [result_part_ref[x].fillna(method='ffill', inplace=True) for x in ffill_and_zero_fill_cols + ffill_and_bfill_cols]
-                [result_part_ref[x].fillna(0, inplace=True) for x in zero_fill_cols + ffill_and_zero_fill_cols]
-                [result_part_ref[x].fillna(method='bfill', inplace=True) for x in ffill_and_bfill_cols]
+                result_part_ref = fill_cols_function(result_part_ref, last_processed_stock)
 
                 if result_part_ref[result_part_ref['Part_Ref'].isnull()].shape[0]:
                     print('null values found for part_ref: \n{}'.format(part_ref))
@@ -514,6 +510,7 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
                 result_part_ref['Cost_Reg_avg'] = result_part_ref['Cost_Reg_avg'] * (-1)
 
                 results = results.append(result_part_ref)
+                # results.to_csv('output/testing_results.csv'.format(part_ref))
                 # print('Elapsed time: {:.2f}.'.format(time.time() - start))
 
             position = int((i / parts_count) * 100)
@@ -531,41 +528,50 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
     return results
 
 
+def fill_cols_function(result_part_ref, last_processed_stock):
+
+    ffill_and_zero_fill_cols = ['Stock_Qty_al', 'Sales Evolution_al', 'Purchases Evolution', 'Regulated Evolution', 'Purchases Urgent Evolution', 'Purchases Non Urgent Evolution']
+    zero_fill_cols = ['Qty_Purchased_sum', 'Qty_Regulated_sum', 'Qty_Sold_sum_al', 'Qty_Purchased_urgent_sum', 'Qty_Purchased_non_urgent_sum', 'Cost_Purchase_avg', 'Cost_Reg_avg', 'Cost_Sale_avg', 'PVP_avg']
+    ffill_and_bfill_cols = ['Part_Ref', 'Stock_Qty']
+
+    [result_part_ref[x].fillna(method='ffill', inplace=True) for x in ffill_and_zero_fill_cols + ffill_and_bfill_cols]
+    [result_part_ref[x].fillna(method='bfill', inplace=True) for x in ffill_and_zero_fill_cols + ffill_and_bfill_cols]
+    [result_part_ref[x].fillna(0, inplace=True) for x in zero_fill_cols + ffill_and_zero_fill_cols]
+
+    return result_part_ref
+
+
 def results_preprocess_merge(pse_code, results, min_date, max_date):
+    # min_date = datetime.datetime.strptime(min_date, format('%Y%m%d'))
+    # min_date = datetime.datetime.strftime(min_date, format('%Y%m%d'))
 
-    # min_date = datetime.datetime.strptime(min_date, format('%Y-%m-%d %H:%M:%S'))
-    min_date = datetime.datetime.strftime(min_date, format('%Y%m%d'))
-
-    old_results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, min_date))
+    old_results = pd.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0, parse_dates=['index'])
     new_results = pd.concat([old_results, results])
-
-    old_results_unique_parts = old_results['Part_Ref'].unique()
-    new_results_unique_parts = results['Part_Ref'].unique()
-    nunique_matching_parts = len([x for x in old_results_unique_parts if x in new_results_unique_parts])
 
     shape_before = new_results.shape
     new_results.drop_duplicates(subset=['index', 'Part_Ref'], inplace=True)
     shape_after = new_results.shape
     shape_diff = shape_before[0] - shape_after[0]
 
-    # if shape_diff != nunique_matching_parts:
-    #     results.to_csv('output/results_merge_{}_{}_to_{}.csv'.format(pse_code, min_date, max_date))
-    #     raise ValueError('Problem while removing repeated rows. Instead of removing {} repeated rows, {} were removed.'.format(nunique_matching_parts, shape_diff))
-    # else:
     print('Removed {} repeated rows.'.format(shape_diff))
     return new_results
 
 
-def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
+def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, preprocessed_data_exists_flag):
     # Proj_ID = 2259
 
     df_sales, df_al, df_stock, df_reg_al_clients, df_purchases = dataframes_list[0], dataframes_list[1], dataframes_list[2], dataframes_list[3], dataframes_list[4]
+
     result, stock_evolution_correct_flag, offset = pd.DataFrame(), 0, 0
 
     df_sales_filtered = df_sales[(df_sales['Part_Ref'].isin(selected_part)) & (df_sales['Movement_Date'] >= min_date) & (df_sales['Movement_Date'] <= max_date)]
     df_al_filtered = df_al[(df_al['Part_Ref'].isin(selected_part)) & (df_al['Movement_Date'] >= min_date) & (df_al['Movement_Date'] <= max_date)]
     df_purchases_filtered = df_purchases[(df_purchases['Part_Ref'].isin(selected_part)) & (df_purchases.index > min_date) & (df_purchases.index <= max_date)]
     df_stock_filtered = df_stock[(df_stock['Part_Ref'].isin(selected_part)) & (df_stock.index >= min_date) & (df_stock.index <= max_date)]
+    if preprocessed_data_exists_flag:
+        df_last_processed = dataframes_list[5]
+        df_last_processed_filtered_last_row = df_last_processed[df_last_processed['Part_Ref'].isin(selected_part)].sort_values(by='index').tail(1)
+        df_last_stock_filtered_first_row = df_stock_filtered[df_stock_filtered['Part_Ref'].isin(selected_part)].sort_values(by='Record_Date').tail(1)
 
     df_al_filtered = auto_line_dataset_cleaning(df_sales_filtered, df_al_filtered, df_purchases_filtered, df_reg_al_clients, pse_code)
 
@@ -611,12 +617,21 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
 
     qty_sold_al = df_al_filtered[df_al_filtered.index > min_date]['Qty_Sold_sum_al'].sum()
     qty_purchased = df_purchases_filtered['Qty_Purchased_sum'].sum()
+
     try:
-        stock_start = df_stock_filtered[df_stock_filtered.index == min_date]['Stock_Qty'].values[0]
+        if not preprocessed_data_exists_flag:
+            stock_start = df_stock_filtered[df_stock_filtered.index == min_date]['Stock_Qty'].values[0]
+        elif preprocessed_data_exists_flag:
+            stock_start = df_last_processed_filtered_last_row['Stock_Qty'].values[0]  #
     except IndexError:
         stock_start = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
+
     try:
-        stock_end = df_stock_filtered[df_stock_filtered.index == max_date]['Stock_Qty'].values[0]
+        if not preprocessed_data_exists_flag:
+            stock_end = df_stock_filtered[df_stock_filtered.index == max_date]['Stock_Qty'].values[0]
+        elif preprocessed_data_exists_flag:
+            stock_end = df_last_stock_filtered_first_row['Stock_Qty'].values[0]
+            last_stock_qty_al = df_last_processed_filtered_last_row['Stock_Qty_al'].values[0]
     except IndexError:
         stock_end = 0  # When stock is 0, it is not saved in SQL, hence why the previous line doesn't return any value;
 
@@ -634,7 +649,10 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
     except IndexError:
         result['Stock_Qty'] = 0  # Cases when there is no stock information
 
-    result_al = stock_start + qty_purchased - qty_sold_al - reg_value
+    if not preprocessed_data_exists_flag:
+        result_al = stock_start + qty_purchased - qty_sold_al - reg_value
+    else:
+        result_al = df_last_processed_filtered_last_row['Stock_Qty_al'].values[0] + qty_purchased - qty_sold_al - reg_value
 
     if result_al != stock_end:
         offset = stock_end - result_al
@@ -651,21 +669,38 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list):
     # The stock_qty_al initial value is to compensate for the previous line.
     min_date_next_day = min_date + relativedelta(days=1)
     try:
-        result['Sales Evolution_al'] = result[result.index > min_date]['Qty_Sold_sum_al'].cumsum()
-        result['Purchases Evolution'] = result[result.index > min_date]['Qty_Purchased_sum'].cumsum()
-        result['Purchases Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_urgent_sum'].cumsum()
-        result['Purchases Non Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_non_urgent_sum'].cumsum()
-        result['Regulated Evolution'] = result[result.index > min_date]['Qty_Regulated_sum'].cumsum()
+        if preprocessed_data_exists_flag:
+            sales_evolution_offset = df_last_processed_filtered_last_row['Sales Evolution_al'].values[0]
+            purchases_evolution_offset = df_last_processed_filtered_last_row['Purchases Evolution'].values[0]
+            purchases_urgent_evolution_offset = df_last_processed_filtered_last_row['Purchases Urgent Evolution'].values[0]
+            purchases_non_urgent_evolution_offset = df_last_processed_filtered_last_row['Purchases Non Urgent Evolution'].values[0]
+            regulated_evolution_offset = df_last_processed_filtered_last_row['Regulated Evolution'].values[0]
+            # print(sales_evolution_offset, purchases_evolution_offset, purchases_urgent_evolution_offset, purchases_non_urgent_evolution_offset, regulated_evolution_offset)
+
+            result['Sales Evolution_al'] = result[result.index > min_date]['Qty_Sold_sum_al'].cumsum() + sales_evolution_offset
+            result['Purchases Evolution'] = result[result.index > min_date]['Qty_Purchased_sum'].cumsum() + purchases_evolution_offset
+            result['Purchases Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_urgent_sum'].cumsum() + purchases_urgent_evolution_offset
+            result['Purchases Non Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_non_urgent_sum'].cumsum() + purchases_non_urgent_evolution_offset
+            result['Regulated Evolution'] = result[result.index > min_date]['Qty_Regulated_sum'].cumsum() + regulated_evolution_offset
+        elif not preprocessed_data_exists_flag:
+            result['Sales Evolution_al'] = result[result.index > min_date]['Qty_Sold_sum_al'].cumsum()
+            result['Purchases Evolution'] = result[result.index > min_date]['Qty_Purchased_sum'].cumsum()
+            result['Purchases Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_urgent_sum'].cumsum()
+            result['Purchases Non Urgent Evolution'] = result[result.index > min_date]['Qty_Purchased_non_urgent_sum'].cumsum()
+            result['Regulated Evolution'] = result[result.index > min_date]['Qty_Regulated_sum'].cumsum()
     except KeyError:
         print(selected_part, min_date_next_day, '\n', result)
 
     result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
-    result.ix[0, 'Stock_Qty_al'] = stock_start  #
+    if not preprocessed_data_exists_flag:
+        result.ix[0, 'Stock_Qty_al'] = stock_start
+    elif preprocessed_data_exists_flag:
+        result.ix[0, 'Stock_Qty_al'] = last_stock_qty_al
     result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
 
     # result.to_csv('output/{}_stock_evolution.csv'.format(selected_part[0]))
 
-    return result, stock_evolution_correct_flag, offset
+    return result, stock_evolution_correct_flag, offset, last_stock_qty_al
 
 
 def auto_line_dataset_cleaning(df_sales, df_al, df_purchases, df_reg_al_clients, pse_code):

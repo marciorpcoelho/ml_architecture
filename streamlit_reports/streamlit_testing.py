@@ -70,22 +70,12 @@ def main():
             chart_data_v1['features'] = list(selection_to_predict)[0:9]
             chart_data_v1['feature_importance'] = feature_importances_normalized[1]
             chart_data_v1.sort_values(by='feature_importance', ascending=False, inplace=True)
-            chart_data_v1['names'] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
-
-            # chart_data_v2 = pd.DataFrame(columns=list(selection_to_predict)[0:9])
-            # chart_data_v2.loc[0, :] = feature_importances_normalized[1]
-
-            chart_v1 = alt.Chart(chart_data_v1, height=120).mark_bar().encode(
-                x='names:N',
-                y='feature_importance',
+            chart_v1 = alt.Chart(chart_data_v1).mark_bar().encode(
+                alt.X('features:N', axis=alt.Axis(labelAngle=-30)),
+                alt.Y('feature_importance:Q'),
                 tooltip=['features']
             ).interactive()
-
-            # st.bar_chart(chart_data_v1)
-            # st.bar_chart(chart_data_v2.transpose())
-
-            # st.altair_chart(chart_v1)
 
             st.write("### Number of previous sales: {}".format(number_prev_sales))
             # st.write("### Selection to predict: {}".format(selection_to_predict.head(1).values))
@@ -96,7 +86,7 @@ def main():
 
             st.write("Feature Importance:", "", chart_v1)
 
-            save_predictions(last_predictions, selection_to_predict, predictions)
+            save_predictions(last_predictions, selection_to_predict, predictions, base_path)
 
             # shap_plot(data, predictive_models[1], selection_to_predict)
 
@@ -151,7 +141,7 @@ def get_last_predictions(path):
         return
 
 
-def save_predictions(last_predictions, selection, predictions):
+def save_predictions(last_predictions, selection, predictions, path):
     # timestamp = str(datetime.datetime.now().day) + str(datetime.datetime.now().month) + str(datetime.datetime.now().year)
     timestamp = datetime.datetime.now()
 
@@ -162,9 +152,9 @@ def save_predictions(last_predictions, selection, predictions):
 
     if last_predictions is not None:
         last_predictions = last_predictions.append(selection)
-        last_predictions.to_csv('dbs/predictions_history.csv')
+        last_predictions.to_csv(path + 'dbs/predictions_history.csv')
     else:
-        selection.to_csv('dbs/predictions_history.csv')
+        selection.to_csv(path + 'dbs/predictions_history.csv')
 
 
 @st.cache

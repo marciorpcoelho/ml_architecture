@@ -256,6 +256,8 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
         df_non_ohe = pandas_object_columns_categorical_conversion_auto(df_non_ohe)
         df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, ['Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'])
 
+        df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}_non_scaled.csv'.format(current_date))
+
         df_non_ohe = skewness_reduction(df_non_ohe, target)
         df_non_ohe = robust_scaler_function(df_non_ohe, target)
 
@@ -279,7 +281,7 @@ def data_modelling(df_sales, datasets, datasets_non_ohe, models):
     log_record('A iniciar secção C...', options_file.project_id)
     start = time.time()
 
-    best_models, running_times = regression_model_training(models, datasets['train_x'], datasets_non_ohe['train_x'], datasets['train_y'], datasets_non_ohe['train_y'], options_file.regression_models, options_file.k, options_file.gridsearch_score, options_file.project_id)
+    best_models, running_times = regression_model_training(models, datasets['train_x'], datasets_non_ohe['train_x'], datasets['train_y'], datasets_non_ohe['train_y'], options_file.regression_models_standard, options_file.k, options_file.gridsearch_score, options_file.project_id)
     save_model(best_models, models, options_file.project_id)
 
     print('Ended section C - Elapsed time: {:.2f}'.format(time.time() - start))
