@@ -12,7 +12,7 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) +
 
 """
 # Days in Stock Predictor - Hyundai/Honda
-Machine Learning Model used to predict the number of days a configuration
+Machine Learning Regression Model used to predict the number of days of a configuration
 """
 
 configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']

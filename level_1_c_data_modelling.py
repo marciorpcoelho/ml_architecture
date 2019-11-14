@@ -219,7 +219,8 @@ def new_request_type(df, df_top_words, options_file):
     keyword_dict = keyword_dict[0]
 
     stemmer_pt = SnowballStemmer('porter')
-    user_dict, requests_dict_2 = {}, {}
+    user_dict, force_dict, requests_dict_2 = {}, {}, {}
+    verbose, request_num = 0, 'RE-000000'
 
     df_top_words['Label'] = 'Não Definido'
     for label in keyword_dict.keys():
@@ -238,6 +239,14 @@ def new_request_type(df, df_top_words, options_file):
                     user_dict[label].append(user_id)
                 else:
                     user_dict[label] = [user_id]
+                continue
+
+            elif "Forced:" in keywords:
+                cleaned_keyword = keywords.replace('Forced:', '')
+                if label in force_dict.keys():
+                    force_dict[label].append(cleaned_keyword)
+                else:
+                    force_dict[label] = [cleaned_keyword]
                 continue
 
             if ' ' in keywords:
@@ -279,7 +288,14 @@ def new_request_type(df, df_top_words, options_file):
 
     df = requests_draw_handling(df, requests_dict_2, ranking_dict)
 
+    if verbose:
+        print('A \n', df[df['Request_Num'] == request_num]['Label'])
+    df, df_top_words = force_label_assignment(df, df_top_words, force_dict, options_file)
+    if verbose:
+        print('B \n', df[df['Request_Num'] == request_num]['Label'])
     df, _ = user_label_assignment(df, df_top_words, user_dict)
+    if verbose:
+        print('C \n', df[df['Request_Num'] == request_num]['Label'])
 
     df.sort_values(by='Request_Num', inplace=True)
     df_top_words.sort_index(inplace=True)
@@ -343,37 +359,18 @@ def user_label_assignment(df, df_top_words, user_dict):
     return df, df_top_words
 
 
-# Old Version, without Priority
-# def requests_draw_handling(df, requests_dict):
-#
-#     df['Label'] = 'Não Definido'
-#     for request in requests_dict.keys():
-#         matches_count = len(requests_dict[request])
-#         unique_labels_count = len(set([x[0] for x in requests_dict[request]]))
-#         labels = [x[0] for x in requests_dict[request]]
-#         unique_labels = set(labels)
-#         unique_ranks_count = len(set([x[1] for x in requests_dict[request]]))
-#         highest_rank_label = max(requests_dict[request], key=operator.itemgetter(1))[0]
-#
-#         if matches_count > 1 and unique_labels_count > 1:
-#             if 'Workspace' in unique_labels:  # Workspace has priority over any other label
-#                 df.loc[df['Request_Num'] == request, 'Label'] = 'Workspace'
-#             else:
-#                 if highest_rank_label == 'Demonstração Resultados' and 'Importador' in unique_labels:  # Importador has priority over any rank of Demonstração Resultados
-#                     df.loc[df['Request_Num'] == request, 'Label'] = 'Importador'
-#                 else:
-#                     if unique_ranks_count == 1 and unique_labels_count != len(labels):
-#                         label_counter = Counter(labels)
-#                         df.loc[df['Request_Num'] == request, 'Label'] = label_counter.most_common(1)[0][0]
-#                     elif unique_ranks_count == 1 and unique_labels_count == len(labels):
-#                         # print('DRAW:', request, requests_dict[request])
-#                         df.loc[df['Request_Num'] == request, 'Label'] = 'Draw: ' + '+'.join([x[0] for x in requests_dict[request]])
-#                     else:
-#                         df.loc[df['Request_Num'] == request, 'Label'] = highest_rank_label
-#         else:
-#             df.loc[df['Request_Num'] == request, 'Label'] = requests_dict[request][0][0]
-#
-#     return df
+def force_label_assignment(df, df_top_words, force_dict, options_file):
+    for key in force_dict.keys():
+        for value in force_dict[key]:
+            try:
+                matched_requests = df[df['Description'].str.contains(value)]['Request_Num']
+                df.loc[df['Request_Num'].isin(matched_requests), 'Label'] = key
+                df_top_words.loc[df_top_words.index.isin(matched_requests), 'Label'] = key
+
+            except KeyError:
+                log_record('Palavra chave não encontrada: {}'.format(force_dict[key]), options_file.project_id, flag=1)
+
+    return df, df_top_words
 
 
 # New Version, with priority

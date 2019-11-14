@@ -3,7 +3,12 @@ import pandas as pd
 import numpy as np
 import cvxpy as cp
 import os
+import pyodbc
 import time
+from py_dotenv import read_dotenv
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+dotenv_path = base_path + 'info.env'
+read_dotenv(dotenv_path)
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 
@@ -11,6 +16,13 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) +
 # APV Parts Suggestion
 Solver Optimization for APV Parts
 """
+
+performance_sql_info = {'DSN': os.getenv('DSN_MLG'),
+                        'UID': os.getenv('UID'),
+                        'PWD': os.getenv('PWD'),
+                        'DB': 'BI_MLG',
+                        'test_view': 'streamlit_test_apv'
+                        }
 
 configuration_parameters_full = ['Motor_Desc', 'Alarm', 'AC_Auto', 'Open_Roof', 'Auto_Trans', 'Colour_Ext', 'Colour_Int', 'LED_Lights', 'Xenon_Lights', 'Rims_Size', 'Model_Code', 'Navigation', 'Park_Front_Sens', 'Roof_Bars', 'Interior_Type', 'Version']
 extra_parameters = ['Average_Score_Euros', 'Number_Cars_Sold', 'Average_Score_Euros_Local', 'Number_Cars_Sold_Local', 'Sales_Place']
@@ -111,8 +123,52 @@ def main():
             st.write("#Different Parts: {}".format(df_solution_filtered['Part_Ref'].nunique()))
             st.write("Days to Sell: {:.2f}".format(df_solution_filtered['Qty x DtS'].max()))
             st.write("Solution:", df_solution_filtered[['Part_Ref', 'Qty', goal_type, 'DtS', 'Qty x DtS']])
-    else:
-        st.write('$\\bold{Please}$ $\\bold{select}$ $\\bold{a}$ $\\bold{Parts}$ $\\bold{Group.}$')
+
+            cols_name = ['Part_Ref', 'Qty']
+            sql_inject(df_solution_filtered[cols_name])
+
+
+def sql_inject(df_solution):
+    df_solution.rename(index=str, columns={'Qty': 'Quantity'}, inplace=True)
+    df_solution['Quantity'] = pd.to_numeric(df_solution['Quantity'], downcast='integer')
+
+    print(df_solution.dtypes)
+
+    columns = list(df_solution)
+
+    sql_truncate(performance_sql_info['DSN'], performance_sql_info['UID'], performance_sql_info['PWD'], performance_sql_info['DB'], performance_sql_info['test_view'])
+
+    columns_string, values_string = sql_string_preparation_v1(columns)
+
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'
+                          .format(performance_sql_info['DSN'], performance_sql_info['UID'], performance_sql_info['PWD'], performance_sql_info['DB']), searchescape='\\')
+
+    cursor = cnxn.cursor()
+    for index, row in df_solution.iterrows():
+        cursor.execute("INSERT INTO " + performance_sql_info['test_view'] + "(" + columns_string + ') VALUES ( ' + '\'{}\', \'{}\''.format(row['Part_Ref'], row['Quantity']) + ' )')
+
+    cursor.commit()
+    cursor.close()
+
+
+def sql_truncate(dsn, uid, pwd, database, view):
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, uid, pwd, database), searchescape='\\')
+    query = "TRUNCATE TABLE " + view
+    cursor = cnxn.cursor()
+    cursor.execute(query)
+
+    cnxn.commit()
+    cursor.close()
+    cnxn.close()
+
+
+def sql_string_preparation_v1(values_list):
+    columns_string = '[%s]' % "], [".join(values_list)
+
+    values_string = ['\'?\''] * len(values_list)
+    values_string = 'values (%s)' % ', '.join(values_string)
+
+    return columns_string, values_string
 
 
 def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
