@@ -19,6 +19,7 @@ from imblearn.over_sampling import RandomOverSampler
 import level_0_performance_report
 from level_1_e_deployment import sql_string_preparation_v2, time_tags
 from level_2_optionals_baviera_options import colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors
+import level_1_a_data_acquisition as level_a
 warnings.simplefilter('ignore', FutureWarning)
 
 # Globals Definition
@@ -199,11 +200,16 @@ def save_fig(name, save_dir='output/'):
     plt.savefig(save_dir + str(name) + '.png')
 
 
-def options_scraping(df, project_id):
+def options_scraping(df, model_training_check, options_file):
+    project_id = options_file.project_id
     # Project_Id = 2162
     # df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index])  # No need for Prov filtering, as it is already filtered in the data source;
     # df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
     # df = remove_rows(df, [df['Registration_Number'].str.contains('/').index, [df['Registration_Number'].str.len() > 8].index])  # This removes vehicles with erroneous registration numbers;
+
+    if not model_training_check:
+        model_mapping, _ = level_a.sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database'], options_file.sql_info['model_mapping'], 'Mapped_Value', options_file)
+        model_mapping = model_mapping[0]
 
     df_grouped = df.groupby('Nº Stock')
     nav_all, barras_all, alarme_all = [], [], []
@@ -213,11 +219,22 @@ def options_scraping(df, project_id):
 
     # Modelo
     level_0_performance_report.performance_info_append(time.time(), 'start_modelo')
-    unique_models = df['Modelo'].unique()
-    for model in unique_models:
-        # if 'Série' not in model:
-        tokenized_modelo = nltk.word_tokenize(model)
-        df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
+    if model_training_check:
+        unique_models = df['Modelo'].unique()
+        for model in unique_models:
+            tokenized_modelo = nltk.word_tokenize(model)
+            df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
+    elif not model_training_check:
+        unique_models = df['Version_Code'].unique()
+        for model in unique_models:
+            found_flag = 0
+            for key in model_mapping.keys():
+                if model in model_mapping[key]:
+                    df.loc[df['Version_Code'] == model, 'Modelo'] = key
+                    found_flag = 1
+                    break
+            if not found_flag:
+                level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte modelo: {}.'.format(model), project_id, flag=1)
     level_0_performance_report.performance_info_append(time.time(), 'end_modelo')
 
     # Motorização
@@ -601,6 +618,23 @@ def col_group(df, columns_to_replace, dictionaries, project_id):
         raise ValueError('Existem valores não parametrizados. Por favor corrigir.')
 
     return df
+
+
+def sell_place_parametrization(df, original_sale_place_column, new_sale_place_column, mapping, project_id):
+
+    sell_districts = list(mapping.keys())
+    unique_sale_places = df[original_sale_place_column].unique()
+
+    df = new_column_creation(df, [new_sale_place_column + '_level_1'], df[original_sale_place_column].str[0:3])
+    for sale_place in unique_sale_places:
+        sale_place_level_2 = [x for x in sell_districts if x in sale_place]
+        if len(sale_place_level_2):
+            df.loc[df[original_sale_place_column] == sale_place, new_sale_place_column + '_level_2'] = sale_place_level_2
+        else:
+            if sale_place[0:3] == 'DCS':  # This is for the cases where the description has no Local. Currently, all of them are from Lisboa (DCS)
+                df.loc[df[original_sale_place_column] == sale_place, new_sale_place_column + '_level_2'] = 'Lisboa'
+            else:
+                level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte local de venda: {}.'.format(sale_place), project_id, flag=1)
 
 
 def total_price(df):

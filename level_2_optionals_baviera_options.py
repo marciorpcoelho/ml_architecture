@@ -35,8 +35,9 @@ sql_info = {
     'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
     'final_table': 'VHE_Fact_BI_OrderOptimization_copy',
+    'model_mapping': ['VHE_MapBI_Model_Fase2'],
     'mappings': ['VHE_MapBI_Rims_Size', 'VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Model', 'VHE_MapBI_Version', 'VHE_MapBI_Interior_Type', 'VHE_MapBI_Color_Ext', 'VHE_MapBI_Color_Int', 'VHE_MapBI_Motor_Desc'],
-    'mappings_temp': ['VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2'],  # When no training is needed in this project
+    'mappings_temp': ['VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Sales_Place_Fase2'],  # When no training is needed in this project
 }
 
 project_id = 2162
@@ -94,14 +95,14 @@ jantes_dict = {
 
 sales_place_dict = {
     'centro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
-    'norte': ['DCC - Feira', 'DCG - Gaia', 'DCN-Porto', 'DCN-Porto Mini', 'DCG - Gaia Mini', 'DCN-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCN-Maia'],
+    'norte': ['DCC - Feira', 'DCG - Gaia', 'DCP-Porto', 'DCP-Porto Mini', 'DCG - Gaia Mini', 'DCP-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCP-Maia'],
     'sul': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
     'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
     'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
 }
 
 sales_place_dict_v2 = {
-    'porto': ['DCN-Porto', 'DCN-Porto Mini', 'DCN-Porto Usados',  'DCN-Maia'],
+    'porto': ['DCP-Porto', 'DCP-Porto Mini', 'DCP-Porto Usados',  'DCP-Maia'],
     'gaia': ['DCC - Feira', 'DCG - Gaia', 'DCG - Gaia Mini', 'DCG - Gaia Usados', 'DCC - Feira Usados'],
     'aveiro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
     'lisboa': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
@@ -209,6 +210,7 @@ sql_to_code_renaming = {
     'Colour_Int_Desc': 'Interior',
     'Model_Desc': 'Modelo',
     'Version_Desc': 'Versão',
+    'Version_Code': 'Version_Code',
     'Optional_Desc': 'Opcional',
     'Sell_Location_Desc': 'Local da Venda',
     'Order_Type_Desc': 'Tipo Encomenda',
@@ -231,6 +233,8 @@ column_sql_renaming = {
         'Motor': 'Motor_Desc',
         'Local da Venda': 'Sales_Place',
         'Local da Venda_v2': 'Sales_Place_v2',
+        'Local da Venda_Fase2_level_1': 'Sales_Place_Fase2_level_1',
+        'Local da Venda_Fase2_level_2': 'Sales_Place_Fase2_level_2',
         'Margem': 'Margin',
         'margem_percentagem': 'Margin_Percentage',
         'price_total': 'Sell_Value',
@@ -339,6 +343,8 @@ column_checkpoint_sql_renaming = {
     'Modelo': 'Model_Code',
     'Local da Venda': 'Sales_Place',
     'Local da Venda_v2': 'Sales_Place_v2',
+    'Local da Venda_Fase2_level_1': 'Sales_Place_Fase2_level_1',
+    'Local da Venda_Fase2_level_2': 'Sales_Place_Fase2_level_2',
     'Margem': 'Margin',
     'margem_percentagem': 'Margin_Percentage',
     'price_total': 'Sell_Value',

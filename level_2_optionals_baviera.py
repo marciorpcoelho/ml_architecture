@@ -5,7 +5,7 @@ import pandas as pd
 import level_2_optionals_baviera_options
 from level_2_optionals_baviera_options import project_id, classification_models, k, gridsearch_score
 from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
-from level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection
+from level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
 from level_1_c_data_modelling import classification_model_training, save_model
 from level_1_d_model_evaluation import performance_evaluation_classification, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
 from level_1_e_deployment import sql_inject, sql_age_comparison, sql_mapping_upload
@@ -92,7 +92,8 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
                                    ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada', ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
                                    ('Interior', 'mokka'): 'mocha', ('Interior', 'beige'): 'bege', ('Interior', 'dakota\''): 'dakota', ('Interior', 'antracite/cinza/p'): 'antracite/cinza/preto', ('Interior', 'antracite/cinza/pretoreto'): 'antracite/cinza/preto', ('Interior', 'nevada\''): 'nevada',
                                    ('Interior', '"nappa"'): 'nappa', ('Interior', 'anthrazit'): 'antracite', ('Interior', 'antracito'): 'antracite', ('Interior', 'preto/laranja/preto/lara'): 'preto/laranja', ('Interior', 'anthtacite'): 'antracite',
-                                   ('Interior', 'champag'): 'champagne', ('Interior', 'cri'): 'crimson', ('Modelo', 'Enter Model Details'): '', ('Registration_Number', '\.'): '', ('Interior', 'preto/m '): 'preto ', ('Interior', 'congnac/preto'): 'cognac/preto'}
+                                   ('Interior', 'champag'): 'champagne', ('Interior', 'cri'): 'crimson', ('Modelo', 'Enter Model Details'): '', ('Registration_Number', '\.'): '', ('Interior', 'preto/m '): 'preto ', ('Interior', 'congnac/preto'): 'cognac/preto',
+                                   ('Local da Venda', 'DCN'): 'DCP'}
 
         df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
         df.dropna(axis=0, inplace=True)  # Removes all remaining NA's
@@ -107,7 +108,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index], project_id)  # This removes Toyota Vehicles that aren't supposed to be in this model
         df = remove_rows(df, [df[(df.Colour_Ext_Code == ' ') & (df.Cor == ' ')].index], project_id, warning=1)
 
-        df = options_scraping(df, project_id)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+        df = options_scraping(df, model_training_check, level_2_optionals_baviera_options)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
         df = remove_columns(df, ['Colour_Ext_Code'], project_id)  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;
 
         vehicle_count_checkup(df, level_2_optionals_baviera_options, sql_check=1)
@@ -130,10 +131,11 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
             cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Exterior', 'Cor_Interior', 'Motor']
             mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings'], 'Mapped_Value', level_2_optionals_baviera_options)
         else:
-            cols_to_group_layer_2 = ['Local da Venda', 'Local da Venda_v2']
+            cols_to_group_layer_2 = ['Local da Venda', 'Local da Venda_v2', 'Local da Venda_Fase2']
             mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings_temp'], 'Mapped_Value', level_2_optionals_baviera_options)
+            sell_place_parametrization(df, 'Local da Venda', 'Local da Venda_Fase2', mapping_dictionaries[2], level_2_optionals_baviera_options.project_id)
 
-        df = col_group(df, cols_to_group_layer_2, mapping_dictionaries, project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective groups are shown in level_2_optionals_baviera_options
+        df = col_group(df, cols_to_group_layer_2[0:2], mapping_dictionaries[0:2], project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective groups are shown in level_2_optionals_baviera_options
 
         df = new_features(df, configuration_parameters, project_id)  # Creates a series of new features, explained in the provided pdf
 
@@ -164,7 +166,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     df_ohe = remove_columns(df_ohe, removed_columns, project_id)
     df_ohe = constant_columns_removal(df_ohe, project_id)
 
-    datasets = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Local da Venda_v2', 'Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
+    datasets = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Local da Venda_Fase2_level_1', 'Local da Venda_Fase2_level_2', 'Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
     # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed
 
     log_record('Finished Step B.', project_id)
