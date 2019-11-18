@@ -662,7 +662,6 @@ def data_grouping_by_locals_temp(df, configuration_parameters):
     df_grouped5 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_2'])
     df = df_grouped5.apply(additional_info_temp, ('_local_Fase2_level_2',))
 
-    print(df.head())
     df.to_csv('output/bmw_dataset.csv')
 
     return 'N/A', df, df.shape[0]

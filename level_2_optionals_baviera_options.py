@@ -262,21 +262,31 @@ column_sql_renaming = {
         'average_percentage_margin': 'Average_Margin_Percentage',
         'average_percentage_margin_local': 'Average_Margin_Percentage_Local',
         'average_percentage_margin_local_v2': 'Average_Margin_Percentage_Local_v2',
+        'average_percentage_margin_local_Fase2_level_1': 'Average_Margin_Percentage_Local_Fase2_Level_1',
+        'average_percentage_margin_local_Fase2_level_2': 'Average_Margin_Percentage_Local_Fase2_Level_2',
         'average_score_euros': 'Average_Score_Euros',
         'average_score_euros_local': 'Average_Score_Euros_Local',
         'average_score_euros_local_v2': 'Average_Score_Euros_Local_v2',
+        'average_score_euros_local_Fase2_level_1': 'Average_Score_Euros_Local_Fase2_Level_1',
+        'average_score_euros_local_Fase2_level_2': 'Average_Score_Euros_Local_Fase2_Level_2',
         'average_stock_days': 'Average_Stock_Days',
         'average_stock_days_local': 'Average_Stock_Days_Local',
         'average_stock_days_local_v2': 'Average_Stock_Days_Local_v2',
+        'average_stock_days_local_Fase2_level_1': 'Average_Stock_Days_Local_Fase2_Level_1',
+        'average_stock_days_local_Fase2_level_2': 'Average_Stock_Days_Local_Fase2_Level_2',
         'average_score': 'Average_Score_Class_GT',
         'average_score_local': 'Average_Score_Class_GT_Local',
         'average_score_local_v2': 'Average_Score_Class_GT_Local_v2',
+        'average_score_local_Fase2_level_1': 'Average_Score_Class_GT_Fase2_level_1',
+        'average_score_local_Fase2_level_2': 'Average_Score_Class_GT_Fase2_level_2',
         'average_score_pred': 'Average_Score_Class_Pred',
         'average_score_pred_local': 'Average_Score_Class_Pred_Local',
         'average_score_pred_local_v2': 'Average_Score_Class_Pred_Local_v2',
         'nr_cars_sold': 'Number_Cars_Sold',
         'nr_cars_sold_local': 'Number_Cars_Sold_Local',
         'nr_cars_sold_local_v2': 'Number_Cars_Sold_Local_v2',
+        'nr_cars_sold_local_Fase2_level_1': 'Number_Cars_Sold_Local_Fase2_Level_1',
+        'nr_cars_sold_local_Fase2_level_2': 'Number_Cars_Sold_Local_Fase2_Level_2',
 }
 
 columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
@@ -287,7 +297,9 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
                    'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
                    'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2',
-                   'Average_Score_Class_Pred_Local', 'Average_Score_Class_Pred_Local_v2', 'Registration_Number', 'VHE_Number']
+                   'Average_Score_Class_Pred_Local', 'Average_Score_Class_Pred_Local_v2', 'Registration_Number', 'VHE_Number', 'Sales_Place_Fase2_level_1', 'Sales_Place_Fase2_level_2',
+                   'Average_Margin_Percentage_Local_Fase2_Level_1', 'Average_Margin_Percentage_Local_Fase2_Level_2', 'Average_Score_Euros_Local_Fase2_Level_1', 'Average_Score_Euros_Local_Fase2_Level_2',
+                   'Average_Stock_Days_Local_Fase2_Level_1', 'Average_Stock_Days_Local_Fase2_Level_2', 'Number_Cars_Sold_Local_Fase2_Level_1', 'Number_Cars_Sold_Local_Fase2_Level_2']
 
 columns_for_sql_temp = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
                         'Sales_Place_v2', 'Model_Code', 'Margin', 'Margin_Percentage',
@@ -297,7 +309,9 @@ columns_for_sql_temp = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Siz
                         'Average_Stock_Days', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
                         'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
                         'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Registration_Number', 'VHE_Number',
-                        'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2', 'Score_Class_GT']
+                        'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2', 'Score_Class_GT', 'Sales_Place_Fase2_level_1', 'Sales_Place_Fase2_level_2',
+                        'Average_Margin_Percentage_Local_Fase2_Level_1', 'Average_Margin_Percentage_Local_Fase2_Level_2', 'Average_Score_Euros_Local_Fase2_Level_1', 'Average_Score_Euros_Local_Fase2_Level_2',
+                        'Average_Stock_Days_Local_Fase2_Level_1', 'Average_Stock_Days_Local_Fase2_Level_2', 'Number_Cars_Sold_Local_Fase2_Level_1', 'Number_Cars_Sold_Local_Fase2_Level_2']
 
 column_performance_sql_renaming = {
     'start_section_a': 'Section_A_Start',
