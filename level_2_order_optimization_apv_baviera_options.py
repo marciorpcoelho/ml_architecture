@@ -1,7 +1,10 @@
 import os
 from py_dotenv import read_dotenv
 dotenv_path = 'info.env'
-read_dotenv(dotenv_path)
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+read_dotenv(base_path + dotenv_path)
+
+update_frequency_days = 0
 
 DSN_MLG = os.getenv('DSN_MLG')
 DSN_PRD = os.getenv('DSN_Prd')
@@ -15,7 +18,8 @@ sql_info = {
     'sales_table': '',
     'purchases_table': '',
     'stock_table': '',
-    'final_table': '',
+    'final_table': 'PSE_Fact_BI_OrderOptimization',
+    'optimization_solution_table': 'PSE_Fact_BI_OrderOptimization_Solver_Solution',
 }
 
 project_id = 2259
@@ -26,6 +30,8 @@ log_files = {
     'full_log': 'logs/apv_baviera_2259.txt'
 }
 
+configuration_parameters_full = ['Motor_Desc', 'Alarm', 'AC_Auto', 'Open_Roof', 'Auto_Trans', 'Colour_Ext', 'Colour_Int', 'LED_Lights', 'Xenon_Lights', 'Rims_Size', 'Model_Code', 'Navigation', 'Park_Front_Sens', 'Roof_Bars', 'Interior_Type', 'Version']
+extra_parameters = ['Average_Score_Euros', 'Number_Cars_Sold', 'Average_Score_Euros_Local', 'Number_Cars_Sold_Local', 'Sales_Place']
 
 bmw_ta_mapping = {
     'BMW_Bonus_Group_1': ['1', '2'],  # Peças + Óleos
@@ -234,6 +240,10 @@ reg_autoline_clients = '''
     FROM [BI_CRP].dbo.[PSE_Mapping_Adjustments_SLR_Accounts] WITH (NOLOCK)  
     WHERE nlr_code = '701' '''
 
+df_solve_query = '''
+    SELECT * 
+    FROM [BI_MLG].dbo.[{}] '''.format(sql_info['final_table'])
+
 dim_product_group_dw = '''
     SELECT Product_Group_Code,
         Product_Group_Level_1_Code,
@@ -248,3 +258,22 @@ regex_dict = {
 }
 
 bmw_original_oil_words = ['óleo', 'oleo', 'oil', 'óleos', 'oleos', 'oils']
+
+
+column_sql_renaming = {
+    'Part_Ref': 'Part_Ref',
+    'Cost': 'Cost',
+    'PVP': 'PVP',
+    'Margin': 'Margin',
+    'Last Stock': 'Last_Stock',
+    'Last Stock Value': 'Last_Stock_Value',
+    'Last Year Sales': 'Last_Year_Sales',
+    'Last Year Sales Mean': 'Last_Year_Sales_Mean',
+    'DaysToSell_1_Part_v2_mean': 'Days_To_Sell_Mean',
+    'DaysToSell_1_Part_v2_median': 'Days_To_Sell_Median',
+    'Group': 'Part_Ref_Group',
+}
+
+columns_sql_solver_solution = [
+    'Part_Ref', 'Qty', 'DtS', 'DtS_Per_Qty', 'Above_Goal_Flag', 'Part_Ref_Group'
+]

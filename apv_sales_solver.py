@@ -7,13 +7,19 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import datetime as dt
 import level_0_performance_report
-from level_1_d_model_evaluation import save_fig
-from level_1_b_data_processing import df_join_function
-from level_2_order_optimization_apv_baviera_options import group_goals, group_goals_type, goal_types
+import level_2_order_optimization_apv_baviera_options as options_file
+import modules.level_1_d_model_evaluation as level_1_d_model_evaluation
+import modules.level_1_b_data_processing as level_1_b_data_processing
+import modules.level_1_e_deployment as level_1_e_deployment
 from scipy.optimize import minimize, LinearConstraint, Bounds
 from dateutil.relativedelta import relativedelta
 import warnings
 warnings.filterwarnings('ignore')
+
+group_goals = options_file.group_goals
+group_goals_type = options_file.group_goals_type
+goal_types = options_file.goal_types
+sql_info = options_file.sql_info
 
 pd.set_option('display.expand_frame_repr', False)
 my_dpi = 96
@@ -35,13 +41,18 @@ def main():
 
     try:
         # df_solve = pd.read_csv('output/df_solve_0B_filtered.csv', index_col=0)
-        df_solve = pd.read_csv('output/df_solve_0B_{}.csv'.format(current_date), index_col=0)
+        df_solve = pd.read_csv('output/df_solve_0B_{}.csv'.format(current_date), index_col=0).reset_index()
         print('df_solve found...')
+
     except FileNotFoundError:
         print('df_solve file not found, processing a new one...')
         # df_sales = pd.read_csv('dbs/results_merge_case_study_0B.csv', parse_dates=['index'], index_col=0)
         df_sales = pd.read_csv('output/results_merge_0B_{}.csv'.format(current_date), parse_dates=['index'], index_col=0)
         df_solve = solver_dataset_preparation(df_sales, df_part_refs_ta, group_goals['dtss_goal'], current_date)
+
+        df_solve = level_1_b_data_processing.column_rename(df_solve, list(options_file.column_sql_renaming.keys()), list(options_file.column_sql_renaming.values()))
+        df_solve = level_1_b_data_processing.remove_rows(df_solve, [df_solve.loc[df_solve['Part_Ref_Group'].isnull(), :].index], options_file.project_id)
+        level_1_e_deployment.sql_inject(df_solve, options_file.DSN_MLG, sql_info['database_final'], sql_info['final_table'], options_file, columns=list(options_file.column_sql_renaming.values()), truncate=1, check_date=1)
 
     dtss_goal = group_goals['dtss_goal']
     number_of_parts_goal = group_goals['number_of_unique_parts']
@@ -303,7 +314,7 @@ def evolution_plots(n_size, group, goal_value, goal_type, dtss_goal, total_numbe
 
     plt.tight_layout()
     plt.title('N={}'.format(n_size))
-    save_fig('apv_solver_metrics_evolution_{}'.format(group))
+    level_1_d_model_evaluation.save_fig('apv_solver_metrics_evolution_{}'.format(group))
     # plt.show()
 
 
@@ -416,7 +427,7 @@ def solver_dataset_preparation(df_sales, df_part_refs_ta, dtss_goal, current_dat
     pool.close()
     df_solve = pd.concat([result for result in results if result is not None])
 
-    df_solve = df_join_function(df_solve, df_part_refs_ta[['Part_Ref', 'Group']].set_index('Part_Ref'), on='Part_Ref')  # Addition of the Groups Description
+    df_solve = level_1_b_data_processing.df_join_function(df_solve, df_part_refs_ta[['Part_Ref', 'Group']].set_index('Part_Ref'), on='Part_Ref')  # Addition of the Groups Description
 
     df_solve.to_csv('output/df_solve_0B_{}.csv'.format(current_date))
 

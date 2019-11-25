@@ -119,13 +119,3 @@ words_to_remove_from_description = ['felisbel', 'felisbela', 'susana', 'paul', '
                                     'ou', 'poi', 'agradecia', 'est', 'obrigada', 'bueno', 'bom', 'con', 'ter', 'bon', 'boa', 'esta', 'pelo', 'tenemos', 'como', 'sao', 'fazer', 'ver', 'estamo',
                                     'azevedo', 'oliveira', '-', '\'', 'tpsilva', 'mb', '12ts23', '12ts26', '10ua27', 'joliveira', 'salvador', 'piedra', 'diego', 'rodriguez', 'estebaranz']
 
-column_performance_sql_renaming = {
-    'start_section_a': 'Section_A_Start',
-    'start_section_b': 'Section_B_Start',
-    'start_section_c': 'Section_C_Start',
-    'start_section_e': 'Section_E_Start',
-    'end_section_a': 'Section_A_End',
-    'end_section_b': 'Section_B_End',
-    'end_section_c': 'Section_C_End',
-    'end_section_e': 'Section_E_End',
-}

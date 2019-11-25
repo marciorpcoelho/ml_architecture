@@ -5,12 +5,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import level_2_pa_servicedesk_2244_options as options_file
-from level_1_a_data_acquisition import read_csv, sql_retrieve_df, sql_mapping_retrieval
-from level_1_b_data_processing import summary_description_null_checkup, top_words_processing, threshold_grouping, value_count_histogram, date_cols, ohe, data_type_conversion, min_max_scaling, min_max_scaling_reverse, constant_columns_removal, remove_columns, object_column_removal, text_preprocess, literal_removal, string_to_list, df_join_function, null_handling, lowercase_column_convertion, null_analysis, remove_rows, value_replacement, value_substitution, duplicate_removal, language_detection, string_replacer, close_and_resolve_date_replacements
-from level_1_c_data_modelling import clustering_training, new_request_type
-from level_1_d_model_evaluation import cluster_metrics_plots, radial_chart_preprocess, make_spider
-from level_1_e_deployment import save_csv, sql_inject
-from level_0_performance_report import error_upload, log_record, project_dict, performance_info, performance_info_append
+from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df, sql_mapping_retrieval
+from modules.level_1_b_data_processing import summary_description_null_checkup, top_words_processing, threshold_grouping, value_count_histogram, date_cols, ohe, data_type_conversion, min_max_scaling, min_max_scaling_reverse, constant_columns_removal, remove_columns, object_column_removal, text_preprocess, literal_removal, string_to_list, df_join_function, null_handling, lowercase_column_convertion, null_analysis, remove_rows, value_replacement, value_substitution, duplicate_removal, language_detection, string_replacer, close_and_resolve_date_replacements
+from modules.level_1_c_data_modelling import clustering_training, new_request_type
+from modules.level_1_d_model_evaluation import cluster_metrics_plots, radial_chart_preprocess, make_spider
+from modules.level_1_e_deployment import save_csv, sql_inject
+from modules.level_0_performance_report import error_upload, log_record, project_dict, performance_info, performance_info_append
 from wordcloud import WordCloud
 from sklearn.decomposition import PCA
 my_dpi = 96
@@ -26,7 +26,7 @@ clustering = 0
 
 
 def main():
-    log_record('Project: PA @ Service Desk', options_file.project_id)
+    log_record('Projeto: {}'.format(project_dict[options_file.project_id]), options_file.project_id)
     input_file_facts, input_file_durations, input_file_clients, pbi_categories = 'dbs/db_facts_initial.csv', 'dbs/db_facts_duration.csv', 'dbs/db_clients_initial.csv', 'dbs/db_pbi_categories_initial.csv'
     query_filters = [{'Cost_Centre': '6825', 'Record_Type': ['1', '2']}, {'Cost_Centre': '6825'}]
 
@@ -47,17 +47,17 @@ def main():
     deployment(df)
     performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df.shape[0], running_times_upload_flag=0)
 
-    log_record('Finished Successfully - Project: PA @ Service Desk.', options_file.project_id)
+    log_record('Conclusão com sucesso - Projeto: {}'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
 def data_modelling(df, df_top_words):
-    performance_info_append(time.time(), 'start_section_c')
-    log_record('Started Step C...', options_file.project_id)
+    performance_info_append(time.time(), 'Section_C_Start')
+    log_record('Início Secção C...', options_file.project_id)
 
     df = new_request_type(df, df_top_words, options_file)
 
-    log_record('Finished Step C.', options_file.project_id)
-    performance_info_append(time.time(), 'end_section_c')
+    log_record('Fim Secção C.', options_file.project_id)
+    performance_info_append(time.time(), 'Section_C_End')
 
     return df
 
@@ -94,8 +94,8 @@ def pca_analysis():
 
 
 def data_acquisition(input_files, query_filters, local=0):
-    performance_info_append(time.time(), 'start_section_a')
-    log_record('Started Step A...', options_file.project_id)
+    performance_info_append(time.time(), 'Section_A_Start')
+    log_record('Início Secção A...', options_file.project_id)
 
     if local:
         df_facts = read_csv(input_files[0], index_col=0, parse_dates=options_file.date_columns, infer_datetime_format=True)
@@ -110,25 +110,25 @@ def data_acquisition(input_files, query_filters, local=0):
 
         save_csv([df_facts, df_facts_duration, df_clients, df_pbi_categories], ['dbs/db_facts_initial', 'dbs/db_facts_duration', 'dbs/db_clients_initial', 'dbs/db_pbi_categories_initial'])
 
-    log_record('Finished Step A...', options_file.project_id)
-    performance_info_append(time.time(), 'end_section_a')
+    log_record('Fim Secção A...', options_file.project_id)
+    performance_info_append(time.time(), 'Section_A_End')
 
     return df_facts, df_facts_duration, df_clients, df_pbi_categories
 
 
 def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
-    performance_info_append(time.time(), 'start_section_b')
-    log_record('Started Step B...', options_file.project_id)
+    performance_info_append(time.time(), 'Section_B_Start')
+    log_record('Início Secção B...', options_file.project_id)
 
     dict_strings_to_replace = {('Description', 'filesibmcognoscbindatacqertmodelsfdfdeeacebedeabeeabbedrtm'): 'files ibm cognos', ('Description', 'cognosapv'): 'cognos apv', ('Description', 'caetanoautopt'): 'caetano auto pt',
                                ('Description', 'autolinecognos'): 'autoline cognos', ('Description', 'realnao'): 'real nao', ('Description', 'booksytner'): 'book sytner'}  # ('Description', 'http://'): 'http://www.', ('Summary', 'http://'): 'http://www.'
 
     # Remove PBI's categories requests
-    log_record('Total Initial Requests: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
+    log_record('Contagem inicial de pedidos: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
     pbi_categories = remove_rows(df_pbi_categories.copy(), [df_pbi_categories[~df_pbi_categories['Category_Name'].str.contains('Power BI')].index], options_file.project_id)['Category_Id'].values  # Selects the Category ID's which belong to PBI
-    log_record('The number of PBI requests are: {}'.format(df_facts[df_facts['Category_Id'].isin(pbi_categories)]['Request_Num'].nunique()), options_file.project_id)
+    log_record('Contagem de pedidos PBI: {}'.format(df_facts[df_facts['Category_Id'].isin(pbi_categories)]['Request_Num'].nunique()), options_file.project_id)
     df_facts = remove_rows(df_facts, [df_facts.loc[df_facts['Category_Id'].isin(pbi_categories)].index], options_file.project_id)  # Removes the rows which belong to PBI;
-    log_record('After PBI Filtering, the number of requests is: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
+    log_record('Após o filtro de pedidos PBI, a nova contagem é de: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
 
     # Lowercase convertion of Summary and Description
     df_facts = lowercase_column_convertion(df_facts, columns=['Summary', 'Description'])
@@ -180,9 +180,9 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
 
     df_facts, df_top_words = top_words_processing(df_facts)
 
-    log_record('After preprocessing the number of requests is: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
-    log_record('Finished Step B.', options_file.project_id)
-    performance_info_append(time.time(), 'end_section_b')
+    log_record('Após o processamento a contagem de pedidos é de: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
+    log_record('Fim Secção B.', options_file.project_id)
+    performance_info_append(time.time(), 'Section_B_End')
 
     return df_facts, df_top_words
 
@@ -464,16 +464,16 @@ def word_histogram(listing):
 
 
 def deployment(df):
-    performance_info_append(time.time(), 'start_section_e')
-    log_record('Started Step E...', options_file.project_id)
+    performance_info_append(time.time(), 'Section_E_Start')
+    log_record('Início Secção E...', options_file.project_id)
     df = df.astype(object).where(pd.notnull(df), None)
 
     sql_inject(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['final_table'], options_file, ['Request_Num', 'StemmedDescription', 'Language', 'Label'], truncate=1)
 
     # sql_join(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts'], options_file)
 
-    log_record('Finished Step E.', options_file.project_id)
-    performance_info_append(time.time(), 'end_section_e')
+    log_record('Fim Secção E.', options_file.project_id)
+    performance_info_append(time.time(), 'Section_E_End')
 
     return
 
@@ -498,5 +498,5 @@ if __name__ == '__main__':
         project_identifier = 2244
         log_record(exception.args[0], project_identifier, flag=2)
         error_upload(options_file, project_identifier, options_file.log_files['full_log'], error_flag=1)
-        log_record('Failed - Project: ' + str(project_dict[project_identifier]) + '.', project_identifier)
+        log_record('Falhou - Projeto: ' + str(project_dict[project_identifier]) + '.', project_identifier)
 

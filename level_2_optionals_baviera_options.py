@@ -7,8 +7,9 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
 from sklearn import tree, linear_model, neighbors, svm
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
-dotenv_path = 'info.env'
-read_dotenv(dotenv_path)
+dotenv_path = '/info.env'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+read_dotenv(base_path + dotenv_path)
 
 # Options:
 margin_threshold = 3.5
@@ -22,8 +23,6 @@ selected_configuration_parameters = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej',
 DSN_MLG = os.getenv('DSN_MLG')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
-# EMAIL = os.getenv('EMAIL')
-# EMAIL_PASS = os.getenv('EMAIL_PASS')
 configuration_parameters_full = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 # Dictionaries:
@@ -50,14 +49,6 @@ color_ext_dict = {
     'azul': ['azul'],
     'outros': ['undefined', 'sunstone', 'castanho', 'topaz', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
 }
-
-# New Cor_Exterior (v2)
-# color_ext_dict_layer_1 = {
-#     'preto': ['preto'],
-#     'branco': ['branco'],
-#     'cinzento': ['cinzento', 'prateado', 'prata', 'cinza', 'bluestone'],
-#     'azul/outros': ['azul', 'castanho', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
-# }
 
 colors_pt = ['preto', 'branco', 'azul', 'verde', 'tartufo', 'vermelho', 'antracite/vermelho', 'anthtacite/preto', 'preto/laranja/preto/lara', 'prata/cinza', 'cinza', 'preto/silver', 'cinzento', 'prateado', 'prata', 'amarelo',
              'laranja', 'castanho', 'dourado', 'antracit', 'antracite/preto', 'antracite/cinza/preto', 'branco/outras', 'antracito', 'antracite', 'antracite/vermelho/preto', 'oyster/preto', 'prata/preto/preto', 'âmbar/preto/pr',
@@ -233,8 +224,8 @@ column_sql_renaming = {
         'Motor': 'Motor_Desc',
         'Local da Venda': 'Sales_Place',
         'Local da Venda_v2': 'Sales_Place_v2',
-        'Local da Venda_Fase2_level_1': 'Sales_Place_Fase2_level_1',
-        'Local da Venda_Fase2_level_2': 'Sales_Place_Fase2_level_2',
+        'Local da Venda_Fase2_level_1': 'Sales_Place_Fase2_Level_1',
+        'Local da Venda_Fase2_level_2': 'Sales_Place_Fase2_Level_2',
         'Margem': 'Margin',
         'margem_percentagem': 'Margin_Percentage',
         'price_total': 'Sell_Value',
@@ -277,8 +268,8 @@ column_sql_renaming = {
         'average_score': 'Average_Score_Class_GT',
         'average_score_local': 'Average_Score_Class_GT_Local',
         'average_score_local_v2': 'Average_Score_Class_GT_Local_v2',
-        'average_score_local_Fase2_level_1': 'Average_Score_Class_GT_Fase2_level_1',
-        'average_score_local_Fase2_level_2': 'Average_Score_Class_GT_Fase2_level_2',
+        'average_score_local_Fase2_level_1': 'Average_Score_Class_GT_Fase2_Level_1',
+        'average_score_local_Fase2_level_2': 'Average_Score_Class_GT_Fase2_Level_2',
         'average_score_pred': 'Average_Score_Class_Pred',
         'average_score_pred_local': 'Average_Score_Class_Pred_Local',
         'average_score_pred_local_v2': 'Average_Score_Class_Pred_Local_v2',
@@ -297,7 +288,7 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
                    'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
                    'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2',
-                   'Average_Score_Class_Pred_Local', 'Average_Score_Class_Pred_Local_v2', 'Registration_Number', 'VHE_Number', 'Sales_Place_Fase2_level_1', 'Sales_Place_Fase2_level_2',
+                   'Average_Score_Class_Pred_Local', 'Average_Score_Class_Pred_Local_v2', 'Registration_Number', 'VHE_Number', 'Sales_Place_Fase2_Level_1', 'Sales_Place_Fase2_Level_2',
                    'Average_Margin_Percentage_Local_Fase2_Level_1', 'Average_Margin_Percentage_Local_Fase2_Level_2', 'Average_Score_Euros_Local_Fase2_Level_1', 'Average_Score_Euros_Local_Fase2_Level_2',
                    'Average_Stock_Days_Local_Fase2_Level_1', 'Average_Stock_Days_Local_Fase2_Level_2', 'Number_Cars_Sold_Local_Fase2_Level_1', 'Number_Cars_Sold_Local_Fase2_Level_2']
 
@@ -309,43 +300,9 @@ columns_for_sql_temp = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Siz
                         'Average_Stock_Days', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
                         'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
                         'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Registration_Number', 'VHE_Number',
-                        'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2', 'Score_Class_GT', 'Sales_Place_Fase2_level_1', 'Sales_Place_Fase2_level_2',
+                        'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2', 'Score_Class_GT', 'Sales_Place_Fase2_Level_1', 'Sales_Place_Fase2_Level_2',
                         'Average_Margin_Percentage_Local_Fase2_Level_1', 'Average_Margin_Percentage_Local_Fase2_Level_2', 'Average_Score_Euros_Local_Fase2_Level_1', 'Average_Score_Euros_Local_Fase2_Level_2',
                         'Average_Stock_Days_Local_Fase2_Level_1', 'Average_Stock_Days_Local_Fase2_Level_2', 'Number_Cars_Sold_Local_Fase2_Level_1', 'Number_Cars_Sold_Local_Fase2_Level_2']
-
-column_performance_sql_renaming = {
-    'start_section_a': 'Section_A_Start',
-    'start_section_b': 'Section_B_Start',
-    'start_section_c': 'Section_C_Start',
-    'start_section_d': 'Section_D_Start',
-    'start_section_e': 'Section_E_Start',
-    'end_section_a': 'Section_A_End',
-    'end_section_b': 'Section_B_End',
-    'end_section_c': 'Section_C_End',
-    'end_section_d': 'Section_D_End',
-    'end_section_e': 'Section_E_End',
-    'start_modelo': 'Model_Code_Start',
-    'end_modelo': 'Model_Code_End',
-    'start_motor': 'Motor_Desc_Start',
-    'end_motor': 'Motor_Desc_End',
-    'nav_all': 'Navigation_Duration',
-    'barras_all': 'Roof_Bars_Duration',
-    'alarme_all': 'Alarm_Duration',
-    'seven_lug_all': 'Seven_Seats_Duration',
-    'prot_all': 'Solar_Protection_Duration',
-    'ac_all': 'AC_Auto_Duration',
-    'teto_all': 'Open_Roof_Duration',
-    'cor_ext_all': 'Colour_Ext_Duration',
-    'cor_int_all': 'Colour_Int_Duration',
-    'int_type_all': 'Interior_Type_Duration',
-    'versao_all': 'Version_Duration',
-    'trans_all': 'Auto_Trans_Duration',
-    'sens_all': 'Park_Front_Sens_Duration',
-    'jantes_all': 'Rims_Size_Duration',
-    'farois_all': 'Lights_Duration',
-    'start_standard': 'Standard_Start',
-    'end_standard': 'Standard_End'
-}
 
 column_checkpoint_sql_renaming = {
     'Jantes': 'Rims_Size',
@@ -357,8 +314,8 @@ column_checkpoint_sql_renaming = {
     'Modelo': 'Model_Code',
     'Local da Venda': 'Sales_Place',
     'Local da Venda_v2': 'Sales_Place_v2',
-    'Local da Venda_Fase2_level_1': 'Sales_Place_Fase2_level_1',
-    'Local da Venda_Fase2_level_2': 'Sales_Place_Fase2_level_2',
+    'Local da Venda_Fase2_level_1': 'Sales_Place_Fase2_Level_1',
+    'Local da Venda_Fase2_level_2': 'Sales_Place_Fase2_Level_2',
     'Margem': 'Margin',
     'margem_percentagem': 'Margin_Percentage',
     'price_total': 'Sell_Value',

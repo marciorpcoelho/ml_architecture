@@ -3,87 +3,51 @@ import pandas as pd
 import numpy as np
 import cvxpy as cp
 import os
+import sys
+import pyodbc
 import time
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+sys.path.insert(1, base_path)
+import level_2_order_optimization_apv_baviera_options as options_file
+import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
+import modules.level_1_e_deployment as level_1_e_deployment
+
 
 """
 # APV Parts Suggestion
 Solver Optimization for APV Parts
 """
 
-configuration_parameters_full = ['Motor_Desc', 'Alarm', 'AC_Auto', 'Open_Roof', 'Auto_Trans', 'Colour_Ext', 'Colour_Int', 'LED_Lights', 'Xenon_Lights', 'Rims_Size', 'Model_Code', 'Navigation', 'Park_Front_Sens', 'Roof_Bars', 'Interior_Type', 'Version']
-extra_parameters = ['Average_Score_Euros', 'Number_Cars_Sold', 'Average_Score_Euros_Local', 'Number_Cars_Sold_Local', 'Sales_Place']
-
-# 'MINI_Bonus_Group_1': ['1', '2'],  # Peças + Óleos
-# 'MINI_Bonus_Group_3': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
-# 'MINI_Bonus_Group_4': ['8'],  # Pneus
-
-group_goals = {
-    'dtss_goal': 15,  # Weekdays only!
-    'number_of_unique_parts': 50,
-    'number_of_total_parts': 50,
-
-    # 'BMW_Bonus_Group_1': [223713 - 208239],  # Purchase - September Goal
-    # 'BMW_Bonus_Group_3': [4504 - 2226],  # Purchase
-    # 'BMW_Bonus_Group_4': [8890 - 8250],  # Sales
-    # 'BMW_Bonus_Group_5': [8085 - 3320],  # Sales
-    # 'MINI_Bonus_Group_1': [0],
-    # 'MINI_Bonus_Group_3': [0],
-    # 'MINI_Bonus_Group_4': [0],
-
-    'BMW_Bonus_Group_1': [220170 - 51416],  # Purchase - November Goal
-    'BMW_Bonus_Group_3': [4433 - 749],  # Purchase
-    'BMW_Bonus_Group_4': [8749 - 347],  # Sales
-    'BMW_Bonus_Group_5': [7957 - 127],  # Sales
-    'MINI_Bonus_Group_1': [29382 - 7843],  # Purchase
-    'MINI_Bonus_Group_3': [2069 - 220],  # Sales
-    'MINI_Bonus_Group_4': [723 - 466],  # Sales
-}
-
-group_goals_type = {
-    'BMW_Bonus_Group_1': 'Cost',  # Purchase
-    'BMW_Bonus_Group_3': 'Cost',  # Purchase
-    'BMW_Bonus_Group_4': 'PVP',  # Sales
-    'BMW_Bonus_Group_5': 'PVP',  # Sales
-    'MINI_Bonus_Group_1': 'Cost',  # Sales
-    'MINI_Bonus_Group_3': 'PVP',  # Sales
-    'MINI_Bonus_Group_4': 'PVP',  # Sales
-}
-
-goal_types = ['Cost', 'PVP']
-
 
 def main():
     current_date = '20191031'
-    solve_dataset_name = base_path + 'output/df_solve_0B_{}.csv'.format(current_date)
-    solve_data = get_data(solve_dataset_name)
-    # ta_dataset_name = base_path + 'output/part_ref_ta_{}.csv'.format(current_date)
-    # ta_data = get_data(ta_dataset_name)
+    # solve_dataset_name = base_path + 'output/df_solve_0B_{}.csv'.format(current_date)
+    solve_data = get_data(options_file)
 
     # sel_metric = st.sidebar.selectbox('Please select a metric:', ['None'] + ['DaysToSell_1_Part', 'DaysToSell_1_Part_v2_mean', 'DaysToSell_1_Part_v2_median'], index=0)
-    sel_metric = 'DaysToSell_1_Part_v2_median'
+    sel_metric = 'Days_To_Sell_Median'
 
     if sel_metric != 'None':
         solve_data = solve_data[solve_data[sel_metric] > 0]
-        solve_data = solve_data[(solve_data['Group'] != 'NO_TA') & (solve_data['Group'] != 'Outros')]
+        solve_data = solve_data[(solve_data['Part_Ref_Group'] != 'NO_TA') & (solve_data['Part_Ref_Group'] != 'Outros')]
 
-    solve_data = solve_data[solve_data['Group'] != 'BMW_Bonus_Group_1']
+    solve_data = solve_data[solve_data['Part_Ref_Group'] != 'BMW_Bonus_Group_1']
 
-    sel_group = st.sidebar.selectbox('Please select a Parts Group:', ['None'] + list(solve_data['Group'].dropna().unique()), index=0)
+    sel_group = st.sidebar.selectbox('Please select a Parts Group:', ['None'] + list(solve_data['Part_Ref_Group'].dropna().unique()), index=0)
     dtss_goal = st.sidebar.number_input('Please select a limit of days to sell', 0, 30, value=15)
     max_part_number = st.sidebar.number_input('Please select a max number of parts (0 = No Limit):', 0, 5000, value=0)
     minimum_cost_or_pvp = st.sidebar.number_input('Please select a minimum cost/pvp for each part (0 = No Limit):', 0.0, max([max(solve_data['PVP']), max(solve_data['Cost'])]), value=0.0)
 
     sel_values_filters = [sel_group]
-    sel_values_col_filters = ['Group']
+    sel_values_col_filters = ['Part_Ref_Group']
 
     if 'None' not in sel_values_filters:
 
-        goal_value = group_goals[sel_group][0]
+        goal_value = options_file.group_goals[sel_group][0]
 
-        goal_type = group_goals_type[sel_group]
-        non_goal_type = [x for x in goal_types if x not in goal_type][0]
+        goal_type = options_file.group_goals_type[sel_group]
+        non_goal_type = [x for x in options_file.goal_types if x not in goal_type][0]
 
         data_filtered = filter_data(solve_data, sel_values_filters, sel_values_col_filters)
 
@@ -109,10 +73,10 @@ def main():
             df_solution_filtered = df_solution[df_solution['Qty'] > 0]
             st.write("Total Parts: {:.0f}".format(df_solution_filtered['Qty'].sum()))
             st.write("#Different Parts: {}".format(df_solution_filtered['Part_Ref'].nunique()))
-            st.write("Days to Sell: {:.2f}".format(df_solution_filtered['Qty x DtS'].max()))
-            st.write("Solution:", df_solution_filtered[['Part_Ref', 'Qty', goal_type, 'DtS', 'Qty x DtS']])
-    else:
-        st.write('$\\bold{Please}$ $\\bold{select}$ $\\bold{a}$ $\\bold{Parts}$ $\\bold{Group.}$')
+            st.write("Days to Sell: {:.2f}".format(df_solution_filtered['DtS_Per_Qty'].max()))
+            st.write("Solution:", df_solution_filtered[['Part_Ref', 'Qty', goal_type, 'DtS', 'DtS_Per_Qty']])
+
+            solution_saving(df_solution_filtered, sel_group, current_date)
 
 
 def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
@@ -156,31 +120,35 @@ def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max
             above_goal_flag = 0
             # st.write('Solution does not reach the goal :(')
 
-        df_solution = solution_saving_csv(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss)
+        df_solution = solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group)
 
     return problem_testing_2.status, result, selection.value, above_goal_flag, df_solution
 
 
-def solution_saving_csv(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss):
-    df_solution = pd.DataFrame(columns={'Part_Ref', 'Qty', goal_type, 'DtS', 'Qty x DtS'})
+def solution_saving(df_solution, group_name, current_date):
+
+    df_solution.to_csv(base_path + '/output/solver_solution_{}_{}.csv'.format(group_name, current_date))
+    level_1_e_deployment.sql_inject(df_solution, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], options_file, list(df_solution[options_file.columns_sql_solver_solution]), truncate=1)
+
+
+def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group_name):
+    df_solution = pd.DataFrame(columns={'Part_Ref', 'Qty', goal_type, 'DtS', 'DtS_Per_Qty'})
 
     df_solution['Part_Ref'] = [part for part in unique_parts]
     df_solution['Qty'] = [qty for qty in selection.value]
     df_solution[goal_type] = [value for value in values]
     df_solution[non_goal_type] = [value for value in other_values]
     df_solution['DtS'] = [dts for dts in dtss]
-    df_solution['Qty x DtS'] = [qty * dts for qty, dts in zip(selection.value, dtss)]
-    # df_solution['AboveGoal?'] = [above_goal_flag] * len(unique_parts)
-    # df_solution['Group_Name'] = [group_name] * len(unique_parts)
-
-    # df_solution.to_csv('output/solver_solution_{}_goal_{}_{}.csv'.format(group_name, goal_type, current_date))
+    df_solution['DtS_Per_Qty'] = [qty * dts for qty, dts in zip(selection.value, dtss)]
+    df_solution['Above_Goal_Flag'] = [above_goal_flag] * len(unique_parts)
+    df_solution['Part_Ref_Group'] = [group_name] * len(unique_parts)
 
     return df_solution
 
 
 @st.cache
-def get_data(dataset_name):
-    df = pd.read_csv(dataset_name, index_col=0)
+def get_data(options_file_in):
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
 
     return df
 

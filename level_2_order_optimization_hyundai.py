@@ -3,12 +3,12 @@ import time
 import logging
 import numpy as np
 import pandas as pd
-from level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv, missing_customer_info_treatment
-from level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
-from level_1_c_data_modelling import regression_model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation_regression, plot_roc_curve, multiprocess_model_evaluation, model_choice, feature_contribution, heatmap_correlation_function
-from level_1_e_deployment import sql_inject_v2, time_tags
-from level_0_performance_report import log_record
+from modules.level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv, missing_customer_info_treatment
+from modules.level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
+from modules.level_1_c_data_modelling import regression_model_training, save_model
+from modules.level_1_d_model_evaluation import performance_evaluation_regression, plot_roc_curve, multiprocess_model_evaluation, model_choice, feature_contribution, heatmap_correlation_function
+from modules.level_1_e_deployment import sql_inject_v2, time_tags
+from modules.level_0_performance_report import log_record
 import level_2_order_optimization_hyundai_options as options_file
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
@@ -34,7 +34,7 @@ def main():
 
 
 def data_acquisition():
-    log_record('A iniciar secção A...', options_file.project_id)
+    log_record('Início Secção A...', options_file.project_id)
     start = time.time()
 
     sales_info = ['dbs/df_sales', options_file.sales_query]
@@ -82,13 +82,13 @@ def data_acquisition():
     df_sales = df_join_function(df_sales, df_customers_and_dealers[['SLR_Account_CHS_Key', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Code', 'Customer_Group_Desc']].set_index('SLR_Account_CHS_Key'), on='SLR_Account_CHS_Key', how='left')
 
     print('Ended section A - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Secção A terminada.', options_file.project_id)
+    log_record('Fim Secção A.', options_file.project_id)
     return df_sales, df_stock, df_pdb, df_customers, df_dealers
 
 
 def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_cols, target):
     # print('Starting section B...')
-    log_record('A iniciar secção B...', options_file.project_id)
+    log_record('Início Secção B...', options_file.project_id)
     start = time.time()
     # current_date, _ = time_tags()
     current_date = '2019-10-10'
@@ -272,26 +272,25 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     datasets = dataset_split(df_ohe, [target], oversample_flag, objective='regression')
 
     print('Ended section B - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Secção B terminada.', options_file.project_id)
+    log_record('Fim Secção B.', options_file.project_id)
     return df_sales, datasets, datasets_non_ohe
 
 
 def data_modelling(df_sales, datasets, datasets_non_ohe, models):
-    # print('Starting Step C...')
-    log_record('A iniciar secção C...', options_file.project_id)
+    log_record('Início Secção C...', options_file.project_id)
     start = time.time()
 
     best_models, running_times = regression_model_training(models, datasets['train_x'], datasets_non_ohe['train_x'], datasets['train_y'], datasets_non_ohe['train_y'], options_file.regression_models_standard, options_file.k, options_file.gridsearch_score, options_file.project_id)
     save_model(best_models, models, options_file.project_id)
 
     print('Ended section C - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Secção C terminada.', options_file.project_id)
+    log_record('Fim Secção C.', options_file.project_id)
     return best_models, running_times
 
 
 def model_evaluation(df_sales, models, best_models, running_times, datasets, datasets_non_ohe, in_options_file, configuration_parameters, project_id):
     # print('Starting Step D...')
-    log_record('A iniciar secção D...', options_file.project_id)
+    log_record('Início Secção D...', options_file.project_id)
     start = time.time()
 
     results_training, results_test, predictions = performance_evaluation_regression(models, best_models, running_times, datasets, datasets_non_ohe, in_options_file, project_id)  # Creates a df with the performance of each model evaluated in various metrics
@@ -306,12 +305,12 @@ def model_evaluation(df_sales, models, best_models, running_times, datasets, dat
     # feature_contribution(best_model, configuration_parameters, 'PT_PDB_Model_Desc', options_file, project_id)
 
     print('Ended section D - Elapsed time: {:.2f}'.format(time.time() - start))
-    log_record('Secção D terminada.', options_file.project_id)
+    log_record('Fim Secção D.', options_file.project_id)
     return model_choice_message, best_model_name
 
 
 def deployment(df, db, view):
-    log_record('A iniciar secção E...', options_file.project_id)
+    log_record('Início Secção E...', options_file.project_id)
     start = time.time()
 
     columns_to_convert_to_datetime = ['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Record_Date']
@@ -339,7 +338,7 @@ def deployment(df, db, view):
         # sql_inject_v1(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
 
     print('Secção E terminada - Duração: {:.2f}'.format(time.time() - start))
-    log_record('Secção E terminada.', options_file.project_id)
+    log_record('Fim Secção E.', options_file.project_id)
 
 
 if __name__ == '__main__':

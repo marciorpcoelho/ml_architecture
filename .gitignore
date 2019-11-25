@@ -110,3 +110,4 @@ venv.bak/
 /info.env
 !/testing.py
 /level_3_scheduler.py
+/modules/info.env

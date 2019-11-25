@@ -2,11 +2,11 @@ import time
 import sys
 import logging
 import level_2_order_optimization_apv_baviera_options as options_file
-from level_1_a_data_acquisition import dw_data_retrieval, autoline_data_retrieval
-from level_1_b_data_processing import apv_dataset_treatment
-from level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_selection, part_ref_ta_definition
-from level_1_e_deployment import time_tags
-from level_0_performance_report import log_record, project_dict
+from modules.level_1_a_data_acquisition import dw_data_retrieval, autoline_data_retrieval
+from modules.level_1_b_data_processing import apv_dataset_treatment
+from modules.level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_selection, part_ref_ta_definition
+from modules.level_1_e_deployment import time_tags
+from modules.level_0_performance_report import log_record, project_dict
 
 update = 1  # Decides whether to fetch new datasets from the DW or not
 
@@ -17,7 +17,7 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the 
 
 
 def main():
-    log_record('Project: Baviera APV Order Optimization', options_file.project_id)
+    log_record('Projeto: Otimização Encomenda Baviera APV', options_file.project_id)
 
     min_date = '20180131'  # This is a placeholder for the minimum possible date - It already searches for the last processed date.
     # max_date = '20190816'  # This will be replaced by current date
@@ -29,11 +29,11 @@ def main():
     df_sales_cleaned, df_purchases_cleaned, df_stock = data_processing(df_sales, df_purchases, df_stock, options_file)
     results = data_modelling(options_file.pse_code, df_sales_cleaned, df_al, df_stock, df_reg_al_clients, df_purchases_cleaned, min_date, max_date, options_file.project_id)
 
-    log_record('Finished Successfully - Project: {} .\n'.format(project_dict[options_file.project_id]), options_file.project_id)
+    log_record('Conclusão com sucesso - Projeto: {} .\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
 def data_acquistion(options_info, current_date):
-    log_record('Started Step A...', options_file.project_id)
+    log_record('Início Secção A...', options_file.project_id)
 
     pse_code = options_info.pse_code
     start = time.time()
@@ -43,24 +43,24 @@ def data_acquistion(options_info, current_date):
 
     print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
 
-    log_record('Finished Step A.', options_file.project_id)
+    log_record('Fim Secção A.', options_file.project_id)
     return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al
 
 
 def data_processing(df_sales, df_purchases, df_stock, options_info):
-    log_record('Started Step B...', options_file.project_id)
+    log_record('Início Secção B...', options_file.project_id)
     start_treatment = time.time()
 
     df_sales, df_purchases, df_stock = apv_dataset_treatment(df_sales, df_purchases, df_stock, options_info.pse_code, options_info.urgent_purchases_flags, update, options_info.project_id)
 
     print('Elapsed time: {:.2f} seconds.'.format(time.time() - start_treatment))
 
-    log_record('Finished Step B.', options_file.project_id)
+    log_record('Fim Secção B.', options_file.project_id)
     return df_sales, df_purchases, df_stock
 
 
 def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date, project_id):
-    log_record('Started Step C', options_file.project_id)
+    log_record('Início Secção C', options_file.project_id)
     start = time.time()
 
     if pse_code == '0I':
@@ -75,7 +75,7 @@ def data_modelling(pse_code, df_sales, df_al, df_stock, df_reg_al_clients, df_pu
 
     print('Elapsed time: {:.2f}'.format(time.time() - start))
 
-    log_record('Finished Step C', options_file.project_id)
+    log_record('Fim Secção C', options_file.project_id)
     return results
 
 
@@ -84,4 +84,4 @@ if __name__ == '__main__':
         main()
     except Exception as exception:
         log_record(exception.args[0], options_file.project_id, flag=2)
-        log_record('Failed - Project: {}'.format(project_dict[options_file.project_id]), options_file.project_id)
+        log_record('Falhou - Projeto: {}'.format(project_dict[options_file.project_id]), options_file.project_id)

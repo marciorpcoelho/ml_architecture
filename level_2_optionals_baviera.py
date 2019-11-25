@@ -3,13 +3,14 @@ import time
 import logging
 import pandas as pd
 import level_2_optionals_baviera_options
+
 from level_2_optionals_baviera_options import project_id, classification_models, k, gridsearch_score
-from level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
-from level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
-from level_1_c_data_modelling import classification_model_training, save_model
-from level_1_d_model_evaluation import performance_evaluation_classification, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
-from level_1_e_deployment import sql_inject, sql_age_comparison, sql_mapping_upload
-from level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
+from modules.level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
+from modules.level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
+from modules.level_1_c_data_modelling import classification_model_training, save_model
+from modules.level_1_d_model_evaluation import performance_evaluation_classification, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
+from modules.level_1_e_deployment import sql_inject, sql_age_comparison, sql_mapping_upload
+from modules.level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
 pd.set_option('display.expand_frame_repr', False)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=level_2_optionals_baviera_options.log_files['full_log'], filemode='a')
@@ -29,7 +30,7 @@ if dict_sql_upload_flag:
 
 
 def main():
-    log_record('Project: Baviera Stock Optimization', project_id)
+    log_record('Projeto: Sugestão Encomenda Baviera - Viaturas', project_id)
 
     ### Options:
     input_file = 'dbs/' + 'full_data_bmw.csv'
@@ -55,12 +56,12 @@ def main():
 
     performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options, model_choice_message, vehicle_count, running_times_upload_flag)
 
-    log_record('Finished Successfully - Project: Baviera Order Optimization.\n', project_id)
+    log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[project_id]), project_id)
 
 
 def data_acquistion(input_file, query_filters, local=0):
-    performance_info_append(time.time(), 'start_section_a')
-    log_record('Started Step A...', project_id)
+    performance_info_append(time.time(), 'Section_A_Start')
+    log_record('Início Secção A...', project_id)
 
     if local:
         try:
@@ -73,18 +74,18 @@ def data_acquistion(input_file, query_filters, local=0):
         df = sql_retrieve_df(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), query_filters, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
         vehicle_count_checkup(df, level_2_optionals_baviera_options, sql_check=0)
 
-    log_record('Finished Step A.', project_id)
-    performance_info_append(time.time(), 'end_section_a')
+    log_record('Fim Secção A.', project_id)
+    performance_info_append(time.time(), 'Section_A_End')
 
     return df
 
 
 def data_processing(df, target_variable, oversample_check, number_of_features):
-    performance_info_append(time.time(), 'start_section_b')
-    log_record('Started Step B...', project_id)
+    performance_info_append(time.time(), 'Section_B_Start')
+    log_record('Início Secção B...', project_id)
 
     if sql_age_comparison(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
-        log_record('Checkpoint not found or too old. Preprocessing data...', project_id)
+        log_record('Checkpoint não encontrado ou demasiado antigo. A processar dados...', project_id)
 
         df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior', 'Versão'])  # Lowercases the strings of these columns
 
@@ -108,7 +109,11 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index], project_id)  # This removes Toyota Vehicles that aren't supposed to be in this model
         df = remove_rows(df, [df[(df.Colour_Ext_Code == ' ') & (df.Cor == ' ')].index], project_id, warning=1)
 
-        df = options_scraping(df, model_training_check, level_2_optionals_baviera_options)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+        if not model_training_check:
+            model_mapping, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['model_mapping'], 'Mapped_Value', level_2_optionals_baviera_options)
+            model_mapping = model_mapping[0]
+
+        df = options_scraping(df, model_training_check, model_mapping, level_2_optionals_baviera_options)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
         df = remove_columns(df, ['Colour_Ext_Code'], project_id)  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;
 
         vehicle_count_checkup(df, level_2_optionals_baviera_options, sql_check=1)
@@ -169,31 +174,31 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     datasets = dataset_split(df_ohe[[x for x in df_ohe if x not in ['Local da Venda_Fase2_level_1', 'Local da Venda_Fase2_level_2', 'Registration_Number', 'score_euros', 'days_stock_price', 'Data Venda', 'Data Compra', 'Margem', 'Nº Stock', 'margem_percentagem', 'margin_class', 'stock_days', 'stock_days_class']]], target_variable, oversample_check)
     # Dataset split in train/test datasets, at the ratio of 0.75/0.25, while also ensuring both classes are evenly distributed
 
-    log_record('Finished Step B.', project_id)
+    log_record('Fim Secção B.', project_id)
 
-    performance_info_append(time.time(), 'end_section_b')
+    performance_info_append(time.time(), 'Section_B_End')
 
     return df, datasets
 
 
 def data_modelling(df, datasets, models):
-    performance_info_append(time.time(), 'start_section_c')
-    log_record('Started Step C...', project_id)
+    performance_info_append(time.time(), 'Section_C_Start')
+    log_record('Início Secção C...', project_id)
 
     df.sort_index(inplace=True)
 
     classes, best_models, running_times = classification_model_training(models, datasets['train_x'], datasets['train_y'], classification_models, k, gridsearch_score, project_id)  # Training of each referenced model
     save_model(best_models, models, project_id)
 
-    log_record('Finished Step C.', project_id)
-    performance_info_append(time.time(), 'end_section_c')
+    log_record('Fim Secção C.', project_id)
+    performance_info_append(time.time(), 'Section_C_End')
 
     return classes, best_models, running_times
 
 
 def model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, options_file, oversample_check, proj_id):
-    performance_info_append(time.time(), 'start_section_d')
-    log_record('Started Step D...', proj_id)
+    performance_info_append(time.time(), 'Section_D_Start')
+    log_record('Início Secção D...', proj_id)
 
     results_training, results_test, predictions = performance_evaluation_classification(models, best_models, classes, running_times, datasets, options_file, proj_id)  # Creates a df with the performance of each model evaluated in various metrics, explained in the provided pdf
     plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features))
@@ -207,15 +212,15 @@ def model_evaluation(df, models, best_models, running_times, classes, datasets, 
         best_model = df_model_dict[best_model_name]
         feature_contribution(best_model, configuration_parameters, 'Modelo', options_file, proj_id)
 
-    log_record('Finished Step D.', proj_id)
+    log_record('Fim Secção D.', proj_id)
 
-    performance_info_append(time.time(), 'end_section_d')
+    performance_info_append(time.time(), 'Section_D_End')
     return model_choice_message, best_model, df.shape[0]
 
 
 def deployment(df, db, view):
-    performance_info_append(time.time(), 'start_section_e')
-    log_record('Started Step E...', project_id)
+    performance_info_append(time.time(), 'Section_E_Start')
+    log_record('Início Secção E...', project_id)
 
     if df is not None:
         df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
@@ -224,8 +229,8 @@ def deployment(df, db, view):
         else:
             sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql_temp, truncate=1, check_date=1)
 
-    log_record('Finished Step E.', project_id)
-    performance_info_append(time.time(), 'end_section_e')
+    log_record('Fim Secção E.', project_id)
+    performance_info_append(time.time(), 'Section_E_End')
     return
 
 
@@ -236,4 +241,4 @@ if __name__ == '__main__':
         project_identifier = 2162
         log_record(exception.args[0], project_identifier, flag=2)
         error_upload(level_2_optionals_baviera_options, project_identifier, level_2_optionals_baviera_options.log_files['full_log'], error_flag=1)
-        log_record('Failed - Project: {}.'.format(str(project_dict[project_identifier])), project_identifier)
+        log_record('Falhou - Projeto: {}.'.format(str(project_dict[project_identifier])), project_identifier)
