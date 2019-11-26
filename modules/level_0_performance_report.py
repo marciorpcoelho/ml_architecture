@@ -9,8 +9,7 @@ from multiprocessing import cpu_count
 from py_dotenv import read_dotenv
 pd.set_option('display.expand_frame_repr', False)
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
-# dotenv_path = base_path + 'info.env'
-dotenv_path = 'C:\\Users\\mrpc\\Documents\\mrpc - Pessoal\\PyCharm Projects\\ml_architecture\\' + 'info.env'
+dotenv_path = base_path + 'info.env'
 read_dotenv(dotenv_path)
 
 times_global = []
@@ -284,7 +283,7 @@ def log_record(message, project_id, flag=0):
     elif flag == 2:
         logging.exception('#')
 
-    # performance_report_sql_inject_single_line(message, flag, performance_sql_info, project_id)
+    performance_report_sql_inject_single_line(message, flag, performance_sql_info, project_id)
 
 
 def performance_report_sql_inject_single_line(line, flag, performance_sql_info_in, project_id):
