@@ -16,7 +16,7 @@ import modules.level_0_performance_report as level_0_performance_report
 
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
 pd.set_option('display.expand_frame_repr', False)
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 
 my_dpi = 96
 

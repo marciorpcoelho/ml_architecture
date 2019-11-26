@@ -10,7 +10,6 @@ import modules.level_0_performance_report as level_0_performance_report
 # from modules.level_0_performance_report import log_record, regex_dict
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
-print(base_path)
 
 
 def save_csv(dfs, names):

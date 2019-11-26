@@ -23,7 +23,7 @@ import modules.level_0_performance_report as level_0_performance_report
 # from modules.level_1_e_deployment import sql_string_preparation_v2, time_tags
 import modules.level_1_e_deployment as level_1_e_deployment
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 
 warnings.simplefilter('ignore', FutureWarning)
 

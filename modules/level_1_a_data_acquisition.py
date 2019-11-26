@@ -11,7 +11,7 @@ import modules.level_0_performance_report as level_0_performance_report
 import modules.level_1_e_deployment as level_1_e_deployment
 # from modules.level_1_e_deployment import sql_get_last_vehicle_count, sql_inject_single_line
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 
 
 def read_csv(*args, **kwargs):
