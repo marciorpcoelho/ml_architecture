@@ -84,7 +84,7 @@ def remove_rows(df, rows, project_id, warning=0):
             filtered_df = df.drop(condition, axis=0)
         end_size = filtered_df.shape[0]
         if start_size - end_size:
-            level_0_performance_report.log_record('Existem veículos sem Cor_Ext {} que foram removidos.'.format(df[df.index.isin(rows[0].values)]['Nº Stock'].unique()), project_id, flag=1)
+            level_0_performance_report.log_record('Existem veículos com informação em falta que foram removidos - {}.'.format(df[df.index.isin(rows[0].values)]['Nº Stock'].unique()), project_id, flag=1)
 
         return filtered_df
 

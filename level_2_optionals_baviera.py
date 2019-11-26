@@ -83,6 +83,7 @@ def data_acquistion(input_file, query_filters, local=0):
 def data_processing(df, target_variable, oversample_check, number_of_features):
     performance_info_append(time.time(), 'Section_B_Start')
     log_record('Início Secção B...', project_id)
+    model_mapping = {}
 
     if sql_age_comparison(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
         log_record('Checkpoint não encontrado ou demasiado antigo. A processar dados...', project_id)
@@ -114,6 +115,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
             model_mapping = model_mapping[0]
 
         df = options_scraping(df, model_training_check, model_mapping, level_2_optionals_baviera_options)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+        df = remove_rows(df, [df[df.Modelo.isnull()].index], project_id, warning=1)
         df = remove_columns(df, ['Colour_Ext_Code'], project_id)  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;
 
         vehicle_count_checkup(df, level_2_optionals_baviera_options, sql_check=1)
