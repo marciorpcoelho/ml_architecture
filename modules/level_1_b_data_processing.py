@@ -13,14 +13,12 @@ import matplotlib.pyplot as plt
 from multiprocessing import Pool
 from dateutil.relativedelta import relativedelta
 from nltk.stem.snowball import SnowballStemmer
+from imblearn.over_sampling import RandomOverSampler
 from sklearn.feature_selection import f_classif, SelectKBest
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, RobustScaler
-from imblearn.over_sampling import RandomOverSampler
 
-# from modules.level_0_performance_report import log_record, performance_info_append, pool_workers_count
 import modules.level_0_performance_report as level_0_performance_report
-# from modules.level_1_e_deployment import sql_string_preparation_v2, time_tags
 import modules.level_1_e_deployment as level_1_e_deployment
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
@@ -1640,3 +1638,16 @@ def robust_scaler_function(df, target):
     df[numerical_cols] = robust_normalizer.fit_transform(df[numerical_cols])
 
     return df
+
+
+def boolean_replacement(df, boolean_cols):
+
+    if list(df[boolean_cols[0]].unique()) == [1, 0] or list(df[boolean_cols[0]].unique()) == [0, 1]:
+        for column in boolean_cols:
+            df[column] = pd.Series(np.where(df[column].values == 1, 'Sim', 'Não'), df.index)
+    else:
+        for column in boolean_cols:
+            df[column] = pd.Series(np.where(df[column].values == "Sim", 1, 0), df.index)
+
+    return df
+

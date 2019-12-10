@@ -5,10 +5,11 @@ import lightgbm as lgb
 from py_dotenv import read_dotenv
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neural_network import MLPClassifier
-from sklearn import tree, linear_model, neighbors, svm
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn import tree, linear_model
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.linear_model import LassoCV, Ridge, LassoLarsCV, ElasticNetCV
-from sklearn.svm import SVR
+from sklearn.svm import SVR, SVC
 
 
 dotenv_path = 'info.env'
@@ -224,8 +225,8 @@ classification_models = {
     'dt': [tree.DecisionTreeClassifier, [{'min_samples_leaf': [3, 5, 7, 9, 10, 15, 20, 30], 'max_depth': [3, 5, 6], 'class_weight': ['balanced']}]],
     'rf': [RandomForestClassifier, [{'n_estimators': [10, 25, 50, 100, 200, 500, 1000], 'max_depth': [5, 10, 20], 'class_weight': ['balanced']}]],
     'lr': [linear_model.LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear'], 'max_iter': [1000]}]],
-    'knn': [neighbors.KNeighborsClassifier, [{'n_neighbors': np.arange(1, 50, 1)}]],
-    'svm': [svm.SVC, [{'C': np.logspace(-2, 2, 10)}]],
+    'knn': [KNeighborsClassifier, [{'n_neighbors': np.arange(1, 50, 1)}]],
+    'svm': [SVC, [{'C': np.logspace(-2, 2, 10)}]],
     'ab': [AdaBoostClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
     'gc': [GradientBoostingClassifier, [{'n_estimators': [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}]],
     'xgb': [xgb.XGBClassifier, [{'objective': ['binary:logistic'], 'booster': ['gbtree'], 'max_depth': [5, 10, 20, 50, 100]}]],  # ToDo: need to add L1 (reg_alpha) and L2 (reg_lambda) regularization to counter the overfitting

@@ -245,10 +245,14 @@ def sql_string_preparation_v1(values_list):
     return columns_string, values_string
 
 
-def sql_truncate(dsn, options_file, database, view):
+def sql_truncate(dsn, options_file, database, view, query=None):
     level_0_performance_report.log_record('A truncar view {} da DB {}.'.format(view, database), options_file.project_id)
+
     cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
-    query = "TRUNCATE TABLE " + view
+
+    if query is None:
+        query = "TRUNCATE TABLE " + view
+
     cursor = cnxn.cursor()
     cursor.execute(query)
 
