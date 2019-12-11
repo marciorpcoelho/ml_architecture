@@ -140,7 +140,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         else:
             cols_to_group_layer_2 = ['Local da Venda', 'Local da Venda_v2', 'Local da Venda_Fase2']
             mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings_temp'], 'Mapped_Value', level_2_optionals_baviera_options)
-            sell_place_parametrization(df, 'Local da Venda', 'Local da Venda_Fase2', mapping_dictionaries[2], level_2_optionals_baviera_options.project_id)
+            df = sell_place_parametrization(df, 'Local da Venda', 'Local da Venda_Fase2', mapping_dictionaries[2], level_2_optionals_baviera_options.project_id)
 
         df = col_group(df, cols_to_group_layer_2[0:2], mapping_dictionaries[0:2], project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective groups are shown in level_2_optionals_baviera_options
 

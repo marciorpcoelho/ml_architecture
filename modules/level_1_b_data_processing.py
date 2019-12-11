@@ -637,12 +637,13 @@ def col_group(df, columns_to_replace, dictionaries, project_id):
 
 def sell_place_parametrization(df, original_sale_place_column, new_sale_place_column, mapping, project_id):
 
-    sell_districts = list(mapping.keys())
+    sell_districts = list(mapping.values())
+    sel_districts_flat = [x for sublist in sell_districts for x in sublist]
+
     unique_sale_places = df[original_sale_place_column].unique()
 
-    df = new_column_creation(df, [new_sale_place_column + '_level_1'], df[original_sale_place_column].str[0:3])
     for sale_place in unique_sale_places:
-        sale_place_level_2 = [x for x in sell_districts if x in sale_place]
+        sale_place_level_2 = [x for x in sel_districts_flat if x in sale_place]
         if len(sale_place_level_2):
             df.loc[df[original_sale_place_column] == sale_place, new_sale_place_column + '_level_2'] = sale_place_level_2
         else:
@@ -650,6 +651,11 @@ def sell_place_parametrization(df, original_sale_place_column, new_sale_place_co
                 df.loc[df[original_sale_place_column] == sale_place, new_sale_place_column + '_level_2'] = 'Lisboa'
             else:
                 level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte local de venda: {}.'.format(sale_place), project_id, flag=1)
+
+    df = new_column_creation(df, [new_sale_place_column + '_level_1'], df[new_sale_place_column + '_level_2'])
+    df = col_group(df, [new_sale_place_column + '_level_1'], [mapping], project_id)
+
+    return df
 
 
 def total_price(df):
