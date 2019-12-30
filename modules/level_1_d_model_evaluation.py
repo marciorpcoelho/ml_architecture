@@ -385,7 +385,7 @@ def model_choice(dsn, options_file, df_results):
 
         df_previous_performance_results = level_1_e_deployment.sql_second_highest_date_checkup(dsn, options_file, level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['performance_algorithm_results'])
         if df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)].shape[0]:
-            level_0_performance_report.log_record('Resultados mais antigos são melhores na métrica em avaliação: {:.4f} > {:.4f} para o algoritmo {}. Os últimos dados serão mantidos - Não haverá update dos mesmos.'.format(df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].max(), best_model_value, df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].idxmax()), options_file.project_id, flag=1)
+            level_0_performance_report.log_record('Resultados mais antigos são melhores na métrica em avaliação: {:.4f} > {:.4f} para o algoritmo {}.'.format(df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].max(), best_model_value, df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].idxmax()), options_file.project_id, flag=1)
 
             model_choice_flag = 1
             if df_previous_performance_results.loc[df_previous_performance_results[options_file.metric].gt(best_model_value)][options_file.metric].max() - best_model_value < performance_threshold_interval:

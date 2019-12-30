@@ -36,7 +36,7 @@ sql_info = {
     'product_db': 'VHE_Dim_VehicleData_DTR',
     'sales': 'VHE_Fact_BI_Sales_DTR',
     'stock': 'VHE_Fact_BI_Stock_DTR',
-    'final_table': 'VHE_Fact_BI_Sales_DTR_Temp',
+    'final_table': 'VHE_Fact_BI_Sales_DTR',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
 }
 
@@ -51,7 +51,7 @@ sales_query_filtered = '''
             and Sales_Type_Code_DMS in ('RAC', 'STOCK', 'UVENDA', 'VENDA') and Sales_Type_Dealer_Code <> 'Demo'
         UNION ALL
         SELECT *
-        FROM [BI_DW_History].dbo.[VHE_Fact_BI_Sales_DTR] WITH (NOLOCK) 
+        FROM [BI_DTR_History].dbo.[VHE_Fact_BI_Sales_DTR] WITH (NOLOCK) 
         where Registration_Flag = '1' and Chassis_Flag = '1' and VehicleData_Code <> '1'
             and Sales_Type_Code_DMS in ('RAC', 'STOCK', 'UVENDA', 'VENDA') and Sales_Type_Dealer_Code <> 'Demo' '''
 
@@ -61,7 +61,7 @@ sales_query = '''
         FROM [BI_DTR].dbo.[VHE_Fact_BI_Sales_DTR] WITH (NOLOCK) 
         UNION ALL 
         SELECT *
-        FROM [BI_DW_History].dbo.[VHE_Fact_BI_Sales_DTR] WITH (NOLOCK)'''
+        FROM [BI_DTR_History].dbo.[VHE_Fact_BI_Sales_DTR] WITH (NOLOCK)'''
 
 stock_query = '''
         select *
@@ -72,7 +72,44 @@ product_db_query = '''
         FROM [BI_DTR].dbo.[VHE_Dim_VehicleData_DTR] WITH (NOLOCK)
         UNION ALL
         SELECT *
-        FROM [BI_DW_History].dbo.[VHE_Dim_VehicleData_DTR] WITH (NOLOCK)'''
+        FROM [BI_DTR_History].dbo.[VHE_Dim_VehicleData_DTR] WITH (NOLOCK)'''
+
+dealers_query = '''
+        select "SLR_Dim_Dealers_DTR_VHE"."Client_Id" AS "Client_Id", "SLR_Dim_Dealers_DTR_VHE"."Environment"
+        AS "Environment", "SLR_Dim_Dealers_DTR_VHE"."NDB_Dealer_Code" AS "NDB_Dealer_Code",
+        "SLR_Dim_Dealers_DTR_VHE"."SLR_Account" AS "SLR_Account", "SLR_Dim_Dealers_DTR_VHE"."Customer_Display"
+        AS "Customer_Display", "SLR_Dim_Dealers_DTR_VHE"."NDB_VATGroup_Code" AS "NDB_VATGroup_Code",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_VATGroup_Desc" AS "NDB_VATGroup_Desc", "SLR_Dim_Dealers_DTR_VHE"."NDB_VAT_Number_Code"
+        AS "NDB_VAT_Number_Code", "SLR_Dim_Dealers_DTR_VHE"."NDB_VAT_Number" AS "NDB_VAT_Number",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_Contract_Dealer_Code" AS "NDB_Contract_Dealer_Code",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_Contract_Dealer_Desc" AS "NDB_Contract_Dealer_Desc",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_VHE_PerformGroup_Code" AS "NDB_VHE_PerformGroup_Code",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_VHE_PerformGroup_Desc" AS "NDB_VHE_PerformGroup_Desc",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_PSE_PerformGroup_Code" AS "NDB_PSE_PerformGroup_Code",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_PSE_PerformGroup_Desc" AS "NDB_PSE_PerformGroup_Desc",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_VHE_AreaManager_Code" AS "NDB_VHE_AreaManager_Code",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_VHE_AreaManager_Desc" AS "NDB_VHE_AreaManager_Desc",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_PSE_AreaManager_Code" AS "NDB_PSE_AreaManager_Code",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_PSE_AreaManager_Desc" AS "NDB_PSE_AreaManager_Desc",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_VHE_Team_Code" AS "NDB_VHE_Team_Code", "SLR_Dim_Dealers_DTR_VHE"."NDB_VHE_Team_Desc"
+        AS "NDB_VHE_Team_Desc", "SLR_Dim_Dealers_DTR_VHE"."NDB_PSE_Team_Code" AS "NDB_PSE_Team_Code",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_PSE_Team_Desc" AS "NDB_PSE_Team_Desc", "SLR_Dim_Dealers_DTR_VHE"."NDB_Headquarters"
+        AS "NDB_Headquarters", "SLR_Dim_Dealers_DTR_VHE"."Record_Date" AS "Record_Date",
+        "SLR_Dim_Dealers_DTR_VHE"."Last_Modified_Date" AS "Last_Modified_Date", "SLR_Dim_Dealers_DTR_VHE"."Customer_Group_Code"
+        AS "Customer_Group_Code", "SLR_Dim_Dealers_DTR_VHE"."VAT_Number_Display" AS "VAT_Number_Display",
+        "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Key" AS "SLR_Account_CHS_Key", "SLR_Dim_Dealers_DTR_VHE"."SLR_AccountGroup_Code"
+        AS "SLR_AccountGroup_Code", "SLR_Dim_Dealers_DTR_VHE"."NDB_Dealer_Desc" AS "NDB_Dealer_Desc",
+        "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Invoice" AS "SLR_Account_Invoice"
+         from "SLR_Dim_Dealers_DTR WITH (NOLOCK)"
+        "SLR_Dim_Dealers_DTR_VHE"
+         where "SLR_Dim_Dealers_DTR_VHE"."Record_Type" <> 3 '''
+
+customer_group_query = '''
+        select "SLR_Dim_Customer_Groups_DTR"."Customer_Group_Code" AS "Customer_Group_Code",
+        "SLR_Dim_Customer_Groups_DTR"."EN_Customer_Group_Desc" AS "Customer_Group_Desc",
+        "SLR_Dim_Customer_Groups_DTR"."Customer_Group_Display_Order" AS "Customer_Group_Display_Order"
+        from "BI_DTR"."dbo"."SLR_Dim_Customer_Groups_DTR" "SLR_Dim_Customer_Groups_DTR"  WITH (NOLOCK)'''
+
 
 # Motorização
 motor_translation = {
@@ -107,16 +144,6 @@ motor_grouping = {
     'Outros': [],
 }
 
-# Modelo
-# v1
-# model_grouping = {
-#     'i20': [],
-#     'kauai': [],
-#     'tucson': [],
-#     'i10': [],
-#     'hr-v': [],
-#     'civic': [],
-# }
 
 # Transmissão
 transmission_translation = {
@@ -187,7 +214,7 @@ ext_color_translation = {
     'Laranja': ['tangerine comet (tt)', 'tangerine comet', 'sunset orange ii'],
     'Prateado': ['lunar silver m.', 'platinum silver', 'sleek silver', 'lake silver', 'aurora silver', 'titanium silver', 'platinum silve', 'typhoon silver', 'lake silver (tt)', 'alabaster silver m.', 'tinted silver m.'],
     'Preto': ['midnight burgundy p.', 'crystal black p.', 'ruse black m.', 'phantom black'],
-    'Vermelho': ['ral3000', 'rallye red', 'milano red', 'fiery red', 'passion red', 'tomato red', 'pulse red', 'engine red', 'magma red', 'pulse red (tt)', 'passion red p.'],
+    'Vermelho': ['premium crystal red m.', 'ral3000', 'rallye red', 'milano red', 'fiery red', 'passion red', 'tomato red', 'pulse red', 'engine red', 'magma red', 'pulse red (tt)', 'passion red p.'],
     'NÃO_PARAMETRIZADOS': [],
 }
 
@@ -255,5 +282,18 @@ regression_models = {
     'lgb': [lgb.LGBMRegressor, [{'num_leaves': [15, 20, 25, 30, 35, 50, 75, 100], 'max_depth': [11, 13, 15, 17, 19], 'n_estimators': [50, 100, 200, 250, 500, 1000, 1500, 2000, 3000, 5000, 10000]}]],
     'xgb': [xgb.XGBRegressor, [{'objective': ['reg:squarederror'], 'max_depth': [7, 9, 11, 13, 15, 17], 'n_estimators': [50, 100, 200, 250, 500, 1000, 2000, 3000, 5000, 10000]}]],
 }
+
+sql_columns_vhe_fact_bi = [
+    'NLR_Code', 'Environment', 'Value_Type_Code', 'Chassis_Number', 'Registration_Number', 'NLR_Posting_Date', 'SLR_Document_Date_CHS', 'SLR_Account_CHS_Key', 'SLR_Document_Date_RGN',
+    'Product_Code', 'Sales_Type_Code', 'Location_Code', 'VehicleData_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code', 'Transmission_Type_Code', 'Vehicle_Area_Code', 'Dispatch_Type_Code',
+    'Sales_Status_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'DaysInStock_Distributor', 'DaysInStock_Dealer', 'DaysInStock_Global', 'SLR_Account_Dealer_Code',
+    'Sales_Type_Dealer_Code', 'Measure_1', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Measure_13',
+    'Measure_14', 'Measure_15', 'Measure_16', 'Measure_17', 'Measure_18', 'Measure_19', 'Measure_20', 'Measure_21', 'Measure_22', 'Measure_23', 'Measure_24', 'Measure_25', 'Measure_26', 'Measure_27',
+    'Measure_28', 'Measure_29', 'Measure_30', 'Measure_31', 'Measure_32', 'Measure_33', 'Measure_34', 'Measure_35', 'Measure_36', 'Measure_37', 'Measure_38', 'Measure_39', 'Measure_40', 'Measure_41',
+    'Measure_42', 'Measure_43', 'Measure_44', 'Measure_45', 'Measure_46', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc',
+    'Customer_Display', 'Customer_Group_Code', 'Customer_Group_Desc', 'No_Registration_Number_Flag', 'Registration_Number_No_SLR_Document_RGN_Flag', 'SLR_Document_RGN_Flag', 'Undefined_VHE_Status',
+    'Quantity_Sold', 'Average_DaysInStock_Global', 'prev_sales_check', 'number_prev_sales', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc',
+    'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code', 'Fixed_Margin_II'
+]
 
 

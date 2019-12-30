@@ -34,7 +34,7 @@ sql_info = {
     'vhe_number_history': 'VHE_NrVehicles_History',
     'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
-    'final_table': 'VHE_Fact_BI_OrderOptimization_copy',
+    'final_table': 'VHE_Fact_BI_OrderOptimization',
     'model_mapping': ['VHE_MapBI_Model_Fase2'],
     'mappings': ['VHE_MapBI_Rims_Size', 'VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Model', 'VHE_MapBI_Version', 'VHE_MapBI_Interior_Type', 'VHE_MapBI_Color_Ext', 'VHE_MapBI_Color_Int', 'VHE_MapBI_Motor_Desc'],
     'mappings_temp': ['VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Sales_Place_Fase2'],  # When no training is needed in this project

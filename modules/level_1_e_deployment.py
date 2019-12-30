@@ -134,7 +134,6 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
     try:
         if check_date:
             time_result = sql_date_comparison(df, dsn, options_file, database, view, 'Date', time_to_last_update)
-            print(df.head())
             if time_result:
                 values_string = [str(tuple(x)) for x in df.values]
 
@@ -157,9 +156,9 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
                 cursor.execute(insert_rows)
 
         print('Duração: {:.2f} segundos.'.format(time.time() - start))
-    except (pyodbc.ProgrammingError, pyodbc.DataError):
+    except (pyodbc.ProgrammingError, pyodbc.DataError) as error:
         save_csv([df], [base_path + 'output/' + view + '_backup'])
-        level_0_performance_report.log_record('Erro ao fazer upload. A gravar localmente...', options_file.project_id, flag=1)
+        level_0_performance_report.log_record('Erro ao fazer upload - {} - A gravar localmente...'.format(error), options_file.project_id, flag=1)
 
     cnxn.commit()
     cursor.close()

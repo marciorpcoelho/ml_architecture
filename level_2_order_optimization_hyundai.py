@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import pandas as pd
 from modules.level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv, missing_customer_info_treatment
-from modules.level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_convertion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
+from modules.level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, score_calculation, null_analysis, inf_analysis, lowercase_column_conversion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from modules.level_1_c_data_modelling import regression_model_training, save_model
 from modules.level_1_d_model_evaluation import performance_evaluation_regression, plot_roc_curve, multiprocess_model_evaluation, model_choice, feature_contribution, heatmap_correlation_function
 from modules.level_1_e_deployment import sql_inject_v2, time_tags
@@ -27,10 +27,10 @@ def main():
 
     df_sales, df_stock, df_pdb_dim, df_customers, df_dealers = data_acquisition()
     df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters, target)
-    best_models, running_times = data_modelling(df_sales, datasets, datasets_non_ohe, models)
-    model_choice_message, best_model_name = model_evaluation(df_sales, models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
-    print(model_choice_message, best_model_name)
-    # deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
+    # best_models, running_times = data_modelling(df_sales, datasets, datasets_non_ohe, models)
+    # model_choice_message, best_model_name = model_evaluation(df_sales, models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
+    # print(model_choice_message, best_model_name)
+    deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
 
 def data_acquisition():
@@ -40,13 +40,15 @@ def data_acquisition():
     sales_info = ['dbs/df_sales', options_file.sales_query]
     stock_info = ['dbs/df_stock', options_file.stock_query]
     product_db = ['dbs/df_pdb', options_file.product_db_query]
+    customer_group_info = ['dbs/df_customer_group', options_file.customer_group_query]
+    dealers_info = ['dbs/df_dealers', options_file.dealers_query]
 
-    # current_date, _ = time_tags()
-    current_date = '2019-09-02'
+    current_date, _ = time_tags()
+    # current_date = '2019-09-02'
 
     dfs = []
 
-    for dimension in [sales_info, stock_info, product_db]:
+    for dimension in [sales_info, stock_info, product_db, customer_group_info, dealers_info]:
         file_name = dimension[0] + '_' + str(current_date)
         try:
             df = pd.read_csv(file_name + '.csv', index_col=0, low_memory=False, dtype={'SLR_Document_Period_CHS': 'Int64', 'SLR_Document_Year_CHS': 'Int64', 'SLR_Document_Type_CHS': 'Int64', 'Analysis_Period_RGN': 'Int64', 'Analysis_Year_RGN': 'Int64',
@@ -62,6 +64,8 @@ def data_acquisition():
     df_sales = dfs[0]
     df_stock = dfs[1]
     df_pdb = dfs[2]
+    df_customers = dfs[3]
+    df_dealers = dfs[4]
 
     df_pdb.drop_duplicates(subset='VehicleData_Code', inplace=True)  # There are repeated VehicleData_Code inside this union between BI_DTR and BI_DW_History
 
@@ -71,8 +75,8 @@ def data_acquisition():
     df_sales['NLR_Code'] = pd.to_numeric(df_sales['NLR_Code'], errors='ignore')
     # df_sales['Product_Code'] = pd.to_numeric(df_sales['Product_Code'], errors='ignore')
 
-    df_customers = pd.read_csv('dbs/customers_group.csv', encoding='latin-1', sep=';')
-    df_dealers = pd.read_csv('dbs/dealers_dtr.csv', encoding='latin-1', sep=';')
+    # df_customers = pd.read_csv('dbs/customers_group.csv', encoding='latin-1', sep=';')
+    # df_dealers = pd.read_csv('dbs/dealers_dtr.csv', encoding='latin-1', sep=';')
 
     # Adding missing information regarding customers
     missing_customer_info_treatment(df_sales)
@@ -90,8 +94,8 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
     # print('Starting section B...')
     log_record('Início Secção B...', options_file.project_id)
     start = time.time()
-    # current_date, _ = time_tags()
-    current_date = '2019-10-10'
+    current_date, _ = time_tags()
+    # current_date = '2019-10-10'
 
     try:
         df_ohe = read_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date), index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category',
@@ -106,64 +110,64 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
                                                                                                                    'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category',
                                                                                                                    'PT_PDB_Model_Desc': 'category', 'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
                                                                                                                    'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
+        df_sales = read_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date), index_col=0, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
+
         # df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, df_non_ohe.columns + ['SLR_Account_Dealer_Code', 'Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'])
         print('Current day file found and processed. Skipping to Section C...')
     except FileNotFoundError:
-        try:
-            df_sales = read_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date), index_col=0, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
-            print('Current day file found. Skipping to step 2...')
-        except FileNotFoundError:
-            print('Current day file not found. Processing...')
+        print('Current day file not found. Processing...')
 
-            # Step 1 - Dataset cleaning and transforming to 1 line per sale
-            # df_sales = df_sales[df_sales['VehicleData_Code'] == 38]
+        # Step 1 - Dataset cleaning and transforming to 1 line per sale
+        # df_sales = df_sales[df_sales['VehicleData_Code'] == 38]
 
-            columns_to_convert_to_datetime = ['Ship_Arrival_Date', 'SLR_Document_Date_CHS', 'Registration_Request_Date', 'SLR_Document_Date_RGN']
-            for column in columns_to_convert_to_datetime:
-                df_sales[column] = pd.to_datetime(df_sales[column])
+        columns_to_convert_to_datetime = ['Ship_Arrival_Date', 'SLR_Document_Date_CHS', 'Registration_Request_Date', 'SLR_Document_Date_RGN']
+        for column in columns_to_convert_to_datetime:
+            df_sales[column] = pd.to_datetime(df_sales[column])
 
-            # Filtering
-            print('\nInitial Unique Chassis Count: {}'.format(df_sales['Chassis_Number'].nunique()))
-            print('Initial Unique Registration Count: {}'.format(df_sales['Registration_Number'].nunique()))
+        # Filtering
+        print('\nInitial Unique Chassis Count: {}'.format(df_sales['Chassis_Number'].nunique()))
+        print('Initial Unique Registration Count: {}'.format(df_sales['Registration_Number'].nunique()))
 
-            print('Removal of 49-VG-94 Registration Plate, which presents two Chassis Number')
-            df_sales = df_sales[~(df_sales['Registration_Number'] == '49-VG-94')].copy()
+        print('Removal of 49-VG-94 Registration Plate, which presents two Chassis Number')
+        df_sales = df_sales[~(df_sales['Registration_Number'] == '49-VG-94')].copy()
 
-            print('\nInitial Unique Chassis Count: {}'.format(df_sales['Chassis_Number'].nunique()))
-            print('Initial Unique Registration Count: {}'.format(df_sales['Registration_Number'].nunique()))
+        print('\nInitial Unique Chassis Count: {}'.format(df_sales['Chassis_Number'].nunique()))
+        print('Initial Unique Registration Count: {}'.format(df_sales['Registration_Number'].nunique()))
 
-            # Sorting
-            df_sales.sort_values(['Ship_Arrival_Date', 'SLR_Document_Date_CHS', 'Registration_Request_Date', 'SLR_Document_Date_RGN'])
+        # Sorting
+        df_sales.sort_values(['Ship_Arrival_Date', 'SLR_Document_Date_CHS', 'Registration_Request_Date', 'SLR_Document_Date_RGN'])
 
-            df_sales['No_Registration_Number_Flag'] = 0
-            df_sales['Registration_Number_No_SLR_Document_RGN_Flag'] = 0
-            df_sales['SLR_Document_RGN_Flag'] = 0
-            df_sales['Undefined_VHE_Status'] = 0
+        df_sales['No_Registration_Number_Flag'] = 0
+        df_sales['Registration_Number_No_SLR_Document_RGN_Flag'] = 0
+        df_sales['SLR_Document_RGN_Flag'] = 0
+        df_sales['Undefined_VHE_Status'] = 0
 
-            df_sales_grouped_3 = df_sales.groupby(['Chassis_Number', 'Registration_Number'])
-            df_sales = na_fill_hyundai(df_sales_grouped_3)
-            # print(null_analysis(df_sales))
+        df_sales_grouped_3 = df_sales.groupby(['Chassis_Number', 'Registration_Number'])
+        df_sales = na_fill_hyundai(df_sales_grouped_3)
+        # print(null_analysis(df_sales))
 
-            # New Column Creation
-            df_sales_grouped = df_sales.groupby(['VehicleData_Code'])
-            df_sales['Quantity_Sold'] = df_sales_grouped['Quantity_CHS'].transform('sum')
-            df_sales['Quantity_Sold'] = df_sales['Quantity_Sold'].astype(np.int64, errors='ignore')
+        # New Column Creation
+        df_sales_grouped = df_sales.groupby(['VehicleData_Code'])
+        df_sales['Quantity_Sold'] = df_sales_grouped['Quantity_CHS'].transform('sum')
+        df_sales['Quantity_Sold'] = df_sales['Quantity_Sold'].astype(np.int64, errors='ignore')
 
-            df_sales_unique_chassis = df_sales.drop_duplicates(subset=['VehicleData_Code', 'Chassis_Number']).copy()
-            df_sales_grouped_2 = df_sales_unique_chassis.groupby(['VehicleData_Code'])
-            df_sales['Average_DaysInStock_Global'] = df_sales_grouped_2['DaysInStock_Global'].transform('mean').round(3)
+        df_sales_unique_chassis = df_sales.drop_duplicates(subset=['VehicleData_Code', 'Chassis_Number']).copy()
+        df_sales_grouped_2 = df_sales_unique_chassis.groupby(['VehicleData_Code'])
+        df_sales['Average_DaysInStock_Global'] = df_sales_grouped_2['DaysInStock_Global'].transform('mean').round(3)
 
-            df_sales.to_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date))
+        # df_sales.to_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date))
 
         # Step 2: ML Processing
         # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+        print('before join - \n{} \n{}'.format(df_sales.head(), df_sales.shape))
         df_sales = df_join_function(df_sales, df_pdb_dim[['VehicleData_Code'] + configuration_parameters_cols].set_index('VehicleData_Code'), on='VehicleData_Code', how='left')
+        print('after join - \n{} \n{}'.format(df_sales.head(), df_sales.shape))
 
-        df_sales = lowercase_column_convertion(df_sales, configuration_parameters_cols)
+        df_sales = lowercase_column_conversion(df_sales, configuration_parameters_cols)
 
         # Filtering rows with no relevant information
-        print('1 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
-        df_sales = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viaturas apenas Hyundai
+        # print('1 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
+        # df_sales = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viaturas apenas Hyundai
         print('2 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
         df_sales = df_sales[df_sales['VehicleData_Code'] != 1]
         print('3 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
@@ -177,7 +181,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
         print('7 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
         df_sales = df_sales[df_sales['Registration_Number'] != 'G.FORCE']  # Filters rows where, for some odd reason, the days in stock are negative
         print('8 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
-        df_sales = df_sales[df_sales['Customer_Group_Code'].notnull()]  # Filters rows where there is not client information;
+        df_sales = df_sales[df_sales['Customer_Group_Code'].notnull()]  # Filters rows where there is no client information;
         print('9 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
 
         df_sales = new_features(df_sales, configuration_parameters_cols, options_file.project_id)
@@ -192,14 +196,14 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
         #                                      'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'SLR_Account_Dealer_Code', 'Salesman_Dealer_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Vehicle_Code',
         #                                      'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS'], options_file.project_id)
 
-        df_sales = remove_columns(df_sales, ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type',
-                                             'SLR_Document_Category', 'Chassis_Flag', 'SLR_Document_Period_CHS', 'SLR_Document_Year_CHS', 'SLR_Document_CHS', 'SLR_Document_Type_CHS',
-                                             'SLR_Account_CHS', 'Quantity_CHS', 'Registration_Flag', 'Analysis_Date_RGN', 'Analysis_Period_RGN', 'Analysis_Year_RGN',
-                                             'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'VehicleData_Key',
-                                             'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
-                                             'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
-                                             'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
-                                             'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code'], options_file.project_id)
+        # df_sales = remove_columns(df_sales, ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type',
+        #                                      'SLR_Document_Category', 'Chassis_Flag', 'SLR_Document_Period_CHS', 'SLR_Document_Year_CHS', 'SLR_Document_CHS', 'SLR_Document_Type_CHS',
+        #                                      'SLR_Account_CHS', 'Quantity_CHS', 'Registration_Flag', 'Analysis_Date_RGN', 'Analysis_Period_RGN', 'Analysis_Year_RGN',
+        #                                      'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'VehicleData_Key',
+        #                                      'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
+        #                                      'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
+        #                                      'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
+        #                                      'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code'], options_file.project_id)
 
         # Specific Measures Calculation
         df_sales = measures_calculation_hyundai(df_sales)
@@ -208,7 +212,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
         df_sales['Total_Discount_%'] = df_sales['Total_Discount_%'].replace([np.inf, np.nan, -np.inf], 0)  # Is this correct? This is caused by Total Sales = 0
         df_sales['Fixed_Margin_I_%'] = df_sales['Fixed_Margin_I_%'].replace([np.inf, np.nan, -np.inf], 0)  # Is this correct? This is caused by Total Net Sales = 0
 
-        df_sales = lowercase_column_convertion(df_sales, configuration_parameters_cols)  # Lowercases the strings of these columns
+        df_sales = lowercase_column_conversion(df_sales, configuration_parameters_cols)  # Lowercases the strings of these columns
 
         df_sales = parameter_processing_hyundai(df_sales, options_file, configuration_parameters_cols)
 
@@ -240,6 +244,19 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
 
         # New VehicleData_Code Creation
         df_sales['ML_VehicleData_Code'] = df_sales.groupby(configuration_parameters_cols).ngroup()
+        df_sales.to_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
+
+        df_sales = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viaturas apenas Hyundai
+
+        columns_with_too_much_info_2 = ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type',
+                                        'SLR_Document_Category', 'Chassis_Flag', 'SLR_Document_Period_CHS', 'SLR_Document_Year_CHS', 'SLR_Document_CHS', 'SLR_Document_Type_CHS',
+                                        'SLR_Account_CHS', 'Quantity_CHS', 'Registration_Flag', 'Analysis_Date_RGN', 'Analysis_Period_RGN', 'Analysis_Year_RGN',
+                                        'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'VehicleData_Key',
+                                        'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
+                                        'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
+                                        'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
+                                        'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code']
+
         df_sales.to_csv('output/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
 
         columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 40, 41, 42, 43]] + \
@@ -247,7 +264,7 @@ def data_processing(df_sales, df_stock, df_pdb_dim, configuration_parameters_col
                                       'DaysInStock_Distributor', 'Average_DaysInStock_Global', 'HME_Support', 'Quality_Margin', 'Total_Network_Support', 'Registration_Number', 'NLR_Posting_Date', 'SLR_Document_Date_CHS', 'SLR_Account_CHS_Key', 'SLR_Document_Date_RGN', 'Location_Code',
                                       'Dispatch_Type_Code', 'SLR_Account_Dealer_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Fixed_Margin_II_%', 'DaysInStock_Global']
 
-        df_non_ohe = remove_columns(df_sales, [x for x in columns_with_too_much_info if x not in target], options_file.project_id)
+        df_non_ohe = remove_columns(df_sales, [x for x in columns_with_too_much_info + columns_with_too_much_info_2 if x not in target], options_file.project_id)
 
         df_non_ohe = constant_columns_removal(df_non_ohe, options_file.project_id)
 
@@ -334,7 +351,7 @@ def deployment(df, db, view):
     #     df[column] = df[column].astype(str)
 
     if df is not None:
-        sql_inject_v2(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
+        sql_inject_v2(df[options_file.sql_columns_vhe_fact_bi], options_file.DSN_MLG, db, view, options_file, list(df[options_file.sql_columns_vhe_fact_bi]), truncate=1, check_date=1)
         # sql_inject_v1(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
 
     print('Secção E terminada - Duração: {:.2f}'.format(time.time() - start))

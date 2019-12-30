@@ -6,7 +6,7 @@ import level_2_optionals_baviera_options
 
 from level_2_optionals_baviera_options import project_id, classification_models, k, gridsearch_score
 from modules.level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
-from modules.level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_convertion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
+from modules.level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_conversion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
 from modules.level_1_c_data_modelling import classification_model_training, save_model
 from modules.level_1_d_model_evaluation import performance_evaluation_classification, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
 from modules.level_1_e_deployment import sql_inject, sql_age_comparison, sql_mapping_upload
@@ -88,7 +88,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     if sql_age_comparison(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
         log_record('Checkpoint não encontrado ou demasiado antigo. A processar dados...', project_id)
 
-        df = lowercase_column_convertion(df, ['Opcional', 'Cor', 'Interior', 'Versão'])  # Lowercases the strings of these columns
+        df = lowercase_column_conversion(df, ['Opcional', 'Cor', 'Interior', 'Versão'])  # Lowercases the strings of these columns
 
         dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather',
                                    ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada', ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
@@ -146,7 +146,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         df = new_features(df, configuration_parameters, project_id)  # Creates a series of new features, explained in the provided pdf
 
-        global_variables_saving(df, project='optionals_baviera')  # Small functions to save 2 specific global variables which will be needed later
+        global_variables_saving(df, level_2_optionals_baviera_options.project_id)  # Small functions to save 2 specific global variables which will be needed later
 
         log_record('Checkpoint B.1...', project_id)
         # performance_info_append(time.time(), 'checkpoint_b1')

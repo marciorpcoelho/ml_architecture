@@ -49,7 +49,7 @@ my_dpi = 96
 # score_calculation - Calculates new metrics (Score) based on the stock days and margin of a sale
 
 
-def lowercase_column_convertion(df, columns):
+def lowercase_column_conversion(df, columns):
     df[columns] = df[columns].apply(lambda x: x.str.lower())
 
     return df
@@ -860,8 +860,8 @@ def z_scores_function(df, cols_to_normalize):
     return df
 
 
-def global_variables_saving(df, project):
-    if project == 'optionals_baviera':
+def global_variables_saving(df, project_id):
+    if project_id == 2162:
         global MEAN_TOTAL_PRICE
         MEAN_TOTAL_PRICE = np.mean(df['price_total'])
         global STD_TOTAL_PRICE
@@ -996,7 +996,7 @@ def language_detection(df, column_to_detect, new_column):
 # Converts a column of a data frame with only strings to a list with all the unique strings
 def string_to_list(df, column):
 
-    lower_case_strings = lowercase_column_convertion(df, columns=column)[column[0]].dropna(axis=0).values
+    lower_case_strings = lowercase_column_conversion(df, columns=column)[column[0]].dropna(axis=0).values
     strings = ' '.join(lower_case_strings).split()
 
     strings = unidecode_function(strings)
