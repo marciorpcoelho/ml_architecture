@@ -90,8 +90,8 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
         return df
 
     except (pyodbc.ProgrammingError, pyodbc.OperationalError) as error:
-        level_0_performance_report.log_record('Erro ao obter os dados do DW - {}'.format(error), options_file.project_id, flag=1)
-        return  # ToDo need to figure a better way of handling these errors
+        level_0_performance_report.log_record('Erro ao obter os dados do DW - {}'.format(error), options_file.project_id, flag=2)
+        return
 
 
 # When you have a full query to use and no need to prepare anything. Will merge with sql_retrieve_df in the future;
@@ -107,7 +107,8 @@ def sql_retrieve_df_specified_query(dsn, db, options_file, query):
         print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
         return df
 
-    except (pyodbc.ProgrammingError, pyodbc.OperationalError):
+    except (pyodbc.ProgrammingError, pyodbc.OperationalError) as error:
+        level_0_performance_report.log_record('Erro ao obter os dados do DW - {}'.format(error), options_file.project_id, flag=2)
         return
 
 
