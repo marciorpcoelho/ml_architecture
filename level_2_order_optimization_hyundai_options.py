@@ -100,7 +100,7 @@ dealers_query = '''
         "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Key" AS "SLR_Account_CHS_Key", "SLR_Dim_Dealers_DTR_VHE"."SLR_AccountGroup_Code"
         AS "SLR_AccountGroup_Code", "SLR_Dim_Dealers_DTR_VHE"."NDB_Dealer_Desc" AS "NDB_Dealer_Desc",
         "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Invoice" AS "SLR_Account_Invoice"
-         from "SLR_Dim_Dealers_DTR WITH (NOLOCK)"
+         from "SLR_Dim_Dealers_DTR"
         "SLR_Dim_Dealers_DTR_VHE"
          where "SLR_Dim_Dealers_DTR_VHE"."Record_Type" <> 3 '''
 

@@ -86,9 +86,9 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
                                                                                                                    'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
         df_sales = read_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date), index_col=0, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
 
-        log_record('Current day file found and processed. Skipping to Section C...', options_file.project_id)
+        log_record('Dados do dia atual foram encontrados. A passar para a secção C...', options_file.project_id)
     except FileNotFoundError:
-        log_record('Current day file not found. Processing...', options_file.project_id)
+        log_record('Dados do dia atual não foram encontrados. A processar...', options_file.project_id)
 
         # Step 1 - Dataset cleaning and transforming to 1 line per sale
         columns_to_convert_to_datetime = ['Ship_Arrival_Date', 'SLR_Document_Date_CHS', 'Registration_Request_Date', 'SLR_Document_Date_RGN']
@@ -96,14 +96,11 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
             df_sales[column] = pd.to_datetime(df_sales[column])
 
         # Filtering
-        log_record('\nInitial Unique Chassis Count: {}'.format(df_sales['Chassis_Number'].nunique()), options_file.project_id)
-        log_record('Initial Unique Registration Count: {}'.format(df_sales['Registration_Number'].nunique()), options_file.project_id)
+        log_record('1 - Contagem Inicial de Chassis únicos: {}'.format(df_sales['Chassis_Number'].nunique()), options_file.project_id)
+        log_record('1 - Contagem Inicial de Matrículas únicas: {}'.format(df_sales['Registration_Number'].nunique()), options_file.project_id)
 
         print('Removal of 49-VG-94 Registration Plate, which presents two Chassis Number')
         df_sales = df_sales[~(df_sales['Registration_Number'] == '49-VG-94')].copy()
-
-        log_record('\nInitial Unique Chassis Count: {}'.format(df_sales['Chassis_Number'].nunique()), options_file.project_id)
-        log_record('Initial Unique Registration Count: {}'.format(df_sales['Registration_Number'].nunique()), options_file.project_id)
 
         # Sorting
         df_sales.sort_values(['Ship_Arrival_Date', 'SLR_Document_Date_CHS', 'Registration_Request_Date', 'SLR_Document_Date_RGN'])
@@ -136,21 +133,21 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
         # Filtering rows with no relevant information
         # print('1 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
         # df_sales = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viaturas apenas Hyundai
-        log_record('1 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        # log_record('1 - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['VehicleData_Code'] != 1]
-        log_record('2 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        log_record('2 - Remoção de Viaturas não parametrizadas - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['Sales_Type_Dealer_Code'] != 'Demo']
-        log_record('3 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        log_record('3 - Remoção de Viaturas de Demonstração - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['Sales_Type_Code_DMS'].isin(['RAC', 'STOCK', 'VENDA'])]
-        log_record('4 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        log_record('4 - Seleção de apenas Viaturas de RAC, Stock e Venda - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[~df_sales['Dispatch_Type_Code'].isin(['AMBULÂNCIA', 'TAXI', 'PSP'])]
-        log_record('5 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        log_record('5 - Remoção de Viaturas Especiais (Ambulâncias, Táxis, PSP) - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['DaysInStock_Global'] >= 0]  # Filters rows where, for some odd reason, the days in stock are negative
-        log_record('6 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        log_record('6 - Remoção de Viaturas com Dias em Stock Global negativos - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['Registration_Number'] != 'G.FORCE']  # Filters rows where, for some odd reason, the days in stock are negative
-        log_record('7 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        log_record('7 - Remoção de Viaturas com Matrículas Inválidas (G.Force) - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['Customer_Group_Code'].notnull()]  # Filters rows where there is no client information;
-        log_record('8 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        log_record('8 - Remoção de Viaturas sem informação de cliente - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
 
         df_sales = new_features(df_sales, configuration_parameters_cols, options_file.project_id)
 
@@ -171,16 +168,16 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
         # Parameter Translation
         df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], translation_dictionaries, options_file.project_id)
         df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']
-        log_record('9 - Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        log_record('9 - Remoção de Viaturas sem versão parametrizada - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
 
         # Parameter Grouping
         print('### NO GROUPING ###')
         # df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], grouping_dictionaries, options_file.project_id)
 
-        log_record('Number of Different VehicleData_Code: {}'.format(df_sales['VehicleData_Code'].nunique()), options_file.project_id)
+        log_record('Contagem de VehicleData_Code únicos: {}'.format(df_sales['VehicleData_Code'].nunique()), options_file.project_id)
         df_sales_grouped_conf_cols = df_sales.groupby(configuration_parameters_cols)
 
-        log_record('Number of Different Configurations: {}'.format(len(df_sales_grouped_conf_cols)), options_file.project_id)
+        log_record('Contagem de Configurações: {}'.format(len(df_sales_grouped_conf_cols)), options_file.project_id)
 
         # New VehicleData_Code Creation
         df_sales['ML_VehicleData_Code'] = df_sales.groupby(configuration_parameters_cols).ngroup()
