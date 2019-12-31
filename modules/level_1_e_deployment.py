@@ -82,7 +82,9 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
 
     try:
         if check_date:
-            time_result = sql_date_comparison(df, dsn, options_file, database, view, 'Date', time_to_last_update)
+            df.loc[:, 'Date'] = time_tags()[0]
+            time_result = sql_date_comparison(dsn, options_file, database, view, 'Date', time_to_last_update)
+
             if time_result:
                 level_0_performance_report.log_record('A fazer upload para SQL, Database {} e view {}...'.format(database, view), options_file.project_id)
 
@@ -133,7 +135,8 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
 
     try:
         if check_date:
-            time_result = sql_date_comparison(df, dsn, options_file, database, view, 'Date', time_to_last_update)
+            df['Date'] = time_tags()[0]
+            time_result = sql_date_comparison(dsn, options_file, database, view, 'Date', time_to_last_update)
             if time_result:
                 values_string = [str(tuple(x)) for x in df.values]
                 level_0_performance_report.log_record('A fazer upload para SQL, Database {} e view {}...'.format(database, view), options_file.project_id)
@@ -263,12 +266,9 @@ def sql_truncate(dsn, options_file, database, view, query=None):
     cnxn.close()
 
 
-def sql_date_comparison(df, dsn, options_file, database, view, date_column, time_to_last_update):
+def sql_date_comparison(dsn, options_file, database, view, date_column, time_to_last_update):
     time_tag_date, _ = time_tags()
     current_date = datetime.strptime(time_tag_date, '%Y-%m-%d')
-
-    df['Date'] = [time_tag_date] * df.shape[0]
-    # df['Date'] = pd.to_datetime(df['Date'])
 
     last_date = sql_date_checkup(dsn, options_file, database, view, date_column)
 
@@ -312,18 +312,6 @@ def sql_second_highest_date_checkup(dsn, options_file, database, view, date_colu
 
     cnxn.close()
     return df
-
-
-def sql_age_comparison(dsn, options_file, database, view, update_frequency):
-    # time_tag = time.strftime("%d/%m/%y")
-    time_tag_date, _ = time_tags(format_date="%d/%m/%y")
-    current_date = datetime.strptime(time_tag_date, '%d/%m/%y')
-    last_date = sql_date_checkup(dsn, options_file, database, view, 'Date')
-
-    if (current_date - last_date).days >= update_frequency:
-        return 1
-    else:
-        return 0
 
 
 # Uploads parameter's mappings to SQL

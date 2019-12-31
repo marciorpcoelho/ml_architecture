@@ -86,9 +86,10 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
                                                                                                                    'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category',
                                                                                                                    'PT_PDB_Model_Desc': 'category', 'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
                                                                                                                    'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
-        df_sales = read_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date), index_col=0, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
+        df_sales = read_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date), index_col=0, dtype={'SLR_Account_Dealer_Code': object, 'Immobilized_Number': object}, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN',
+                                                                                                                                                                                              'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
 
-        log_record('Dados do dia atual foram encontrados. A passar para a secção C...', options_file.project_id)
+        log_record('Dados do dia atual foram encontrados. A passar para a próxima secção...', options_file.project_id)
     except FileNotFoundError:
         log_record('Dados do dia atual não foram encontrados. A processar...', options_file.project_id)
 
@@ -262,7 +263,8 @@ def deployment(df, db, view):
     df = df.astype(object).where(pd.notnull(df), 'NULL')
 
     if df is not None:
-        sql_inject_v2(df[options_file.sql_columns_vhe_fact_bi], options_file.DSN_MLG, db, view, options_file, list(df[options_file.sql_columns_vhe_fact_bi]), truncate=1, check_date=1)
+        sel_df = df.loc[:, options_file.sql_columns_vhe_fact_bi].copy()
+        sql_inject_v2(sel_df, options_file.DSN_MLG, db, view, options_file, list(sel_df), truncate=1, check_date=1)
 
     log_record('Fim Secção E.', options_file.project_id)
     performance_info_append(time.time(), 'Section_E_End')

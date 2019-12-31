@@ -62,6 +62,7 @@ project_sql_dict = {2244: 'Project_SD',
 
 project_pbi_performance_link = {2244: 'https://bit.ly/2X8twFU',
                                 2162: 'https://bit.ly/2U1dznN',
+                                2406: 'https://bit.ly/2U1dznN'  # ToDo: Need to update this
                                 }
 
 
@@ -102,7 +103,7 @@ def performance_info(project_id, options_file, model_choice_message, unit_count,
 
     df_performance, df_warnings = pd.DataFrame(), pd.DataFrame()
     if not len(warnings_global):
-        df_warnings['Warnings'] = [0]
+        df_warnings['Warnings'] = ['0']
         df_warnings['Warning_Flag'] = [0]
         df_warnings['Project_Id'] = [project_id]
         warning_flag = 0

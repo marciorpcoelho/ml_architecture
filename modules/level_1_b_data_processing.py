@@ -895,7 +895,7 @@ def df_copy(df):
 
 def dataset_split(df, target, oversample=0, objective='classification'):
     if objective == 'classification':
-        df_train, df_test = train_test_split(df, stratify=df[target], random_state=2)  # This ensures that the classes are evenly distributed by train/test datasets; Default split is 0.75/0.25 train/test
+        df_train, df_test = train_test_split(df.copy(), stratify=df[target], random_state=2)  # This ensures that the classes are evenly distributed by train/test datasets; Default split is 0.75/0.25 train/test
 
         df_train_y = df_train[target]
         df_train_x = df_train.drop(target, axis=1)
@@ -904,7 +904,7 @@ def dataset_split(df, target, oversample=0, objective='classification'):
         df_test_x = df_test.drop(target, axis=1)
 
     elif objective == 'regression':
-        df_train_x, df_test_x, df_train_y, df_test_y = train_test_split(df, df[target], test_size=0.2, random_state=5)
+        df_train_x, df_test_x, df_train_y, df_test_y = train_test_split(df.copy(), df[target], test_size=0.2, random_state=5)
 
         df_train_x.drop(target, axis=1, inplace=True)
         df_test_x.drop(target, axis=1, inplace=True)
