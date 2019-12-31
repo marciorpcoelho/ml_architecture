@@ -8,7 +8,7 @@ from modules.level_1_b_data_processing import robust_scaler_function, skewness_r
 from modules.level_1_c_data_modelling import regression_model_training, save_model
 from modules.level_1_d_model_evaluation import performance_evaluation_regression, model_choice
 from modules.level_1_e_deployment import sql_inject_v2, time_tags
-from modules.level_0_performance_report import log_record, performance_info_append
+from modules.level_0_performance_report import log_record, performance_info_append, error_upload, project_dict, performance_info
 import level_2_order_optimization_hyundai_options as options_file
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
@@ -29,6 +29,8 @@ def main():
     # best_models, running_times = data_modelling(datasets, datasets_non_ohe, models)
     # model_choice_message, best_model_name = model_evaluation(models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
     deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
+
+    performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df_sales.shape[0], running_times_upload_flag=0)
 
 
 def data_acquisition():
@@ -267,4 +269,10 @@ def deployment(df, db, view):
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as exception:
+        project_identifier = options_file.project_id
+        log_record(exception.args[0], project_identifier, flag=2)
+        error_upload(options_file, project_identifier, options_file.log_files['full_log'], error_flag=1)
+        log_record('Falhou - Projeto: {}.'.format(str(project_dict[project_identifier])), project_identifier)

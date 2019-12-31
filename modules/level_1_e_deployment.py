@@ -136,6 +136,7 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
             time_result = sql_date_comparison(df, dsn, options_file, database, view, 'Date', time_to_last_update)
             if time_result:
                 values_string = [str(tuple(x)) for x in df.values]
+                level_0_performance_report.log_record('A fazer upload para SQL, Database {} e view {}...'.format(database, view), options_file.project_id)
 
                 for batch in chunker(values_string, 1000):
                     rows = ','.join(batch)
@@ -148,6 +149,8 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
                 level_0_performance_report.log_record('Já existem dados mais recentes.', options_file.project_id)
         if not check_date:
             values_string = [str(tuple(x)) for x in df.values]
+            level_0_performance_report.log_record('A fazer upload para SQL, Database {} e view {}...'.format(database, view), options_file.project_id)
+
             for batch in chunker(values_string, 1000):
                 rows = ','.join(batch)
                 rows = re.sub(level_0_performance_report.regex_dict['null_replacement'], 'NULL', rows)

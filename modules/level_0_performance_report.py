@@ -57,6 +57,7 @@ project_dict = {2244: 'PA@Service Desk',
 
 project_sql_dict = {2244: 'Project_SD',
                     2162: 'Project_VHE_BMW',
+                    2406: 'Project_VHE_DTR',
                     }
 
 project_pbi_performance_link = {2244: 'https://bit.ly/2X8twFU',
