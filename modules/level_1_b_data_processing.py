@@ -239,16 +239,16 @@ def options_scraping(df, model_training_check, model_mapping, options_file):
             tokenized_modelo = nltk.word_tokenize(model)
             df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
     elif not model_training_check:
-        unique_models = df['Version_Code'].unique()
-        for model in unique_models:
+        unique_version_code = df['Version_Code'].unique()
+        for version_code in unique_version_code:
             found_flag = 0
             for key in model_mapping.keys():
-                if model in model_mapping[key]:
-                    df.loc[df['Version_Code'] == model, 'Modelo'] = key
+                if version_code in model_mapping[key]:
+                    df.loc[df['Version_Code'] == version_code, 'Modelo'] = key
                     found_flag = 1
                     break
             if not found_flag:
-                level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte modelo: {}.'.format(model), project_id, flag=1)
+                level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte código de versão: {}.'.format(version_code), project_id, flag=1)
     level_0_performance_report.performance_info_append(time.time(), 'Model_Code_End')
 
     # Motorização

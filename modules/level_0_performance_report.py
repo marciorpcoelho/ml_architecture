@@ -60,10 +60,7 @@ project_sql_dict = {2244: 'Project_SD',
                     2406: 'Project_VHE_DTR',
                     }
 
-project_pbi_performance_link = {2244: 'https://bit.ly/2X8twFU',
-                                2162: 'https://bit.ly/2U1dznN',
-                                2406: 'https://bit.ly/2U1dznN'  # ToDo: Need to update this
-                                }
+project_pbi_performance_link = 'https://bit.ly/2SJIYJy'
 
 
 dict_models_name_conversion = {
@@ -148,7 +145,7 @@ def email_notification(project_id, warning_flag, warning_desc, error_desc, error
     flags_to_send = df_mail_users[project_sql_dict[project_id]].values
 
     mail_subject = str(project_dict[project_id]) + ' - Relatório'
-    link = project_pbi_performance_link[project_id]
+    link = project_pbi_performance_link
 
     if error_flag:
         run_conclusion = 'não terminou devido ao erro: {}.'.format(error_desc)
@@ -167,7 +164,7 @@ def email_notification(project_id, warning_flag, warning_desc, error_desc, error
             mail_body = 'Bom dia {}, ' \
                          '\n \nO projeto {} {} \n{} \n{}' \
                          '\n \nPara mais informações, por favor consulta o seguinte relatório: {} \n' \
-                         '\nCumprimentos, \nRelatório Automático, v1.4' \
+                         '\nCumprimentos, \nRelatório Automático, v1.41' \
                          .format(user, project_dict[project_id], run_conclusion, warning_conclusion, conclusion_message, link)
             message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
 
