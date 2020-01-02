@@ -26,7 +26,7 @@ def vehicle_count_checkup(df, options_file, sql_check=0):
     last_vehicle_count = level_1_e_deployment.sql_get_last_vehicle_count(options_file.DSN_MLG, options_file, options_file.sql_info['database'], options_file.sql_info['vhe_number_history'])
 
     if not sql_check:
-        if current_vehicle_count < 80:
+        if current_vehicle_count < 100:
             raise ValueError('Apenas ' + str(current_vehicle_count) + ' veículos foram encontrados. Por favor verificar na base de dados.')
     elif sql_check:
         if current_vehicle_count < last_vehicle_count:

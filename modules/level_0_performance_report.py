@@ -102,16 +102,17 @@ def performance_warnings_append(warning):
 def performance_info(project_id, options_file, model_choice_message, unit_count, running_times_upload_flag):
 
     df_performance, df_warnings = pd.DataFrame(), pd.DataFrame()
+
     if not len(warnings_global):
-        df_warnings['Warnings'] = ['0']
-        df_warnings['Warning_Flag'] = [0]
-        df_warnings['Project_Id'] = [project_id]
         warning_flag = 0
+        df_warnings['Warnings'] = ['0']
     else:
-        df_warnings['Warnings'] = warnings_global
-        df_warnings['Warning_Flag'] = [1] * len(warnings_global)
-        df_warnings['Project_Id'] = [project_id] * len(warnings_global)
         warning_flag = 1
+        df_warnings['Warnings'] = warnings_global
+
+    df_warnings['Warning_Flag'] = warning_flag
+    df_warnings['Project_Id'] = project_id
+    df_performance['Date'], df_warnings['Date'] = time.strftime("%Y-%m-%d"), time.strftime("%Y-%m-%d")
 
     if project_id == 2162:
         for (step, timings) in zip(names_global, times_global):
@@ -196,8 +197,9 @@ def performance_report_sql_retrieve_df(query, dsn, uid, pwd, db, project_id, **k
 
 
 def error_upload(options_file, project_id, log_file, error_flag=0):
-    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Error_Flag', 'Project_Id'})
+    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Error_Flag', 'Project_Id', 'Date'})
     error_only = None
+    current_date = time.strftime("%Y-%m-%d")
 
     if error_flag:
         error_full, error_only = parse_line(log_file)
@@ -213,6 +215,7 @@ def error_upload(options_file, project_id, log_file, error_flag=0):
         df_error['File_Loc'] = error_files
         df_error['Error_Flag'] = error_flag
         df_error['Project_Id'] = project_id_series
+        df_error['Date'] = current_date
 
         if not len(warnings_global):
             warning_flag = 0
@@ -223,7 +226,7 @@ def error_upload(options_file, project_id, log_file, error_flag=0):
 
         email_notification(project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_desc=error_only, error_flag=1, model_choice_message=0)
     elif not error_flag:
-        df_error.loc[0, ['Error_Full', 'Error_Only', 'File_Loc', 'Error_Flag', 'Project_Id']] = [None, None, None, 0, project_id]
+        df_error.loc[0, ['Error_Full', 'Error_Only', 'File_Loc', 'Error_Flag', 'Project_Id', 'Date']] = [None, None, None, 0, project_id, current_date]
 
     performance_report_sql_inject(df_error, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['error_log'], options_file, list(df_error))
 
@@ -239,7 +242,6 @@ def performance_report_sql_inject(df, dsn, database, view, options_file, columns
     cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
     cursor = cnxn.cursor()
 
-    # columns += ['Date']
     columns_string = '[%s]' % "], [".join(columns)
     values_string = ['?'] * len(columns)
     values_string = 'values (%s)' % ', '.join(values_string)
