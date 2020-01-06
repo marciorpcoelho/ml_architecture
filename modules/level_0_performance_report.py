@@ -96,9 +96,10 @@ def performance_warnings_append(warning):
     warnings_global.append(warning)
 
 
-def performance_info(project_id, options_file, model_choice_message, unit_count, running_times_upload_flag):
+def performance_info(project_id, options_file, model_choice_message, unit_count):
 
     df_performance, df_warnings = pd.DataFrame(), pd.DataFrame()
+    current_date = time.strftime("%Y-%m-%d")
 
     if not len(warnings_global):
         warning_flag = 0
@@ -109,7 +110,7 @@ def performance_info(project_id, options_file, model_choice_message, unit_count,
 
     df_warnings['Warning_Flag'] = warning_flag
     df_warnings['Project_Id'] = project_id
-    df_performance['Date'], df_warnings['Date'] = time.strftime("%Y-%m-%d"), time.strftime("%Y-%m-%d")
+    df_warnings['Date'] = current_date
 
     if project_id == 2162:
         for (step, timings) in zip(names_global, times_global):
@@ -118,18 +119,13 @@ def performance_info(project_id, options_file, model_choice_message, unit_count,
             else:
                 df_performance[step] = [timings] * unit_count
 
-        df_performance['Project_Id'] = project_id
-
-        if running_times_upload_flag:
-            performance_report_sql_inject(df_performance, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance))
-
     if project_id == 2244:
         for (step, timings) in zip(names_global, times_global):
             df_performance[step] = [timings]
 
-        df_performance['Project_Id'] = project_id
-        performance_report_sql_inject(df_performance, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance))
-
+    df_performance['Date'] = current_date
+    df_performance['Project_Id'] = project_id
+    performance_report_sql_inject(df_performance, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance))
     performance_report_sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings))
 
     error_flag, error_only = error_upload(options_file, project_id, options_file.log_files['full_log'])

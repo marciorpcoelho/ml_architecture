@@ -30,7 +30,7 @@ def main():
     # model_choice_message, best_model_name = model_evaluation(models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
     deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
-    performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df_sales.shape[0], running_times_upload_flag=0)
+    performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df_sales.shape[0])
 
 
 def data_acquisition():

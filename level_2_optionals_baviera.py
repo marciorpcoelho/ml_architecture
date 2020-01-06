@@ -20,7 +20,6 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the 
 
 configuration_parameters = level_2_optionals_baviera_options.selected_configuration_parameters
 
-running_times_upload_flag = 1
 dict_sql_upload_flag = 0
 model_training_check = 0  # Check that disables the model training. This was placed in order to disable the machine learning grouping and respective training.
 
@@ -54,7 +53,7 @@ def main():
 
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
-    performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options, model_choice_message, vehicle_count, running_times_upload_flag)
+    performance_info(level_2_optionals_baviera_options.project_id, level_2_optionals_baviera_options, model_choice_message, vehicle_count)
 
     log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[project_id]), project_id)
 
@@ -85,7 +84,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     log_record('Início Secção B...', project_id)
     model_mapping = {}
 
-    if sql_date_comparison(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options.update_frequency_days):
+    if sql_date_comparison(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], 'Date', level_2_optionals_baviera_options.update_frequency_days):
         log_record('Checkpoint não encontrado ou demasiado antigo. A processar dados...', project_id)
 
         df = lowercase_column_conversion(df, ['Opcional', 'Cor', 'Interior', 'Versão'])  # Lowercases the strings of these columns
