@@ -25,14 +25,14 @@ def main():
     max_date, _ = time_tags(format_date='%Y%m%d')
     print('Processing data from {} to {}'.format(min_date, max_date))
 
-    df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al = data_acquistion(options_file, max_date)
+    df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_al = data_acquisition(options_file, max_date)
     df_sales_cleaned, df_purchases_cleaned, df_stock = data_processing(df_sales, df_purchases, df_stock, options_file)
     results = data_modelling(options_file.pse_code, df_sales_cleaned, df_al, df_stock, df_reg_al_clients, df_purchases_cleaned, min_date, max_date, options_file.project_id)
 
     log_record('Conclusão com sucesso - Projeto: {} .\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
-def data_acquistion(options_info, current_date):
+def data_acquisition(options_info, current_date):
     log_record('Início Secção A...', options_file.project_id)
 
     pse_code = options_info.pse_code

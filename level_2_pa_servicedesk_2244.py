@@ -495,7 +495,7 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as exception:
-        project_identifier = 2244
+        project_identifier = options_file.project_id
         log_record(exception.args[0], project_identifier, flag=2)
         error_upload(options_file, project_identifier, options_file.log_files['full_log'], error_flag=1)
         log_record('Falhou - Projeto: ' + str(project_dict[project_identifier]) + '.', project_identifier)

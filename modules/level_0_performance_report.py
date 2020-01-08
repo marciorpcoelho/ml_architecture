@@ -140,7 +140,7 @@ def email_notification(project_id, warning_flag, warning_desc, error_desc, error
     toaddrs = df_mail_users['UserEmail'].unique()
     flags_to_send = df_mail_users[project_sql_dict[project_id]].values
 
-    mail_subject = str(project_dict[project_id]) + ' - Relatório'
+    mail_subject = '#PRJ-' + str(project_id) + ' ' + str(project_dict[project_id]) + ' - Relatório'
     link = project_pbi_performance_link
 
     if error_flag:
@@ -160,7 +160,7 @@ def email_notification(project_id, warning_flag, warning_desc, error_desc, error
             mail_body = 'Bom dia {}, ' \
                          '\n \nO projeto {} {} \n{} \n{}' \
                          '\n \nPara mais informações, por favor consulta o seguinte relatório: {} \n' \
-                         '\nCumprimentos, \nRelatório Automático, v1.41' \
+                         '\nCumprimentos, \nRelatório Automático, v1.42' \
                          .format(user, project_dict[project_id], run_conclusion, warning_conclusion, conclusion_message, link)
             message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
 

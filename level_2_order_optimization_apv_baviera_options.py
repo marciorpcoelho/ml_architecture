@@ -15,11 +15,34 @@ sql_info = {
     'database': 'BI_CRP',
     'database_histy': 'BI_DW_History',
     'database_final': 'BI_MLG',
+    'dms_database': 'DMS_MLG_01',
     'sales_table': '',
     'purchases_table': '',
     'stock_table': '',
     'final_table': 'PSE_Fact_BI_OrderOptimization',
     'optimization_solution_table': 'PSE_Fact_BI_OrderOptimization_Solver_Solution',
+}
+
+sql_info_stock_dbs = {
+    'AFR_SPG_01': 'DMS_AFR_01',
+    'AFR_SPG_03': 'DMS_AFR_03',
+    'AFR_SPG_05': 'DMS_AFR_05',
+    'AFR_SPG_06': 'DMS_AFR_06',
+    'AFR_SPG_07': 'DMS_AFR_07',
+    'AFR_SPG_08': 'DMS_AFR_08',
+    'CRP_SPG_04': 'DMS_CRP_04',
+    'CRP_ATL_01': 'DMS_CRP_01',
+}
+
+sql_info_stock_tables = {
+    'AFR_SPG_01': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'AFR_SPG_03': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'AFR_SPG_05': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'AFR_SPG_06': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'AFR_SPG_07': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'AFR_SPG_08': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'CRP_SPG_04': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'CRP_ATL_01': ['SM_Parts_Stock'],
 }
 
 project_id = 2259
@@ -277,3 +300,125 @@ column_sql_renaming = {
 columns_sql_solver_solution = [
     'Part_Ref', 'Qty', 'DtS', 'DtS_Per_Qty', 'Above_Goal_Flag', 'Part_Ref_Group'
 ]
+
+SPG_Parts_Stock_cols = '''        
+       [NL_Company]
+      ,[SO_Code]
+      ,[Franchise_Code]
+      ,[Product_Group]
+      ,[Part_Ref]
+      ,[Part_Desc]
+      ,[Analysis_Code]
+      ,[Model_Code]
+      ,[Discount_Code]
+      ,[PL_Account]
+      ,[Created_Date]
+      ,[Stock_Created_Date]
+      ,[Last_Buy_Date]
+      ,[Last_Sell_Date]
+      ,[Last_Movement_Date]
+      ,[Stock_Balance]
+      ,[Quantity]
+      ,[Reserved_Quantity]
+      ,[Ordered_Quantity]
+      ,[Average_Cost]
+      ,[Supplier_Cost]
+      ,[PVP_1]
+      ,[Avg_Month_Demand]
+      ,[Standard_Cost]
+      ,[Sales_Price]
+      ,[Last_Buy_Company_Date]
+      ,[Last_Sell_Company_Date]
+      ,[Parts_Included]'''
+
+SPG_Parts_Stock_Warehouses_cols = '''
+       [NL_Company]
+      ,[SO_Code]
+      ,[Franchise_Code]
+      ,[Product_Group]
+      ,[Part_Ref]
+      ,[Part_Desc]
+      ,[Analysis_Code]
+      ,[Model_Code]
+      ,[Discount_Code]
+      ,[PL_Account]
+      ,[Created_Date]
+      ,[Last_Buy_Date]
+      ,[Last_Sell_Date]
+      ,[Last_Movement_Date]
+      ,[Stock_Balance]
+      ,[Quantity]
+      ,[Average_Cost]
+      ,[PVP_1]
+      ,[Avg_Month_Demand]
+      ,[Standard_Cost]
+      ,[Sales_Price]
+      ,[Warehouse_Code]
+      ,[Warehouse]
+      ,[Last_Buy_Company_Date]
+      ,[Last_Sell_Company_Date]'''
+
+ATL_Parts_Stock_cols = '''
+       [SO_Code]
+      ,[Franchise_code]
+      ,[Product_Group]
+      ,[Part_Ref]
+      ,[Part_Desc]
+      ,[Alternative_Part_Desc_1]
+      ,[Alternative_Part_Desc_2]
+      ,[Analysis_Code]
+      ,[Model_Code]
+      ,[Discount_Code]
+      ,[Line_Class]
+      ,[Sales_Code]
+      ,[Quantity]
+      ,[Reserved_Quantity]
+      ,[Ordered_Quantity]
+      ,[Average_Cost]
+      ,[PVP_1]
+      ,[PVP_2]
+      ,[PVP_3]
+      ,[Created_Date]
+      ,[Last_Buy_Date]
+      ,[Last_Sell_Date]
+      ,[Last_Movement_Date]
+      ,[Stock_Balance]
+      ,[PL_Account]
+      ,[Avg_Month_Demand]
+      ,[ReOrder_Category]
+      ,[Standard_Cost]
+      ,[Discount_Group_Code]
+      ,[Sales_Price]
+      ,[NStock_Item]
+      ,[Part_Location_1]
+      ,[Part_Location_2]
+      ,[Part_Location_3]
+      ,[Part_Location_4]
+      ,[Part_Location_5]
+      ,[Part_Location_6]
+      ,[Part_Location_7]
+      ,[Part_Location_8]
+      ,[Part_Location_9]
+      ,[Part_LocationDesc_1]
+      ,[Part_LocationDesc_2]
+      ,[Part_LocationDesc_3]
+      ,[Part_LocationDesc_4]
+      ,[Part_LocationDesc_5]
+      ,[Part_LocationDesc_6]
+      ,[Part_LocationDesc_7]
+      ,[Part_LocationDesc_8]
+      ,[Part_LocationDesc_9]
+      ,[Quantity_Location_1]
+      ,[Quantity_Location_2]
+      ,[Quantity_Location_3]
+      ,[Quantity_Location_4]
+      ,[Quantity_Location_5]
+      ,[Quantity_Location_6]
+      ,[Quantity_Location_7]
+      ,[Quantity_Location_8]
+      ,[Quantity_Location_9]
+      ,[Surcharge]
+      ,[Pending_Quantity]
+      ,[Supplier_Cost]
+      ,[Parts_Included]'''
+

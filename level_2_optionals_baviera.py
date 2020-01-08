@@ -42,7 +42,7 @@ def main():
     ###
 
     number_of_features = 'all'
-    df = data_acquistion(input_file, query_filters, local=0)
+    df = data_acquisition(input_file, query_filters, local=0)
     df, datasets = data_processing(df, target_variable, oversample_check, number_of_features)
 
     if model_training_check:
@@ -58,7 +58,7 @@ def main():
     log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[project_id]), project_id)
 
 
-def data_acquistion(input_file, query_filters, local=0):
+def data_acquisition(input_file, query_filters, local=0):
     performance_info_append(time.time(), 'Section_A_Start')
     log_record('Início Secção A...', project_id)
 
