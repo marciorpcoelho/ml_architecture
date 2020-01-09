@@ -3,6 +3,7 @@ import time
 import logging
 import numpy as np
 import pandas as pd
+from traceback import format_exc
 from modules.level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv, missing_customer_info_treatment
 from modules.level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, lowercase_column_conversion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from modules.level_1_c_data_modelling import regression_model_training, save_model
@@ -274,7 +275,7 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as exception:
-        project_identifier = options_file.project_id
-        log_record(exception.args[0], project_identifier, flag=2)
-        error_upload(options_file, project_identifier, options_file.log_files['full_log'], error_flag=1)
+        project_identifier, exception_desc = options_file.project_id, exception.args[0]
+        log_record(exception_desc, project_identifier, flag=2)
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
         log_record('Falhou - Projeto: {}.'.format(str(project_dict[project_identifier])), project_identifier)

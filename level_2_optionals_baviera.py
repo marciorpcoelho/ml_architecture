@@ -2,6 +2,7 @@ import sys
 import time
 import logging
 import pandas as pd
+from traceback import format_exc
 import level_2_optionals_baviera_options
 
 from level_2_optionals_baviera_options import project_id, classification_models, k, gridsearch_score
@@ -239,7 +240,7 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as exception:
-        project_identifier = level_2_optionals_baviera_options.project_id
-        log_record(exception.args[0], project_identifier, flag=2)
-        error_upload(level_2_optionals_baviera_options, project_identifier, level_2_optionals_baviera_options.log_files['full_log'], error_flag=1)
+        project_identifier, exception_desc = level_2_optionals_baviera_options.project_id, exception.args[0]
+        log_record(exception_desc, project_identifier, flag=2)
+        error_upload(level_2_optionals_baviera_options, project_identifier, format_exc(), exception_desc, error_flag=1)
         log_record('Falhou - Projeto: {}.'.format(str(project_dict[project_identifier])), project_identifier)

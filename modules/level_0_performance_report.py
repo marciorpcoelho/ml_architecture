@@ -128,8 +128,7 @@ def performance_info(project_id, options_file, model_choice_message, unit_count)
     performance_report_sql_inject(df_performance, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance))
     performance_report_sql_inject(df_warnings, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings))
 
-    error_flag, error_only = error_upload(options_file, project_id, options_file.log_files['full_log'])
-    email_notification(project_id, warning_flag=warning_flag, warning_desc=warnings_global, error_desc=error_only, error_flag=error_flag, model_choice_message=model_choice_message)
+    email_notification(project_id, warning_flag=warning_flag, warning_desc=warnings_global, error_desc='', model_choice_message=model_choice_message)
 
 
 def email_notification(project_id, warning_flag, warning_desc, error_desc, error_flag=0, model_choice_message=0):
@@ -189,25 +188,16 @@ def performance_report_sql_retrieve_df(query, dsn, uid, pwd, db, project_id, **k
     cnxn.close()
 
 
-def error_upload(options_file, project_id, log_file, error_flag=0):
-    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'File_Loc', 'Error_Flag', 'Project_Id', 'Date'})
-    error_only = None
+def error_upload(options_file, project_id, error_full, error_only, error_flag=0):
+    df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'Error_Flag', 'Project_Id', 'Date'})
+    # error_only = None
     current_date = time.strftime("%Y-%m-%d")
 
     if error_flag:
-        error_full, error_only = parse_line(log_file)
-        rx = re.compile(regex_dict['between_quotes'])
-        error_files = rx.findall(error_full[0])
-
-        error_full_series = [error_full[0]] * len(error_files)
-        error_only_series = [error_only[0]] * len(error_files)
-        project_id_series = [project_id] * len(error_files)
-
-        df_error['Error_Full'] = error_full_series
-        df_error['Error_Only'] = error_only_series
-        df_error['File_Loc'] = error_files
+        df_error['Error_Full'] = [error_full]
+        df_error['Error_Only'] = [error_only]
         df_error['Error_Flag'] = error_flag
-        df_error['Project_Id'] = project_id_series
+        df_error['Project_Id'] = project_id
         df_error['Date'] = current_date
 
         if not len(warnings_global):
@@ -219,7 +209,7 @@ def error_upload(options_file, project_id, log_file, error_flag=0):
 
         email_notification(project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_desc=error_only, error_flag=1, model_choice_message=0)
     elif not error_flag:
-        df_error.loc[0, ['Error_Full', 'Error_Only', 'File_Loc', 'Error_Flag', 'Project_Id', 'Date']] = [None, None, None, 0, project_id, current_date]
+        df_error.loc[0, ['Error_Full', 'Error_Only', 'Error_Flag', 'Project_Id', 'Date']] = [None, None, 0, project_id, current_date]
 
     performance_report_sql_inject(df_error, performance_sql_info['DSN'], performance_sql_info['DB'], performance_sql_info['error_log'], options_file, list(df_error))
 
@@ -255,18 +245,6 @@ def performance_report_sql_inject(df, dsn, database, view, options_file, columns
     cnxn.close()
 
     return
-
-
-def parse_line(file_path):
-    with open(file_path, 'r') as file:
-        content = file.read()
-        rx = re.compile(regex_dict['error_only'])
-        error_only = rx.findall(content)
-
-        rx = re.compile(regex_dict['error_full'])
-        error_full = rx.findall(content.replace('\n', ' '))
-
-        return error_full, error_only
 
 
 def log_record(message, project_id, flag=0):
