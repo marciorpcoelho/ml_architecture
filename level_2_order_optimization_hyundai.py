@@ -118,13 +118,13 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
         df_sales = na_fill_hyundai(df_sales_grouped_3)
 
         # New Column Creation
-        df_sales_grouped = df_sales.groupby(['VehicleData_Code'])
-        df_sales['Quantity_Sold'] = df_sales_grouped['Quantity_CHS'].transform('sum')
-        df_sales['Quantity_Sold'] = df_sales['Quantity_Sold'].astype(np.int64, errors='ignore')
+        # df_sales_grouped = df_sales.groupby(['VehicleData_Code'])
+        # df_sales['Quantity_Sold'] = df_sales_grouped['Quantity_CHS'].transform('sum')
+        # df_sales['Quantity_Sold'] = df_sales['Quantity_Sold'].astype(np.int64, errors='ignore')
 
-        df_sales_unique_chassis = df_sales.drop_duplicates(subset=['VehicleData_Code', 'Chassis_Number']).copy()
-        df_sales_grouped_2 = df_sales_unique_chassis.groupby(['VehicleData_Code'])
-        df_sales['Average_DaysInStock_Global'] = df_sales_grouped_2['DaysInStock_Global'].transform('mean').round(3)
+        # df_sales_unique_chassis = df_sales.drop_duplicates(subset=['VehicleData_Code', 'Chassis_Number']).copy()
+        # df_sales_grouped_2 = df_sales_unique_chassis.groupby(['VehicleData_Code'])
+        # df_sales['Average_DaysInStock_Global'] = df_sales_grouped_2['DaysInStock_Global'].transform('mean').round(3)
 
         # df_sales.to_csv('dbs/df_sales_importador_processed_{}.csv'.format(current_date))
 

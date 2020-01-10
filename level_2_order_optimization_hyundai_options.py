@@ -10,10 +10,9 @@ from sklearn import tree, linear_model
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
 from sklearn.linear_model import LassoCV, Ridge, LassoLarsCV, ElasticNetCV
 from sklearn.svm import SVR, SVC
-
-
-dotenv_path = 'info.env'
-read_dotenv(dotenv_path)
+dotenv_path = '/info.env'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+read_dotenv(base_path + dotenv_path)
 
 DSN_PRD = os.getenv('DSN_Prd')
 DSN_MLG = os.getenv('DSN_MLG')
@@ -38,6 +37,7 @@ sql_info = {
     'stock': 'VHE_Fact_BI_Stock_DTR',
     'final_table': 'VHE_Fact_BI_Sales_DTR',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
+    'optimization_solution_table': 'VHE_Fact_BI_OrderOptimization_Solver_Optimization_DTR',
 }
 
 log_files = {

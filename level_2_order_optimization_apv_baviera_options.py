@@ -1,6 +1,6 @@
 import os
 from py_dotenv import read_dotenv
-dotenv_path = 'info.env'
+dotenv_path = '/info.env'
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
 read_dotenv(base_path + dotenv_path)
 

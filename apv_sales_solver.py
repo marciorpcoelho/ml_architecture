@@ -6,14 +6,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
 import datetime as dt
-import level_0_performance_report
+from scipy.optimize import minimize, LinearConstraint, Bounds
+from dateutil.relativedelta import relativedelta
+import warnings
+
+import modules.level_0_performance_report as level_0_performance_report
 import level_2_order_optimization_apv_baviera_options as options_file
 import modules.level_1_d_model_evaluation as level_1_d_model_evaluation
 import modules.level_1_b_data_processing as level_1_b_data_processing
 import modules.level_1_e_deployment as level_1_e_deployment
-from scipy.optimize import minimize, LinearConstraint, Bounds
-from dateutil.relativedelta import relativedelta
-import warnings
+
 warnings.filterwarnings('ignore')
 
 group_goals = options_file.group_goals
@@ -442,8 +444,7 @@ def solver_metrics_per_part_ref(args):
     # final_df = pd.DataFrame()
 
     if df_sales_filtered['Qty_Sold_sum_al'].sum() >= 0 and df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:  # This checkup is needed as I can not enforce it before when processing a time interval, only when processing all data
-        df_sales_filtered.set_index('index', inplace=True)
-        # I should use last purchase date/cost, but first: not all parts have purchases (e.g. BM83.13.9.415.965) and second, they should give the same value.
+        df_sales_filtered.set_index('index', inplace=True)  # I should use last purchase date/cost, but first: not all parts have purchases (e.g. BM83.13.9.415.965) and second, they should give the same value.
 
         last_sale_date = df_sales_filtered[(df_sales_filtered['Qty_Sold_sum_al'] > 0)].index.max()
 

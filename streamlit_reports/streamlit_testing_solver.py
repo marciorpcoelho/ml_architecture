@@ -13,7 +13,7 @@ import level_2_optionals_baviera_options as options_file
 import modules.SessionState as sessionstate
 
 """
-## Sugestão de Encomenda Baviera (Fase II)
+# Sugestão de Encomenda Baviera (Fase II)
 Sugestão de Configurações para a encomenda mensal de viaturas BMW
 """
 
@@ -132,7 +132,7 @@ def main():
                                 session_state.save_button_pressed_flag = 0
                                 session_state.overwrite_button_pressed = 0
                         else:
-                            st.write('and im here')
+                            st.write('Sugestão Gravada')
                             solution_saving(sel_configurations, sel_local, sel_model)
                             session_state.save_button_pressed_flag = 0
                             session_state.overwrite_button_pressed = 0
