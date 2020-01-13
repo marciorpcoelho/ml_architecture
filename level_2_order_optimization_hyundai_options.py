@@ -292,7 +292,7 @@ sql_columns_vhe_fact_bi = [
     'Measure_28', 'Measure_29', 'Measure_30', 'Measure_31', 'Measure_32', 'Measure_33', 'Measure_34', 'Measure_35', 'Measure_36', 'Measure_37', 'Measure_38', 'Measure_39', 'Measure_40', 'Measure_41',
     'Measure_42', 'Measure_43', 'Measure_44', 'Measure_45', 'Measure_46', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc',
     'Customer_Display', 'Customer_Group_Code', 'Customer_Group_Desc', 'No_Registration_Number_Flag', 'Registration_Number_No_SLR_Document_RGN_Flag', 'SLR_Document_RGN_Flag', 'Undefined_VHE_Status',
-    'Quantity_Sold', 'Average_DaysInStock_Global', 'prev_sales_check', 'number_prev_sales', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc',
+    'prev_sales_check', 'number_prev_sales', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc',
     'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code', 'Fixed_Margin_II'
 ]
 
