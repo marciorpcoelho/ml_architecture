@@ -119,7 +119,7 @@ def performance_info(project_id, options_file, model_choice_message, unit_count)
             else:
                 df_performance[step] = [timings] * unit_count
 
-    if project_id == 2244:
+    else:
         for (step, timings) in zip(names_global, times_global):
             df_performance[step] = [timings]
 
