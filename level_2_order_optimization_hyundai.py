@@ -275,7 +275,7 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as exception:
-        project_identifier, exception_desc = options_file.project_id, exception.args[0]
+        project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record(exception_desc, project_identifier, flag=2)
         error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
         log_record('Falhou - Projeto: {}.'.format(str(project_dict[project_identifier])), project_identifier)
