@@ -8,7 +8,7 @@ from modules.level_1_a_data_acquisition import sql_retrieve_df_specified_query, 
 from modules.level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, lowercase_column_conversion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from modules.level_1_c_data_modelling import regression_model_training, save_model
 from modules.level_1_d_model_evaluation import performance_evaluation_regression, model_choice
-from modules.level_1_e_deployment import sql_inject_v2, time_tags
+from modules.level_1_e_deployment import time_tags, sql_inject
 from modules.level_0_performance_report import log_record, performance_info_append, error_upload, project_dict, performance_info
 import level_2_order_optimization_hyundai_options as options_file
 
@@ -87,8 +87,7 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
                                                                                                                    'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category',
                                                                                                                    'PT_PDB_Model_Desc': 'category', 'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
                                                                                                                    'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
-        df_sales = read_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date), index_col=0, dtype={'SLR_Account_Dealer_Code': object, 'Immobilized_Number': object}, parse_dates=['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN',
-                                                                                                                                                                                              'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date'])
+        df_sales = read_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date), index_col=0, dtype={'SLR_Account_Dealer_Code': object, 'Immobilized_Number': object}, parse_dates=options_file.date_columns)
 
         log_record('Dados do dia atual foram encontrados. A passar para a próxima secção...', options_file.project_id)
     except FileNotFoundError:
@@ -185,12 +184,12 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
 
         # New VehicleData_Code Creation
         df_sales['ML_VehicleData_Code'] = df_sales.groupby(configuration_parameters_cols).ngroup()
-        df_sales.to_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
+        # df_sales.to_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
 
         # Step 3: ML Processing
         df_sales = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viaturas apenas Hyundai
 
-        df_sales.to_csv('output/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
+        # df_sales.to_csv('output/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
 
         columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 40, 41, 42, 43]] + \
                                      ['Chassis_Number', 'Total_Sales', 'Total_Discount', 'Total_Discount_%', 'Total_Net_Sales', 'Fixed_Margin_I', 'Fixed_Margin_II', 'Fixed_Margin_I_%', 'stock_days_class', 'DaysInStock_Dealer',
@@ -205,22 +204,22 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
                                       'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
                                       'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code']
 
-        df_non_ohe = remove_columns(df_sales, [x for x in columns_with_too_much_info if x not in target], options_file.project_id)
+        df_non_ohe = remove_columns(df_sales.copy(), [x for x in columns_with_too_much_info if x not in target], options_file.project_id)
 
         df_non_ohe = constant_columns_removal(df_non_ohe, options_file.project_id)
 
         df_non_ohe = pandas_object_columns_categorical_conversion_auto(df_non_ohe)
-        df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, ['Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'])
+        df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, ['Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'], options_file.project_id)
 
-        df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}_non_scaled.csv'.format(current_date))
+        # df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}_non_scaled.csv'.format(current_date))
 
         df_non_ohe = skewness_reduction(df_non_ohe, target)
         df_non_ohe = robust_scaler_function(df_non_ohe, target)
 
-        df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date))
+        # df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date))
 
-        df_ohe = ohe(df_non_ohe, configuration_parameters_cols + ['Product_Code', 'Fuel_Type_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Sales_Type_Dealer_Code', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc'])
-        df_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date))
+        df_ohe = ohe(df_non_ohe, configuration_parameters_cols + ['Product_Code', 'Fuel_Type_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Sales_Type_Dealer_Code', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc'], options_file.project_id)
+        # df_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date))
 
     datasets_non_ohe = dataset_split(df_non_ohe, [target], oversample_flag, objective='regression')
     datasets = dataset_split(df_ohe, [target], oversample_flag, objective='regression')
@@ -261,11 +260,17 @@ def deployment(df, db, view):
     performance_info_append(time.time(), 'Section_E_Start')
     log_record('Início Secção E...', options_file.project_id)
 
-    df = df.astype(object).where(pd.notnull(df), 'NULL')
-
     if df is not None:
         sel_df = df.loc[:, options_file.sql_columns_vhe_fact_bi].copy()
-        sql_inject_v2(sel_df, options_file.DSN_MLG, db, view, options_file, list(sel_df), truncate=1, check_date=1)
+
+        sel_df['NLR_Posting_Date'] = sel_df['NLR_Posting_Date'].astype(object).where(sel_df['NLR_Posting_Date'].notnull(), None)
+        sel_df['SLR_Document_Date_CHS'] = sel_df['SLR_Document_Date_CHS'].astype(object).where(sel_df['SLR_Document_Date_CHS'].notnull(), None)
+        sel_df['SLR_Document_Date_RGN'] = sel_df['SLR_Document_Date_RGN'].astype(object).where(sel_df['SLR_Document_Date_RGN'].notnull(), None)
+        sel_df['Ship_Arrival_Date'] = sel_df['Ship_Arrival_Date'].astype(object).where(sel_df['Ship_Arrival_Date'].notnull(), None)
+        sel_df['Registration_Request_Date'] = sel_df['Registration_Request_Date'].astype(object).where(sel_df['Registration_Request_Date'].notnull(), None)
+        sel_df['Registration_Date'] = sel_df['Registration_Date'].astype(object).where(sel_df['Registration_Date'].notnull(), None)
+
+        sql_inject(sel_df, options_file.DSN_MLG, db, view, options_file, list(sel_df), truncate=1, check_date=1)
 
     log_record('Fim Secção E.', options_file.project_id)
     performance_info_append(time.time(), 'Section_E_End')

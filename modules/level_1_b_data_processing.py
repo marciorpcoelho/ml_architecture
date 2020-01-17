@@ -62,7 +62,6 @@ def remove_columns(df, columns, project_id):
             df.drop([column], axis=1, inplace=True)
         except KeyError:
             level_0_performance_report.log_record('Aviso de remoção de coluna - A coluna {} não foi encontrada.'.format(column), project_id, flag=1)
-            # level_0_performance_report.performance_warnings_append('Column Deletion Warning - Column ' + str(column) + ' not found.')
             continue
 
     return df
@@ -776,8 +775,6 @@ def additional_info_optimization_hyundai(args):
 
     key, x = args
 
-    # print(len(x), '\n', x)
-
     if len(x) > 1:
         x['prev_sales_check'] = [0] + [1] * (len(x) - 1)
         x['number_prev_sales'] = list(range(len(x)))
@@ -945,16 +942,19 @@ def dtype_checkup(train_x_resampled, train_x):
         train_x_resampled[column] = train_x_resampled[column].astype(train_x[column].dtype)
 
 
-def ohe(df, cols):
+def ohe(df, cols, project_id):
 
     for column in cols:
-        # if df[column].nunique() > 2 or df[column].nunique() >= 1 and type(df[column].head(1).values[0]) == str:
-        uniques = df[column].unique()
-        for value in uniques:
-            new_column = column + '_' + str(value)
-            df[new_column] = 0
-            df.loc[df[column] == value, new_column] = 1
-        df.drop(column, axis=1, inplace=True)
+        try:
+            uniques = df[column].unique()
+            for value in uniques:
+                new_column = column + '_' + str(value)
+                df[new_column] = 0
+                df.loc[df[column] == value, new_column] = 1
+            df.drop(column, axis=1, inplace=True)
+        except KeyError:
+            level_0_performance_report.log_record('Aviso de conversão OHE de coluna - A coluna {} não foi encontrada.'.format(column), project_id, flag=1)
+            continue
 
     return df
 
@@ -1594,10 +1594,14 @@ def pandas_object_columns_categorical_conversion_auto(df):
     return df
 
 
-def pandas_object_columns_categorical_conversion(df, columns):
+def pandas_object_columns_categorical_conversion(df, columns, project_id):
 
-    for c in columns:
-        df[c] = df[c].astype('category')
+    for column in columns:
+        try:
+            df[column] = df[column].astype('category')
+        except KeyError:
+            level_0_performance_report.log_record('Aviso de conversão de coluna - A coluna {} não foi encontrada.'.format(column), project_id, flag=1)
+            continue
 
     return df
 

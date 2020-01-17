@@ -111,6 +111,9 @@ customer_group_query = '''
         from "BI_DTR"."dbo"."SLR_Dim_Customer_Groups_DTR" "SLR_Dim_Customer_Groups_DTR"  WITH (NOLOCK)'''
 
 
+date_columns = ['NLR_Posting_Date', 'SLR_Document_Date_CHS', 'Analysis_Date_RGN', 'SLR_Document_Date_RGN', 'Record_Date', 'Registration_Request_Date']
+
+
 # Motorização
 motor_translation = {
     '1.0i/g': ['1.0 lpgi'],

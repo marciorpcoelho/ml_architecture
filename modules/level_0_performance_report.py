@@ -1,6 +1,4 @@
 import pandas as pd
-import re
-import smtplib
 import logging
 import os
 import time
@@ -33,6 +31,8 @@ performance_sql_info = {'DSN': os.getenv('DSN_MLG'),
                         'mail_users': 'LOG_MailUsers',
                         'performance_running_time': 'LOG_Performance_Running_Time',
                         'performance_algorithm_results': 'LOG_Performance_Algorithms_Results',
+                        'sp_send_dbmail': 'usp_LOG_Mail_Execution',
+                        'sp_send_dbmail_input_parameters_name': ['mail_subject', 'mail_body_part1', 'mail_body_part2', 'project_id'],
                         }
 
 performance_sql_queries = {
@@ -57,6 +57,7 @@ project_dict = {2244: 'PA@Service Desk',
 
 project_sql_dict = {2244: 'Project_SD',
                     2162: 'Project_VHE_BMW',
+                    2259: 'Project_VHE_APV',
                     2406: 'Project_VHE_DTR',
                     }
 
@@ -133,13 +134,8 @@ def performance_info(project_id, options_file, model_choice_message, unit_count)
 
 def email_notification(project_id, warning_flag, warning_desc, error_desc, error_flag=0, model_choice_message=0):
     run_conclusion, warning_conclusion, conclusion_message = None, None, None
-    fromaddr = EMAIL
-    df_mail_users = performance_report_sql_retrieve_df(performance_sql_queries['mail_users_query'], performance_sql_info['DSN'], performance_sql_info['UID'], performance_sql_info['PWD'], performance_sql_info['DB'], performance_id)
-    users = df_mail_users['UserName'].unique()
-    toaddrs = df_mail_users['UserEmail'].unique()
-    flags_to_send = df_mail_users[project_sql_dict[project_id]].values
 
-    mail_subject = '#PRJ-' + str(project_id) + ' ' + str(project_dict[project_id]) + ' - Relatório'
+    mail_subject = '#PRJ-{}: {} - Relatório'.format(project_id, project_dict[project_id])
     link = project_pbi_performance_link
 
     if error_flag:
@@ -147,45 +143,46 @@ def email_notification(project_id, warning_flag, warning_desc, error_desc, error
         conclusion_message = ''
     elif not error_flag:
         run_conclusion = 'terminou com sucesso.'
-        conclusion_message = '\r\nA sua conclusão foi: ' + str(model_choice_message)
+        conclusion_message = '\r\nA sua conclusão foi: {}'.format(model_choice_message)
 
     if warning_flag:
         warning_conclusion = '\n Foram encontrados os seguintes alertas: \r\n - {}'.format('\r\n - '.join(x for x in warning_desc))
     elif not warning_flag:
         warning_conclusion = 'Não foram encontrados quaisquer alertas.\n'
 
-    for (flag, user, toaddr) in zip(flags_to_send, users, toaddrs):
-        if flag:
-            mail_body = 'Bom dia {}, ' \
-                         '\n \nO projeto {} {} \n{} \n{}' \
-                         '\n \nPara mais informações, por favor consulta o seguinte relatório: {} \n' \
-                         '\nCumprimentos, \nRelatório Automático, v1.42' \
-                         .format(user, project_dict[project_id], run_conclusion, warning_conclusion, conclusion_message, link)
-            message = 'Subject: {}\n\n{}'.format(mail_subject, mail_body).encode('latin-1')
-
-            try:
-                server = smtplib.SMTP('smtp.gmail.com')
-                server.ehlo()
-                server.starttls()
-                server.login(EMAIL, EMAIL_PASS)
-                server.sendmail(fromaddr, toaddr, message)
-                server.quit()
-            except TimeoutError:
-                return
-
-
-def performance_report_sql_retrieve_df(query, dsn, uid, pwd, db, project_id, **kwargs):
-
-    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, uid, pwd, db), searchescape='\\')
+    mail_body_part1 = '''Bom dia'''
+    mail_body_part2 = '''\n \nO projeto {} {} \n{} \n{}
+                      \n \nPara mais informações, por favor consulta o seguinte relatório: {} 
+                      \nCumprimentos, \nDatabase Mail, v2.0'''.format(project_dict[project_id], run_conclusion, warning_conclusion, conclusion_message, link)
 
     try:
-        df = pd.read_sql(query, cnxn, **kwargs)
-
-        return df
+        sp_query = sp_query_creation(performance_sql_info['sp_send_dbmail'], performance_sql_info['sp_send_dbmail_input_parameters_name'], [mail_subject, mail_body_part1, mail_body_part2, project_id])
+        generic_query_execution(sp_query)
     except (pyodbc.ProgrammingError, pyodbc.OperationalError) as error:
-        log_record('Erro ao obter os dados do DW - {}'.format(error), project_id, flag=1)
+        log_record('Erro ao executar SP {} - {}'.format(performance_sql_info['sp_send_dbmail'], error), project_id, flag=1)
 
+
+def generic_query_execution(query):
+
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(performance_sql_info['DSN'], performance_sql_info['UID'], performance_sql_info['PWD'], performance_sql_info['DB']), searchescape='\\')
+    cursor = cnxn.cursor()
+
+    cursor.execute(query)
+
+    cnxn.commit()
+    cursor.close()
     cnxn.close()
+
+    return
+
+
+def sp_query_creation(sp_name, sp_input_parameters_name_list, sp_output_parameters_value_list):
+
+    query_exec = 'EXEC {} '.format(sp_name)
+    query_parameters = ', '.join(['@{} = \'{}\''.format(x, y) for x, y in zip(sp_input_parameters_name_list, sp_output_parameters_value_list)])
+    sp_query = query_exec + query_parameters
+
+    return sp_query
 
 
 def error_upload(options_file, project_id, error_full, error_only, error_flag=0):
