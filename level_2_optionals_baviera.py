@@ -163,7 +163,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     ohe_cols = configuration_parameters + ['Local da Venda', 'buy_day', 'buy_month', 'buy_year']
 
     df_ohe = df.copy(deep=True)  # Creates a copy of the original df
-    df_ohe = ohe(df_ohe, ohe_cols)  # Creates the OHE for columns in ohe_cols
+    df_ohe = ohe(df_ohe, ohe_cols, level_2_optionals_baviera_options.project_id)  # Creates the OHE for columns in ohe_cols
 
     if type(number_of_features) != str:
         sel_columns, removed_columns = feature_selection(df_ohe, configuration_parameters, target_variable, number_of_features)

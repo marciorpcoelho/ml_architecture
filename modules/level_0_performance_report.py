@@ -159,7 +159,7 @@ def email_notification(project_id, warning_flag, warning_desc, error_desc, error
         sp_query = sp_query_creation(performance_sql_info['sp_send_dbmail'], performance_sql_info['sp_send_dbmail_input_parameters_name'], [mail_subject, mail_body_part1, mail_body_part2, project_id])
         generic_query_execution(sp_query)
     except (pyodbc.ProgrammingError, pyodbc.OperationalError) as error:
-        log_record('Erro ao executar SP {} - {}'.format(performance_sql_info['sp_send_dbmail'], error), project_id, flag=1)
+        log_record('Erro ao executar SP {} - {}'.format(performance_sql_info['sp_send_dbmail'], error), project_id, flag=2)
 
 
 def generic_query_execution(query):
@@ -179,7 +179,7 @@ def generic_query_execution(query):
 def sp_query_creation(sp_name, sp_input_parameters_name_list, sp_output_parameters_value_list):
 
     query_exec = 'EXEC {} '.format(sp_name)
-    query_parameters = ', '.join(['@{} = \'{}\''.format(x, y) for x, y in zip(sp_input_parameters_name_list, sp_output_parameters_value_list)])
+    query_parameters = ', '.join(['@{} = \'{}\''.format(x, str(y).replace('\'', '"')) for x, y in zip(sp_input_parameters_name_list, sp_output_parameters_value_list)])
     sp_query = query_exec + query_parameters
 
     return sp_query
