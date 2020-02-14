@@ -219,8 +219,8 @@ def save_model(clfs, model_name, project_id):
         file_handler.close()
 
 
-def new_request_type(df, df_top_words, options_file):
-    keyword_dict, ranking_dict = level_1_a_data_acquisition.sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database_final'], ['SDK_Setup_Keywords'], 'Keyword_Group', options_file, multiple_columns=1)
+def new_request_type(df, df_top_words, df_manual_classification, options_file):
+    keyword_dict, ranking_dict = level_1_a_data_acquisition.sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'], 'Keyword_Group', options_file, multiple_columns=1)
     keyword_dict = keyword_dict[0]
 
     stemmer_pt = SnowballStemmer('porter')
@@ -313,6 +313,9 @@ def new_request_type(df, df_top_words, options_file):
         level_0_performance_report.log_record('Pedidos não classificados no dataset Top_Words: {}'.format([x for x in unique_requests_df_top_words if x not in unique_requests_df]), options_file.project_id, flag=1)
         raise ValueError('Existem pedidos sem classificação!')
 
+    if df_manual_classification.shape[0]:  # No need to call this function if there are no manually classified requests;
+        df = manual_classified_requests(df, df_manual_classification)
+
     level_0_performance_report.log_record('{:.2f}% de pedidos Não Definidos'.format((df[df['Label'] == 'Não Definido'].shape[0] / df['Request_Num'].nunique()) * 100), options_file.project_id)
 
     return df
@@ -354,6 +357,19 @@ def consecutive_keyword_testing(df, matched_index, keywords):
         return matched_requests
     else:
         return None
+
+
+def manual_classified_requests(df, df_manual_classification):
+    # Project ID = 2244
+    # The goal of this function is to replace the "Não Definidos" labels by the manual classified requests via streamlit dashboard. It considers there is only one row per request;
+    # The filtering for the "Não Definidos" is enforced via df_manual_classification, as those are only for that class of requests;
+
+    for request_num in df_manual_classification['Request_Num'].unique():
+        label = df_manual_classification.loc[df_manual_classification['Request_Num'] == request_num, 'Label'].values[0]
+
+        df.loc[df['Request_Num'] == request_num, 'Label'] = label
+
+    return df
 
 
 def user_label_assignment(df, df_top_words, user_dict):

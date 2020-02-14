@@ -1,8 +1,9 @@
 import os
 from py_dotenv import read_dotenv
 from multiprocessing import cpu_count
-dotenv_path = 'info.env'
-read_dotenv(dotenv_path)
+dotenv_path = '/info.env'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+read_dotenv(base_path + dotenv_path)
 
 DSN = os.getenv('DSN_Prd')
 DSN_MLG = os.getenv('DSN_MLG')
@@ -24,6 +25,8 @@ sql_info = {
     'initial_table_pbi_categories': 'BI_SDK_Dim_Requests_Categories',
     # 'final_table': 'SDK_Fact_BI_PA_ServiceDesk',
     'final_table': 'BI_SDK_Fact_DW_Requests_Classification',
+    'aux_table': 'BI_SDK_Fact_DW_Requests_Manual_Classification',
+    'keywords_table': ['SDK_Setup_Keywords'],  # This is a mapping table, uses the sql_mapping_retrieval function, and therefore should be a list, not a string;
 }
 
 log_files = {

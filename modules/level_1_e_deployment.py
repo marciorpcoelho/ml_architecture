@@ -32,16 +32,6 @@ def time_tags(format_date="%Y-%m-%d", format_time="%H:%M:%S"):
     return time_tag_date, time_tag_hour
 
 
-def log_inject(line, project_id, flag, performance_info_dict):
-
-    time_tag_date, time_tag_hour = time_tags()
-    line = apostrophe_escape(line)
-
-    values = [str(line), str(flag), time_tag_hour, time_tag_date, str(project_id)]
-
-    sql_inject_single_line(performance_info_dict['DSN'], performance_info_dict['UID'], performance_info_dict['PWD'], performance_info_dict['DB'], performance_info_dict['log_view'], values)
-
-
 def sql_inject_single_line(dsn, uid, pwd, database, view, values):
     values_string = '\'%s\'' % '\', \''.join(values)
 

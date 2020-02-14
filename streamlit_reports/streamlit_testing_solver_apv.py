@@ -11,36 +11,50 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) +
 sys.path.insert(1, base_path)
 import level_2_order_optimization_apv_baviera_options as options_file
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
+import modules.level_1_b_data_processing as level_1_b_data_processing
 import modules.level_1_e_deployment as level_1_e_deployment
+import modules.SessionState as SessionState
 
+saved_solutions_pairs_query = ''' SELECT DISTINCT Part_Ref_Group_Desc, [Date]
+      FROM [BI_MLG].[dbo].[{}]
+      GROUP BY Part_Ref_Group_Desc, [Date]'''.format(options_file.sql_info['optimization_solution_table'])
+
+truncate_query = '''DELETE FROM [BI_MLG].[dbo].[{}]
+    WHERE Part_Ref_Group_Desc = '{}' '''
 
 """
 # APV Parts Suggestion
 Solver Optimization for APV Parts
 """
 
+session_state = SessionState.get(overwrite_button_pressed=0, save_button_pressed_flag=0, part_ref_group='')
+
 
 def main():
     current_date = '20191031'
     # solve_dataset_name = base_path + 'output/df_solve_0B_{}.csv'.format(current_date)
     solve_data = get_data(options_file)
+    saved_suggestions_dict, saved_suggestions_df = get_suggestions_dict(options_file)
 
     # sel_metric = st.sidebar.selectbox('Please select a metric:', ['None'] + ['DaysToSell_1_Part', 'DaysToSell_1_Part_v2_mean', 'DaysToSell_1_Part_v2_median'], index=0)
     sel_metric = 'Days_To_Sell_Median'
 
+    if saved_suggestions_df.shape[0]:
+        st.write('Sugestões gravadas:', saved_suggestions_df)
+
     if sel_metric != 'None':
         solve_data = solve_data[solve_data[sel_metric] > 0]
-        solve_data = solve_data[(solve_data['Part_Ref_Group'] != 'NO_TA') & (solve_data['Part_Ref_Group'] != 'Outros')]
+        solve_data = solve_data[(solve_data['Part_Ref_Group_Desc'] != 'NO_TA') & (solve_data['Part_Ref_Group_Desc'] != 'Outros')]
 
-    solve_data = solve_data[solve_data['Part_Ref_Group'] != 'BMW_Bonus_Group_1']
+    solve_data = solve_data[solve_data['Part_Ref_Group_Desc'] != 'BMW_Bonus_Group_1']
 
-    sel_group = st.sidebar.selectbox('Please select a Parts Group:', ['None'] + list(solve_data['Part_Ref_Group'].dropna().unique()), index=0)
+    sel_group = st.sidebar.selectbox('Please select a Parts Group:', ['None'] + list(solve_data['Part_Ref_Group_Desc'].dropna().unique()), index=0)
     dtss_goal = st.sidebar.number_input('Please select a limit of days to sell', 0, 30, value=15)
     max_part_number = st.sidebar.number_input('Please select a max number of parts (0 = No Limit):', 0, 5000, value=0)
     minimum_cost_or_pvp = st.sidebar.number_input('Please select a minimum cost/pvp for each part (0 = No Limit):', 0.0, max([max(solve_data['PVP']), max(solve_data['Cost'])]), value=0.0)
 
     sel_values_filters = [sel_group]
-    sel_values_col_filters = ['Part_Ref_Group']
+    sel_values_col_filters = ['Part_Ref_Group_Desc']
 
     if 'None' not in sel_values_filters:
 
@@ -70,13 +84,26 @@ def main():
             pass
 
         if df_solution.shape[0]:
-            df_solution_filtered = df_solution[df_solution['Qty'] > 0]
-            st.write("Total Parts: {:.0f}".format(df_solution_filtered['Qty'].sum()))
+            df_solution_filtered = df_solution[df_solution['Quantity'] > 0]
+            st.write("Total Parts: {:.0f}".format(df_solution_filtered['Quantity'].sum()))
             st.write("#Different Parts: {}".format(df_solution_filtered['Part_Ref'].nunique()))
             st.write("Days to Sell: {:.2f}".format(df_solution_filtered['DtS_Per_Qty'].max()))
-            st.write("Solution:", df_solution_filtered[['Part_Ref', 'Qty', goal_type, 'DtS', 'DtS_Per_Qty']])
+            st.write("Solution:", df_solution_filtered[['Part_Ref', 'Quantity', goal_type, 'Days_To_Sell', 'DtS_Per_Qty']])
 
-            solution_saving(df_solution_filtered, sel_group, current_date)
+            if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
+                session_state.save_button_pressed_flag = 1
+
+                if sel_group in saved_suggestions_dict.keys() or session_state.overwrite_button_pressed == 1:
+                    st.write('Já existe Sugestão de Encomenda para o Grupo de Peças {}. Pretende substituir pela atual sugestão?'.format(sel_group))
+                    session_state.overwrite_button_pressed = 1
+                    if st.button('Sim'):
+                        solution_saving(df_solution_filtered, sel_group)
+                        session_state.save_button_pressed_flag = 0
+                        session_state.overwrite_button_pressed = 0
+                else:
+                    solution_saving(df_solution_filtered, sel_group)
+                    session_state.save_button_pressed_flag = 0
+                    session_state.overwrite_button_pressed = 0
 
 
 def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
@@ -125,23 +152,35 @@ def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max
     return problem_testing_2.status, result, selection.value, above_goal_flag, df_solution
 
 
-def solution_saving(df_solution, group_name, current_date):
+def solution_saving(df_solution, group_name):
 
-    df_solution.to_csv(base_path + '/output/solver_solution_{}_{}.csv'.format(group_name, current_date))
-    level_1_e_deployment.sql_inject(df_solution, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], options_file, list(df_solution[options_file.columns_sql_solver_solution]), truncate=1)
+    # df_solution.to_csv(base_path + '/output/solver_solution_{}_{}.csv'.format(group_name, current_date))
+    level_1_e_deployment.sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(options_file.sql_info['optimization_solution_table'], group_name))
+
+    # level_1_e_deployment.sql_inject(df_solution, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], options_file, list(df_solution[options_file.columns_sql_solver_solution]), truncate=1)
+    level_1_e_deployment.sql_inject(df_solution,
+                                    options_file.DSN_MLG,
+                                    options_file.sql_info['database_final'],
+                                    options_file.sql_info['optimization_solution_table'],
+                                    options_file,
+                                    list(df_solution[options_file.columns_sql_solver_solution]),
+                                    check_date=1)
+
+    st.write('Sugestão gravada com sucesso - {}'.format(group_name))
+    return
 
 
 def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group_name):
-    df_solution = pd.DataFrame(columns={'Part_Ref', 'Qty', goal_type, 'DtS', 'DtS_Per_Qty'})
+    df_solution = pd.DataFrame(columns={'Part_Ref', 'Quantity', goal_type, 'Days_To_Sell', 'DtS_Per_Qty'})
 
     df_solution['Part_Ref'] = [part for part in unique_parts]
-    df_solution['Qty'] = [qty for qty in selection.value]
+    df_solution['Quantity'] = [qty for qty in selection.value]
     df_solution[goal_type] = [value for value in values]
     df_solution[non_goal_type] = [value for value in other_values]
-    df_solution['DtS'] = [dts for dts in dtss]
+    df_solution['Days_To_Sell'] = [dts for dts in dtss]
     df_solution['DtS_Per_Qty'] = [qty * dts for qty, dts in zip(selection.value, dtss)]
     df_solution['Above_Goal_Flag'] = [above_goal_flag] * len(unique_parts)
-    df_solution['Part_Ref_Group'] = [group_name] * len(unique_parts)
+    df_solution['Part_Ref_Group_Desc'] = [group_name] * len(unique_parts)
 
     return df_solution
 
@@ -151,6 +190,18 @@ def get_data(options_file_in):
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
 
     return df
+
+
+def get_suggestions_dict(options_file_in):
+    saved_suggestions_dict = {}
+    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in, query=saved_solutions_pairs_query)
+    # saved_suggestions_df = level_1_b_data_processing.column_rename(saved_suggestions_df, ['Model_Code', 'Sales_Place_Fase2_Level_1'], [column_translate['Model_Code'], column_translate['Sales_Place_Fase2_Level_1']])
+
+    saved_suggestions_df_grouped = saved_suggestions_df.groupby('Part_Ref_Group_Desc')
+    for key, group in saved_suggestions_df_grouped:
+        saved_suggestions_dict[key] = list(group.values)
+
+    return saved_suggestions_dict, saved_suggestions_df
 
 
 def filter_data(dataset, filters_list, col_filters_list):

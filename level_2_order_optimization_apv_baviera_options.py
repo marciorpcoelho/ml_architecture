@@ -20,7 +20,7 @@ sql_info = {
     'purchases_table': '',
     'stock_table': '',
     'final_table': 'PSE_Fact_BI_OrderOptimization',
-    'optimization_solution_table': 'PSE_Fact_BI_OrderOptimization_Solver_Solution',
+    'optimization_solution_table': 'PSE_Fact_BI_OrderOptimization_Solver_Optimization',
 }
 
 sql_info_stock_dbs = {
@@ -294,11 +294,11 @@ column_sql_renaming = {
     'Last Year Sales Mean': 'Last_Year_Sales_Mean',
     'DaysToSell_1_Part_v2_mean': 'Days_To_Sell_Mean',
     'DaysToSell_1_Part_v2_median': 'Days_To_Sell_Median',
-    'Group': 'Part_Ref_Group',
+    'Group': 'Part_Ref_Group_Desc',
 }
 
 columns_sql_solver_solution = [
-    'Part_Ref', 'Qty', 'DtS', 'DtS_Per_Qty', 'Above_Goal_Flag', 'Part_Ref_Group'
+    'Part_Ref', 'Part_Ref_Group_Desc', 'Quantity', 'Days_To_Sell', 'Above_Goal_Flag', 'Cost', 'PVP',
 ]
 
 SPG_Parts_Stock_cols = '''        
