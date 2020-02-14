@@ -32,7 +32,7 @@ update_query = '''
 Classificação Manual de Pedidos do Service Desk
 """
 
-# Hides the menu hamburguer
+# Hides the menu's hamburguer
 hide_menu_style = """
         <style>
         #MainMenu {visibility: hidden;}
@@ -43,11 +43,8 @@ st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 def main():
     manual_classified_requests_df = get_data_non_cached(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], columns='*')
-    print('got manual')
     auto_classified_requests_df = get_data(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['final_table'], columns='*', query_filters={'Label': 'Não Definido'})
-    print('got auto')
     current_classes = get_data(options_file, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'][0], columns=['Keyword_Group'])
-    print('got current')
 
     st.sidebar.text('Para atualizar a tabela final no DW:')
     if st.sidebar.button('Update DataWarehouse') or session_state.update_final_table_button_pressed_flag == 1:

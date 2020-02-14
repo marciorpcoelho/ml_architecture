@@ -113,8 +113,8 @@ group_goals = {
 }
 
 group_goals_type = {
-    'BMW_Bonus_Group_1': 'Cost',  # Purchase
-    'BMW_Bonus_Group_3': 'Cost',  # Purchase
+    'BMW_Bonus_Group_1': 'Cost',  # Purchases
+    'BMW_Bonus_Group_3': 'Cost',  # Purchases
     'BMW_Bonus_Group_4': 'PVP',  # Sales
     'BMW_Bonus_Group_5': 'PVP',  # Sales
     'MINI_Bonus_Group_1': 'PVP',  # Sales
@@ -133,6 +133,21 @@ mini_ta_mapping = {
     'NO_SAME_BRAND_TA': ['NO_SAME_BRAND_TA'],
     'NO_TA': ['NO_TA'],
 }
+
+part_groups_desc_mapping = {
+    'BMW_Bonus_Group_1': 'BMW - Peças + Óleos',
+    'BMW_Bonus_Group_2': 'BMW - Vendas Balcão',
+    'BMW_Bonus_Group_3': 'BMW - Químicos',
+    'BMW_Bonus_Group_4': 'BMW - Acessórios + Jantes + Lifestyle',
+    'BMW_Bonus_Group_5': 'BMW - Pneus',
+    'MINI_Bonus_Group_1': 'MINI - Peças + Óleos',
+    'MINI_Bonus_Group_2': 'MINI Regeneration',   # MINI Regeneration - No idea on this one...
+    'MINI_Bonus_Group_3': 'MINI - Acessórios + Jantes + Lifestyle',  # Acessórios + Jantes + Lifestyle
+    'MINI_Bonus_Group_4': 'MINI - Pneus',   # Pneus
+}
+
+# 'BMW - Peças + Óleos'
+part_groups_desc = ['BMW - Pneus', 'BMW - Acessórios + Jantes + Lifestyle', 'BMW - Químicos', 'MINI - Pneus', 'MINI - Acessórios + Jantes + Lifestyle', 'MINI Regeneration', 'MINI - Peças + Óleos']
 
 
 sales_query = '''
