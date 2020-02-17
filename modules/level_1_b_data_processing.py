@@ -1032,6 +1032,7 @@ def null_handling(df, handling_approach):
 
 
 def literal_removal(df, column):
+    # Removes newlines, returns, tabs and unicode character;
 
     df.loc[~df[column].isnull(), column] = df[~df[column].isnull()][column].map(lambda s: s.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('\\u', ' '))
 

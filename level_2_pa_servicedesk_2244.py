@@ -157,9 +157,13 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories):
 
     # df_facts = df_facts.groupby('Request_Num').apply(close_and_resolve_date_replacements)  # Currently doing nothing, hence why it's commented
 
+    # Removes duplicate request numbers
     df_facts = duplicate_removal(df_facts, ['Request_Num'])
 
+    # Removes new lines, tabs, etc;
     df_facts = literal_removal(df_facts, 'Description')
+
+    # Replaces string errors, specified in the provided dictionary
     df_facts = string_replacer(df_facts, dict_strings_to_replace)
 
     df_facts = value_replacement(df_facts, {'Description': options_file.regex_dict['url']})

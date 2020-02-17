@@ -133,7 +133,7 @@ def main():
             # st.write("Dias estimados para venda da encomenda: {:.2f}".format(df_solution_filtered['DtS_Per_Qty'].max()))
 
             df_display = df_solution_filtered[['Part_Ref', 'Quantity', goal_type, 'Days_To_Sell']]
-            st.dataframe(df_display.rename(columns=column_translate_dict).round(2))
+            st.write(df_display.rename(columns=column_translate_dict).style.format({'Quantidade': '{:.1f}', 'PVP': '{:.2f}', 'Dias de Venda': '{:.2f}'}))
 
             if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
                 session_state.save_button_pressed_flag = 1
