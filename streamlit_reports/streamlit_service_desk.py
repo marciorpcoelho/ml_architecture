@@ -46,8 +46,10 @@ def main():
     auto_classified_requests_df = get_data(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['final_table'], columns='*', query_filters={'Label': 'Não Definido'})
     current_classes = get_data(options_file, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'][0], columns=['Keyword_Group'])
 
+    auto_classified_requests_df.sort_values(by='Open_Date', inplace=True, ascending=False)
+
     st.sidebar.text('Para atualizar a tabela final no DW:')
-    if st.sidebar.button('Update DataWarehouse') or session_state.update_final_table_button_pressed_flag == 1:
+    if st.sidebar.button('Atualizar DataWarehouse') or session_state.update_final_table_button_pressed_flag == 1:
         session_state.update_final_table_button_pressed_flag = 1
         if not manual_classified_requests_df.shape[0]:
             st.sidebar.text('ERRO - Não existem atualmente pedidos')
@@ -62,17 +64,18 @@ def main():
         auto_classified_requests_df = auto_classified_requests_df.loc[~auto_classified_requests_df['Request_Num'].isin(manual_classified_reqs), :]
 
     fig = go.Figure(data=[go.Table(
-        columnwidth=[120, 600],
+        columnwidth=[120, 600, 120],
         header=dict(
-            values=[['Nº Pedido'], ['Descrição']],
-            align=['center', 'center'],
+            values=[['Nº Pedido'], ['Descrição'], ['Data Abertura']],
+            align=['center', 'center', 'center'],
             ),
         cells=dict(
-            values=[auto_classified_requests_df['Request_Num'], auto_classified_requests_df['Description']],
-            align=['center', 'right'],
+            values=[auto_classified_requests_df['Request_Num'], auto_classified_requests_df['Description'], auto_classified_requests_df['Open_Date']],
+            align=['center', 'right', 'center'],
             )
         )
         ])
+    fig.update_layout(width=800)
     st.write(fig)
 
     st.write('Nº Pedidos com classe Não Definido: {}'.format(auto_classified_requests_df['Request_Num'].nunique()))
@@ -90,17 +93,17 @@ def main():
             if st.button('Gravar Classificação') or session_state.save_button_pressed_flag == 1:
                 session_state.save_button_pressed_flag = 1
 
-                if previous_label or session_state.overwrite_button_pressed == 1:
+                if previous_label or session_state.overwrite_button_pressed_flag == 1:
                     st.write('O pedido {} já foi previamente classificado como {}'.format(sel_req[0], previous_label[0]))  # ToDO: add markdown configuration like bold or italic
                     st.write('Pretende substituir pela classe atual?')
                     if st.button('Sim'):
                         solution_saving(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
-                        session_state.overwrite_button_pressed = 0
+                        session_state.overwrite_button_pressed_flag = 0
                         session_state.save_button_pressed_flag = 0
 
                 else:
                     solution_saving(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
-                    session_state.overwrite_button_pressed = 0
+                    session_state.overwrite_button_pressed_flag = 0
                     session_state.save_button_pressed_flag = 0
     elif len(sel_req) > 1:
         st.write('Por favor escolha um pedido para classificar de cada vez.')
