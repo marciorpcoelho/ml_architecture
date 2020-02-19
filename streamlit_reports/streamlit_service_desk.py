@@ -46,7 +46,7 @@ def main():
     auto_classified_requests_df = get_data(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['final_table'], columns='*', query_filters={'Label': 'Não Definido'})
     current_classes = get_data(options_file, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'][0], columns=['Keyword_Group'])
 
-    auto_classified_requests_df.sort_values(by='Open_Date', inplace=True, ascending=False)
+    auto_classified_requests_df = auto_classified_requests_df.sort_values(by='Open_Date', ascending=False)
 
     st.sidebar.text('Para atualizar a tabela final no DW:')
     if st.sidebar.button('Atualizar DataWarehouse') or session_state.update_final_table_button_pressed_flag == 1:
@@ -106,7 +106,7 @@ def main():
                     session_state.overwrite_button_pressed_flag = 0
                     session_state.save_button_pressed_flag = 0
     elif len(sel_req) > 1:
-        st.write('Por favor escolha um pedido para classificar de cada vez.')
+        st.error('Por favor escolha um pedido para classificar de cada vez.')
 
 
 @st.cache
