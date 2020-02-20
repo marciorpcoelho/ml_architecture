@@ -30,6 +30,12 @@ update_query = '''
     INNER JOIN BI_SDK_Fact_DW_Requests_Manual_Classification AS Class ON Class.Request_Num = Fact.Request_Num
     '''
 
+column_translate_dict = {
+    'Request_Num': 'Nº Pedido',
+    'Label': 'Classificação',
+    'Date': 'Data'
+}
+
 """
 # Classificação Pedidos Service Desk
 Classificação Manual de Pedidos do Service Desk
@@ -52,7 +58,7 @@ def main():
     auto_classified_requests_df = auto_classified_requests_df.sort_values(by='Open_Date', ascending=False)
 
     st.sidebar.text('Histórico de classificação:')
-    last_history = manual_classified_requests_df[['Request_Num', 'Label', 'Date']].tail(5)
+    last_history = manual_classified_requests_df[['Request_Num', 'Label', 'Date']].rename(columns=column_translate_dict).tail(5)
     st.sidebar.table(last_history)
 
     st.sidebar.text('Para atualizar a tabela final no DW:')
