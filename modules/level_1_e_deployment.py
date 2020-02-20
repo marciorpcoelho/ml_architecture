@@ -32,8 +32,13 @@ def time_tags(format_date="%Y-%m-%d", format_time="%H:%M:%S"):
     return time_tag_date, time_tag_hour
 
 
-def sql_inject_single_line(dsn, uid, pwd, database, view, values):
-    values_string = '\'%s\'' % '\', \''.join(values)
+def sql_inject_single_line(dsn, uid, pwd, database, view, values, check_date=0):
+
+    if check_date:
+        values.append(time_tags()[0])
+        values_string = '\'%s\'' % '\', \''.join(values)
+    else:
+        values_string = '\'%s\'' % '\', \''.join(values)
 
     try:
         cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, uid, pwd, database), searchescape='\\')

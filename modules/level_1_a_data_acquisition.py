@@ -34,9 +34,7 @@ def vehicle_count_checkup(df, options_file, sql_check=0):
         elif current_vehicle_count == last_vehicle_count:
             level_0_performance_report.log_record('Atual contagem de veículos ({}) sem incrementos desde a última vez que o modelo foi treinado ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count), options_file.project_id, flag=1)
         else:
-            time_tag_date = time.strftime("%Y-%m-%d")
-            values = [str(current_vehicle_count), time_tag_date]
-            level_1_e_deployment.sql_inject_single_line(options_file.DSN_MLG, options_file.UID, options_file.PWD, options_file.sql_info['database'], options_file.sql_info['vhe_number_history'], values)
+            level_1_e_deployment.sql_inject_single_line(options_file.DSN_MLG, options_file.UID, options_file.PWD, options_file.sql_info['database'], options_file.sql_info['vhe_number_history'], [str(current_vehicle_count)], check_date=1)
             level_0_performance_report.log_record('A atualizar contagem de viaturas: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
     return
 

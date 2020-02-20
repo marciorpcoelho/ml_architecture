@@ -1,7 +1,10 @@
 import streamlit as st
+from streamlit.ScriptRunner import RerunException
+from streamlit.ScriptRequestQueue import RerunData
 import os
 import sys
 import pyodbc
+import time
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 sys.path.insert(1, base_path)
@@ -11,7 +14,7 @@ import modules.level_1_e_deployment as level_1_e_deployment
 import modules.SessionState as SessionState
 from plotly import graph_objs as go
 
-session_state = SessionState.get(sel_label_flag=0, save_button_pressed_flag=0, overwrite_button_pressed_flag=0, update_final_table_button_pressed_flag=0)
+session_state = SessionState.get(run_id=0, save_button_pressed_flag=0, overwrite_button_pressed_flag=0, update_final_table_button_pressed_flag=0, first_run=1)
 
 truncate_query = ''' 
     DELETE 
@@ -48,6 +51,10 @@ def main():
 
     auto_classified_requests_df = auto_classified_requests_df.sort_values(by='Open_Date', ascending=False)
 
+    st.sidebar.text('Histórico de classificação:')
+    last_history = manual_classified_requests_df[['Request_Num', 'Label', 'Date']].tail(5)
+    st.sidebar.table(last_history)
+
     st.sidebar.text('Para atualizar a tabela final no DW:')
     if st.sidebar.button('Atualizar DataWarehouse') or session_state.update_final_table_button_pressed_flag == 1:
         session_state.update_final_table_button_pressed_flag = 1
@@ -80,14 +87,15 @@ def main():
 
     st.write('Nº Pedidos com classe Não Definido: {}'.format(auto_classified_requests_df['Request_Num'].nunique()))
 
-    sel_req = st.multiselect('Por favor escolha um Pedido:', auto_classified_requests_df['Request_Num'].unique())
+    sel_req = st.multiselect('Por favor escolha um Pedido:', auto_classified_requests_df['Request_Num'].unique(), key=session_state.run_id)
+
     if len(sel_req) == 1:
         description = auto_classified_requests_df.loc[auto_classified_requests_df['Request_Num'] == sel_req[0]]['Description'].values[0]
         st.write('Descrição do pedido {}:'.format(sel_req[0]))
         st.write('"" {} ""'.format(description))  # ToDO: add markdown configuration like bold or italic
         sel_label = st.multiselect('Por favor escolha uma Categoria para o pedido {}:'.format(sel_req[0]), current_classes['Keyword_Group'].unique())
 
-        if sel_label:
+        if len(sel_label) == 1:
             previous_label = manual_classified_requests_df.loc[manual_classified_requests_df['Request_Num'] == sel_req[0], 'Label'].values
 
             if st.button('Gravar Classificação') or session_state.save_button_pressed_flag == 1:
@@ -98,13 +106,20 @@ def main():
                     st.write('Pretende substituir pela classe atual?')
                     if st.button('Sim'):
                         solution_saving(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
-                        session_state.overwrite_button_pressed_flag = 0
-                        session_state.save_button_pressed_flag = 0
+                        session_state.overwrite_button_pressed_flag, session_state.save_button_pressed_flag = 0, 0
+                        session_state.run_id += 1
+                        time.sleep(0.1)
+                        raise RerunException(RerunData(widget_state=None))
 
                 else:
                     solution_saving(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
-                    session_state.overwrite_button_pressed_flag = 0
-                    session_state.save_button_pressed_flag = 0
+                    session_state.overwrite_button_pressed_flag, session_state.save_button_pressed_flag = 0, 0
+                    session_state.run_id += 1
+                    time.sleep(0.1)
+                    raise RerunException(RerunData(widget_state=None))
+
+        elif len(sel_label) > 1:
+            st.error('Por favor escolha apenas uma classe.')
     elif len(sel_req) > 1:
         st.error('Por favor escolha um pedido para classificar de cada vez.')
 
@@ -125,7 +140,7 @@ def get_data_non_cached(options_file_in, dsn, db, view, columns, query_filters=0
 def solution_saving(options_file_in, dsn, db, view, sel_req, sel_label):
     level_1_e_deployment.sql_truncate(dsn, options_file_in, db, view, query=truncate_query.format(sel_req))
 
-    level_1_e_deployment.sql_inject_single_line(dsn, options_file_in.UID, options_file_in.PWD, db, view, [sel_req, sel_label])
+    level_1_e_deployment.sql_inject_single_line(dsn, options_file_in.UID, options_file_in.PWD, db, view, [sel_req, sel_label], check_date=1)
 
     st.write('Sugestão gravada com sucesso - {}: {}'.format(sel_req, sel_label))
 
