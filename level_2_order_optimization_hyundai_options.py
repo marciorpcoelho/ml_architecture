@@ -44,6 +44,31 @@ log_files = {
     'full_log': 'logs/optionals_hyundai.txt'
 }
 
+
+column_translate_dict = {
+    'PT_PDB_Model_Desc': 'Modelo',
+    'PT_PDB_Engine_Desc': 'Motorização',
+    'PT_PDB_Transmission_Type_Desc': 'Transmissão',
+    'PT_PDB_Version_Desc': 'Versão',
+    'PT_PDB_Exterior_Color_Desc': 'Cor Exterior',
+    'PT_PDB_Interior_Color_Desc': 'Cor Interior',
+    'Customer_Group_Desc': 'Tipo Cliente',
+    'NDB_VATGroup_Desc': 'Agrupamento NIF',
+    'VAT_Number_Display': 'NIF - Nome',
+    'NDB_Contract_Dealer_Desc': 'Contrato Concessionário',
+    'NDB_VHE_PerformGroup_Desc': 'Agrupamento Performance',
+    'NDB_VHE_Team_Desc': 'Equipa de Vendas',
+    'Customer_Display': 'Cliente Morada',
+    'Date': 'Data',
+    'Quantity_Sold': '#Veículos Vendidos',
+    'Average_Score_Euros': 'Score (€)',
+    'Measure_9': 'Custo Base',
+    'Measure_10': 'Custo Base - Outros',
+    'number_prev_sales': '#Vendas Anteriores',
+}
+
+parameters_desc = ['Modelo', 'Motorização', 'Transmissão', 'Versão', 'Cor Exterior', 'Cor Interior']
+
 sales_query_filtered = '''
         SELECT *
         FROM [BI_DTR].dbo.[VHE_Fact_BI_Sales_DTR] WITH (NOLOCK)

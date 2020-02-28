@@ -187,9 +187,9 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
         # df_sales.to_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
 
         # Step 3: ML Processing
-        df_sales = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viaturas apenas Hyundai
+        df_sales_ml = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viaturas apenas Hyundai
 
-        # df_sales.to_csv('output/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
+        # df_sales_ml.to_csv('output/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
 
         columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 40, 41, 42, 43]] + \
                                      ['Chassis_Number', 'Total_Sales', 'Total_Discount', 'Total_Discount_%', 'Total_Net_Sales', 'Fixed_Margin_I', 'Fixed_Margin_II', 'Fixed_Margin_I_%', 'stock_days_class', 'DaysInStock_Dealer',
@@ -204,14 +204,14 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
                                       'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
                                       'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code']
 
-        df_non_ohe = remove_columns(df_sales.copy(), [x for x in columns_with_too_much_info if x not in target], options_file.project_id)
+        df_non_ohe = remove_columns(df_sales_ml.copy(), [x for x in columns_with_too_much_info if x not in target], options_file.project_id)
 
         df_non_ohe = constant_columns_removal(df_non_ohe, options_file.project_id)
 
         df_non_ohe = pandas_object_columns_categorical_conversion_auto(df_non_ohe)
         df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, ['Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'], options_file.project_id)
 
-        # df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}_non_scaled.csv'.format(current_date))
+        df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}_non_scaled.csv'.format(current_date))
 
         df_non_ohe = skewness_reduction(df_non_ohe, target)
         df_non_ohe = robust_scaler_function(df_non_ohe, target)
