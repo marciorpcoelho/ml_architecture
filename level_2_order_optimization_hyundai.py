@@ -141,8 +141,8 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
         log_record('2 - Remoção de Viaturas não parametrizadas - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['Sales_Type_Dealer_Code'] != 'Demo']
         log_record('3 - Remoção de Viaturas de Demonstração - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
-        df_sales = df_sales[df_sales['Sales_Type_Code_DMS'].isin(['RAC', 'STOCK', 'VENDA'])]
-        log_record('4 - Seleção de apenas Viaturas de RAC, Stock e Venda - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        # df_sales = df_sales[df_sales['Sales_Type_Code_DMS'].isin(['RAC', 'STOCK', 'VENDA'])]
+        # log_record('4 - Seleção de apenas Viaturas de RAC, Stock e Venda - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[~df_sales['Dispatch_Type_Code'].isin(['AMBULÂNCIA', 'TAXI', 'PSP'])]
         log_record('5 - Remoção de Viaturas Especiais (Ambulâncias, Táxis, PSP) - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['DaysInStock_Global'] >= 0]  # Filters rows where, for some odd reason, the days in stock are negative
@@ -151,6 +151,10 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
         log_record('7 - Remoção de Viaturas com Matrículas Inválidas (G.Force) - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['Customer_Group_Code'].notnull()]  # Filters rows where there is no client information;
         log_record('8 - Remoção de Viaturas sem informação de cliente - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        df_sales = df_sales[df_sales['DaysInStock_Distributor'].notnull()]
+        log_record('9 - Remoção de Viaturas sem informação de Dias em Stock - Distribuidor - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        df_sales = df_sales[df_sales['DaysInStock_Dealer'].notnull()]
+        log_record('10 - Remoção de Viaturas sem informação de Dias em Stock - Dealer - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
 
         df_sales = new_features(df_sales, configuration_parameters_cols, options_file.project_id)
 
@@ -165,11 +169,12 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
 
         df_sales = parameter_processing_hyundai(df_sales, options_file, configuration_parameters_cols)
 
-        translation_dictionaries = [options_file.motor_translation, options_file.transmission_translation, options_file.version_translation, options_file.ext_color_translation, options_file.int_color_translation]
+        translation_dictionaries = [options_file.motor_translation, options_file.transmission_translation, options_file.version_translation]
         # grouping_dictionaries = [options_file.motor_grouping, options_file.transmission_grouping, options_file.version_grouping, options_file.ext_color_grouping, options_file.int_color_grouping]
 
         # Parameter Translation
-        df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], translation_dictionaries, options_file.project_id)
+        # df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], translation_dictionaries, options_file.project_id)
+        df_sales = col_group(df_sales, ['PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc'], translation_dictionaries, options_file.project_id)
         df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']
         log_record('9 - Remoção de Viaturas sem versão parametrizada - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
 

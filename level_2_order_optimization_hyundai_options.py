@@ -534,19 +534,19 @@ transmission_grouping = {
 # Versão
 version_translation = {
     'Access': ['access', 'access plus', 'access my17'],
-    'Comfort': ['comfort ', 'comfort', 'comfort + connect navi ', 'comfort', 'van 3 lugares', 'comfort my19', 'comfort navi', 'blue comfort my17', 'blue comfort hp my17', 'comfort + navi', 'comfort + connect navi', 'blue comfort', 'comfort my19\'5'],
+    'Comfort': ['comfort ', 'comfort', 'comfort + connect navi ', 'comfort', 'van 3 lugares', 'comfort my19', 'comfort navi', 'blue comfort my17', 'blue comfort hp my17', 'comfort + navi', 'comfort + connect navi', 'blue comfort', 'comfort my19\'5', 'comfort my20', 'blue comfort hp my16'],
     'Creative': ['creative plus'],
     'Dynamic': ['dynamic', 'dynamic + connect navi'],
     'Elegance': ['elegance navi', '1.5 i-vtec turbo cvt elegance navi', '1.6 i-dtec turbo elegance navi', 'elegance ', 'elegance + connect navi ', 'elegance plus + connect n', 'elegance', 'elegance + connect navi', '1.5 i-vtec turbo elegance'],
     'EV': ['ev'],
-    'Executive': ['executive ', 'executive', 'executive premium', '1.5 i-vtec turbo executive', '1.5 i-vtec turbo cvt executive', '1.6 i-dtec turbo executive', 'executive', 'executive my19'],
+    'Executive': ['executive ', 'executive', 'executive premium', '1.5 i-vtec turbo executive', '1.5 i-vtec turbo cvt executive', '1.6 i-dtec turbo executive', 'executive', 'executive my19', 'executive my20', 'executive my19\'5'],
     'GO': ['go', 'go+', 'go!', 'go!+'],
     'HEV': ['hev'],
     'Launch': ['launch edition'],
     'Lifestyle': ['lifestyle', 'lifestyle + navi', 'lifestyle + connect navi'],
     'Performance': ['performance pack'],
     'PHEV': ['phev'],
-    'Premium': ['premium', 'premium my19', 'premium my19 + pack pele'],
+    'Premium': ['premium', 'premium my19', 'premium my19 + pack pele', 'premium my20', 'premium + pack pele + pack style my19\'5', 'premium + pack pele + style plus my19\'5', 'premium + pack pele my19\'5', 'premium my19\'5'],
     'Prestige': ['prestige'],
     'Pro': ['pro edition'],
     'Sport': ['sport plus', 'sport'],
@@ -559,7 +559,7 @@ version_translation = {
     'MY18': ['my18'],
     'LED': ['led'],
     'Panorama': ['panorama'],
-    'N': ['250cv'],  # Represents Hyundai i30 N
+    'N': ['250cv', 'n-line my19\'5'],  # Represents Hyundai i30 N
     'NÃO_PARAMETRIZADOS': ['dynamic + connect navi ', 'auto ribeiro', 'teclife', 'van 6 lugares', 'style + navi']
 }
 
@@ -657,7 +657,7 @@ regression_models = {
 
 sql_columns_vhe_fact_bi = [
     'NLR_Code', 'Environment', 'Value_Type_Code', 'Chassis_Number', 'Registration_Number', 'NLR_Posting_Date', 'SLR_Document_Date_CHS', 'SLR_Account_CHS_Key', 'SLR_Document_Date_RGN',
-    'Product_Code', 'Sales_Type_Code', 'Location_Code', 'VehicleData_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code', 'Transmission_Type_Code', 'Vehicle_Area_Code', 'Dispatch_Type_Code',
+    'Product_Code', 'Sales_Type_Code', 'Sales_Type_Code_DMS', 'Location_Code', 'VehicleData_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code', 'Transmission_Type_Code', 'Vehicle_Area_Code', 'Dispatch_Type_Code',
     'Sales_Status_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'DaysInStock_Distributor', 'DaysInStock_Dealer', 'DaysInStock_Global', 'SLR_Account_Dealer_Code',
     'Sales_Type_Dealer_Code', 'Measure_1', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Measure_13',
     'Measure_14', 'Measure_15', 'Measure_16', 'Measure_17', 'Measure_18', 'Measure_19', 'Measure_20', 'Measure_21', 'Measure_22', 'Measure_23', 'Measure_24', 'Measure_25', 'Measure_26', 'Measure_27',
