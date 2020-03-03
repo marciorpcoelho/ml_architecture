@@ -18,13 +18,10 @@ from sklearn.preprocessing import StandardScaler
 from dateutil.relativedelta import relativedelta
 from sklearn.metrics import silhouette_score, calinski_harabaz_score
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
-# from modules.level_1_a_data_acquisition import sql_mapping_retrieval
 import modules.level_1_b_data_processing as level_1_b_data_processing
-# from modules.level_1_b_data_processing import remove_punctuation_and_digits, col_group
 import modules.level_0_performance_report as level_0_performance_report
-# from modules.level_0_performance_report import log_record, pool_workers_count, dict_models_name_conversion, project_dict
 pd.set_option('display.expand_frame_repr', False)
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 
 
 class ClassificationTraining(object):

@@ -7,9 +7,27 @@ import pandas as pd
 from datetime import datetime
 
 import modules.level_0_performance_report as level_0_performance_report
-# from modules.level_0_performance_report import log_record, regex_dict
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+if 'nt' in os.name:
+    OS_PLATFORM = 'WINDOWS'
+    # base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+elif 'posix' in os.name:
+    OS_PLATFORM = 'LINUX'
+    # base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
+
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
+
+
+def odbc_connection_creation(dsn, uid, pwd, db):
+    # Creates an ODBC connection to the specified SQL Server
+    odbc_cnxn = None
+
+    if OS_PLATFORM == 'WINDOWS':
+        odbc_cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, uid, pwd, db), searchescape='\\')
+    elif OS_PLATFORM == 'LINUX':
+        odbc_cnxn = pyodbc.connect('Driver=ODBC Driver 17 for SQL Server;Server=tcp:' + str(dsn) + ';UID=' + str(uid) + ';PWD=' + str(pwd) + ';DATABASE=' + str(db), searchescape='\\')
+
+    return odbc_cnxn
 
 
 def save_csv(dfs, names):
@@ -41,7 +59,7 @@ def sql_inject_single_line(dsn, uid, pwd, database, view, values, check_date=0):
         values_string = '\'%s\'' % '\', \''.join(values)
 
     try:
-        cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, uid, pwd, database), searchescape='\\')
+        cnxn = odbc_connection_creation(dsn, uid, pwd, database)
         cursor = cnxn.cursor()
 
         cursor.execute('INSERT INTO [{}].dbo.[{}] VALUES ({})'.format(database, view, values_string))
@@ -67,7 +85,7 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
     if truncate:
         sql_truncate(dsn, options_file, database, view)
 
-    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+    cnxn = odbc_connection_creation(dsn, options_file.uid, options_file.pwd, database)
     cursor = cnxn.cursor()
 
     if check_date:
@@ -115,7 +133,7 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
     if truncate:
         sql_truncate(dsn, options_file, database, view)
 
-    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
     cursor = cnxn.cursor()
 
     if check_date:
@@ -176,7 +194,7 @@ def sql_join(df, dsn, database, view, options_file):
     start = time.time()
     level_0_performance_report.log_record('Joining to SQL Server to DB {} and view {}...'.format(database, view), options_file.project_id)
 
-    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
     cursor = cnxn.cursor()
 
     query = '''update a
@@ -248,7 +266,7 @@ def sql_string_preparation_v1(values_list):
 def sql_truncate(dsn, options_file, database, view, query=None):
     level_0_performance_report.log_record('A truncar view {} da DB {}.'.format(view, database), options_file.project_id)
 
-    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
 
     if query is None:
         query = "TRUNCATE TABLE " + view
@@ -276,7 +294,7 @@ def sql_date_comparison(dsn, options_file, database, view, date_column, time_to_
 def sql_date_checkup(dsn, options_file, database, view, date_column):
 
     try:
-        cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+        cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
         cursor = cnxn.cursor()
 
         cursor.execute('SELECT MAX(' + '[' + date_column + ']' + ') FROM ' + database + '.dbo.' + view + 'WITH (NOLOCK)')
@@ -293,7 +311,7 @@ def sql_date_checkup(dsn, options_file, database, view, date_column):
 
 
 def sql_second_highest_date_checkup(dsn, options_file, database, view, date_column='Date'):
-    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
 
     query = 'with second_date as (SELECT MAX([' + str(date_column) + ']) as max_date ' \
             'FROM [' + str(database) + '].[dbo].[' + str(view) + '] ' \
@@ -313,7 +331,7 @@ def sql_second_highest_date_checkup(dsn, options_file, database, view, date_colu
 def sql_mapping_upload(dsn, options_file, dictionaries):
     # dictionaries = [options_file.jantes_dict, options_file.sales_place_dict, options_file.sales_place_dict_v2, options_file.model_dict, options_file.versao_dict, options_file.tipo_int_dict, options_file.color_ext_dict, options_file.color_int_dict, options_file.motor_dict_v2]
     parameters_name = ['Rims_Size', 'Sales_Place', 'Sales_Place_v2', 'Model', 'Version', 'Interior_Type', 'Color_Ext', 'Color_Int', 'Motor_Desc']
-    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE=BI_MLG'.format(dsn, options_file.UID, options_file.PWD), searchescape='\\')
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, 'BI_MLG')
     cursor = cnxn.cursor()
 
     for (parameter, dictionary) in zip(parameters_name, dictionaries):
@@ -360,7 +378,7 @@ def key_and_value_generator(dictionary, all_values, all_keys):
 
 
 def sql_get_last_vehicle_count(dsn, options_file, database, view, date_column='Date'):
-    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE=BI_MLG'.format(dsn, options_file.UID, options_file.PWD, database), searchescape='\\')
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
     crsr = cnxn.cursor()
 
     query = 'SELECT TOP (1) *' \

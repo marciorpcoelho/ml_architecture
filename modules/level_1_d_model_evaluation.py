@@ -10,13 +10,11 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
 import modules.level_1_e_deployment as level_1_e_deployment
-# from modules.level_1_e_deployment import sql_inject, save_csv, sql_second_highest_date_checkup
 import modules.level_0_performance_report as level_0_performance_report
-# from modules.level_0_performance_report import log_record, performance_sql_info, pool_workers_count, dict_models_name_conversion
 
 from sklearn.metrics import f1_score, accuracy_score, classification_report, precision_score, recall_score, silhouette_samples, silhouette_score, mean_squared_error, r2_score, roc_curve, auc, roc_auc_score
 pd.set_option('display.expand_frame_repr', False)
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 
 my_dpi = 96
 

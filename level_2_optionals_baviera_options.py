@@ -9,7 +9,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn import tree, linear_model, svm
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
 dotenv_path = '/info.env'
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 read_dotenv(base_path + dotenv_path)
 
 # Options:
@@ -21,7 +21,12 @@ k, gridsearch_score = 10, 'recall'  # Stratified Cross-Validation number of Fold
 selected_configuration_parameters = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 # Full: ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
-DSN_MLG = os.getenv('DSN_MLG')
+if 'nt' in os.name:
+    DSN = os.getenv('DSN_Prd')
+    DSN_MLG = os.getenv('DSN_MLG')
+elif 'posix' in os.name:
+    DSN = os.getenv('DSN_Prd_Linux')
+    DSN_MLG = os.getenv('DSN_MLG_Linux')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
 configuration_parameters_full = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']

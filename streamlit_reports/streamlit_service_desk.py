@@ -6,7 +6,7 @@ import sys
 import pyodbc
 import time
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import level_2_pa_servicedesk_2244_options as options_file
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition

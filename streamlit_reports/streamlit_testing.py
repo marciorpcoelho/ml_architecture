@@ -3,26 +3,33 @@ import pandas as pd
 import numpy as np
 import pickle
 import datetime
-import altair as alt
 import os
+import sys
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
-# import matplotlib.pyplot as plt
-# import csv
-# import shap
+sys.path.insert(1, base_path)
+import level_2_order_optimization_hyundai_options as options_file
 
 """
-# Days in Stock Predictor - Hyundai/Honda
-Machine Learning Regression Model used to predict the number of days of a configuration
+# Forecast Dias em Stock - Hyundai/Honda
+Previsão de Dias em Stock - Machine Learning Forecast
 """
+
+hide_menu_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        </style>
+        """
+st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 # selection_history = pd.DataFrame(columns=['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'Measure_9', 'Measure_10', 'number_prev_sales', 'Prediction'])
 
 
 def main():
+    last_date = '2020-02-26'
     # st.title('ML Deploy Testing')
 
-    data = get_data(base_path)
+    data = get_data(base_path, last_date)
     last_predictions = get_last_predictions(base_path)
     predictive_models = get_models(base_path)
     # st.write("### Top Days in Stock", data.sort_values(by='DaysInStock_Global', ascending=False))
@@ -34,27 +41,20 @@ def main():
 
     # Filters
     # Note: Can an option not be present in the dataset?
-    st.sidebar.title('Parameters:')
-    model_filter = st.sidebar.selectbox('Please select a Model:', ['None'] + list(data['PT_PDB_Model_Desc'].unique()), index=0)
-    engine_filter = st.sidebar.selectbox('Please select a Motorization:', ['None'] + list(data['PT_PDB_Engine_Desc'].unique()), index=0)
-    transmission_filter = st.sidebar.selectbox('Please select a Transmission:', ['None'] + list(data['PT_PDB_Transmission_Type_Desc'].unique()), index=0)
-    version_filter = st.sidebar.selectbox('Please select a Version:', ['None'] + list(data['PT_PDB_Version_Desc'].unique()), index=0)
-    ext_color_filter = st.sidebar.selectbox('Please select a Exterior Color:', ['None'] + list(data['PT_PDB_Exterior_Color_Desc'].unique()), index=0)
-    int_color_filter = st.sidebar.selectbox('Please select a Interior Color:', ['None'] + list(data['PT_PDB_Interior_Color_Desc'].unique()), index=0)
-    measure_9_filter = st.sidebar.slider('Please select a base cost value:', 0.0, 40000.0, value=data['Measure_9'].mean())
-    measure_10_filter = st.sidebar.slider('Please select a cost value for others:', 0.0, 2000.0, value=data['Measure_10'].mean())
+    st.sidebar.title('Parâmetros:')
+    model_filter = st.sidebar.selectbox('Por favor escolha um modelo:', ['-'] + list(data['PT_PDB_Model_Desc'].unique()), index=0)
+    engine_filter = st.sidebar.selectbox('Por favor escolha uma motorização:', ['-'] + list(data['PT_PDB_Engine_Desc'].unique()), index=0)
+    transmission_filter = st.sidebar.selectbox('Por favor escolha uma transmissão:', ['-'] + list(data['PT_PDB_Transmission_Type_Desc'].unique()), index=0)
+    version_filter = st.sidebar.selectbox('Por favor escolha uma versão:', ['-'] + list(data['PT_PDB_Version_Desc'].unique()), index=0)
+    ext_color_filter = st.sidebar.selectbox('Por favor escolha uma cor exterior:', ['-'] + list(data['PT_PDB_Exterior_Color_Desc'].unique()), index=0)
+    int_color_filter = st.sidebar.selectbox('Por favor escolha uma cor interior:', ['-'] + list(data['PT_PDB_Interior_Color_Desc'].unique()), index=0)
+    measure_9_filter = st.sidebar.slider('Por favor escolha um custo base:', 0.0, 40000.0, value=data['Measure_9'].mean())
+    measure_10_filter = st.sidebar.slider('Por favor escolha um valor para custo base - outros:', 0.0, 2000.0, value=data['Measure_10'].mean())
 
-    # if st.button('Clear Selections'):
-    #     st.write('model filter was {}'.format(model_filter))
-    #     # model_filter = 'h-1'
-    #     # st.set_option('model_sel', 'h-1')
-    #     model_filter.empty()
-    #     st.write('model filter is now {}'.format(model_filter))
-
-    if st.sidebar.button('Predict Days in Stock'):
+    if st.sidebar.button('Prever Dias em Stock'):
         selections = [model_filter, engine_filter, transmission_filter, version_filter, ext_color_filter, int_color_filter]
-        if 'None' in selections:
-            st.write("## Please select all parameters for configuration.")
+        if '-' in selections:
+            st.error("## Por favor escolha todos os parâmetros para a previsão.")
         else:
             col_filters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 
@@ -65,26 +65,29 @@ def main():
             predictions, feature_importances = model_prediction(predictive_models, selection_to_predict)
             feature_importances_normalized = feature_importance_treatment(feature_importances)
 
-            # plt.bar(list(selection_to_predict)[0:9], feature_importances_normalized)
-            chart_data_v1 = pd.DataFrame()
-            chart_data_v1['features'] = list(selection_to_predict)[0:9]
-            chart_data_v1['feature_importance'] = feature_importances_normalized[1]
-            chart_data_v1.sort_values(by='feature_importance', ascending=False, inplace=True)
+            # chart_data_v1 = pd.DataFrame()
+            # chart_data_v1['features'] = list(selection_to_predict)[0:9]
+            # chart_data_v1['feature_importance'] = feature_importances_normalized[1]
+            # chart_data_v1.sort_values(by='feature_importance', ascending=False, inplace=True)
+            #
+            # chart_v1 = alt.Chart(chart_data_v1).mark_bar().encode(
+            #     alt.X('features:N', axis=alt.Axis(labelAngle=-30)),
+            #     alt.Y('feature_importance:Q'),
+            #     tooltip=['features']
+            # ).interactive()
 
-            chart_v1 = alt.Chart(chart_data_v1).mark_bar().encode(
-                alt.X('features:N', axis=alt.Axis(labelAngle=-30)),
-                alt.Y('feature_importance:Q'),
-                tooltip=['features']
-            ).interactive()
-
-            st.write("### Number of previous sales: {}".format(number_prev_sales))
+            st.write("### Número de vendas anteriores: {}".format(number_prev_sales))
             # st.write("### Selection to predict: {}".format(selection_to_predict.head(1).values))
 
-            st.write("### Days in Stock Prediction (Lower Percentile): {:.2f} days.".format(predictions[0][0]))
-            st.write("### Days in Stock Prediction: {:.2f} days.".format(predictions[1][0]))
-            st.write("### Days in Stock Prediction (Upper Percentile): {:.2f} days.".format(predictions[2][0]))
+            if predictions[0][0] < predictions[1][0]:
+                st.write("### Previsão de Dias em Stock (Percentil Inferior): {:.2f} dias.".format(predictions[0][0]))
 
-            st.write("Feature Importance:", "", chart_v1)
+            st.write("### Previsão de Dias em Stock: {:.2f} dias.".format(predictions[1][0]))
+
+            if predictions[2][0] > predictions[1][0]:
+                st.write("### Previsão de Dias em Stock (Percentil Superior): {:.2f} dias.".format(predictions[2][0]))
+
+            # st.write("Parâmetros mais importantes:", "", chart_v1)
 
             save_predictions(last_predictions, selection_to_predict, predictions, base_path)
 
@@ -92,13 +95,15 @@ def main():
 
     if last_predictions is not None:
         last_predictions.sort_values(by='Date', inplace=True, ascending=False)
-        st.write('### Prediction History', last_predictions[[x for x in list(last_predictions) if x != 'Date']].head(5))
+        st.write('### Histórico de Previsões:', last_predictions[[x for x in list(last_predictions) if x not in ['Date', 'Previsão - Percentil Inferior (dias)', 'Previsão - Percentil Superior (dias)']]].head(5)
+                 .rename(columns=options_file.column_translate_dict)
+                 .reset_index(drop=True)
+                 .style.format({'Previsão (dias)': '{:.0f}', 'Custo Base': '{:.2f}', 'Custo Base - Outros': '{:.2f}'}))
 
-    st.button("Re-run")
+    st.button("Reset")
 
 
 def feature_importance_treatment(feature_importances):
-
     feature_importances_normalized = []
     for feature_importance in feature_importances:
         feature_importances_normalized.append(feature_importance / np.sum(feature_importance))  # Normalization
@@ -117,19 +122,30 @@ def feature_importance_treatment(feature_importances):
 
 
 @st.cache(show_spinner=True)
-def get_data(path):
-    dataset_name = path + 'output/hyundai_ml_dataset_streamlined.csv'
+def get_data(path, last_date):
+    dataset_name = path + 'output/hyundai_ml_dataset_streamlined_{}.csv'.format(last_date)
     df = pd.read_csv(dataset_name, index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category',
                                                        'NDB_VHE_PerformGroup_Desc': 'category', 'NDB_VHE_Team_Desc': 'category', 'Customer_Display': 'category',
                                                        'Customer_Group_Desc': 'category', 'Product_Code': 'category',
                                                        'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category',
-                                                       'PT_PDB_Model_Desc': 'category', 'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
+                                                       'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
                                                        'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
     df['Measure_9'] = df['Measure_9'] * (-1)
     df['Measure_10'] = df['Measure_10'] * (-1)
 
     # Remove a single case where cost is positive
     df = df[df['Measure_9'] >= 0]
+
+    for model in df['PT_PDB_Model_Desc'].unique():
+        if model == 'cr-v':
+            df.loc[df['PT_PDB_Model_Desc'] == model, 'PT_PDB_Model_Desc'] = 'CR-V'
+        elif model == 'hr-v':
+            df.loc[df['PT_PDB_Model_Desc'] == model, 'PT_PDB_Model_Desc'] = 'HR-V'
+        elif model == 'ioniq':
+            df.loc[df['PT_PDB_Model_Desc'] == model, 'PT_PDB_Model_Desc'] = 'Ioniq'
+        elif model[0] != 'i':
+            df.loc[df['PT_PDB_Model_Desc'] == model, 'PT_PDB_Model_Desc'] = model.capitalize()
+
     return df
 
 
@@ -142,12 +158,11 @@ def get_last_predictions(path):
 
 
 def save_predictions(last_predictions, selection, predictions, path):
-    # timestamp = str(datetime.datetime.now().day) + str(datetime.datetime.now().month) + str(datetime.datetime.now().year)
     timestamp = datetime.datetime.now()
 
-    selection.loc[0, 'Lower Limit Prediction'] = predictions[0]
-    selection.loc[0, 'Prediction'] = predictions[1]
-    selection.loc[0, 'Upper Limit Prediction'] = predictions[2]
+    selection.loc[0, 'Previsão - Percentil Inferior (dias)'] = predictions[0]
+    selection.loc[0, 'Previsão (dias)'] = predictions[1]
+    selection.loc[0, 'Previsão - Percentil Superior (dias)'] = predictions[2]
     selection.loc[0, 'Date'] = timestamp
 
     if last_predictions is not None:
@@ -178,7 +193,7 @@ def get_models(path):
 def check_number_prev_sales(dataset, filters_list, col_filters_list):
 
     data_filtered = dataset.copy()
-    if 'None' in filters_list:
+    if '-' in filters_list:
         default_prediction = ['kauai', '1.0i', 'Manual', 'Premium', 'Vermelho', 'Preto', -14357.429999999995, 0.0, 161]
         default_data = get_prediction(default_prediction)
         return default_data, 0
@@ -213,7 +228,7 @@ def model_prediction(ml_models, selection):
 def get_prediction(selection):
     selection_df = pd.DataFrame(columns=['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'Measure_9', 'Measure_10', 'number_prev_sales'])
 
-    if 'None' in selection:
+    if '-' in selection:
         selection_df.loc[0, :] = ['kauai', '1.0i', 'Manual', 'Premium', 'Vermelho', 'Preto', -14357.429999999995, 0.0, 161]
     else:
         selection_df.loc[0, :] = selection

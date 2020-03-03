@@ -5,13 +5,17 @@ import os
 import time
 import pyodbc
 import modules.level_1_b_data_processing as level_1_b_data_processing
-# from modules.level_1_b_data_processing import df_join_function, value_substitution, column_rename
 import modules.level_0_performance_report as level_0_performance_report
-# from modules.level_0_performance_report import log_record
 import modules.level_1_e_deployment as level_1_e_deployment
-# from modules.level_1_e_deployment import sql_get_last_vehicle_count, sql_inject_single_line
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
+
+if 'nt' in os.name:
+    OS_PLATFORM = 'WINDOWS'
+elif 'posix' in os.name:
+    OS_PLATFORM = 'LINUX'
+else:
+    raise RuntimeError("Unsupported operating system: {}".format(os.name))
 
 
 def read_csv(*args, **kwargs):
@@ -66,7 +70,10 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
         columns = str(columns)[1:-1].replace('\'', '')
 
     try:
-        cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, db), searchescape='\\')
+        if OS_PLATFORM == 'WINDOWS':
+            cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, db), searchescape='\\')
+        elif OS_PLATFORM == 'LINUX':
+            cnxn = pyodbc.connect('Driver=ODBC Driver 17 for SQL Server;Server=tcp:' + str(dsn) + ';UID=' + str(options_file.UID) + ';PWD=' + str(options_file.PWD) + ';DATABASE=' + str(db), searchescape='\\')
 
         if type(query_filters) == int:
             query = 'SELECT ' + columns + ' FROM ' + view + ' WITH (NOLOCK)'
@@ -97,7 +104,10 @@ def sql_retrieve_df_specified_query(dsn, db, options_file, query):
     start = time.time()
 
     try:
-        cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, db), searchescape='\\')
+        if OS_PLATFORM == 'WINDOWS':
+            cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file.UID, options_file.PWD, db), searchescape='\\')
+        elif OS_PLATFORM == 'LINUX':
+            cnxn = pyodbc.connect('Driver=ODBC Driver 17 for SQL Server;Server=tcp:' + str(dsn) + ';UID=' + str(options_file.UID) + ';PWD=' + str(options_file.PWD) + ';DATABASE=' + str(db), searchescape='\\')
 
         df = pd.read_sql(query, cnxn)
         cnxn.close()

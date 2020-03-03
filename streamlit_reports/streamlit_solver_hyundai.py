@@ -8,7 +8,6 @@ import time
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 sys.path.insert(1, base_path)
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
-import modules.level_1_b_data_processing as level_1_b_data_processing
 import modules.level_1_e_deployment as level_1_e_deployment
 import level_2_order_optimization_hyundai_options as options_file
 import modules.SessionState as SessionState
@@ -26,30 +25,17 @@ truncate_query = ''' DELETE
 FROM [BI_MLG].[dbo].[VHE_Fact_BI_OrderOptimization_Solver_Optimization_DTR]
 WHERE PT_PDB_Model_Desc = '{}'  '''
 
-column_translate_dict = {
-    'PT_PDB_Model_Desc': 'Modelo',
-    'PT_PDB_Engine_Desc': 'Motorização',
-    'PT_PDB_Transmission_Type_Desc': 'Transmissão',
-    'PT_PDB_Version_Desc': 'Versão',
-    'PT_PDB_Exterior_Color_Desc': 'Cor Exterior',
-    'PT_PDB_Interior_Color_Desc': 'Cor Interior',
-    'Customer_Group_Desc': 'Tipo Cliente',
-    'NDB_VATGroup_Desc': 'Agrupamento NIF',
-    'VAT_Number_Display': 'NIF - Nome',
-    'NDB_Contract_Dealer_Desc': 'Contrato Concessionário',
-    'NDB_VHE_PerformGroup_Desc': 'Agrupamento Performance',
-    'NDB_VHE_Team_Desc': 'Equipa de Vendas',
-    'Customer_Display': 'Cliente Morada',
-    'Date': 'Data',
-    'Quantity_Sold': '#Veículos Vendidos',
-    'Average_Score_Euros': 'Score (€)',
-
-}
-
 """
 # Sugestão de Encomenda - Importador
 Sugestão de Configurações para a encomenda mensal de viaturas Hyundai/Honda
 """
+
+hide_menu_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        </style>
+        """
+st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 session_state = SessionState.get(overwrite_button_pressed_flag=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, client_lvl_1='', client_lvl_2='', client_lvl_3='', client_lvl_4='', client_lvl_5='', client_lvl_6='', client_lvl_7='', model='')
 
@@ -74,15 +60,6 @@ def main():
     sel_client_lvl_6 = st.sidebar.selectbox('Equipa de Vendas:', ['-'] + list(data['NDB_VHE_Team_Desc'].unique()), index=0)
     sel_client_lvl_7 = st.sidebar.selectbox('Cliente Morada:', ['-'] + list(data['Customer_Display'].unique()), index=0)
 
-    # print('0 - client lvl values', sel_client_lvl_1, sel_client_lvl_2, sel_client_lvl_3, sel_client_lvl_4, sel_client_lvl_5, sel_client_lvl_6, sel_client_lvl_7)
-    # print('0 - session_state.client_lvl_1', session_state.client_lvl_1)
-    # print('0 - session_state.client_lvl_2', session_state.client_lvl_2)
-    # print('0 - session_state.client_lvl_3', session_state.client_lvl_3)
-    # print('0 - session_state.client_lvl_4', session_state.client_lvl_4)
-    # print('0 - session_state.client_lvl_5', session_state.client_lvl_5)
-    # print('0 - session_state.client_lvl_6', session_state.client_lvl_6)
-    # print('0 - session_state.client_lvl_7', session_state.client_lvl_7)
-
     if sel_model != session_state.model or sel_client_lvl_1 != session_state.client_lvl_1 or sel_client_lvl_2 != session_state.client_lvl_2 or sel_client_lvl_3 != session_state.client_lvl_3 or sel_client_lvl_4 != session_state.client_lvl_4 or sel_client_lvl_5 != session_state.client_lvl_5 or sel_client_lvl_6 != session_state.client_lvl_6 or sel_client_lvl_7 != session_state.client_lvl_7:
         session_state.client_lvl_1 = sel_client_lvl_1
         session_state.client_lvl_2 = sel_client_lvl_2
@@ -98,30 +75,29 @@ def main():
 
     if '-' not in [sel_model]:
         data_filtered = filter_data(data, [sel_model, sel_min_sold_cars] + client_lvl_values, ['PT_PDB_Model_Desc', 'Quantity_Sold'] + client_lvl_cols)
+
         if not data_filtered.shape[0]:
             st.write('Não foram encontrados registos para as presentes escolhas - Por favor altere o modelo/cliente/valor mínimo de viaturas por configuração.')
             return
         st.write('Número de Configurações:', data_filtered['ML_VehicleData_Code'].nunique())
 
-        parameters = st.multiselect('Escolha os parâmetros da configuração que pretende configurar:', [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'])
+        sel_parameters = st.multiselect('Escolha os parâmetros da configuração que pretende configurar:', [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'], format_func=options_file.column_translate_dict.get)
 
-        for parameter in parameters:
-            sel_parameter_max_number = data_filtered[parameter].nunique()
-            try:
-                sel_parameter_value = st.sidebar.number_input('Por favor escolha o número mínimo de diferentes {} a escolher (valor mínimo é {} e o valor máximo é {})'.format(parameter, 1, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number - 1)
-            except ValueError:
-                sel_parameter_value = st.sidebar.number_input('O número de {} disponíveis values é de apenas {}'.format(parameter, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number)
+        for parameter in sel_parameters:
+            if parameter != '-':
+                sel_parameter_max_number = data_filtered[parameter].nunique()
+                try:
+                    sel_parameter_value = st.sidebar.number_input('Por favor escolha o número mínimo de diferentes {} a escolher (valor mínimo é {} e o valor máximo é {})'.format(parameter, 1, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number - 1)
+                except ValueError:
+                    sel_parameter_value = st.sidebar.number_input('O número de {} disponíveis values é de apenas {}'.format(parameter, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number)
 
-            parameters_values.append(sel_parameter_value)
+                parameters_values.append(sel_parameter_value)
 
-        for parameter, parameter_value in zip(parameters, parameters_values):
-            # st.write(parameter, parameter_value)
+        for parameter, parameter_value in zip(sel_parameters, parameters_values):
             parameter_restriction_vectors.append(get_parameter_positions(data_filtered.copy(), parameter, parameter_value))
 
         if st.button('Criar Sugestão') or session_state.order_suggestion_button_pressed_flag == 1:
             session_state.order_suggestion_button_pressed_flag = 1
-            print('1 - Pressed Criar Sugestão')
-            print('1a - session_state.order_suggestion_button_pressed_flag', session_state.order_suggestion_button_pressed_flag)
             status, total_value_optimized, selection, selection_configuration_ids = solver(data_filtered, parameter_restriction_vectors, sel_order_size)
             data_filtered['Quantity'] = selection
 
@@ -133,15 +109,16 @@ def main():
                     data_filtered.loc[data_filtered.index.isin(complementary_configurations_index), 'Quantity'] = 1
 
                 if saved_suggestions_df.shape[0]:
-                    st.write('Sugestões gravadas:', saved_suggestions_df.rename(columns=column_translate_dict))
+                    st.write('Sugestões gravadas:', saved_suggestions_df.rename(columns=options_file.column_translate_dict))
 
                 sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size)
-                st.write('Sugestão Encomenda:', sel_configurations[['Quantity'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']].rename(columns=column_translate_dict))
+                st.write('Sugestão Encomenda:', sel_configurations[['Quantity'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
+                         .rename(columns=options_file.column_translate_dict)
+                         .style.format({'Score (€)': '{:.2f}'})
+                         )
 
-                print('1b - session_state.save_button_pressed_flag', session_state.save_button_pressed_flag)
                 if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
                     session_state.save_button_pressed_flag = 1
-                    print('2 - Pressed Gravar Sugestão')
 
                     if tuple(client_lvl_values) in saved_suggestions_dict.keys() and sel_model in saved_suggestions_dict[tuple(client_lvl_values)] or session_state.overwrite_button_pressed == 1:
                         st.write('Já existe Sugestão de Encomenda para o Modelo {} e '.format(sel_model) + ' '.join(['& {} = {}'.format(x, y) for x, y in zip(client_lvl_cols_renamed, client_lvl_values) if y != '-']) + '.')
@@ -165,9 +142,8 @@ def main():
 
 @st.cache
 def get_data(options_file_in):
-    start_get_data_function = time.time()
-
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
+
     df['Custo_Stock_Dist'] = df['Measure_9'] * 0.015 / 365 * df['DaysInStock_Distributor'] * (-1)
     df['Score_Euros'] = df['Fixed_Margin_II'] - df['Custo_Stock_Dist']
 
@@ -186,7 +162,6 @@ def get_data(options_file_in):
         elif model[0] != 'i':
             df.loc[df['PT_PDB_Model_Desc'] == model, 'PT_PDB_Model_Desc'] = model.capitalize()
 
-    print('Elapsed time for the get data: {:.2f} seconds.'.format(time.time() - start_get_data_function))
     return df
 
 
@@ -226,10 +201,6 @@ def solver(dataset, parameter_restriction_vectors, sel_order_size):
                                                     ] + parameter_restriction)
 
     result = problem.solve(solver=cp.GLPK_MI, verbose=False, qcp=True)
-
-    # selection_configuration_ids = [x for (x, y) in zip(dataset['ML_VehicleData_Code'].unique(), selection.value) if y > 0]
-
-    print('Elapsed time for the solver: {:.2f} seconds.'.format(time.time() - start_solver))
 
     return problem.status, result, selection.value, unique_ids
 
@@ -278,10 +249,7 @@ def quantity_processing(df, sel_order_size):
 def get_suggestions_dict(options_file_in, client_lvl_cols_in):
     saved_suggestions_dict = {}
 
-    print('### HERE saved_solutions_pairs_query\n', saved_solutions_pairs_query)
     saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in, query=saved_solutions_pairs_query)
-    # saved_suggestions_df = level_1_b_data_processing.column_rename(saved_suggestions_df, ['PT_PDB_Model_Desc', 'Customer_Group_Desc'], ['PT_PDB_Model_Desc', 'Customer_Group_Desc'])
-    print('### HERE saved_suggestions_df\n', saved_suggestions_df)
 
     saved_suggestions_df_grouped = saved_suggestions_df[['PT_PDB_Model_Desc'] + client_lvl_cols_in].groupby(client_lvl_cols_in)
     for key, group in saved_suggestions_df_grouped:
@@ -291,7 +259,6 @@ def get_suggestions_dict(options_file_in, client_lvl_cols_in):
 
 
 def solution_saving(df, sel_model, client_lvl_cols_in, client_lvl_sels):
-    # df = level_1_b_data_processing.column_rename(df, configuration_parameters_full_rename + extra_parameters_rename, configuration_parameters_full + extra_parameters)
     truncate_query_part_2 = ' '.join(['and {} = \'{}\''.format(x, y) for x, y in zip(client_lvl_cols_in, client_lvl_sels) if y != '-'])
 
     df = client_replacement(df, client_lvl_cols_in, client_lvl_sels)  # Replaces the values of Client's Levels by the actual values selected for this solution

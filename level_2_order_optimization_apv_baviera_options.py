@@ -1,13 +1,17 @@
 import os
 from py_dotenv import read_dotenv
 dotenv_path = '/info.env'
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 read_dotenv(base_path + dotenv_path)
 
 update_frequency_days = 0
 
-DSN_MLG = os.getenv('DSN_MLG')
-DSN_PRD = os.getenv('DSN_Prd')
+if 'nt' in os.name:
+    DSN = os.getenv('DSN_Prd')
+    DSN_MLG = os.getenv('DSN_MLG')
+elif 'posix' in os.name:
+    DSN = os.getenv('DSN_Prd_Linux')
+    DSN_MLG = os.getenv('DSN_MLG_Linux')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
 

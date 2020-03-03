@@ -11,11 +11,15 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, AdaB
 from sklearn.linear_model import LassoCV, Ridge, LassoLarsCV, ElasticNetCV
 from sklearn.svm import SVR, SVC
 dotenv_path = '/info.env'
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__))) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 read_dotenv(base_path + dotenv_path)
 
-DSN_PRD = os.getenv('DSN_Prd')
-DSN_MLG = os.getenv('DSN_MLG')
+if 'nt' in os.name:
+    DSN = os.getenv('DSN_Prd')
+    DSN_MLG = os.getenv('DSN_MLG')
+elif 'posix' in os.name:
+    DSN = os.getenv('DSN_Prd_Linux')
+    DSN_MLG = os.getenv('DSN_MLG_Linux')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
 
@@ -65,6 +69,7 @@ column_translate_dict = {
     'Measure_9': 'Custo Base',
     'Measure_10': 'Custo Base - Outros',
     'number_prev_sales': '#Vendas Anteriores',
+    'Quantity:': 'Sug.Encomenda',
 }
 
 parameters_desc = ['Modelo', 'Motorização', 'Transmissão', 'Versão', 'Cor Exterior', 'Cor Interior']

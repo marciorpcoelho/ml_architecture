@@ -4,8 +4,6 @@ import numpy as np
 import cvxpy as cp
 import os
 import sys
-import pyodbc
-import time
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 sys.path.insert(1, base_path)
@@ -61,7 +59,7 @@ def main():
     solve_data = get_data(options_file)
     saved_suggestions_dict, saved_suggestions_df = get_suggestions_dict(options_file)
 
-    # sel_metric = st.sidebar.selectbox('Please select a metric:', ['None'] + ['DaysToSell_1_Part', 'DaysToSell_1_Part_v2_mean', 'DaysToSell_1_Part_v2_median'], index=0)
+    # sel_metric = st.sidebar.selectbox('Please select a metric:', ['-'] + ['DaysToSell_1_Part', 'DaysToSell_1_Part_v2_mean', 'DaysToSell_1_Part_v2_median'], index=0)
     sel_metric = 'Days_To_Sell_Median'
 
     if saved_suggestions_df.shape[0]:
@@ -80,20 +78,20 @@ def main():
             )
             )
         ])
-        fig.update_layout(width=600, height=500)
+        fig.update_layout(width=600, height=240)
         st.write(fig)
 
-    if sel_metric != 'None':
+    if sel_metric != '-':
         solve_data = solve_data[solve_data[sel_metric] > 0]
         solve_data = solve_data[(solve_data['Part_Ref_Group_Desc'] != 'NO_TA') & (solve_data['Part_Ref_Group_Desc'] != 'Outros')]
 
     solve_data = solve_data[solve_data['Part_Ref_Group_Desc'] != 'BMW_Bonus_Group_1']
-    sel_group_original = st.sidebar.selectbox('Por favor escolha um grupo de peças:', ['None'] + options_file.part_groups_desc, index=0)
+    sel_group_original = st.sidebar.selectbox('Por favor escolha um grupo de peças:', ['-'] + options_file.part_groups_desc, index=0)
 
     try:
         sel_group = [x for x in options_file.part_groups_desc_mapping.keys() if options_file.part_groups_desc_mapping[x] == sel_group_original][0]
     except IndexError:
-        return 'None'
+        return '-'
 
     dtss_goal = st.sidebar.number_input('Por favor escolha um limite de dias de venda:', 0, 30, value=15)
     max_part_number = st.sidebar.number_input('Por favor escolha um valor máximo de peças (0=Sem Limite):', 0, 5000, value=0)
@@ -102,7 +100,7 @@ def main():
     sel_values_filters = [sel_group]
     sel_values_col_filters = ['Part_Ref_Group_Desc']
 
-    if 'None' not in sel_values_filters:
+    if '-' not in sel_values_filters:
 
         goal_value = options_file.group_goals[sel_group][0]
 
@@ -115,7 +113,6 @@ def main():
 
         status, total_value_optimized, selection, above_goal_flag, df_solution = solver(data_filtered, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
 
-        # st.write('Optimization Status: {}'.format(status))
         st.write('Máxima solução atingida: {:.2f} €'.format(total_value_optimized))
 
         try:
@@ -152,8 +149,6 @@ def main():
 
 
 def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
-    # print('Solving for {}...'.format(group))
-
     above_goal_flag = 0
     df_solution = pd.DataFrame()
     df_solve = df_solve[df_solve[sel_metric] <= dtss_goal]
@@ -165,7 +160,6 @@ def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max
     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
 
     n_size = df_solve['Part_Ref'].nunique()  # Number of different parts
-    # print('Number of parts inside initial conditions:', n_size)
 
     values = np.array(df_solve[goal_type].values.tolist())  # Costs/Sale prices for each reference, info#1
     other_values = df_solve[non_goal_type].values.tolist()
@@ -197,10 +191,8 @@ def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max
 
 def solution_saving(df_solution, group_name, group_name_original):
 
-    # df_solution.to_csv(base_path + '/output/solver_solution_{}_{}.csv'.format(group_name, current_date))
     level_1_e_deployment.sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(options_file.sql_info['optimization_solution_table'], group_name))
 
-    # level_1_e_deployment.sql_inject(df_solution, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], options_file, list(df_solution[options_file.columns_sql_solver_solution]), truncate=1)
     level_1_e_deployment.sql_inject(df_solution,
                                     options_file.DSN_MLG,
                                     options_file.sql_info['database_final'],
@@ -238,7 +230,6 @@ def get_data(options_file_in):
 def get_suggestions_dict(options_file_in):
     saved_suggestions_dict = {}
     saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in, query=saved_solutions_pairs_query)
-    # saved_suggestions_df = level_1_b_data_processing.column_rename(saved_suggestions_df, ['Model_Code', 'Sales_Place_Fase2_Level_1'], [column_translate['Model_Code'], column_translate['Sales_Place_Fase2_Level_1']])
 
     saved_suggestions_df_grouped = saved_suggestions_df.groupby('Part_Ref_Group_Desc')
     for key, group in saved_suggestions_df_grouped:
