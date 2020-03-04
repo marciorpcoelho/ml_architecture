@@ -43,7 +43,7 @@ def data_acquisition():
     dfs = []
 
     for query in [options_file.sales_query, options_file.stock_query, options_file.product_db_query, options_file.customer_group_query, options_file.dealers_query]:
-        df = sql_retrieve_df_specified_query(options_file.DSN_PRD, options_file.sql_info['database_source'], options_file, query)
+        df = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_source'], options_file, query)
         # df.to_csv(file_name + '.csv')
         dfs.append(df)
 

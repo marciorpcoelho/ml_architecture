@@ -142,7 +142,7 @@ def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_f
 
 
 def dw_data_retrieval(pse_code, current_date, options_info, update):
-
+    # PRJ-2259
     print('Retrieving data for PSE_Code = {}'.format(pse_code))
 
     sales_info = [base_path + 'dbs/df_sales', options_info.sales_query]
@@ -166,7 +166,7 @@ def dw_data_retrieval(pse_code, current_date, options_info, update):
             # print('{} file found.'.format(file_name))
         except FileNotFoundError:
             print('{} file not found. Retrieving data from SQL...'.format(file_name))
-            df = sql_retrieve_df_specified_query(options_info.DSN_PRD, options_info.sql_info['database'], options_info, dimension[1])
+            df = sql_retrieve_df_specified_query(options_info.DSN, options_info.sql_info['database'], options_info, dimension[1])
             df.to_csv(file_name + '.csv')
 
         dfs.append(df)

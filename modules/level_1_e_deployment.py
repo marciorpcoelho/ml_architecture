@@ -85,7 +85,7 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
     if truncate:
         sql_truncate(dsn, options_file, database, view)
 
-    cnxn = odbc_connection_creation(dsn, options_file.uid, options_file.pwd, database)
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
     cursor = cnxn.cursor()
 
     if check_date:
