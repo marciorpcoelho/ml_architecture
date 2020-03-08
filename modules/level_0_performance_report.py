@@ -165,7 +165,7 @@ def email_notification(project_id, warning_flag, warning_desc, error_full, error
     try:
         sp_query = sp_query_creation(performance_sql_info['sp_send_dbmail'], performance_sql_info['sp_send_dbmail_input_parameters_name'], [mail_subject, mail_body_part1, mail_body_part2, project_id])
         generic_query_execution(sp_query)
-    except (pyodbc.ProgrammingError, pyodbc.OperationalError) as error:
+    except (pyodbc.ProgrammingError, pyodbc.OperationalError, pyodbc.Error) as error:
         log_record('Erro ao executar SP {} - {}'.format(performance_sql_info['sp_send_dbmail'], error), project_id, flag=2)
 
 
@@ -278,7 +278,7 @@ def performance_report_sql_inject(df, dsn, database, view, options_file, columns
             cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
 
         print('Duração: {:.2f} segundos.'.format(time.time() - start))
-    except (pyodbc.ProgrammingError, pyodbc.DataError) as error:
+    except (pyodbc.ProgrammingError, pyodbc.DataError, pyodbc.Error) as error:
         df.to_csv(base_path + 'output/{}_backup.csv'.format(view))
         log_record('Erro ao fazer upload - {} - A gravar localmente...'.format(error), options_file.project_id, flag=1)
 
@@ -322,6 +322,6 @@ def performance_report_sql_inject_single_line(line, flag, performance_sql_info_i
         cnxn.commit()
         cursor.close()
         cnxn.close()
-    except (pyodbc.ProgrammingError, pyodbc.OperationalError):
-        logging.warning('Unable to access SQL Server.')
+    except (pyodbc.ProgrammingError, pyodbc.OperationalError, pyodbc.Error):
+        logging.warning('Erro ao gravar registo.')
         return
