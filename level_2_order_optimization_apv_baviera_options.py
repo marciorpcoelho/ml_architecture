@@ -35,7 +35,10 @@ sql_info_stock_dbs = {
     'AFR_SPG_07': 'DMS_AFR_07',
     'AFR_SPG_08': 'DMS_AFR_08',
     'CRP_SPG_04': 'DMS_CRP_04',
+    'IBE_SPG_02': 'DMS_IBE_02',
+    'CA_SPG_01': 'DMS_CA_01',
     'CRP_ATL_01': 'DMS_CRP_01',
+    'IBE_ATL_01': 'DMS_IBE_01',
 }
 
 sql_info_stock_tables = {
@@ -46,7 +49,10 @@ sql_info_stock_tables = {
     'AFR_SPG_07': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
     'AFR_SPG_08': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
     'CRP_SPG_04': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'CA_SPG_01': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
+    'IBE_SPG_02': ['SM_Parts_Stock', 'SM_Parts_Stock_Warehouses'],
     'CRP_ATL_01': ['SM_Parts_Stock'],
+    'IBE_ATL_01': ['SM_Parts_Stock'],
 }
 
 project_id = 2259
