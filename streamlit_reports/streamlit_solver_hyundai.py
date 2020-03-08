@@ -1,16 +1,22 @@
 import streamlit as st
-# import pandas as pd
+import logging
 import numpy as np
 import cvxpy as cp
 import os
 import sys
 import time
+from traceback import format_exc
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 sys.path.insert(1, base_path)
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment
+from modules.level_0_performance_report import log_record, error_upload
 import level_2_order_optimization_hyundai_options as options_file
 import modules.SessionState as SessionState
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
+logging.Logger('errors')
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
 configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
 client_lvl_cols = ['Customer_Group_Desc', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display']
@@ -283,5 +289,10 @@ def client_replacement(df, client_lvl_cols_in, client_lvl_sels):
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as exception:
+        project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
+        log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
 

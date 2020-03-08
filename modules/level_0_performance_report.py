@@ -26,6 +26,7 @@ times_global = []
 names_global = []
 warnings_global = []
 pool_workers_count = cpu_count()
+database_mail_version = '2.1'
 
 # Universal Information
 performance_id = 0000
@@ -61,6 +62,12 @@ project_dict = {2244: 'PA@Service Desk',
                 2406: 'Otimização Encomenda Hyundai/Honda',
                 0000: 'Performance Analysis'
                 }
+
+app_dict = {2244: 'Classificação Pedidos Service Desk',
+            2162: 'Sugestão de Encomenda Baviera (Fase II)',
+            2259: 'Sugestão de Encomenda de Peças - Após-Venda Baviera',
+            2406: 'Sugestão de Encomenda - Importador',
+            }
 
 project_sql_dict = {2244: 'Project_SD',
                     2162: 'Project_VHE_BMW',
@@ -148,37 +155,55 @@ def performance_info(project_id, options_file, model_choice_message, unit_count)
     performance_report_sql_inject(df_performance, DSN_MLG, performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance))
     performance_report_sql_inject(df_warnings, DSN_MLG, performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings))
 
-    email_notification(project_id, warning_flag=warning_flag, warning_desc=warnings_global, error_desc='', model_choice_message=model_choice_message)
+    email_notification(project_id, warning_flag=warning_flag, warning_desc=warnings_global, error_full='', error_desc='', model_choice_message=model_choice_message)
 
 
-def email_notification(project_id, warning_flag, warning_desc, error_desc, error_flag=0, model_choice_message=0):
-    run_conclusion, warning_conclusion, conclusion_message = None, None, None
+def email_notification(project_id, warning_flag, warning_desc, error_full, error_desc, error_flag=0, model_choice_message=0, solution_type='DEVOP'):
 
-    mail_subject = '#PRJ-{}: {} - Relatório'.format(project_id, project_dict[project_id])
-    link = project_pbi_performance_link
-
-    if error_flag:
-        run_conclusion = 'não terminou devido ao erro: {}.'.format(error_desc)
-        conclusion_message = ''
-    elif not error_flag:
-        run_conclusion = 'terminou com sucesso.'
-        conclusion_message = '\r\nA sua conclusão foi: {}'.format(model_choice_message)
-
-    if warning_flag:
-        warning_conclusion = '\n Foram encontrados os seguintes alertas: \r\n - {}'.format('\r\n - '.join(x for x in warning_desc))
-    elif not warning_flag:
-        warning_conclusion = 'Não foram encontrados quaisquer alertas.\n'
-
-    mail_body_part1 = '''Bom dia'''
-    mail_body_part2 = '''\n \nO projeto {} {} \n{} \n{}
-                      \n \nPara mais informações, por favor consulta o seguinte relatório: {} 
-                      \nCumprimentos, \nDatabase Mail, v2.0'''.format(project_dict[project_id], run_conclusion, warning_conclusion, conclusion_message, link)
+    mail_subject, mail_body_part1, mail_body_part2, project_id = mail_message_creation(warning_desc, warning_flag, error_full, error_desc, error_flag, project_id, model_choice_message, solution_type)
 
     try:
         sp_query = sp_query_creation(performance_sql_info['sp_send_dbmail'], performance_sql_info['sp_send_dbmail_input_parameters_name'], [mail_subject, mail_body_part1, mail_body_part2, project_id])
         generic_query_execution(sp_query)
     except (pyodbc.ProgrammingError, pyodbc.OperationalError) as error:
         log_record('Erro ao executar SP {} - {}'.format(performance_sql_info['sp_send_dbmail'], error), project_id, flag=2)
+
+
+def mail_message_creation(warning_desc, warning_flag, error_full, error_desc, error_flag, project_id, model_choice_message, solution_type):
+
+    if solution_type == 'DEVOP':
+        run_conclusion, warning_conclusion, conclusion_message = None, None, None
+        mail_subject = '#PRJ-{}: {} - Relatório'.format(project_id, project_dict[project_id])
+        link = project_pbi_performance_link
+
+        if error_flag:
+            run_conclusion = 'não terminou devido ao erro: {}.'.format(error_desc)
+            conclusion_message = ''
+        elif not error_flag:
+            run_conclusion = 'terminou com sucesso.'
+            conclusion_message = '\r\nA sua conclusão foi: {}'.format(model_choice_message)
+
+        if warning_flag:
+            warning_conclusion = '\n Foram encontrados os seguintes alertas: \r\n - {}'.format('\r\n - '.join(x for x in warning_desc))
+        elif not warning_flag:
+            warning_conclusion = 'Não foram encontrados quaisquer alertas.\n'
+
+        mail_body_part1 = '''Bom dia'''
+        mail_body_part2 = '''\n \nO projeto {} {} \n{} \n{}
+                              \n \nPara mais informações, por favor consulta o seguinte relatório: {} 
+                              \nCumprimentos, \nDatabase Mail, v{}'''.format(project_dict[project_id], run_conclusion, warning_conclusion, conclusion_message, link, database_mail_version)
+
+    elif solution_type == 'OPR':
+        mail_subject = '#PRJ-{}: ERRO - Streamlit App {}'.format(project_id, app_dict[project_id])
+
+        mail_body_part1 = '''AVISO - '''
+        mail_body_part2 = '''\n \n A aplicação streamlit {} referente ao projeto {} encontrou um erro. A descrição desse erro é: \n\n{}
+                              \nCumprimentos, \nDatabase Mail, v{}'''.format(app_dict[project_id], project_dict[project_id], error_full, database_mail_version)
+
+    else:
+        raise RuntimeError('Tipo de Solução desconhecido: {}'.format(solution_type))
+
+    return mail_subject, mail_body_part1, mail_body_part2, project_id
 
 
 def generic_query_execution(query):
@@ -204,7 +229,7 @@ def sp_query_creation(sp_name, sp_input_parameters_name_list, sp_output_paramete
     return sp_query
 
 
-def error_upload(options_file, project_id, error_full, error_only, error_flag=0):
+def error_upload(options_file, project_id, error_full, error_only, error_flag=0, solution_type='DEVOP'):
     df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'Error_Flag', 'Project_Id', 'Date'})
     # error_only = None
     current_date = time.strftime("%Y-%m-%d")
@@ -213,6 +238,7 @@ def error_upload(options_file, project_id, error_full, error_only, error_flag=0)
         df_error['Error_Full'] = [error_full]
         df_error['Error_Only'] = [error_only]
         df_error['Error_Flag'] = error_flag
+        df_error['Solution'] = [solution_type]
         df_error['Project_Id'] = project_id
         df_error['Date'] = current_date
 
@@ -223,9 +249,9 @@ def error_upload(options_file, project_id, error_full, error_only, error_flag=0)
             warning_flag = 1
             warning_desc = warnings_global
 
-        email_notification(project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_desc=error_only, error_flag=1, model_choice_message=0)
+        email_notification(project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_full=error_full, error_desc=error_only, error_flag=1, model_choice_message=0, solution_type=solution_type)
     elif not error_flag:
-        df_error.loc[0, ['Error_Full', 'Error_Only', 'Error_Flag', 'Project_Id', 'Date']] = [None, None, 0, project_id, current_date]
+        df_error.loc[0, ['Error_Full', 'Error_Only', 'Error_Flag', 'Solution', 'Project_Id', 'Date']] = [None, None, 0, solution_type, project_id, current_date]
 
     performance_report_sql_inject(df_error, DSN_MLG, performance_sql_info['DB'], performance_sql_info['error_log'], options_file, list(df_error))
 
@@ -263,7 +289,7 @@ def performance_report_sql_inject(df, dsn, database, view, options_file, columns
     return
 
 
-def log_record(message, project_id, flag=0):
+def log_record(message, project_id, flag=0, solution_type='DEVOP'):
     # Flag Code: message: 0, warning: 1, error: 2
 
     if flag == 0:
@@ -274,16 +300,16 @@ def log_record(message, project_id, flag=0):
     elif flag == 2:
         logging.exception('#')
 
-    performance_report_sql_inject_single_line(message, flag, performance_sql_info, project_id)
+    performance_report_sql_inject_single_line(message, flag, performance_sql_info, project_id, solution_type)
 
 
-def performance_report_sql_inject_single_line(line, flag, performance_sql_info_in, project_id):
+def performance_report_sql_inject_single_line(line, flag, performance_sql_info_in, project_id, solution_type):
 
     time_tag_date = time.strftime("%Y-%m-%d")
     time_tag_hour = time.strftime("%H:%M:%S")
     line = line.replace('\'', '"')
 
-    values = [str(line), str(flag), time_tag_hour, time_tag_date, str(project_id)]
+    values = [str(line), str(flag), time_tag_hour, time_tag_date, str(solution_type), str(project_id)]
 
     values_string = '\'%s\'' % '\', \''.join(values)
 

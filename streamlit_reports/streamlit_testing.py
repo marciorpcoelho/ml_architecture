@@ -10,7 +10,7 @@ sys.path.insert(1, base_path)
 import level_2_order_optimization_hyundai_options as options_file
 
 """
-# Forecast Dias em Stock - Hyundai/Honda
+# Forecast Dias em Stock - Importador
 Previsão de Dias em Stock - Machine Learning Forecast
 """
 
