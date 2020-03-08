@@ -60,7 +60,9 @@ project_dict = {2244: 'PA@Service Desk',
                 2162: 'Otimização Encomenda Baviera Viaturas',
                 2259: 'Otimização Encomenda Baviera APV',
                 2406: 'Otimização Encomenda Hyundai/Honda',
-                0000: 'Performance Analysis'
+                1111: 'Fotografia Stock',
+                2610: 'Catalogação Peças @ DGO',
+                0000: 'Performance Analysis',
                 }
 
 app_dict = {2244: 'Classificação Pedidos Service Desk',
@@ -73,6 +75,8 @@ project_sql_dict = {2244: 'Project_SD',
                     2162: 'Project_VHE_BMW',
                     2259: 'Project_VHE_APV',
                     2406: 'Project_VHE_DTR',
+                    2610: 'Project_Part_Ref_Catalog',
+                    1111: 'DMS Stock Photograph',
                     }
 
 project_pbi_performance_link = 'https://bit.ly/2SJIYJy'
