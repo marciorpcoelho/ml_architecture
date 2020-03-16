@@ -458,6 +458,7 @@ def options_scraping_per_group(args):
     if not color:
         if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58'] or tokenized_color == [' ']:
             color = ['undefined']
+            level_0_performance_report.log_record('Cor exterior não encontrada {} para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
         elif tokenized_color == ['verm', 'tk', 'mmm']:
             color = ['vermelho']
         else:
@@ -526,6 +527,7 @@ def options_scraping_per_group(args):
             group['Cor_Interior'] = 'vermelho'
         else:
             group['Cor_Interior'] = '0'
+            level_0_performance_report.log_record('Cor Interior não encontrada: \'{}\' para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
     end_cor_int = local_time()
 
     # Tipo Interior
@@ -644,7 +646,7 @@ def sell_place_parametrization(df, original_sale_place_column, new_sale_place_co
     for sale_place in unique_sale_places:
         sale_place_level_2 = [x for x in sel_districts_flat if x in sale_place]
         if len(sale_place_level_2):
-            df.loc[df[original_sale_place_column] == sale_place, new_sale_place_column + '_level_2'] = sale_place_level_2
+            df.loc[df[original_sale_place_column] == sale_place, new_sale_place_column + '_level_2'] = sale_place_level_2[0]
         else:
             if sale_place[0:3] == 'DCS':  # This is for the cases where the description has no Local. Currently, all of them are from Lisboa (DCS)
                 df.loc[df[original_sale_place_column] == sale_place, new_sale_place_column + '_level_2'] = 'Lisboa'
@@ -1074,7 +1076,8 @@ def text_preprocess(df, unique_clients_decoded, options_file):
     for key, row in df.iterrows():
         description, stemmed_words = row['Description'], []
 
-        description = remove_punctuation_and_digits(description)
+        description = string_digit_removal(description)
+        description = string_punctuation_removal(description)
 
         try:
             tokenized = nltk.tokenize.word_tokenize(description)
@@ -1099,15 +1102,36 @@ def text_preprocess(df, unique_clients_decoded, options_file):
     return df
 
 
-def remove_punctuation_and_digits(string_to_process):
+# df['Part_Desc'] = df['Part_Desc'].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform],))
+def stop_words_removal(string_to_process, stop_words_list):
+    new_string = ' '.join([x for x in nltk.tokenize.word_tokenize(string_to_process) if x not in stop_words_list])
 
-    digit_remover = str.maketrans('', '', string.digits)
+    return new_string
+
+
+def abbreviations_correction(string_to_correct, abbreviations_dict):
+    new_string = ''
+
+    return new_string
+
+
+def string_punctuation_removal(string_to_process):
     punctuation_remover = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
 
-    string_to_process = string_to_process.translate(digit_remover).translate(punctuation_remover)
-    string_to_process = unidecode.unidecode(string_to_process)
+    processed_string = str(string_to_process).translate(punctuation_remover)
+    processed_string = unidecode.unidecode(processed_string)
 
-    return string_to_process
+    return processed_string.strip()
+
+
+def string_digit_removal(string_to_process):
+
+    digit_remover = str.maketrans('', '', string.digits)
+
+    processed_string = str(string_to_process).translate(digit_remover)
+    processed_string = unidecode.unidecode(processed_string)
+
+    return processed_string
 
 
 def word_frequency(df, threshold=0):
