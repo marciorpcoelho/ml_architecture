@@ -527,7 +527,7 @@ def options_scraping_per_group(args):
             group['Cor_Interior'] = 'vermelho'
         else:
             group['Cor_Interior'] = '0'
-            level_0_performance_report.log_record('Cor Interior não encontrada: \'{}\' para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
+            # level_0_performance_report.log_record('Cor Interior não encontrada: \'{}\' para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
     end_cor_int = local_time()
 
     # Tipo Interior

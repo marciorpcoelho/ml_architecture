@@ -253,7 +253,8 @@ def new_request_type(df, df_top_words, df_manual_classification, options_file):
 
             if ' ' in keywords:
                 rank = 1 + consecutive_flag
-                keywords = level_1_b_data_processing.remove_punctuation_and_digits(keywords)
+                keywords = level_1_b_data_processing.string_digit_removal(keywords)
+                keywords = level_1_b_data_processing.string_punctuation_removal(keywords)
                 tokenized_key_word = nltk.tokenize.word_tokenize(keywords)
                 try:
                     tokenized_key_word = [stemmer_pt.stem(x) for x in tokenized_key_word]
