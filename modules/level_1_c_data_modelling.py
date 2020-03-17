@@ -226,9 +226,7 @@ def new_request_type(df, df_top_words, df_manual_classification, options_file):
 
     df_top_words['Label'] = 'Não Definido'
     for label in keyword_dict.keys():
-        # print('Label: {}'.format(label))
         for keywords in keyword_dict[label]:
-            # print('Keywords: {}'.format(keywords))
             consecutive_flag = 1
             # multiple words not consecutive
             if ';' in keywords:
@@ -506,7 +504,6 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
         i, parts_count = 1, len(selected_parts)
         print('PSE_Code = {}'.format(pse_code))
         for part_ref in selected_parts:
-            # start = time.time()
             result_part_ref, stock_evolution_correct_flag, offset, last_processed_stock = sql_data([part_ref], pse_code, datetime.datetime.strptime(min_date, format('%Y%m%d')), max_date, dataframes_list, preprocessed_data_exists_flag)
 
             if result_part_ref.shape[0]:
@@ -527,7 +524,6 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
 
                 results = results.append(result_part_ref)
                 # results.to_csv(base_path + 'output/testing_results.csv'.format(part_ref))
-                # print('Elapsed time: {:.2f}.'.format(time.time() - start))
 
             position = int((i / parts_count) * 100)
             if not position % 1:
@@ -558,8 +554,6 @@ def fill_cols_function(result_part_ref, last_processed_stock):
 
 
 def results_preprocess_merge(pse_code, results, min_date, max_date):
-    # min_date = datetime.datetime.strptime(min_date, format('%Y%m%d'))
-    # min_date = datetime.datetime.strftime(min_date, format('%Y%m%d'))
 
     old_results = pd.read_csv(base_path + 'output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0, parse_dates=['index'])
     new_results = pd.concat([old_results, results])
@@ -622,7 +616,6 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
         df_al_filtered.loc[rows_selection, 'Qty_Regulated_sum'] = row['Unit'].sum()
         df_al_filtered.loc[rows_selection, 'Cost_Reg_avg'] = row['Cost_Reg'].sum()
 
-    # if df_al_filtered['Qty_Sold_sum_al'].sum() != 0 and df_al_filtered[df_al_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:
     df_al_filtered.drop(['Unit', 'Preço de custo', 'P. V. P', 'regularization_flag'], axis=1, inplace=True)
 
     df_al_filtered = df_al_filtered.drop_duplicates(subset=['Movement_Date'])
@@ -652,7 +645,6 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
         last_stock_qty_al = 0
 
     reg_value = df_al_filtered['Qty_Regulated_sum'].sum()
-    # delta_stock = stock_end - stock_start
 
     if not reg_value:
         reg_value = 0
@@ -724,7 +716,6 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
         result.ix[0, 'Stock_Qty_al'] = last_stock_qty_al
     result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
 
-    # result.to_csv(base_path + 'output/{}_stock_evolution.csv'.format(selected_part[0]))
     return result, stock_evolution_correct_flag, offset, last_stock_qty_al
 
 

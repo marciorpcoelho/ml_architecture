@@ -203,39 +203,6 @@ def sql_join(df, dsn, database, view, options_file):
         inner join [scrcgaisqld1\dev01].BI_MLG.dbo.SDK_Fact_BI_PA_ServiceDesk as b on a.request_num=b.request_num '''.replace('\'', '\'\'')
     cursor.execute(query)
 
-    # for index, row in df.iterrows():
-    # cursor.execute(
-    #     'UPDATE ' + view + ' '
-    #     'SET ' + view + '.Label = ' + df['Label'] + ', '
-    #            + view + '.Language = ' + df['Language'] + ', '
-    #            + view + '.StemmedDescription = ' + df['StemmedDescription']
-    #     + ' FROM ' + view
-    #     + ' inner join ' + df['Request_Num'] + ' on ' + df['Request_Num'] + '=' + view + '.Request_Num'
-    # )
-
-    # cursor.execute(
-    #     'UPDATE ' + view + ' '
-    #     'SET ' + view + '.Label = ? , '
-    #            + view + '.Language = ? , '
-    #            + view + '.StemmedDescription = ? '
-    #     + ' FROM ' + view
-    #     + ' inner join ' + df['Request_Num'] + ' on ' + df['Request_Num'] + '=' + view + '.Request_Num'
-    # )
-
-    # for index, row in df.iterrows():
-    #     # print(row['Label'], row['Language'], row['StemmedDescription'])
-    #
-    #     try:
-    #         # query = 'UPDATE ' + view + ' SET ' + view + '.Label = ' + '\'' + row['Label'] + '\'' + ', ' + view + '.Language = ' + '\'' + row['Language'] + '\'' + ', ' + view + '.StemmedDescription = ' + '\'' + row['StemmedDescription'].replace('\'', '\'\'') + '\'' + ' FROM ' + view + ' WHERE ' + view + '.Request_Num = ' + '\'' + row['Request_Num'] + '\''
-    #         query = '''UPDATE {} SET {}.Label = '{}', {}.Language = '{}', {}.StemmedDescription = '{}' FROM {} WHERE {}.Request_Num = '{}' '''.format(view, view, row['Label'], view, row['Language'], view, row['StemmedDescription'].replace('\'', '\'\''), view, view, row['Request_Num'])
-    #
-    #         cursor.execute(query)
-    #     except pyodbc.ProgrammingError:
-    #         print(row['Label'], row['Language'], row['StemmedDescription'], '\n', query)
-    #         raise pyodbc.ProgrammingError
-
-        # print(query)
-
     print('Duração: {:.2f} segundos.'.format(time.time() - start))
 
     cnxn.commit()
@@ -247,9 +214,6 @@ def sql_join(df, dsn, database, view, options_file):
 
 def sql_string_preparation_v2(values_list):
     columns_string = '[%s]' % "], [".join(values_list)
-
-    # values_string = ['?'] * len(values_list)
-    # values_string = 'values (%s)' % ', '.join(values_string)
 
     return columns_string
 
@@ -329,7 +293,6 @@ def sql_second_highest_date_checkup(dsn, options_file, database, view, date_colu
 
 # Uploads parameter's mappings to SQL
 def sql_mapping_upload(dsn, options_file, dictionaries):
-    # dictionaries = [options_file.jantes_dict, options_file.sales_place_dict, options_file.sales_place_dict_v2, options_file.model_dict, options_file.versao_dict, options_file.tipo_int_dict, options_file.color_ext_dict, options_file.color_int_dict, options_file.motor_dict_v2]
     parameters_name = ['Rims_Size', 'Sales_Place', 'Sales_Place_v2', 'Model', 'Version', 'Interior_Type', 'Color_Ext', 'Color_Int', 'Motor_Desc']
     cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, 'BI_MLG')
     cursor = cnxn.cursor()

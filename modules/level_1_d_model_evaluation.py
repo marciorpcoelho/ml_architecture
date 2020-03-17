@@ -365,7 +365,6 @@ def heatmap_correlation_function(df, target_col, heatmap_name):
     df = df[[x for x in list(df) if x != target_col] + [target_col]]  # Changes the order of the df columns, so its easier to identify the target column in the heat map
     corr = df.corr()
 
-    # sns.heatmap(corr, xticklabels=corr.columns, yticklabels=corr.columns, annot=True)
     sns.heatmap(corr, xticklabels=corr.columns, yticklabels=corr.columns)
     save_fig(heatmap_name)
     # plt.show()
@@ -436,7 +435,6 @@ def model_choice_upload(flag, name, value, options_file):
         df_model_result['Metric'] = [options_file.metric]
         df_model_result['Value'] = [value]
     df_model_result['Message'] = [message]
-
     level_1_e_deployment.sql_inject(df_model_result, options_file.DSN_MLG, level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['model_choices'], options_file, list(df_model_result), check_date=1)
 
     return message
