@@ -6,7 +6,7 @@ import os
 import sys
 import time
 from traceback import format_exc
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment

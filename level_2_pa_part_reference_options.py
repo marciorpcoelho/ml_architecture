@@ -22,7 +22,7 @@ sql_info = {
     'database_BI_CA': 'BI_CA',
     'database_BI_GSC': 'BI_GSC',
     'database_final': 'BI_MLG',
-    }
+}
 
 
 current_stock_query = '''SELECT DISTINCT Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW
@@ -76,18 +76,24 @@ abbreviations_dict = {
 
 }
 
-dms_codes_per_franchise = '''
+brand_codes_per_franchise = '''
     select DISTINCT Client_Id, Franchise_Code_DMS as Original_Value
     from {}.dbo.PSE_MapDMS_Franchises WITH (NOLOCK)
     where Franchise like '%{}%'
 '''
 
 master_files_to_convert = {
-    'dbs/Master_Files/Fiat_DiffusioneTariffaCJD': [[0, 13, 37, 71, 91, 109, 120, 123, 129], ['Part_Ref', 'Part_Ref#2', 'Part_Ref#3', 'Part_Desc_PT', 'Part_Desc_EN', 'Cod#2', 'Tag#1', 'Cod#3'], 0, 0],
-    'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213': [[0, 26, 34, 52, 67, 82, 86, 88, 136, 161, 178, 215, 227, 245, 271, 295, 319, 343, 367, 445, 447, 515, 605, 637, 651], ['Cod#1', 'Cod#2', 'Part_Ref', 'Part_Desc_PT', 'Part_Desc_FR', 'Tag#1', 'Tag#2', 'Cod#4', 'Cod#5', 'Cod#6', 'Cod#7', 'Cod#8', 'Cod#9', 'Cod#10', 'Cod#11', 'Cod#12', 'Cod#13', 'Cod#14', 'Cod#15', 'Cod#16', 'Cod#17', 'Cod#18', 'Part_Desc_PT#2', 'Cod#19'], 0, 0],
-    'dbs/Master_Files/SEAT_I6459_Completa_200301_PO': [[3, 23, 46, 104, 108, 121, 125, 134], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#1', 'Tag#2', 'Currency', 'Cod#3'], 1, 1],
-    'dbs/Master_Files/VAG_TPCNCAVW': [[0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
-    'dbs/Master_Files/VAG_TPCNCSK': [[0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
+    # 'dbs/Master_Files/Fiat_DiffusioneTariffaCJD': [0, [0, 13, 37, 71, 91, 109, 120, 123, 129], ['Part_Ref', 'Part_Ref#2', 'Part_Ref#3', 'Part_Desc_PT', 'Part_Desc_EN', 'Cod#2', 'Tag#1', 'Cod#3'], 0, 0],
+    # 'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213': [0, [0, 26, 34, 52, 67, 82, 86, 88, 136, 161, 178, 215, 227, 245, 271, 295, 319, 343, 367, 445, 447, 515, 605, 637, 651], ['Cod#1', 'Cod#2', 'Part_Ref', 'Part_Desc_PT', 'Part_Desc_FR', 'Tag#1', 'Tag#2', 'Cod#4', 'Cod#5', 'Cod#6', 'Cod#7', 'Cod#8', 'Cod#9', 'Cod#10', 'Cod#11', 'Cod#12', 'Cod#13', 'Cod#14', 'Cod#15', 'Cod#16', 'Cod#17', 'Cod#18', 'Part_Desc_PT#2', 'Cod#19'], 0, 0],
+    # 'dbs/Master_Files/SEAT_I6459_Completa_200301_PO': [0, [3, 23, 46, 104, 108, 121, 125, 134], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#1', 'Tag#2', 'Currency', 'Cod#3'], 1, 1],
+    # 'dbs/Master_Files/VAG_TPCNCAVW': [0, [0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
+    # 'dbs/Master_Files/VAG_TPCNCSK': [0, [0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
+    # 'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
+    # 'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
+    # 'dbs/Master_Files/BMW_Motos_RE_TARIF_BMM_20200318111608': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
+    # 'dbs/Master_Files/Hyundai_RE_TARIF_HYN_20200318142512': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
+    # 'dbs/Master_Files/Honda_RE_TARIF_HON_20200318122510': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
+    'dbs/Master_Files/Opel_RE_TARIF_OPL_20200318145935': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
 }
 
 master_files_converted = [
@@ -95,77 +101,31 @@ master_files_converted = [
     'dbs/Master_Files/Nissan_tarifa.csv',  # The second Nissan file is the same as this (same references) but with one less column: Discount Code
     'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv',
     'dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv',
-    'dbs/Master_Files/VAG.csv',  # ToDo: need to handle this one later
+    'dbs/Master_Files/VAG_TPCNCAVW.csv',
+    # 'dbs/Master_Files/VAG_TPCNCSK.csv',
+    # 'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652.csv',
+    # 'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912.csv',
+    # 'dbs/Master_Files/Ford_RE_TARIF_FOR_20200318114459.csv',
+    # 'dbs/Master_Files/Hyundai_RE_TARIF_HYN_20200318142512.csv',
+    # 'dbs/Master_Files/Honda_RE_TARIF_HON_20200318122510.csv',
 ]
+
 master_files_and_brand = {
     'dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv': ['fiat'],
     'dbs/Master_Files/Nissan_tarifa.csv': ['nissan'],
     'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv': ['peugeot', 'citroen', 'opel', 'chevrolet'],
     'dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv': ['seat'],
-    'dbs/Master_Files/VAG.csv': ['volkswagen'],  # ToDo: need to handle this one later
+    # 'dbs/Master_Files/VAG.csv': ['volkswagen'],
+    # 'dbs/Master_Files/VAG_TPCNCAVW.csv': ['audi', 'volkswagen'],
+    'dbs/Master_Files/VAG_TPCNCAVW.csv': ['volkswagen'],
+    'dbs/Master_Files/VAG_TPCNCSK.csv': ['skoda'],
+    'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652.csv': ['skoda'],
+    'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912.csv': ['audi', 'volkswagen'],
+    'dbs/Master_Files/Ford_RE_TARIF_FOR_20200318114459.csv': ['ford'],
+    'dbs/Master_Files/Hyundai_RE_TARIF_HYN_20200318142512.csv': ['hyundai'],
+    'dbs/Master_Files/Honda_RE_TARIF_HON_20200318122510.csv': ['honda'],
+    'dbs/Master_Files/Opel_RE_TARIF_OPL_20200318145935.csv': ['opel'],
 }
-
-master_files_afr_dict = {
-    'FIA': ['dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv'],
-    'NIS': ['dbs/Master_Files/Nissan_tarifa.csv'],
-    'CHV': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'SEA': ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv'],
-    'VAG': ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv', 'dbs/Master_Files/VAG_TPCNCAVW.csv', 'dbs/Master_Files/VAG_TPCNCSK.csv']
-}
-
-master_files_crp_dict = {
-    'CH': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'CHV': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'CI': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'CTR': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'FI': ['dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv'],
-    'FIA': ['dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv'],
-    'NI': ['dbs/Master_Files/Nissan_tarifa.csv'],
-    'NIS': ['dbs/Master_Files/Nissan_tarifa.csv'],
-    'OP': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'OPL': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'PEU': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'PG': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'SE': ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv'],
-    'SEA': ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv']
-}
-
-master_files_ca_dict = {
-    'CHV': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'FIA': ['dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv'],
-    'NIS': ['dbs/Master_Files/Nissan_tarifa.csv'],
-    'OPL': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'PEU': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'SEA': ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv'],
-}
-
-master_files_ibe_dict = {
-    'CHV': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'FIA': ['dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv'],
-    'G': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'N': ['dbs/Master_Files/Nissan_tarifa.csv'],
-    'NIS': ['dbs/Master_Files/Nissan_tarifa.csv'],
-    'O': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'OPL': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'P': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'PEU': ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-    'S': ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv'],
-    'SEA': ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv'],
-    'U': ['dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv'],
-}
-
-# master_files_dict = {
-#     8: ['dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv'],
-#     33: ['dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv'],
-#     22: ['dbs/Master_Files/Nissan_tarifa.csv'],
-#     4: ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-#     6: ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-#     23: ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-#     24: ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-#     50: ['dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv'],
-#     27: ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv'],
-#     31: ['dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv'],
-# }
 
 # 'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.txt
 # fields_1, fields_2, fields_3, fields_4, fields_5, fields_6 = [], [], [], [], [], []
@@ -310,34 +270,13 @@ master_files_ibe_dict = {
 regex_dict = {
     'zero_at_beginning': r'^0*',
     'dms_code_at_beginning': r'^{}',
+    'up_to_2_letters_at_end': r'[a-zA-Z]{1,2}?$',
     '2_letters_at_end': r'[a-zA-Z]{2}?$',
     'remove_hifen': r'-',
     'remove_last_dot': r'\.{1}$',
-    '001_beginning_code_removal': r'^001',
+    # '001_beginning_code_removal': r'^001',
+    'dms_code_or_condition': r'^' + '|^',
+    'space_removal': r'\s+',
+    'letters_in_the_beginning': r'^[a-zA-Z]{2}',
+    'single_V_in_the_beginning': r'^[V]',
 }
-
-# if current_stock_master_file_filtered.shape[0]:
-#     current_stock_master_file_filtered_refs = current_stock_master_file_filtered['Part_Ref'].unique()  # ToDo HERE
-#     print('Current Stock References Count: {}'.format(len(current_stock_master_file_filtered_refs)))
-#
-#     if master_file_brand == 'fiat':
-#         # Plain Match
-#         step_1_time = time.time()
-#         matched_refs_step_1 = [x for x in current_stock_master_file_filtered_refs if x in master_file_refs]
-#         print('Step 1 - Elapsed time: {:.3f}'.format(time.time() - step_1_time))
-#         print('Matched Step 1: {}'.format(len(matched_refs_step_1)))
-#
-#         if len(matched_refs_step_1) < len(current_stock_master_file_filtered_refs):
-#             regex = re.compile(regex_dict['zero_at_beginning'])
-#             step_2_time = time.time()
-#             master_file_refs_stem = [regex.sub('', x) for x in master_file_refs]
-#             matched_refs_step_2 = [x for x in current_stock_master_file_filtered_refs if regex.sub('', x) in master_file_refs_stem]
-#
-#             print('Step 2 - Elapsed time: {:.3f}'.format(time.time() - step_2_time))
-#             print('Matched Step 2: {}'.format(len(matched_refs_step_2)))
-#
-#             if len(matched_refs_step_2) + len(matched_refs_step_1) < len(current_stock_master_file_filtered_refs):
-#                 step_3_time = time.time()
-#                 matched_refs_step_3 = [x for x in current_stock_master_file_filtered_refs if '000' + x in master_file_refs]
-#                 print('Step 3 - Elapsed time: {:.3f}'.format(time.time() - step_3_time))
-#                 print('Matched Step 3: {}'.format(len(matched_refs_step_3)))

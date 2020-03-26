@@ -1,4 +1,5 @@
 import os
+import re
 import nltk
 import time
 import string
@@ -1685,4 +1686,91 @@ def boolean_replacement(df, boolean_cols):
             df[column] = pd.Series(np.where(df[column].values == "Sim", 1, 0), df.index)
 
     return df
+
+
+def master_file_processing(master_files_to_convert):
+    # PRJ-2610
+    # This function's goal is to take raw txt master files and identify each column and convert the file to csv;
+    # For each file, this function needs: column delimiter positions, column's names and 2 flags on whether to ignore the first/last row;
+
+    for master_file_loc in master_files_to_convert.keys():
+        master_file_info = master_files_to_convert[master_file_loc]
+        master_file_spiga_flag = master_file_info[0]
+        master_file_positions = master_file_info[1]
+        master_file_col_names = master_file_info[2]
+        header_flag = master_file_info[3]
+        tail_flag = master_file_info[4]
+
+        if not master_file_spiga_flag:
+            fields_dict = {key: [] for key in master_file_col_names}
+
+            f = open(master_file_loc + '.txt', 'r')
+
+            if header_flag:
+                lines = f.readlines()[1:]
+            elif tail_flag:
+                lines = f.readlines()[:-1]
+            elif header_flag and tail_flag:
+                lines = f.readlines()[1:-1]
+            else:
+                lines = f.readlines()
+
+            result = pd.DataFrame(columns=master_file_col_names)
+            for x in lines:
+
+                for initial_field_pos, end_field_pos, field_name in zip(master_file_positions[:-1], master_file_positions[1:], master_file_col_names):
+                    fields_dict[field_name].append(x[initial_field_pos:end_field_pos].strip())
+
+            for field_name in master_file_col_names:
+                result[field_name] = fields_dict[field_name]
+
+        elif master_file_spiga_flag:
+            result = pd.read_csv(master_file_loc, delimiter=';', header=None, delim_whitespace=False, usecols=[0, 1], names=master_file_col_names)
+
+        result.to_csv(master_file_loc + '.csv')
+
+    return
+
+
+def regex_string_replacement(string_to_process, regex_rule):
+    regex = re.compile(regex_rule)
+
+    processed_string = regex.sub('', string_to_process)
+
+    return processed_string
+
+
+def string_volkswagen_preparation(string_to_process):
+    # 807434 7L6 DB41 -> 7L6 807434 DB41  (MF -> Stock)
+    # 103801 06L -> 06L 103801 (MF -> Stock)
+    # 141153 02T F -> 02T 141153 F (MF -> Stock)
+
+    tag_ref = string_to_process[0:3]
+    main_ref = string_to_process[3:9]
+    leftover_ref = string_to_process[9:]
+
+    new_ref_reordered = main_ref + tag_ref + leftover_ref
+
+    return new_ref_reordered
+
+
+def brand_code_removal(string_to_process, dms_codes):
+    # PRJ 2610
+    dms_codes.sort(key=len, reverse=True)  # I need to sort by length, from larger to smaller to avoid substrings of other dms codes. Ex: FI and FIA. FIA has to be searched first, otherwise FI will remove only FI and leave an erroneous A;
+
+    regex_code = r'^' + '|^'.join(dms_codes)
+
+    processed_string = regex_string_replacement(string_to_process, regex_code)
+
+    return processed_string
+
+
+def duplicate_test(df, col):
+    duplicated_rows = df[df.duplicated(subset=col, keep=False)]
+
+    if duplicated_rows.shape[0]:
+        print('Possible duplicates found! Here\'s a sample: {}: \n'.format(duplicated_rows.shape[0]), duplicated_rows.sort_values(by=col).head(20))
+
+    return
+
 
