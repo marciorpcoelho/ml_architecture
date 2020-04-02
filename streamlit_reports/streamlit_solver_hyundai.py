@@ -118,16 +118,18 @@ def main():
                     st.write('Sugestões gravadas:', saved_suggestions_df.rename(columns=options_file.column_translate_dict))
 
                 sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size)
-                st.write('Sugestão Encomenda:', sel_configurations[['Quantity'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
+                sel_configurations.rename(index=str, columns={'Quantity': 'Sug.Encomenda'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
+                st.write('Sugestão Encomenda:', sel_configurations[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
                          .rename(columns=options_file.column_translate_dict)
-                         .style.format({'Score (€)': '{:.2f}'})
+                         .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}'})
                          )
+                sel_configurations.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
 
                 if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
                     session_state.save_button_pressed_flag = 1
 
                     if tuple(client_lvl_values) in saved_suggestions_dict.keys() and sel_model in saved_suggestions_dict[tuple(client_lvl_values)] or session_state.overwrite_button_pressed == 1:
-                        st.write('Já existe Sugestão de Encomenda para o Modelo {} e '.format(sel_model) + ' '.join(['& {} = {}'.format(x, y) for x, y in zip(client_lvl_cols_renamed, client_lvl_values) if y != '-']) + '.')
+                        st.write('Já existe Sugestão de Encomenda para o Modelo {}'.format(sel_model) + ' '.join([' e {} - {}'.format(x, y) for x, y in zip(client_lvl_cols_renamed, client_lvl_values) if y != '-']) + '.')
                         st.write('Pretende substituir pela atual sugestão?')
                         session_state.overwrite_button_pressed = 1
                         if st.button('Sim'):
@@ -274,7 +276,7 @@ def solution_saving(df, sel_model, client_lvl_cols_in, client_lvl_sels):
     level_1_e_deployment.sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], options_file,
                                     configuration_parameters + client_lvl_cols_in + ['Quantity', 'Average_Score_Euros', 'ML_VehicleData_Code'], check_date=1)
 
-    st.write('Sugestão Gravada')
+    st.write('Sugestão gravada com sucesso.')
     return
 
 

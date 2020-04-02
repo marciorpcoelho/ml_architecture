@@ -65,14 +65,60 @@ stop_words = {
 }
 
 abbreviations_dict = {
-    'frente': ['fr', 'frt'],
-    'traseiro': ['tr'],
-    'esquerdo': ['esq'],
-    'direito': ['drt'],
-    'lh': ['left handed'],  # BI_AFR
-    'rh': ['right handed'],  # BI_AFR
-    'travao': ['trav'],  # BI_AFR
-    'jg': ['jogo'],  # BI_AFR
+    'str': 'string',
+    'abbr': 'abbreviation',
+    'spd': 'speed',
+    'int': 'interior',
+    'inf': 'inferior',
+    'sup': 'superior',
+    'fr': 'frente',
+    'frt': 'frente',
+    'tr': 'tras',
+    'trs': 'tras',
+    'esq': 'esquerdo',
+    'drt': 'direito',
+    'dta': 'direito',
+    'dto': 'direito',
+    'lh': 'esquerdo',  # BI_AFR
+    'rh': 'direito',  # BI_AFR
+    'trav': 'travao',  # BI_AFR
+    'jg': 'jogo',  # BI_AFR
+    'j': 'jogo',
+    'ign': 'ignicao',
+    'c': 'com',
+    'co': 'com',
+    'cx': 'caixa',
+    'filtr': 'filtro',
+    'alar': 'alarme',
+    # 'r': 'pneu'  # Cases when the description is like 155/65R14 or 215/55R17
+    'paraf': 'parafuso',
+    'casq': 'casquilho',
+    'casqu': 'casquilho',
+    'conj': 'conjunto',
+    'anil': 'anilha',
+    'eleo': 'oleo',  # I believe this is an enconding problem
+    'direc': 'direcao',
+    'bris': 'brisas',
+    'abacadeira': 'abracadeira',
+    'unid': 'unidade',
+    'bluetoo': 'bluetooth',
+    'blueto': 'bluetooth',
+    'ext': 'exterior',
+    'ole': 'oleo',
+    'cil': 'cilindro',
+    'transmiss': 'transmissão',
+    'pain': 'painel',
+    'crom': 'cromado',
+    'choq': 'choque',
+    'susp': 'suspensao',
+    'veloc': 'velocidade',
+    'amort': 'amortecedor',
+    'indiv': 'individual'
+
+
+
+
+
 
 }
 
@@ -83,17 +129,17 @@ brand_codes_per_franchise = '''
 '''
 
 master_files_to_convert = {
-    # 'dbs/Master_Files/Fiat_DiffusioneTariffaCJD': [0, [0, 13, 37, 71, 91, 109, 120, 123, 129], ['Part_Ref', 'Part_Ref#2', 'Part_Ref#3', 'Part_Desc_PT', 'Part_Desc_EN', 'Cod#2', 'Tag#1', 'Cod#3'], 0, 0],
-    # 'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213': [0, [0, 26, 34, 52, 67, 82, 86, 88, 136, 161, 178, 215, 227, 245, 271, 295, 319, 343, 367, 445, 447, 515, 605, 637, 651], ['Cod#1', 'Cod#2', 'Part_Ref', 'Part_Desc_PT', 'Part_Desc_FR', 'Tag#1', 'Tag#2', 'Cod#4', 'Cod#5', 'Cod#6', 'Cod#7', 'Cod#8', 'Cod#9', 'Cod#10', 'Cod#11', 'Cod#12', 'Cod#13', 'Cod#14', 'Cod#15', 'Cod#16', 'Cod#17', 'Cod#18', 'Part_Desc_PT#2', 'Cod#19'], 0, 0],
-    # 'dbs/Master_Files/SEAT_I6459_Completa_200301_PO': [0, [3, 23, 46, 104, 108, 121, 125, 134], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#1', 'Tag#2', 'Currency', 'Cod#3'], 1, 1],
-    # 'dbs/Master_Files/VAG_TPCNCAVW': [0, [0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
-    # 'dbs/Master_Files/VAG_TPCNCSK': [0, [0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
+    'dbs/Master_Files/Fiat_DiffusioneTariffaCJD': [0, [0, 13, 37, 71, 91, 109, 120, 123, 129], ['Part_Ref', 'Part_Ref#2', 'Part_Ref#3', 'Part_Desc_PT', 'Part_Desc_EN', 'Cod#2', 'Tag#1', 'Cod#3'], 0, 0],
+    'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213': [0, [0, 26, 34, 52, 67, 82, 86, 88, 136, 161, 178, 215, 227, 245, 271, 295, 319, 343, 367, 445, 447, 515, 605, 637, 651], ['Cod#1', 'Cod#2', 'Part_Ref', 'Part_Desc_PT', 'Part_Desc_FR', 'Tag#1', 'Tag#2', 'Cod#4', 'Cod#5', 'Cod#6', 'Cod#7', 'Cod#8', 'Cod#9', 'Cod#10', 'Cod#11', 'Cod#12', 'Cod#13', 'Cod#14', 'Cod#15', 'Cod#16', 'Cod#17', 'Cod#18', 'Part_Desc_PT#2', 'Cod#19'], 0, 0],
+    'dbs/Master_Files/SEAT_I6459_Completa_200301_PO': [0, [3, 23, 46, 104, 108, 121, 125, 134], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#1', 'Tag#2', 'Currency', 'Cod#3'], 1, 1],
+    'dbs/Master_Files/VAG_TPCNCAVW': [0, [0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
+    'dbs/Master_Files/VAG_TPCNCSK': [0, [0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
     # 'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
     # 'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
     # 'dbs/Master_Files/BMW_Motos_RE_TARIF_BMM_20200318111608': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
     # 'dbs/Master_Files/Hyundai_RE_TARIF_HYN_20200318142512': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
     # 'dbs/Master_Files/Honda_RE_TARIF_HON_20200318122510': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
-    'dbs/Master_Files/Opel_RE_TARIF_OPL_20200318145935': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
+    # 'dbs/Master_Files/Opel_RE_TARIF_OPL_20200318145935': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
 }
 
 master_files_converted = [
@@ -102,7 +148,7 @@ master_files_converted = [
     'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv',
     'dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv',
     'dbs/Master_Files/VAG_TPCNCAVW.csv',
-    # 'dbs/Master_Files/VAG_TPCNCSK.csv',
+    'dbs/Master_Files/VAG_TPCNCSK.csv',
     # 'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652.csv',
     # 'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912.csv',
     # 'dbs/Master_Files/Ford_RE_TARIF_FOR_20200318114459.csv',

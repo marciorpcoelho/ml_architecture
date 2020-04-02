@@ -22,7 +22,7 @@ from sklearn.preprocessing import MinMaxScaler, RobustScaler
 import modules.level_0_performance_report as level_0_performance_report
 import modules.level_1_e_deployment as level_1_e_deployment
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
 
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -1007,14 +1007,18 @@ def string_to_list(df, column):
     return list(np.unique(strings))
 
 
-def unidecode_function(strings_list):
+def unidecode_function(strings):
     decoded_strings = []
 
-    for single_string in strings_list:
-        new_string = unidecode.unidecode(single_string)
-        decoded_strings.append(new_string)
-
-    return decoded_strings
+    if type(strings) == list:
+        for single_string in strings:
+            new_string = unidecode.unidecode(single_string)
+            decoded_strings.append(new_string)
+        return decoded_strings
+    else:
+        decoded_string = unidecode.unidecode(strings)
+        decoded_string_step_2 = string_punctuation_removal(decoded_string)
+        return decoded_string_step_2
 
 
 def df_join_function(df_a, df_b, **kwargs):
@@ -1079,6 +1083,7 @@ def text_preprocess(df, unique_clients_decoded, options_file):
 
         description = string_digit_removal(description)
         description = string_punctuation_removal(description)
+        description = unidecode_function(description)
 
         try:
             tokenized = nltk.tokenize.word_tokenize(description)
@@ -1103,7 +1108,6 @@ def text_preprocess(df, unique_clients_decoded, options_file):
     return df
 
 
-# df['Part_Desc'] = df['Part_Desc'].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform],))
 def stop_words_removal(string_to_process, stop_words_list):
     new_string = ' '.join([x for x in nltk.tokenize.word_tokenize(string_to_process) if x not in stop_words_list])
 
@@ -1111,16 +1115,17 @@ def stop_words_removal(string_to_process, stop_words_list):
 
 
 def abbreviations_correction(string_to_correct, abbreviations_dict):
-    new_string = ''
+    tokenized_string_to_correct = nltk.tokenize.word_tokenize(string_to_correct)
 
-    return new_string
+    string_corrected = ' '.join([abbreviations_dict[x] if x in abbreviations_dict.keys() else x for x in tokenized_string_to_correct])
+
+    return string_corrected
 
 
 def string_punctuation_removal(string_to_process):
     punctuation_remover = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
 
     processed_string = str(string_to_process).translate(punctuation_remover)
-    processed_string = unidecode.unidecode(processed_string)
 
     return processed_string.strip()
 
@@ -1130,7 +1135,6 @@ def string_digit_removal(string_to_process):
     digit_remover = str.maketrans('', '', string.digits)
 
     processed_string = str(string_to_process).translate(digit_remover)
-    processed_string = unidecode.unidecode(processed_string)
 
     return processed_string
 
@@ -1772,5 +1776,15 @@ def duplicate_test(df, col):
         print('Possible duplicates found! Here\'s a sample: {}: \n'.format(duplicated_rows.shape[0]), duplicated_rows.sort_values(by=col).head(20))
 
     return
+
+
+def lemmatisation(x, lemmatizer):
+    return ' '.join([lemmatizer.lemmatize(w) for w in nltk.word_tokenize(x)])
+
+
+def stemming(x, stemmer):
+    return ' '.join([stemmer.stem(w) for w in nltk.word_tokenize(x)])
+
+
 
 

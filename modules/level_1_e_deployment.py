@@ -30,14 +30,14 @@ def odbc_connection_creation(dsn, uid, pwd, db):
     return odbc_cnxn
 
 
-def save_csv(dfs, names):
+def save_csv(dfs, names, **kwargs):
     # Checks for file existence and deletes it if exists, then saves it
 
     for df, name in zip(dfs, names):
         name += '.csv'
         if os.path.isfile(name):
             os.remove(name)
-        df.to_csv(name)
+        df.to_csv(name, **kwargs)
 
     return
 
