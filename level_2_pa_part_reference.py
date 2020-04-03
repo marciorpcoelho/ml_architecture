@@ -21,19 +21,18 @@ from modules.level_1_e_deployment import save_csv, time_tags
 from scipy.sparse import coo_matrix
 import matplotlib.pyplot as plt
 # nltk.download('stopwords')
-# nltk.download('rslp')
+# nltk.download('rslp')  # RSLP Portuguese stemmer
 
 local_flag = 1
 master_file_processing_flag = 0
-# current_platforms = ['BI_AFR', 'BI_CRP', 'BI_IBE', 'BI_CA']
-current_platforms = ['BI_AFR']
+current_platforms = ['BI_AFR', 'BI_CRP', 'BI_IBE', 'BI_CA']
 sel_month = '202002'
 part_desc_col = 'Part_Desc_Merged'
 # 'Part_Desc' - Part Description from DW
 # 'Part_Desc_PT' - Part Description from Master Files when available, and from DW when not available
 # 'Part_Desc_Merge' - Part Description from Master Files merged with Part Description from the DW
 time_tag_date, _ = time_tags(format_date="%m_%Y")
-keyword_dict_per_parts_family = {}
+keywords_per_parts_family_dict = {}
 
 
 def main():
@@ -532,16 +531,12 @@ def data_processing(df_platforms_stock, dim_product_group, dim_clients):
             print('b - elapsed time: {:.3f}'.format(time.time() - start_b))
 
             start_c = time.time()
-            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform] + nltk.corpus.stopwords.words('portuguese'),))  # Removal of Stop Words
+            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform] + options_file.stop_words['Parts_Specific_Common_Stop_Words'] + nltk.corpus.stopwords.words('portuguese'),))  # Removal of Stop Words
             print('c - elapsed time: {:.3f}'.format(time.time() - start_c))
 
             step_c_1 = time.time()
             stemmer_pt_2 = RSLPStemmer()
-            # df_platform_current_stock[part_desc_col + '_2'] = df_platform_current_stock[part_desc_col].apply(stemming, args=(stemmer_pt_2,))
-            # df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stemming, args=(stemmer_pt_2,))
-            # df_platform_current_stock['Comparison'] = np.where(df_platform_current_stock[part_desc_col] != df_platform_current_stock[part_desc_col + '_2'], 1, 0)
-            # print(df_platform_current_stock.loc[df_platform_current_stock['Comparison'] == 1, :].shape)
-            # print(df_platform_current_stock.loc[df_platform_current_stock['Comparison'] == 1, :].head(10))
+            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stemming, args=(stemmer_pt_2,))  # Stems each word using a Portuguese Stemmer
             print('c_1 - elapsed time: {:.3f}'.format(time.time() - step_c_1))
 
             start_d = time.time()
@@ -555,46 +550,79 @@ def data_processing(df_platforms_stock, dim_product_group, dim_clients):
             print('total time: {:.3f}'.format(time.time() - start_a))
             save_csv([df_current_stock_unique], ['dbs/df_{}_current_stock_unique_{}_section_B_step_2'.format(platform, sel_month)], index=False)
         finally:
-            keyword_selection(df_current_stock_unique)
+            keyword_selection(platform, df_current_stock_unique)
+
+    # print('Keyword Dictionary: \n', keyword_dict_per_parts_family)
+    # print('Keyword Dictionary Number of Keys', len(list(keyword_dict_per_parts_family.keys())))
+    pd.DataFrame.from_dict(keywords_per_parts_family_dict, orient='index').to_csv('dbs/keywords_per_parts_family.csv')
+
+    for key in keywords_per_parts_family_dict.keys():
+        print('Product Group DW: {}, Number of Words: {}, Words: {}'.format(key, len(keywords_per_parts_family_dict[key]), keywords_per_parts_family_dict[key]))
 
 
-def keyword_selection(df):
+def keyword_selection(platform, df):
     start_k_1 = time.time()
 
-    # top_freq = pd.Series(' '.join(df[part_desc_col]).split()).value_counts()[:20]
-    # bottom_freq = pd.Series(' '.join(df[part_desc_col]).split()).value_counts()[-20:]
-    # print(top_freq)
-    # print(bottom_freq)
+    df_grouped_product_group_dw = df.loc[df['Product_Group_DW'] != 1, :].groupby('Product_Group_DW')
+    for key, group in df_grouped_product_group_dw:
+        unique_parts_count = group['Part_Ref'].nunique()
+        unique_descs_count = group[part_desc_col].nunique()
+        if platform == 'BI_CA' and key == 49:
+            print(group.head(10))
+            print(group.tail(10))
+        if unique_descs_count > 1:
+            # print('Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
+            group_train = group.sample(frac=0.8, random_state=42)
 
-    descriptions = list(df[part_desc_col])
-    # descriptions_all = [' '.join(df[part_desc_col])]
+            descriptions = list(group_train[part_desc_col])
 
-    # most_common_words(descriptions)
-    # most_common_bigrams(descriptions)
-    # most_common_trigrams(descriptions)
+            top_words = most_common_words(descriptions)
+            # most_common_bigrams(descriptions)
+            # most_common_trigrams(descriptions)
 
-    cv = CountVectorizer(max_df=0.8, max_features=10000, ngram_range=(1, 3))
-    # x = cv.fit_transform(descriptions)
-    x = cv.fit_transform(descriptions)
+            cv = CountVectorizer(min_df=0.05, max_df=0.8, max_features=10000, ngram_range=(1, 1))
+            try:
+                x = cv.fit_transform(descriptions)
 
-    tfidf_transformer = TfidfTransformer(smooth_idf=True, use_idf=True)
-    tfidf_transformer.fit(x)
-    feature_names = cv.get_feature_names()
+                tfidf_transformer = TfidfTransformer(smooth_idf=True, use_idf=True)
+                tfidf_transformer.fit(x)
+                feature_names = cv.get_feature_names()
 
-    tf_idf_vector = tfidf_transformer.transform(cv.transform(descriptions))
+                tf_idf_vector = tfidf_transformer.transform(cv.transform(descriptions))
 
-    sorted_items = sort_coo(tf_idf_vector.tocoo())
-    # extract only the top n; n here is 10
-    keywords = extract_topn_from_vector(feature_names, sorted_items, 5)
+                sorted_items = sort_coo(tf_idf_vector.tocoo())
+                # extract only the top n; n here is 10
+                tf_idf_keywords = extract_topn_from_vector(feature_names, sorted_items, 5)
+                # print('TF-IDF Words: {}'.format(list(tf_idf_keywords.keys())))
 
-    # now print the results
-    print("\nAbstract:")
-    print(descriptions)
-    print("\nKeywords:")
-    for k in keywords:
-        print(k, keywords[k])
+                # now print the results
+                # print("\nAbstract:")
+                # print(descriptions)
+                # print("\nTF-IDF Keywords:")
+                # for k in tf_idf_keywords:
+                #     print(k, tf_idf_keywords[k])
+                common_and_tf_idf_words = list(set(list(tf_idf_keywords.keys()) + top_words))
+                # print('Top Common Words + TF-IDF Words: {}'.format(common_and_tf_idf_words))
+                keyword_dict_creation(key, common_and_tf_idf_words)
+
+            except ValueError:
+                print('TF-IDF Error - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
+                pass
+
+        else:
+            print('Not enough information - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
+            pass
 
     print('k_1 - elapsed time: {:.3f}'.format(time.time() - start_k_1))
+
+    return
+
+
+def keyword_dict_creation(product_group, keywords):
+    try:
+        keywords_per_parts_family_dict[product_group] = keywords_per_parts_family_dict[product_group] + keywords
+    except KeyError:
+        keywords_per_parts_family_dict[product_group] = keywords
 
     return
 
@@ -630,14 +658,18 @@ def extract_topn_from_vector(feature_names, sorted_items, topn=10):
 
 def most_common_words(descriptions):
     top_words = get_top_n_words(descriptions, n=20)
-    top_df = pd.DataFrame(top_words)
-    top_df.columns = ["Word", "Freq"]
+    top_words = [x[0] for x in top_words]
 
-    sns.set(rc={'figure.figsize': (13, 8)})
-    g = sns.barplot(x="Word", y="Freq", data=top_df)
-    g.set_xticklabels(g.get_xticklabels(), rotation=30)
+    # top_df = pd.DataFrame(top_words)
+    # top_df.columns = ["Word", "Freq"]
+    # print(top_words)
 
+    # sns.set(rc={'figure.figsize': (13, 8)})
+    # g = sns.barplot(x="Word", y="Freq", data=top_df)
+    # g.set_xticklabels(g.get_xticklabels(), rotation=30)
     # plt.show()
+
+    return top_words
 
 
 def most_common_bigrams(descriptions):

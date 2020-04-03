@@ -62,6 +62,7 @@ stop_words = {
     'BI_CRP': [],
     'BI_IBE': ['del', 'con'],
     'BI_CA': [],
+    'Parts_Specific_Common_Stop_Words': ['esquerdo', 'direito', 'frente', 'tras', 'kit', 'jogo']  # Added 'esquerdo', 'direito', 'frente', 'tras' because they appear in too many Product Groups and provide nearly no information;
 }
 
 abbreviations_dict = {
@@ -73,15 +74,19 @@ abbreviations_dict = {
     'sup': 'superior',
     'fr': 'frente',
     'frt': 'frente',
+    'fte': 'frente',
     'tr': 'tras',
     'trs': 'tras',
     'esq': 'esquerdo',
+    'esqu': 'esquerdo',
+    'esquerd': 'esquerdo',
     'drt': 'direito',
     'dta': 'direito',
     'dto': 'direito',
     'lh': 'esquerdo',  # BI_AFR
     'rh': 'direito',  # BI_AFR
     'trav': 'travao',  # BI_AFR
+    'trava': 'travao',
     'jg': 'jogo',  # BI_AFR
     'j': 'jogo',
     'ign': 'ignicao',
@@ -113,13 +118,9 @@ abbreviations_dict = {
     'susp': 'suspensao',
     'veloc': 'velocidade',
     'amort': 'amortecedor',
-    'indiv': 'individual'
-
-
-
-
-
-
+    'indiv': 'individual',
+    'embr': 'embraiagem',
+    'amortecedo': 'amortecedor',
 }
 
 brand_codes_per_franchise = '''
