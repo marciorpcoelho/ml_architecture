@@ -95,9 +95,9 @@ def main():
             if parameter != '-':
                 sel_parameter_max_number = data_filtered[parameter].nunique()
                 try:
-                    sel_parameter_value = st.sidebar.number_input('Por favor escolha o número mínimo de diferentes {} a escolher (valor mínimo é {} e o valor máximo é {})'.format(parameter, 1, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number - 1)
+                    sel_parameter_value = st.sidebar.number_input('Por favor escolha o número mínimo de diferentes {} a escolher (valor mínimo é {} e o valor máximo é {})'.format(options_file.column_translate_dict[parameter], 1, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number - 1)
                 except ValueError:
-                    sel_parameter_value = st.sidebar.number_input('O número de {} disponíveis values é de apenas {}'.format(parameter, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number)
+                    sel_parameter_value = st.sidebar.number_input('O número de {} disponíveis values é de apenas {}'.format(options_file.column_translate_dict[parameter], sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number)
 
                 parameters_values.append(sel_parameter_value)
 
