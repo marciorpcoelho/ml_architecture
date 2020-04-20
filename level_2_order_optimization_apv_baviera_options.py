@@ -28,6 +28,9 @@ sql_info = {
     'ta_table': 'PSE_Fact_BI_OrderOptimization_TA_Groups',
 }
 
+# Top 0I Parts: ['BM83.21.2.405.675', 'BM07.12.9.952.104', 'BM07.14.9.213.164', 'BM83.19.2.158.851', 'BM64.11.9.237.555']  # PSE_Code = 0I, Lisboa - Expo
+# Top 0B Parts: ['BM83.21.0.406.573', 'BM83.13.9.415.965', 'BM51.18.1.813.017', 'BM11.42.8.507.683', 'BM64.11.9.237.555']  # PSE_Code = 0B, Gaia
+
 sql_info_stock_dbs = {
     'AFR_SPG_01': 'DMS_AFR_01',
     'AFR_SPG_03': 'DMS_AFR_03',

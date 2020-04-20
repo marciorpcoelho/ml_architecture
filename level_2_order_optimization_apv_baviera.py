@@ -44,7 +44,7 @@ def data_acquisition(options_info, last_processed_date, current_date):
     print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
 
     log_record('Fim Secção A.', options_file.project_id)
-    # return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_history
+    performance_info_append(time.time(), 'Section_A_End')
     return df_sales, df_product_group_dw, df_history
 
 
@@ -58,6 +58,7 @@ def data_processing(df_sales, options_info):
     print('Elapsed time: {:.2f} seconds.'.format(time.time() - start_treatment))
 
     log_record('Fim Secção B.', options_file.project_id)
+    performance_info_append(time.time(), 'Section_B_End')
     return df_sales
 
 
@@ -65,11 +66,6 @@ def data_modelling(pse_code, df_sales, df_history, min_date, max_date, preproces
     performance_info_append(time.time(), 'Section_C_Start')
     log_record('Início Secção C', options_file.project_id)
     start = time.time()
-
-    if pse_code == '0I':
-        selected_parts = ['BM83.21.2.405.675', 'BM07.12.9.952.104', 'BM07.14.9.213.164', 'BM83.19.2.158.851', 'BM64.11.9.237.555']  # PSE_Code = 0I, Lisboa - Expo
-    if pse_code == '0B':
-        selected_parts = ['BM83.21.0.406.573', 'BM83.13.9.415.965', 'BM51.18.1.813.017', 'BM11.42.8.507.683', 'BM64.11.9.237.555']  # PSE_Code = 0B, Gaia
 
     selected_parts = part_ref_selection(df_sales, min_date, max_date, options_file.project_id)
     results = apv_photo_stock_treatment(df_sales, df_history, selected_parts, preprocessed_data_exists_flag, min_date, max_date, pse_code, project_id)
@@ -79,6 +75,7 @@ def data_modelling(pse_code, df_sales, df_history, min_date, max_date, preproces
     print('Elapsed time: {:.2f}'.format(time.time() - start))
 
     log_record('Fim Secção C', options_file.project_id)
+    performance_info_append(time.time(), 'Section_C_End')
     return df_solver, part_ref_matchup_df
 
 

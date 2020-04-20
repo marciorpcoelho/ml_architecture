@@ -432,7 +432,7 @@ def request_matches(label, keywords, rank, requests_list, dictionary):
 
 def part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=1):
     # Proj_ID = 2259
-    print('Selection of Part References...')
+    level_0_performance_report.log_record('Selection of Part References...', project_id)
 
     if last_year_flag:
         min_date = pd.to_datetime(max_date) - relativedelta(years=1)
@@ -452,7 +452,7 @@ def part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=1):
 
     [level_0_performance_report.log_record('{} has a weird size!'.format(x), project_id, flag=1) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
 
-    print('{} unique part_refs between {} and {}.'.format(len(all_unique_part_refs), min_date, max_date))
+    level_0_performance_report.log_record('{} unique part_refs between {} and {}.'.format(len(all_unique_part_refs), min_date, max_date), project_id)
 
     return all_unique_part_refs
 
