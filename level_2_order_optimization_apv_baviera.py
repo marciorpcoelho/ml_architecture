@@ -4,7 +4,7 @@ import logging
 from traceback import format_exc
 import level_2_order_optimization_apv_baviera_options as options_file
 from modules.level_1_a_data_acquisition import dw_data_retrieval, autoline_data_retrieval, read_csv
-from modules.level_1_b_data_processing import apv_dataset_treatment
+from modules.level_1_b_data_processing import apv_dataset_treatment, column_rename
 from modules.level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_selection, part_ref_ta_definition, apv_last_stock_calculation, apv_photo_stock_treatment, solver_dataset_preparation
 from modules.level_1_e_deployment import time_tags, sql_inject
 from modules.level_0_performance_report import log_record, project_dict, error_upload, performance_info, performance_info_append
@@ -70,7 +70,7 @@ def data_modelling(pse_code, df_sales, df_history, min_date, max_date, preproces
     selected_parts = part_ref_selection(df_sales, min_date, max_date, options_file.project_id)
     results = apv_photo_stock_treatment(df_sales, df_history, selected_parts, preprocessed_data_exists_flag, min_date, max_date, pse_code, project_id)
     part_ref_matchup_df = part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping], options_file.regex_dict, options_file.bmw_original_oil_words, options_file.project_id)  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
-    df_solver = solver_dataset_preparation(results, part_ref_matchup_df, options_file.group_goals['dtss_goal'], max_date)
+    df_solver = solver_dataset_preparation(results, part_ref_matchup_df, options_file.group_goals['dtss_goal'], pse_code, max_date)
 
     print('Elapsed time: {:.2f}'.format(time.time() - start))
 
@@ -82,6 +82,10 @@ def data_modelling(pse_code, df_sales, df_history, min_date, max_date, preproces
 def deployment(df_solver, df_part_ref_ta):
     performance_info_append(time.time(), 'Section_E_Start')
     log_record('Início Secção E...', options_file.project_id)
+
+    df_solver = column_rename(df_solver, list(options_file.column_sql_renaming.keys()), list(options_file.column_sql_renaming.values()))
+    df_solver = df_solver.dropna(subset=[options_file.column_sql_renaming['Group']])
+    df_part_ref_ta = column_rename(df_part_ref_ta, ['Group'], [options_file.column_sql_renaming['Group']])
 
     sql_inject(df_solver, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, columns=list(options_file.column_sql_renaming.values()), truncate=1, check_date=1)
     sql_inject(df_part_ref_ta, options_file.DSN, options_file.sql_info['database_final'], options_file.sql_info['ta_table'], options_file, columns=list(df_part_ref_ta), truncate=1, check_date=1)

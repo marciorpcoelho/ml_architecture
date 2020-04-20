@@ -852,14 +852,14 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
 
 
 def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mappings, regex_dict, bmw_original_oil_words, project_id):  # From PSE_Sales
-    level_0_performance_report.log_record('Fetching TA for each part_reference...', project_id)
-    start = time.time()
+    level_0_performance_report.log_record('A procurar TA para cada referência...', project_id)
+    # start = time.time()
 
     try:
         df_part_ref_ta_grouped = level_1_a_data_acquisition.read_csv(base_path + '/output/part_ref_ta_{}.csv'.format(max_date), index_col=0)
 
     except FileNotFoundError:
-        level_0_performance_report.log_record('Não foi encontrado o ficheiro part_ref_ta_{}. A processar...', project_id)
+        level_0_performance_report.log_record('Não foi encontrado o ficheiro part_ref_ta_{}. A processar...'.format(max_date), project_id)
         df_part_ref_ta = pd.DataFrame(columns={'Part_Ref', 'TA'})
         part_refs, part_ref_tas = [], []
 
@@ -931,7 +931,7 @@ def ta_selection(df, part_ref, regex_dict, bmw_original_oil_words, project_id, p
                 if len(part_ref_desc.values[0]) and any(x in part_ref_desc for x in bmw_original_oil_words):
                     part_ref_ta = '1'
             else:
-                level_0_performance_report.log_record('Problematic Part - {} and: \n{}'.format(part_ref, part_ref_desc), project_id, flag=1)
+                level_0_performance_report.log_record('Problematic Part - {} - {}'.format(part_ref, part_ref_desc), project_id, flag=1)
                 return 'NO_TA'
 
     elif not part_ref_unique_ta:
@@ -954,9 +954,10 @@ def load_model(model_name, project_id):
     return
 
 
-def solver_dataset_preparation(df_sales, df_part_refs_ta, dtss_goal, current_date):
-    start = time.time()
+def solver_dataset_preparation(df_sales, df_part_refs_ta, dtss_goal, pse_code, current_date):
+    # start = time.time()
 
+    df_sales['index'] = pd.to_datetime(df_sales['index'], format='%Y-%m-%d')
     df_sales['weekday'] = df_sales['index'].dt.dayofweek
 
     last_year_date = pd.to_datetime(current_date) - relativedelta(years=1)
@@ -978,9 +979,9 @@ def solver_dataset_preparation(df_sales, df_part_refs_ta, dtss_goal, current_dat
 
     df_solve = level_1_b_data_processing.df_join_function(df_solve, df_part_refs_ta[['Part_Ref', 'Group']].set_index('Part_Ref'), on='Part_Ref')  # Addition of the Groups Description
 
-    df_solve.to_csv('output/df_solve_0B_{}.csv'.format(current_date))
+    df_solve.to_csv('output/df_solver_{}_{}.csv'.format(pse_code, current_date))
 
-    print('Elapsed Time: {:.2f}'.format(time.time() - start))
+    # print('Elapsed Time: {:.2f}'.format(time.time() - start))
     return df_solve
 
 
