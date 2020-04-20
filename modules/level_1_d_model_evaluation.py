@@ -67,7 +67,7 @@ def performance_evaluation_classification(models, best_models, classes, running_
         try:
             feat_importance['Importance'] = best_models[model].feature_importances_
             feat_importance.sort_values(by='Importance', ascending=False, inplace=True)
-            feat_importance.to_csv(base_path + 'output/' + 'feature_importance_' + str(model) + '.csv')
+            feat_importance.to_csv(base_path + '/output/' + 'feature_importance_' + str(model) + '.csv')
         except AttributeError:
             pass
 
@@ -135,7 +135,7 @@ def performance_evaluation_classification(models, best_models, classes, running_
     metric_bar_plot(df_results_test, 'project_{}_test_dataset'.format(project_id))
 
     # performance_df = pd.concat([df_results_train, df_results_test])
-    # performance_df.to_csv(base_path + 'output/performance_hyundai_multiclass.csv')
+    # performance_df.to_csv(base_path + '/output/performance_hyundai_multiclass.csv')
 
     level_1_e_deployment.sql_inject(pd.concat([df_results_train, df_results_test]), level_0_performance_report.performance_sql_info['DSN'], level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
 
@@ -163,7 +163,7 @@ def performance_evaluation_regression(models, best_models, running_times, datase
         # try:
         #     feat_importance['Importance'] = best_models[model].feature_importances_
         #     feat_importance.sort_values(by='Importance', ascending=False, inplace=True)
-        #     feat_importance.to_csv(base_path + 'output/' + 'feature_importance_' + str(model) + '.csv')
+        #     feat_importance.to_csv(base_path + '/output/' + 'feature_importance_' + str(model) + '.csv')
         # except AttributeError:
         #     pass
 
@@ -496,7 +496,7 @@ def multiprocess_evaluation(args):
     df_model = add_new_columns_to_df(df, probabilities, predictions[model_name], datasets, configuration_parameters, oversample_check, project_id)
     df_model = df_decimal_places_rounding(df_model, {'proba_0': 2, 'proba_1': 2})
 
-    level_1_e_deployment.save_csv([df_model], [base_path + 'output/' + 'db_final_classification_' + model_name])
+    level_1_e_deployment.save_csv([df_model], [base_path + '/output/' + 'db_final_classification_' + model_name])
 
     level_0_performance_report.log_record('Modelo {} terminou @ {}'.format(level_0_performance_report.dict_models_name_conversion[model_name][0], time.strftime("%H:%M:%S @ %d/%m/%y")), project_id)
     return model_name, df_model
@@ -663,6 +663,6 @@ def data_grouping_by_locals_temp(df, configuration_parameters):
     df_grouped5 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_2'])
     df = df_grouped5.apply(additional_info_temp, ('_local_Fase2_level_2',))
 
-    df.to_csv(base_path + 'output/bmw_dataset.csv')
+    df.to_csv(base_path + '/output/bmw_dataset.csv')
 
     return 'N/A', df, df.shape[0]

@@ -114,7 +114,7 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
 
         print('Duração: {:.2f} segundos.'.format(time.time() - start))
     except (pyodbc.ProgrammingError, pyodbc.DataError) as error:
-        save_csv([df], [base_path + 'output/' + view + '_backup'])
+        save_csv([df], [base_path + '/output/' + view + '_backup'])
         level_0_performance_report.log_record('Erro ao fazer upload - {} - A gravar localmente...'.format(error), options_file.project_id, flag=1)
 
     cnxn.commit()
@@ -176,7 +176,7 @@ def sql_inject_v2(df, dsn, database, view, options_file, columns, truncate=0, ch
 
         print('Duração: {:.2f} segundos.'.format(time.time() - start))
     except (pyodbc.ProgrammingError, pyodbc.DataError) as error:
-        save_csv([df], [base_path + 'output/' + view + '_backup'])
+        save_csv([df], [base_path + '/output/' + view + '_backup'])
         level_0_performance_report.log_record('Erro ao fazer upload - {} - A gravar localmente...'.format(error), options_file.project_id, flag=1)
 
     cnxn.commit()

@@ -7,6 +7,7 @@ import operator
 import datetime
 import numpy as np
 import pandas as pd
+import datetime as dt
 from os import listdir
 from multiprocessing import Pool
 from sklearn.cluster import KMeans
@@ -147,7 +148,7 @@ def regression_model_training(models, train_x, train_x_non_ohe, train_y, train_y
         clf_best = clf.grid.best_estimator_
 
         df_cv = pd.DataFrame(clf.grid.cv_results_)
-        df_cv.to_csv(base_path + 'output/gridsearch_results_{}_{}.csv'.format(model, '18_10_19'))
+        df_cv.to_csv(base_path + '/output/gridsearch_results_{}_{}.csv'.format(model, '18_10_19'))
 
         best_models_pre_fit[model] = clf_best
         if model == 'lgb':
@@ -456,11 +457,11 @@ def part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=1):
     return all_unique_part_refs
 
 
-def apv_last_stock_calculation(min_date_str, max_date_str, pse_code):
+def apv_last_stock_calculation(min_date_str, current_date, pse_code, project_id):
     # Proj_ID = 2259
-    results_files = [datetime.datetime.strptime(f[17:25], format('%Y%m%d')) for f in listdir(base_path + 'output/') if f.startswith('results_merge_{}_'.format(pse_code))]
+    results_files = [datetime.datetime.strptime(f[17:25], format('%Y%m%d')) for f in listdir(base_path + '/output/') if f.startswith('results_merge_{}_'.format(pse_code))]
     min_date_datetime = datetime.datetime.strptime(min_date_str, format('%Y%m%d'))
-    max_date_datetime = datetime.datetime.strptime(max_date_str, format('%Y%m%d'))
+    max_date_datetime = datetime.datetime.strptime(current_date, format('%Y%m%d'))
     preprocessed_data_exists_flag = 0
 
     try:
@@ -470,7 +471,8 @@ def apv_last_stock_calculation(min_date_str, max_date_str, pse_code):
                 raise Exception('All data has been processed already up to date {}.'.format(max_file_date))
             else:
                 preprocessed_data_exists_flag = 1
-                print('Data already processed from {} to {} for PSE {}. Will adjust accordingly: minimum date to process is now: {}.'.format(min_date_str, max_file_date, pse_code, max_file_date))
+                level_0_performance_report.log_record('Data already processed from {} to {} for PSE {}. Will adjust accordingly: minimum date to process is now: {}.'.format(min_date_str, max_file_date, pse_code, max_file_date), project_id)
+                # print('Data already processed from {} to {} for PSE {}. Will adjust accordingly: minimum date to process is now: {}.'.format(min_date_str, max_file_date, pse_code, max_file_date))
             return datetime.datetime.strftime(max_file_date, format('%Y%m%d')), preprocessed_data_exists_flag
         else:  # Do nothing
             return min_date_str, preprocessed_data_exists_flag
@@ -479,14 +481,14 @@ def apv_last_stock_calculation(min_date_str, max_date_str, pse_code):
 
 
 def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date, project_id):
+    # PRJ-2259
 
     try:
-        results = pd.read_csv(base_path + 'output/results_merge_{}_{}.csv'.format(pse_code, max_date), index_col='index')
-        print('File results_merge_{}_{} found.'.format(pse_code, max_date))
+        results = level_1_a_data_acquisition.read_csv(base_path + '/output/results_merge_{}_{}.csv'.format(pse_code, max_date), index_col='index')
 
     except FileNotFoundError:
-        print('File results_merge_{}_{} not found. Processing...'.format(pse_code, max_date))
-        min_date, preprocessed_data_exists_flag = apv_last_stock_calculation(min_date, max_date, pse_code)
+        level_0_performance_report.log_record('Ficheiro results_merge_{}_{} não encontrado. A processar...'.format(pse_code, max_date), project_id)
+        min_date, preprocessed_data_exists_flag = apv_last_stock_calculation(min_date, max_date, pse_code, project_id)
 
         df_stock.set_index('Record_Date', inplace=True)
         df_purchases.set_index('Movement_Date', inplace=True)
@@ -499,11 +501,10 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
 
         if preprocessed_data_exists_flag:
             selected_parts = part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=0)
-            df_last_processed = pd.read_csv(base_path + 'output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0, parse_dates=['index'])
+            df_last_processed = level_1_a_data_acquisition.read_csv(base_path + '/output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0, parse_dates=['index'])
             dataframes_list.append(df_last_processed)
 
-        i, parts_count = 1, len(selected_parts)
-        print('PSE_Code = {}'.format(pse_code))
+        # i, parts_count = 1, len(selected_parts)
         for part_ref in selected_parts:
             result_part_ref, stock_evolution_correct_flag, offset, last_processed_stock = sql_data([part_ref], pse_code, datetime.datetime.strptime(min_date, format('%Y%m%d')), max_date, dataframes_list, preprocessed_data_exists_flag)
 
@@ -513,8 +514,8 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
                 result_part_ref = fill_cols_function(result_part_ref, last_processed_stock)
 
                 if result_part_ref[result_part_ref['Part_Ref'].isnull()].shape[0]:
-                    print('null values found for part_ref: \n{}'.format(part_ref))
-                    print('Number of null rows: {}'.format(result_part_ref[result_part_ref['Part_Ref'].isnull()].shape))
+                    level_0_performance_report.log_record('null values found for part_ref: \n{}'.format(part_ref), project_id, flag=1)
+                    level_0_performance_report.log_record('Number of null rows: {}'.format(result_part_ref[result_part_ref['Part_Ref'].isnull()].shape), project_id, flag=1)
 
                 result_part_ref.loc[:, 'Stock_Evolution_Correct_Flag'] = stock_evolution_correct_flag
                 result_part_ref.loc[:, 'Stock_Evolution_Offset'] = offset
@@ -524,21 +525,64 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
                 result_part_ref['Cost_Reg_avg'] = result_part_ref['Cost_Reg_avg'] * (-1)
 
                 results = results.append(result_part_ref)
-                # results.to_csv(base_path + 'output/testing_results.csv'.format(part_ref))
+                # results.to_csv(base_path + '/output/testing_results.csv'.format(part_ref))
 
-            position = int((i / parts_count) * 100)
-            if not position % 1:
-                if position not in positions:
-                    print('{}% completed'.format(position))
-                    positions.append(position)
-
-            i += 1
+            # position = int((i / parts_count) * 100)
+            # if not position % 1:
+            #     if position not in positions:
+            #         print('{}% completed'.format(position))
+            #         positions.append(position)
+            #
+            # i += 1
         if preprocessed_data_exists_flag:
             results = results_preprocess_merge(pse_code, results, min_date, max_date)
 
-        results.to_csv(base_path + 'output/results_merge_{}_{}.csv'.format(pse_code, max_date))
+        results.to_csv(base_path + '/output/results_merge_{}_{}.csv'.format(pse_code, max_date))
 
     return results
+
+
+def apv_photo_stock_treatment(df_sales, df_history, selected_parts, preprocessed_data_exists_flag, min_date, max_date, pse_code, project_id):
+    # PRJ-2259
+
+    # DW Sales Preparation
+    df_sales = df_sales[['Movement_Date', 'Part_Ref', 'Part_Desc', 'Product_Group', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_mov']]
+    df_sales = df_sales.rename(columns={'Qty_Sold_sum_mov': 'Qty_Sold'})
+    df_sales = df_sales.sort_values(by='Movement_Date')
+    df_sales = df_sales.drop_duplicates(subset=['Movement_Date', 'Part_Ref'])
+
+    datetime_index = pd.date_range(start=df_sales['Movement_Date'].min(), end=df_sales['Movement_Date'].max())
+    df_sales.set_index(['Movement_Date'], drop=True, inplace=True)
+
+    df_history['Movement_Date'] = pd.to_datetime(df_history['Movement_Date'], format='%Y-%m-%d')
+    pool = Pool(processes=int(level_0_performance_report.pool_workers_count))
+    results = pool.map(stock_and_sales_reconstitution, [(part_ref, df_sales, df_history, datetime_index) for part_ref in selected_parts])
+    pool.close()
+    final_df = pd.concat([result for result in results if result is not None])
+
+    if preprocessed_data_exists_flag:
+        old_results = level_1_a_data_acquisition.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0)
+        final_df.rename(columns={'PVP_1': 'PVP_avg', 'Cost_Sale_1': 'Cost_Sale_avg', 'Qty_Sold': 'Qty_Sold_sum_al', 'Qty_Stock': 'Stock_Qty_al', 'Movement_Date': 'index'}, inplace=True)
+        final_df = pd.concat([old_results, final_df], ignore_index=True)
+
+    final_df.to_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date))
+    return final_df
+
+
+def stock_and_sales_reconstitution(args):
+    sel_part, df_sales, df_stock, datetime_index = args
+
+    zero_fill_cols = ['Qty_Sold', 'PVP_1', 'Cost_Sale_1']
+
+    df_stock_filtered = df_stock.loc[df_stock['Part_Ref'] == sel_part, :]
+    df_sales_dw_filtered = df_sales.loc[df_sales['Part_Ref'] == sel_part, :]
+
+    result_part_ref = df_sales_dw_filtered.reindex(datetime_index).reset_index()
+    [result_part_ref[x].fillna(0, inplace=True) for x in zero_fill_cols]
+    result_part_ref['Part_Ref'] = sel_part
+
+    result_part_ref = pd.merge(result_part_ref, df_stock_filtered[['Qty_Stock', 'Movement_Date']], how='inner', left_on='index', right_on='Movement_Date', validate='one_to_one').drop(['index'], axis=1)
+    return result_part_ref
 
 
 def fill_cols_function(result_part_ref, last_processed_stock):
@@ -556,15 +600,15 @@ def fill_cols_function(result_part_ref, last_processed_stock):
 
 def results_preprocess_merge(pse_code, results, min_date, max_date):
 
-    old_results = pd.read_csv(base_path + 'output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0, parse_dates=['index'])
+    old_results = level_1_a_data_acquisition.read_csv(base_path + '/output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0, parse_dates=['index'])
     new_results = pd.concat([old_results, results])
 
-    shape_before = new_results.shape
+    # shape_before = new_results.shape
     new_results.drop_duplicates(subset=['index', 'Part_Ref'], inplace=True)
-    shape_after = new_results.shape
-    shape_diff = shape_before[0] - shape_after[0]
+    # shape_after = new_results.shape
+    # shape_diff = shape_before[0] - shape_after[0]
 
-    print('Removed {} repeated rows.'.format(shape_diff))
+    # print('Removed {} repeated rows.'.format(shape_diff))
     return new_results
 
 
@@ -712,9 +756,9 @@ def sql_data(selected_part, pse_code, min_date, max_date, dataframes_list, prepr
 
     result['Stock_Qty_al'] = result['Stock_Qty'] - result['Sales Evolution_al'] + result['Purchases Evolution'] - result['Regulated Evolution']
     if not preprocessed_data_exists_flag:
-        result.ix[0, 'Stock_Qty_al'] = stock_start
+        result.loc[result.index[0], 'Stock_Qty_al'] = stock_start
     elif preprocessed_data_exists_flag:
-        result.ix[0, 'Stock_Qty_al'] = last_stock_qty_al
+        result.loc[result.index[0], 'Stock_Qty_al'] = last_stock_qty_al
     result.loc[result['Qty_Purchased_sum'] == 0, 'Cost_Purchase_avg'] = 0
 
     return result, stock_evolution_correct_flag, offset, last_stock_qty_al
@@ -807,20 +851,20 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
     return df_al
 
 
-def part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, mappings, regex_dict, bmw_original_oil_words, project_id):  # From PSE_Sales
-    print('Fetching TA for each part_reference...')
+def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mappings, regex_dict, bmw_original_oil_words, project_id):  # From PSE_Sales
+    level_0_performance_report.log_record('Fetching TA for each part_reference...', project_id)
     start = time.time()
 
     try:
-        df_part_ref_ta_grouped = pd.read_csv(base_path + 'output/part_ref_ta_{}.csv'.format(max_date), index_col=0)
-        print('TA Grouping found.')
+        df_part_ref_ta_grouped = level_1_a_data_acquisition.read_csv(base_path + '/output/part_ref_ta_{}.csv'.format(max_date), index_col=0)
 
     except FileNotFoundError:
+        level_0_performance_report.log_record('Não foi encontrado o ficheiro part_ref_ta_{}. A processar...', project_id)
         df_part_ref_ta = pd.DataFrame(columns={'Part_Ref', 'TA'})
         part_refs, part_ref_tas = [], []
 
         df_sales = df_sales[df_sales['Product_Group'].notnull()]
-        i, parts_count, positions = 1, len(selected_parts), []
+        # i, parts_count, positions = 1, len(selected_parts), []
 
         for part_ref in selected_parts:
             if part_ref.startswith('BM83.'):
@@ -829,40 +873,41 @@ def part_ref_ta_definition(df_sales, df_al, selected_parts, pse_code, max_date, 
                     part_ref_tas.append('Chemical')
 
             else:
-                part_ref_ta = ta_selection(df_sales, part_ref, regex_dict, bmw_original_oil_words, product_group_col='Product_Group')
-                if part_ref_ta in ['NO_TA', 'NO_SAME_BRAND_TA']:
-                    part_ref_ta = ta_selection(df_al, part_ref, regex_dict, bmw_original_oil_words, product_group_col='TA')
+                part_ref_ta = ta_selection(df_sales, part_ref, regex_dict, bmw_original_oil_words, project_id, product_group_col='Product_Group')
+                # if part_ref_ta in ['NO_TA', 'NO_SAME_BRAND_TA']:
+                #     part_ref_ta = ta_selection(df_al, part_ref, regex_dict, bmw_original_oil_words, product_group_col='TA')
 
                 if part_ref in ['NO_TA', 'NO_SAME_BRAND_TA']:
-                    print('part_ref {} has the following result: {}'.format(part_ref, part_ref_ta))
+                    # print('part_ref {} has the following result: {}'.format(part_ref, part_ref_ta))
+                    continue
 
                 part_refs.append(part_ref)
                 part_ref_tas.append(part_ref_ta)
 
-                position = int((i / parts_count) * 100)
-                if not position % 1:
-                    if position not in positions:
-                        print('{}% completed'.format(position))
-                        positions.append(position)
-
-            i += 1
+            #     position = int((i / parts_count) * 100)
+            #     if not position % 1:
+            #         if position not in positions:
+            #             print('{}% completed'.format(position))
+            #             positions.append(position)
+            #
+            # i += 1
 
         df_part_ref_ta['Part_Ref'] = part_refs
         df_part_ref_ta['TA'] = part_ref_tas
         df_part_ref_ta['Group'] = part_ref_tas
 
-        df_bmw = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')], ['Group'], [mappings[0]], project_id)
-        df_mini = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')], ['Group'], [mappings[1]], project_id)
+        df_bmw = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')].copy(), ['Group'], [mappings[0]], project_id)
+        df_mini = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')].copy(), ['Group'], [mappings[1]], project_id)
 
         df_part_ref_ta_grouped = pd.concat([df_bmw, df_mini])
 
-        df_part_ref_ta_grouped.to_csv(base_path + 'output/part_ref_ta_{}.csv'.format(max_date))
+        df_part_ref_ta_grouped.to_csv(base_path + '/output/part_ref_ta_{}.csv'.format(max_date))
 
-    print('Elapsed Time: {:.2f}'.format(time.time() - start))
+    # print('Elapsed Time: {:.2f}'.format(time.time() - start))
     return df_part_ref_ta_grouped
 
 
-def ta_selection(df, part_ref, regex_dict, bmw_original_oil_words, product_group_col):
+def ta_selection(df, part_ref, regex_dict, bmw_original_oil_words, project_id, product_group_col):
     part_ref_ta = 'NO_TA'
     part_ref_desc = df[df['Part_Ref'] == part_ref]['Part_Desc'].value_counts().head(1).index  # Gets the most common Part_Desc, for the part_ref which have multiple descriptions;
 
@@ -872,7 +917,7 @@ def ta_selection(df, part_ref, regex_dict, bmw_original_oil_words, product_group
         try:
             part_ref_ta = part_ref_unique_ta[0][1]
         except (IndexError, TypeError):
-            print('part_ref {} with part_ref_ta {} has no TA'.format(part_ref, part_ref_unique_ta))
+            # print('part_ref {} with part_ref_ta {} has no TA'.format(part_ref, part_ref_unique_ta))
             return 'NO_TA'
             # Cases where only the part_ref only has one TA but it is only a letter and not letter + number, which provides no information
 
@@ -886,7 +931,7 @@ def ta_selection(df, part_ref, regex_dict, bmw_original_oil_words, product_group
                 if len(part_ref_desc.values[0]) and any(x in part_ref_desc for x in bmw_original_oil_words):
                     part_ref_ta = '1'
             else:
-                print('Problematic Part - {} and: \n{}'.format(part_ref, part_ref_desc))
+                level_0_performance_report.log_record('Problematic Part - {} and: \n{}'.format(part_ref, part_ref_desc), project_id, flag=1)
                 return 'NO_TA'
 
     elif not part_ref_unique_ta:
@@ -907,4 +952,95 @@ def load_model(model_name, project_id):
     print(model)
 
     return
+
+
+def solver_dataset_preparation(df_sales, df_part_refs_ta, dtss_goal, current_date):
+    start = time.time()
+
+    df_sales['weekday'] = df_sales['index'].dt.dayofweek
+
+    last_year_date = pd.to_datetime(current_date) - relativedelta(years=1)
+    dts_interval_sales = df_sales.tail(dtss_goal)['index'].min()
+
+    weekdays_count = np.busday_count(
+        np.array([last_year_date]).astype('datetime64[D]'),
+        np.array([dt.datetime.strptime(current_date, '%Y%m%d')]).astype('datetime64[D]')
+    )[0]
+
+    df_sales = df_sales[(df_sales['weekday'] >= 0) & (df_sales['weekday'] < 5)]  # Removal of weekend data
+    df_sales.set_index('Part_Ref', inplace=True)
+
+    df_sales_grouped = df_sales.groupby('Part_Ref')
+    pool = Pool(processes=level_0_performance_report.pool_workers_count)
+    results = pool.map(solver_metrics_per_part_ref, [(part_ref, group, last_year_date, dts_interval_sales, weekdays_count) for (part_ref, group) in df_sales_grouped])
+    pool.close()
+    df_solve = pd.concat([result for result in results if result is not None])
+
+    df_solve = level_1_b_data_processing.df_join_function(df_solve, df_part_refs_ta[['Part_Ref', 'Group']].set_index('Part_Ref'), on='Part_Ref')  # Addition of the Groups Description
+
+    df_solve.to_csv('output/df_solve_0B_{}.csv'.format(current_date))
+
+    print('Elapsed Time: {:.2f}'.format(time.time() - start))
+    return df_solve
+
+
+def solver_metrics_per_part_ref(args):
+    part_ref, df_sales_filtered, last_year_date, dts_interval_sales, weekdays_count = args
+    df_solve = pd.DataFrame(columns=['Part_Ref', 'Cost', 'PVP', 'Margin', 'Last Stock', 'Last Stock Value', 'Last Year Sales', 'Last Year Sales Mean', 'Last Year COGS', 'DII Year', 'DII Year weekdays', 'DII Year weekdays v2', 'DaysToSell_1_Part', 'DaysToSell_1_Part_v2', 'DTS_Total_Qty_Sold', 'DTS_Min_Total_Qty_Sold', 'DTS_Max_Total_Qty_Sold', 'DaysToSell_1_Part_v2_mean', 'DaysToSell_1_Part_v2_median'])
+
+    if df_sales_filtered['Qty_Sold_sum_al'].sum() >= 0 and df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0].shape[0] > 1:  # This checkup is needed as I can not enforce it before when processing a time interval, only when processing all data
+        df_sales_filtered.set_index('index', inplace=True)  # I should use last purchase date/cost, but first: not all parts have purchases (e.g. BM83.13.9.415.965) and second, they should give the same value.
+
+        last_sale_date = df_sales_filtered[(df_sales_filtered['Qty_Sold_sum_al'] > 0)].index.max()
+
+        if last_sale_date < last_year_date:  # No sales in last year considering the current date
+            return None
+
+        df_last_sale = df_sales_filtered.loc[last_sale_date, ['Cost_Sale_avg', 'PVP_avg']].values
+        last_cost, last_pvp = df_last_sale[0], df_last_sale[1]
+
+        dts_sales = df_sales_filtered.loc[dts_interval_sales::, 'Qty_Sold_sum_al']
+        dts_total_qty_sold = dts_sales.sum()
+        dts_min_total_qty_sold = dts_sales[dts_sales >= 0].min()
+        dts_max_total_qty_sol = dts_sales.max()
+
+        last_stock = df_sales_filtered['Stock_Qty_al'].tail(1).values[0]
+        if last_stock >= 0:
+            last_stock_value = last_stock * last_cost
+
+            df_last_year = df_sales_filtered.loc[last_year_date::, 'Qty_Sold_sum_al']
+            last_year_sales = df_last_year.sum()
+            last_year_sales_avg = df_last_year.mean()
+
+            if last_year_sales:
+                last_year_cogs = last_year_sales * last_cost
+                margin = (last_pvp - last_cost)
+
+                dii = last_stock_value / last_year_cogs
+                dii_year = dii * 365
+
+                avg_sales_per_day = last_stock / last_year_sales_avg  # The diff between dii_year and avg_sales_per_day is caused by the number of non-weekdays;
+
+                avg_sales_per_day_v2 = last_year_sales / weekdays_count
+
+                days_to_sell_1_part = 1 / last_year_sales_avg
+
+                # days_to_sell_1_part_v2 = 1 / avg_sales_per_day_v2
+
+                df_sales_day_diff = df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0].index.to_series().diff().tolist()
+                df_sales_qty = df_sales_filtered[df_sales_filtered['Qty_Sold_sum_al'] > 0]['Qty_Sold_sum_al'].values.tolist()
+                df_sales_day_diff = [x.days for x in df_sales_day_diff]
+                df_diff_qty_ratios = [x / y for x, y in zip(df_sales_day_diff[1::], df_sales_qty[1::])]
+                df_diff_qty_ratios_mean = np.mean(df_diff_qty_ratios)
+                df_diff_qty_ratios_median = np.median(df_diff_qty_ratios)
+
+                df_solve.loc[0, ['Part_Ref', 'Cost', 'PVP', 'Margin', 'Last Stock', 'Last Stock Value', 'Last Year Sales', 'Last Year Sales Mean', 'Last Year COGS', 'DII Year', 'DII Year weekdays', 'DII Year weekdays v2', 'DaysToSell_1_Part', 'DTS_Total_Qty_Sold', 'DTS_Min_Total_Qty_Sold', 'DTS_Max_Total_Qty_Sold', 'DaysToSell_1_Part_v2_mean', 'DaysToSell_1_Part_v2_median']] = \
+                    [part_ref, last_cost, last_pvp, margin, last_stock, last_stock_value, last_year_sales, last_year_sales_avg, last_year_cogs, dii_year, avg_sales_per_day, avg_sales_per_day_v2, days_to_sell_1_part, dts_total_qty_sold, dts_min_total_qty_sold, dts_max_total_qty_sol, df_diff_qty_ratios_mean, df_diff_qty_ratios_median]
+
+            else:
+                return None
+        else:
+            return None
+
+    return df_solve
 

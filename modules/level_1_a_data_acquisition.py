@@ -45,7 +45,7 @@ def vehicle_count_checkup(df, options_file, sql_check=0):
 
 def missing_customer_info_treatment(df_sales):
 
-    df_vehicles_wo_clients = pd.read_excel(base_path + 'dbs/viaturas_sem_cliente_final rb.xlsx', usecols=['Chassis_Number', 'Registration_Number', 'conc / nº cliente navision'], dtype={'conc / nº cliente navision': str}).dropna()
+    df_vehicles_wo_clients = pd.read_excel(base_path + '/dbs/viaturas_sem_cliente_final rb.xlsx', usecols=['Chassis_Number', 'Registration_Number', 'conc / nº cliente navision'], dtype={'conc / nº cliente navision': str}).dropna()
     df_vehicles_wo_clients.rename(index=str, columns={'conc / nº cliente navision': 'SLR_Account_CHS_Key'}, inplace=True)
     df_vehicles_wo_clients['SLR_Account_CHS_Key'] = '702_' + df_vehicles_wo_clients['SLR_Account_CHS_Key']
     df_sales = level_1_b_data_processing.df_join_function(df_sales, df_vehicles_wo_clients[['Chassis_Number', 'SLR_Account_CHS_Key']].set_index('Chassis_Number'), on='Chassis_Number', rsuffix='_new', how='left')
@@ -57,7 +57,7 @@ def missing_customer_info_treatment(df_sales):
 
 # This function works really well for one single function on scheduler (provided i had sys.stdout.flush() to the end of each file). But if more than one functions are running at the same time (different threads) the stdout
 # saved is all mixed and saved on the file of the last function; - trying now with logging module
-def log_files(project_name, output_dir=base_path + 'logs/'):
+def log_files(project_name, output_dir=base_path + '/logs/'):
     sys.stdout = open(output_dir + project_name + '.txt', 'a')
     sys.stderr = open(output_dir + project_name + '.txt', 'a')
 
@@ -141,29 +141,21 @@ def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_f
     return dictionary_list, dictionary_ranking
 
 
-def dw_data_retrieval(pse_code, current_date, options_info, update):
+def dw_data_retrieval(pse_code, current_date, options_info, last_processed_date):
     # PRJ-2259
     print('Retrieving data for PSE_Code = {}'.format(pse_code))
 
-    sales_info = [base_path + 'dbs/df_sales', options_info.sales_query]
-    purchases_info = [base_path + 'dbs/df_purchases', options_info.purchases_query]
-    stock_info = [base_path + 'dbs/df_stock', options_info.stock_query]
-    reg_info = [base_path + 'dbs/df_reg', options_info.reg_query]
-    reg_al_info = [base_path + 'dbs/df_reg_al_client', options_info.reg_autoline_clients]
-    product_group_dw = [base_path + 'dbs/df_product_group_dw', options_info.dim_product_group_dw]
+    sales_info = [base_path + '/dbs/df_sales', options_info.sales_query]
+    product_group_dw = [base_path + '/dbs/df_product_group_dw', options_info.dim_product_group_dw]
+    stock_history = [base_path + '/dbs/stock_history', options_info.stock_history_query.format(pse_code, last_processed_date)]
 
     dfs = []
 
-    for dimension in [sales_info, purchases_info, stock_info, reg_info, reg_al_info, product_group_dw]:
-
-        if update:
-            file_name = dimension[0] + '_' + str(pse_code) + '_' + str(current_date)
-        else:
-            file_name = dimension[0] + '_' + str(pse_code) + '_20191031'  # Last time I ran this script and saved these files
+    for dimension in [sales_info, product_group_dw]:
+        file_name = dimension[0] + '_' + str(pse_code) + '_' + str(current_date)
 
         try:
             df = read_csv(file_name + '.csv', index_col=0)
-            # print('{} file found.'.format(file_name))
         except FileNotFoundError:
             print('{} file not found. Retrieving data from SQL...'.format(file_name))
             df = sql_retrieve_df_specified_query(options_info.DSN, options_info.sql_info['database'], options_info, dimension[1])
@@ -171,38 +163,41 @@ def dw_data_retrieval(pse_code, current_date, options_info, update):
 
         dfs.append(df)
 
-    df_sales = dfs[0]
-    df_purchases = dfs[1]
-    df_stock = dfs[2]
-    df_reg = dfs[3]
-    df_reg_al_clients = dfs[4]
-    df_product_group_dw = dfs[5]
+    # ToDo Integrate the following the previous loop
+    df_history_file_name = stock_history[0] + '_' + str(pse_code) + '_' + str(current_date)
+    try:
+        df_history = read_csv(df_history_file_name + '.csv', index_col=0)
+    except FileNotFoundError:
+        print('{} file not found. Retrieving data from SQL...'.format(df_history_file_name))
+        df_history = sql_retrieve_df_specified_query(options_info.DSN_MLG, options_info.sql_info['database_final'], options_info, stock_history[1])
+        df_history.to_csv(df_history_file_name + '.csv')
 
-    df_purchases['Movement_Date'] = pd.to_datetime(df_purchases['Movement_Date'], format='%Y%m%d')
-    df_purchases['WIP_Date_Created'] = pd.to_datetime(df_purchases['WIP_Date_Created'], format='%Y%m%d')
+    dfs.append(df_history)
+
+    df_sales = dfs[0]
+    df_product_group_dw = dfs[1]
+    df_history = dfs[2]
 
     df_sales['SLR_Document_Date'] = pd.to_datetime(df_sales['SLR_Document_Date'], format='%Y%m%d')
     df_sales['WIP_Date_Created'] = pd.to_datetime(df_sales['WIP_Date_Created'], format='%Y%m%d')
     df_sales['Movement_Date'] = pd.to_datetime(df_sales['Movement_Date'], format='%Y%m%d')
 
-    df_stock['Record_Date'] = pd.to_datetime(df_stock['Record_Date'], format='%Y%m%d')
-    df_stock.rename(index=str, columns={'Quantity': 'Stock_Qty'}, inplace=True)
-
-    return df_sales, df_purchases, df_stock, df_reg, df_reg_al_clients, df_product_group_dw
+    df_history.rename(columns={'Date': 'Movement_Date', 'Quantity': 'Qty_Stock'}, inplace=True)
+    return df_sales, df_history, df_product_group_dw
 
 
 def autoline_data_retrieval(pse_code, current_date):
     start = time.time()
 
     try:
-        df_al = read_csv(base_path + 'dbs/auto_line_part_ref_history_{}_{}.csv'.format(pse_code, current_date), usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P', 'GPr'])
+        df_al = read_csv(base_path + '/dbs/auto_line_part_ref_history_{}_{}.csv'.format(pse_code, current_date), usecols=['Data Mov', 'Refª da peça', 'Descrição', 'Unit', 'Nº de factura', 'WIP nº', 'Sugestão nº  (Enc)', 'Conta', 'Nº auditoria stock', 'Preço de custo', 'P. V. P', 'GPr'])
     except FileNotFoundError:
         try:
-            df_1 = pd.read_excel(base_path + 'dbs/auto_line_fb1_{}_{}.xlsx'.format(pse_code, current_date))
-            df_2 = pd.read_excel(base_path + 'dbs/auto_line_fb2_{}_{}.xlsx'.format(pse_code, current_date))
+            df_1 = pd.read_excel(base_path + '/dbs/auto_line_fb1_{}_{}.xlsx'.format(pse_code, current_date))
+            df_2 = pd.read_excel(base_path + '/dbs/auto_line_fb2_{}_{}.xlsx'.format(pse_code, current_date))
             df_al = pd.concat([df_1, df_2])
 
-            df_al.to_csv(base_path + 'dbs/auto_line_part_ref_history_{}_{}.csv'.format(pse_code, current_date))
+            df_al.to_csv(base_path + '/dbs/auto_line_part_ref_history_{}_{}.csv'.format(pse_code, current_date))
             print('dbs/auto_line_part_ref_history_{}_{} created and saved.'.format(pse_code, current_date))
 
         except FileNotFoundError:

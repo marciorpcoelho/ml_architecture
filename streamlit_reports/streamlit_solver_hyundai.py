@@ -1,5 +1,6 @@
 import streamlit as st
 import logging
+import pandas as pd
 import numpy as np
 import cvxpy as cp
 import os
@@ -55,6 +56,7 @@ def main():
     parameters_values, parameter_restriction_vectors = [], []
     max_number_of_cars_sold = max(data['Quantity_Sold'])
 
+    sel_range = st.sidebar.radio('Apenas Gama Viva?', ['Não', 'Sim'])
     sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(data['PT_PDB_Model_Desc'].unique()), index=0, key=session_state.run_id)
     sel_order_size = st.sidebar.number_input('Por favor escolha o número de viaturas a encomendar:', 1, 1000, value=100)
     sel_min_number_of_configuration = st.sidebar.number_input('Por favor escolha o número mínimo de configurações (default={}):'.format(min_number_of_configuration), 1, 100, value=min_number_of_configuration)
@@ -82,7 +84,7 @@ def main():
     client_lvl_values = [sel_client_lvl_1, sel_client_lvl_2, sel_client_lvl_3, sel_client_lvl_4, sel_client_lvl_5, sel_client_lvl_6, sel_client_lvl_7]
 
     if '-' not in [sel_model]:
-        data_filtered = filter_data(data, [sel_model, sel_min_sold_cars] + client_lvl_values, ['PT_PDB_Model_Desc', 'Quantity_Sold'] + client_lvl_cols)
+        data_filtered = filter_data(data, [sel_range, sel_model, sel_min_sold_cars] + client_lvl_values, ['Gama_Viva_Flag', 'PT_PDB_Model_Desc', 'Quantity_Sold'] + client_lvl_cols)
 
         if not data_filtered.shape[0]:
             st.write('Não foram encontrados registos para as presentes escolhas - Por favor altere o modelo/cliente/valor mínimo de viaturas por configuração.')
@@ -153,6 +155,11 @@ def main():
 @st.cache
 def get_data(options_file_in):
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
+    df['PDB_End_Order_Date'] = pd.to_datetime(df['PDB_End_Order_Date'], format='%Y-%m-%d', errors='ignore')
+    current_date, _ = level_1_e_deployment.time_tags(format_date='%Y-%m-%d')
+
+    gama_viva_mask = df['PDB_End_Order_Date'] >= current_date
+    gama_viva_mask_2 = df['PDB_End_Order_Date'].isnull()
 
     df['Custo_Stock_Dist'] = df['Measure_9'] * 0.015 / 365 * df['DaysInStock_Distributor'] * (-1)
     df['Score_Euros'] = df['Fixed_Margin_II'] - df['Custo_Stock_Dist']
@@ -161,6 +168,7 @@ def get_data(options_file_in):
     df['Average_DaysInStock_Global'] = df_grouped['DaysInStock_Global'].transform('mean')
     df['Quantity_Sold'] = df_grouped['Chassis_Number'].transform('nunique')
     df['Average_Score_Euros'] = df_grouped['Score_Euros'].transform('mean')
+    df['Gama_Viva_Flag'] = np.where(gama_viva_mask | gama_viva_mask_2, "Sim", "Não")
 
     for model in df['PT_PDB_Model_Desc'].unique():
         if model == 'cr-v':

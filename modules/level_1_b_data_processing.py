@@ -22,7 +22,7 @@ from sklearn.preprocessing import MinMaxScaler, RobustScaler
 import modules.level_0_performance_report as level_0_performance_report
 import modules.level_1_e_deployment as level_1_e_deployment
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 
 warnings.simplefilter('ignore', FutureWarning)
 
@@ -152,7 +152,7 @@ def zero_analysis(df):
         print('Dataframe is empty!')
 
 
-def value_count_histogram(df, columns, tag, output_dir=base_path + 'plots/'):
+def value_count_histogram(df, columns, tag, output_dir=base_path + '/plots/'):
     for column in columns:
         plt.subplots(figsize=(1000 / my_dpi, 600 / my_dpi), dpi=my_dpi)
 
@@ -205,7 +205,7 @@ def bar_plot_auto_label(rects):
         plt.text(rect.get_x() + rect.get_width()/2., 1.05*height, '%d' % int(height), ha='center', va='bottom')
 
 
-def save_fig(name, save_dir=base_path + 'output/'):
+def save_fig(name, save_dir=base_path + '/output/'):
     # Saves plot in at least two formats, png and pdf
     plt.savefig(save_dir + str(name) + '.pdf')
     plt.savefig(save_dir + str(name) + '.png')
@@ -1139,67 +1139,59 @@ def string_digit_removal(string_to_process):
     return processed_string
 
 
-def word_frequency(df, threshold=0):
+def word_frequency(df, unit_col, description_col, threshold=0):
     word_dict = {}
-    word_dict_ticket = {}
-    word_dict_ticket_count = {}
+    word_dict_unit = {}
+    word_dict_unit_count = {}
 
-    for ticket, row in df.iterrows():
+    for unit, row in df.iterrows():
         try:
-            description = nltk.tokenize.word_tokenize(row['StemmedDescription'])
+            description = nltk.tokenize.word_tokenize(row[description_col])
             for word in description:
                 if word in word_dict.keys():
                     word_dict[word] += 1
-                    if row['Request_Num'] not in word_dict_ticket[word]:
-                        word_dict_ticket[word].append(row['Request_Num'])
+                    if row[unit_col] not in word_dict_unit[word]:
+                        word_dict_unit[word].append(row[unit_col])
                 else:
                     word_dict[word] = 1
-                    word_dict_ticket[word] = [row['Request_Num']]
+                    word_dict_unit[word] = [row[unit_col]]
 
         except TypeError:
             pass
 
-    for key in word_dict_ticket.keys():
-        word_dict_ticket_count[key] = len(word_dict_ticket[key])
+    for key in word_dict_unit.keys():
+        word_dict_unit_count[key] = len(word_dict_unit[key])
 
     # The following two lines convert the dictionaries to lists with ascending order of the values
     # sorted_word_dict = sorted(word_dict.items(), key=operator.itemgetter(1))
-    # sorted_word_dict_ticket = sorted(word_dict_ticket_count.items(), key=operator.itemgetter(1))
+    # sorted_word_dict_unit = sorted(word_dict_unit_count.items(), key=operator.itemgetter(1))
 
-    filtered_dict = {k: v for k, v in word_dict_ticket_count.items() if v > threshold}
-    filtered_dict_tickets = {k: v for k, v in word_dict_ticket_count.items() if v > threshold}
+    filtered_dict = {k: v for k, v in word_dict_unit_count.items() if v > threshold}
+    filtered_dict_units = {k: v for k, v in word_dict_unit_count.items() if v > threshold}
 
     # word_histogram(sorted(filtered_dict.items(), key=operator.itemgetter(1)))
-    # cdf(sorted(filtered_dict.items(), key=operator.itemgetter(1)), '#tickets')
+    # cdf(sorted(filtered_dict.items(), key=operator.itemgetter(1)), '#units')
 
-    return filtered_dict, filtered_dict_tickets
+    return filtered_dict, filtered_dict_units
 
 
-def words_dataframe_creation(df, top_words_dict):
+def words_dataframe_creation(df, top_words_dict, unit_col, description_col):
     start = time.time()
+
     words_list = sorted(top_words_dict.items(), key=operator.itemgetter(1))
-    # x = pd.DataFrame()
     df_total = pd.DataFrame(index=range(df.shape[0]))
 
-    # print('Number of null Stemmed Descriptions: {}'.format(df[df['StemmedDescription'].isnull()]['StemmedDescription']))
+    unique_stemmed_descriptions_non_nan = df[~df[description_col].isnull()].apply(lambda row: nltk.word_tokenize(row[description_col]), axis=1)
 
-    unique_stemmed_descriptions_non_nan = df[~df['StemmedDescription'].isnull()].apply(lambda row: nltk.word_tokenize(row['StemmedDescription']), axis=1)
-    unique_requests = df.dropna(axis=0, subset=['StemmedDescription'])['Request_Num']
-
-    cleaned_df = df.dropna(axis=0, subset=['StemmedDescription'])
-
-    # for key, occurrence in words_list:
-    #     result = map(lambda y: int(key in y), unique_stemmed_descriptions_non_nan)
-    #     x.loc[:, key] = list(result)
-    #
-    # x.index = unique_requests
+    unique_units = df.dropna(axis=0, subset=[description_col])[unit_col]
+    cleaned_df = df.dropna(axis=0, subset=[description_col])
 
     pool = Pool(processes=level_0_performance_report.pool_workers_count)
     results = pool.map(keyword_detection, [(key, occurrence, unique_stemmed_descriptions_non_nan) for (key, occurrence) in words_list])
     pool.close()
     df_total = df_total.join([result for result in results])
 
-    df_total.index = unique_requests
+    df_total.index = unique_units
     print('Elapsed time is: {:.3f}'.format(time.time() - start))
     return df_total, cleaned_df
 
@@ -1282,30 +1274,24 @@ def top_words_processing(df_facts):
     time_tag_date, _ = level_1_e_deployment.time_tags(format_date="%Y_%m_%d")
 
     try:
-        df_cleaned = pd.read_csv(base_path + 'output/df_cleaned_' + str(time_tag_date) + '.csv', index_col=0)
-        df_top_words = pd.read_csv(base_path + 'output/df_top_words_' + str(time_tag_date) + '.csv', index_col=0)
+        df_cleaned = pd.read_csv(base_path + '/output/df_cleaned_' + str(time_tag_date) + '.csv', index_col=0)
+        df_top_words = pd.read_csv(base_path + '/output/df_top_words_' + str(time_tag_date) + '.csv', index_col=0)
     except FileNotFoundError:
-        top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts)
-        df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency)
+        top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts, unit_col='Request_Num', description_col='StemmedDescription')
+        df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency, unit_col='Request_Num', description_col='StemmedDescription')
 
         # These actually take to longer than a re-run, hence they are commented
-        df_top_words.to_csv(base_path + 'output/df_top_words_' + str(time_tag_date) + '.csv')
-        df_cleaned.to_csv(base_path + 'output/df_cleaned_' + str(time_tag_date) + '.csv')
+        df_top_words.to_csv(base_path + '/output/df_top_words_' + str(time_tag_date) + '.csv')
+        df_cleaned.to_csv(base_path + '/output/df_cleaned_' + str(time_tag_date) + '.csv')
 
     return df_cleaned, df_top_words
 
 
-def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_purchases_flags, update, project_id):
+def apv_dataset_treatment(df_sales, pse_code, urgent_purchases_flags, project_id):
     current_date, _ = level_1_e_deployment.time_tags(format_date='%Y%m%d')
     sales_cols_to_keep = ['Movement_Date', 'WIP_Number', 'SLR_Document', 'WIP_Date_Created', 'SLR_Document_Date', 'Part_Ref', 'PVP_1', 'Cost_Sale_1', 'Qty_Sold_sum_wip', 'Qty_Sold_sum_slr', 'Qty_Sold_sum_mov', 'Product_Group', 'Part_Desc']
-    stock_cols_to_keep = ['Part_Ref', 'Stock_Qty', 'Record_Date']
 
-    if update:
-        sales_file_name = base_path + 'dbs/df_sales_cleaned_' + str(pse_code) + '_' + str(current_date)
-        purchases_file_name = base_path + 'dbs/df_purchases_cleaned_' + str(pse_code) + '_' + str(current_date)
-    else:
-        sales_file_name = base_path + 'dbs/df_sales_cleaned_' + str(pse_code) + '_20191031'
-        purchases_file_name = base_path + 'dbs/df_purchases_cleaned_' + str(pse_code) + '_20191031'
+    sales_file_name = base_path + '/dbs/df_sales_cleaned_' + str(pse_code) + '_' + str(current_date)
 
     try:
         df_sales = pd.read_csv(sales_file_name + '.csv', index_col=0, parse_dates=['Movement_Date', 'WIP_Date_Created', 'SLR_Document_Date'], usecols=sales_cols_to_keep).sort_values(by='Movement_Date')
@@ -1315,7 +1301,7 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
 
         df_sales = df_sales[df_sales['Qty_Sold'] != 0]
         df_sales = data_processing_negative_values(df_sales, sales_flag=1)
-        df_sales.to_csv(base_path + 'dbs/df_sales_processed_' + str(pse_code) + '_' + str(current_date) + '.csv')
+        df_sales.to_csv(base_path + '/dbs/df_sales_processed_' + str(pse_code) + '_' + str(current_date) + '.csv')
 
         df_sales['PVP_1'] = df_sales['PVP'] / df_sales['Qty_Sold']
         df_sales['Cost_Sale_1'] = df_sales['Cost_Sale'] / df_sales['Qty_Sold']
@@ -1338,36 +1324,7 @@ def apv_dataset_treatment(df_sales, df_purchases, df_stock, pse_code, urgent_pur
 
         df_sales.to_csv(sales_file_name + '.csv')
 
-    try:
-        df_purchases = pd.read_csv(purchases_file_name + '.csv', index_col=0, parse_dates=['Movement_Date']).sort_values(by='Movement_Date')
-        # print('{} file found.'.format(purchases_file_name))
-    except FileNotFoundError:
-        print('{} file not found, processing...'.format(purchases_file_name))
-
-        df_purchases['Cost_Value_1'] = df_purchases['Cost_Value'] / df_purchases['Quantity']
-
-        df_purchases_grouped = df_purchases.groupby(['Movement_Date', 'Part_Ref'])
-        df_purchases_grouped_urgent = df_purchases[df_purchases['Order_Type_DW'].isin(urgent_purchases_flags)].groupby(['Movement_Date', 'Part_Ref'])
-        df_purchases_grouped_non_urgent = df_purchases[~df_purchases['Order_Type_DW'].isin(urgent_purchases_flags)].groupby(['Movement_Date', 'Part_Ref'])
-
-        df_purchases['Qty_Purchased_sum'] = df_purchases_grouped['Quantity'].transform('sum')
-        df_purchases['Qty_Purchased_urgent_sum'] = df_purchases_grouped_urgent['Quantity'].transform('sum')
-        df_purchases['Qty_Purchased_non_urgent_sum'] = df_purchases_grouped_non_urgent['Quantity'].transform('sum')
-        df_purchases['Cost_Purchase_avg'] = df_purchases_grouped['Cost_Value'].transform('mean')
-
-        df_purchases.drop(['Cost_Value'], axis=1, inplace=True)
-        df_purchases = purchases_na_fill(df_purchases_grouped)
-
-        df_purchases.drop(['Quantity', 'Order_Type_DW'], axis=1, inplace=True)
-
-        df_sales.fillna(method='bfill', inplace=True)
-
-        df_purchases.to_csv(purchases_file_name + '.csv')
-
-    df_purchases.rename(index=str, columns={'Qty_Sold_sum': 'Qty_Purchased_sum'}, inplace=True)  # Will be removed next time i run the data_processement
-    df_stock = remove_columns(df_stock, [x for x in list(df_stock) if x not in stock_cols_to_keep], project_id)
-
-    return df_sales, df_purchases, df_stock
+    return df_sales
 
 
 def data_processing_negative_values(df, sales_flag=0, purchases_flag=0):
@@ -1708,7 +1665,8 @@ def master_file_processing(master_files_to_convert):
         if not master_file_spiga_flag:
             fields_dict = {key: [] for key in master_file_col_names}
 
-            f = open(master_file_loc + '.txt', 'r')
+            # f = open(master_file_loc + '.txt', 'r')
+            f = open(master_file_loc + '.txt', 'r', encoding='latin-1')  # ToDo need to handle this problem, as mercedes' master file needs this encoding
 
             if header_flag:
                 lines = f.readlines()[1:]
@@ -1739,7 +1697,7 @@ def master_file_processing(master_files_to_convert):
 def regex_string_replacement(string_to_process, regex_rule):
     regex = re.compile(regex_rule)
 
-    processed_string = regex.sub('', string_to_process)
+    processed_string = regex.sub('', str(string_to_process))
 
     return processed_string
 

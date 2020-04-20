@@ -24,9 +24,10 @@ def main():
     models = ['rf', 'lgb', 'xgb', 'ridge', 'll_cv', 'elastic_cv', 'svr']
     target = 'DaysInStock_Global'
     configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
+    range_dates = ['PDB_Start_Order_Date', 'PDB_End_Order_Date']
 
     df_sales, df_stock, df_pdb_dim, df_customers, df_dealers = data_acquisition()
-    df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_pdb_dim, configuration_parameters, target)
+    df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_pdb_dim, configuration_parameters, range_dates, target)
     # best_models, running_times = data_modelling(datasets, datasets_non_ohe, models)
     # model_choice_message, best_model_name = model_evaluation(models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
     deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
@@ -69,7 +70,7 @@ def data_acquisition():
     return df_sales, df_stock, df_pdb, df_customers, df_dealers
 
 
-def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target):
+def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_dates, target):
     performance_info_append(time.time(), 'Section_B_Start')
     log_record('Início Secção B...', options_file.project_id)
     current_date, _ = time_tags()
@@ -129,7 +130,7 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, target)
 
         # Step 2: BI Processing
         # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
-        df_sales = df_join_function(df_sales, df_pdb_dim[['VehicleData_Code'] + configuration_parameters_cols].set_index('VehicleData_Code'), on='VehicleData_Code', how='left')
+        df_sales = df_join_function(df_sales, df_pdb_dim[['VehicleData_Code'] + configuration_parameters_cols + range_dates].set_index('VehicleData_Code'), on='VehicleData_Code', how='left')
 
         df_sales = lowercase_column_conversion(df_sales, configuration_parameters_cols)
 
@@ -274,6 +275,8 @@ def deployment(df, db, view):
         sel_df['Ship_Arrival_Date'] = sel_df['Ship_Arrival_Date'].astype(object).where(sel_df['Ship_Arrival_Date'].notnull(), None)
         sel_df['Registration_Request_Date'] = sel_df['Registration_Request_Date'].astype(object).where(sel_df['Registration_Request_Date'].notnull(), None)
         sel_df['Registration_Date'] = sel_df['Registration_Date'].astype(object).where(sel_df['Registration_Date'].notnull(), None)
+        sel_df['PDB_Start_Order_Date'] = sel_df['PDB_Start_Order_Date'].astype(object).where(sel_df['PDB_Start_Order_Date'].notnull(), None)
+        sel_df['PDB_End_Order_Date'] = sel_df['PDB_End_Order_Date'].astype(object).where(sel_df['PDB_End_Order_Date'].notnull(), None)
 
         sql_inject(sel_df, options_file.DSN_MLG, db, view, options_file, list(sel_df), truncate=1, check_date=1)
 

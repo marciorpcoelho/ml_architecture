@@ -396,57 +396,9 @@ product_db_query = '''
       ,[PDB_GearBox_Oil]
       ,[Record_Date]
       ,[Last_Modified_Date]
-        FROM [BI_DTR].dbo.[VHE_Dim_VehicleData_DTR] WITH (NOLOCK)
-        UNION ALL
-        SELECT [VehicleData_Code]
-      ,[VehicleData_Key]
-      ,[PDB_Franchise_Code]
-      ,[Factory_Model_Code]
-      ,[Factory_Vehicle_Option_Code]
-      ,[Factory_Exterior_Color_Code]
-      ,[Factory_Interior_Color_Code]
-      ,[Local_Vehicle_Option_Code]
-      ,[PDB_Model_Key]
-      ,[PDB_Serie_Key]
-      ,[PDB_Bodywork_Key]
-      ,[PDB_Version_Key]
-      ,[PDB_Engine_Key]
-      ,[Local_Model_Code]
-      ,[PDB_Serie_Code]
-      ,[PDB_Model_Code]
-      ,[PDB_Version_Code]
-      ,[PDB_Exterior_Color_Code]
-      ,[PDB_Interior_Color_Code]
-      ,[PDB_Painting_Type_Code]
-      ,[PDB_Bodywork_Code]
-      ,[PDB_Engine_Code]
-      ,[PDB_Transmission_Type_Code]
-      ,[PDB_Fuel_Type_Code]
-      ,[PDB_Vehicle_Type_Code]
-      ,[PDB_Commercial_Version_Code]
-      ,[PT_PDB_Franchise_Desc]
-      ,[PT_PDB_Model_Desc]
-      ,[PT_PDB_Serie_Desc]
-      ,[PT_PDB_Bodywork_Desc]
-      ,[PT_PDB_Version_Desc]
-      ,[PT_PDB_Engine_Desc]
-      ,[PT_PDB_Exterior_Color_Desc]
-      ,[PT_PDB_Interior_Color_Desc]
-      ,[PT_PDB_Painting_Type_Desc]
-      ,[PT_PDB_Transmission_Type_Desc]
-      ,[PT_PDB_Fuel_Type_Desc]
-      ,[PT_PDB_Vehicle_Type_Desc]
-      ,[PT_PDB_Commercial_Version_Desc]
-      ,[PDB_Total_Tara]
-      ,[PDB_Displacement]
-      ,[PDB_Combined_CO2]
-      ,[PDB_Combined_Fuel_Consumption]
-      ,[PDB_Tires_Number]
-      ,[PDB_Engine_Oil]
-      ,[PDB_GearBox_Oil]
-      ,[Record_Date]
-      ,[Last_Modified_Date]
-        FROM [BI_DTR_History].dbo.[VHE_Dim_VehicleData_DTR] WITH (NOLOCK)'''
+      ,[PDB_Start_Order_Date]
+      ,[PDB_End_Order_Date]
+        FROM [BI_DTR].dbo.[VHE_Dim_VehicleData_DTR] WITH (NOLOCK)'''
 
 dealers_query = '''
         select "SLR_Dim_Dealers_DTR_VHE"."Client_Id" AS "Client_Id", "SLR_Dim_Dealers_DTR_VHE"."Environment"
@@ -670,7 +622,7 @@ sql_columns_vhe_fact_bi = [
     'Measure_42', 'Measure_43', 'Measure_44', 'Measure_45', 'Measure_46', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc',
     'Customer_Display', 'Customer_Group_Code', 'Customer_Group_Desc', 'No_Registration_Number_Flag', 'Registration_Number_No_SLR_Document_RGN_Flag', 'SLR_Document_RGN_Flag', 'Undefined_VHE_Status',
     'prev_sales_check', 'number_prev_sales', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc',
-    'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code', 'Fixed_Margin_II'
+    'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code', 'Fixed_Margin_II', 'PDB_Start_Order_Date', 'PDB_End_Order_Date'
 ]
 
 

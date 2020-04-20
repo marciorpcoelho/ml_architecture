@@ -12,11 +12,12 @@ from nltk.stem.porter import PorterStemmer
 from nltk.stem import RSLPStemmer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.model_selection import train_test_split
 from nltk.stem.snowball import SnowballStemmer
 import level_2_pa_part_reference_options as options_file
 from level_2_pa_part_reference_options import regex_dict
 from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df_specified_query
-from modules.level_1_b_data_processing import lowercase_column_conversion, literal_removal, string_punctuation_removal, master_file_processing, regex_string_replacement, brand_code_removal, string_volkswagen_preparation, value_substitution, lemmatisation, stemming, unidecode_function, string_digit_removal
+from modules.level_1_b_data_processing import lowercase_column_conversion, literal_removal, string_punctuation_removal, master_file_processing, regex_string_replacement, brand_code_removal, string_volkswagen_preparation, value_substitution, lemmatisation, stemming, unidecode_function, string_digit_removal, word_frequency, words_dataframe_creation
 from modules.level_1_e_deployment import save_csv, time_tags
 from scipy.sparse import coo_matrix
 import matplotlib.pyplot as plt
@@ -42,6 +43,97 @@ def main():
     platforms_stock, dim_product_group, dim_clients = data_acquisition(current_platforms, 'dbs/dim_product_group_section_A.csv', 'dbs/dim_clients_section_A.csv')
     platforms_stock = master_file_reference_match(platforms_stock, time_tag_date, dim_clients)
     data_processing(platforms_stock, dim_product_group, dim_clients)
+    data_modelling(keywords_per_parts_family_dict)
+
+
+def data_modelling(keyword_dictionary):
+    train_dataset = pd.concat([pd.read_csv('output/{}_train_dataset.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
+    test_dataset = pd.concat([pd.read_csv('output/{}_test_dataset.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
+
+    requests_dict_2 = {}
+    non_matched_keywords = []
+
+    try:
+        test_dataset_words_eval = pd.read_csv('output/df_top_words_parts_reference_project.csv', index_col='Part_Ref')
+        print('Test Datasets Keywords Found...')
+    except FileNotFoundError:
+        print('Evaluation Test Dataset Keywords...')
+
+        _, top_words_ticket_frequency = word_frequency(train_dataset, unit_col='Part_Ref', description_col=part_desc_col)
+        test_dataset_words_eval, _ = words_dataframe_creation(test_dataset, top_words_ticket_frequency, unit_col='Part_Ref', description_col=part_desc_col)
+        test_dataset_words_eval['New_Product_Group_DW'] = 'Não Definido'
+
+        # print('top_words_ticket_frequency \n', top_words_ticket_frequency)
+        # print('top_words_ticket_frequency number of words \n', len(top_words_ticket_frequency.keys()))
+        # print('df_top_words \n', df_top_words)
+        # print('df_top_words shape \n', df_top_words.shape)
+
+        test_dataset_words_eval.to_csv('output/df_top_words_parts_reference_project.csv')
+
+    references = ['54501BA60A', '545011Y210']
+
+    # test_dataset = test_dataset.loc[test_dataset['Part_Ref'].isin(references)]
+    # print(test_dataset)
+    # test_dataset_words_eval = test_dataset_words_eval.loc[test_dataset_words_eval.index.isin(references)]
+    for label in keyword_dictionary.keys():
+        for keywords in keyword_dictionary[label]:
+
+            # tokenized_key_word = nltk.tokenize.word_tokenize(keywords)
+            # try:
+            #     selected_cols = test_dataset_words_eval[tokenized_key_word]
+            # except KeyError:
+            #     print('Palavras chave {} que foram reduzidas a {} não foram encontradas de forma consecutiva.'.format(keywords, tokenized_key_word))
+            #     continue
+            #
+            # matched_index = selected_cols[selected_cols == 1].dropna(axis=0).index.values  # returns the references with the keyword present
+            # if matched_index is not None:
+            #     test_dataset_words_eval.loc[test_dataset_words_eval.index.isin(matched_index), 'New_Product_Group_DW'] = label
+            # else:
+            #     print('Palavras chave {} que foram reduzidas a {} não foram encontradas de forma consecutiva.'.format(keywords, tokenized_key_word))
+
+            try:
+                rank = 0
+                test_dataset_words_eval.loc[test_dataset_words_eval[keywords] == 1, 'New_Product_Group_DW'] = label
+                requests_dict_2 = request_matches(label, keywords, rank, test_dataset_words_eval[test_dataset_words_eval[keywords] == 1].index.values, requests_dict_2)
+            except KeyError:
+                non_matched_keywords.append(keywords)
+                # print('Palavra chave não encontrada: {}'.format(keywords))
+                continue
+
+    test_dataset.sort_values(by='Part_Ref', inplace=True)
+    test_dataset_words_eval.sort_index(inplace=True)
+
+    # print('test_dataset\n', test_dataset['Product_Group_DW'].values)
+    # print('test_dataset_words_eval\n', test_dataset_words_eval['New_Product_Group_DW'].values)
+
+    # if [(x, y) for (x, y) in zip(test_dataset['Part_Ref'].values, test_dataset_words_eval.index.values) if x != y]:
+    #     unique_requests_df = test_dataset['Part_Ref'].unique()
+    #     unique_requests_df_top_words = test_dataset_words_eval.index.values
+    #     print('Referências não classificados no dataset original: {}'.format([x for x in unique_requests_df if x not in unique_requests_df_top_words]))
+    #     print('Referências não classificados no dataset Top_Words: {}'.format([x for x in unique_requests_df_top_words if x not in unique_requests_df]))
+    #     raise ValueError('Existem Referências sem classificação!')
+
+    results = [1 if x == y else 0 for (x, y) in zip(test_dataset['Product_Group_DW'].values, test_dataset_words_eval['New_Product_Group_DW'].values)]
+    correctly_classified = np.sum(results)
+    total_classifications = len(results)
+    print('Non Matched Keywords: \n{}'.format(non_matched_keywords))
+    print('requests_dict_2 \n', requests_dict_2)
+
+    print('Correctly Labeled: {}'.format(correctly_classified))
+    print('Incorrectly Labeled: {}'.format(total_classifications - correctly_classified))
+    print('% Correctly Labeled: {:.2f}'.format(correctly_classified / total_classifications * 100))
+    return
+
+
+def request_matches(label, keywords, rank, requests_list, dictionary):
+
+    for request in requests_list:
+        try:
+            dictionary[request].append((label, rank))
+        except KeyError:
+            dictionary[request] = [(label, rank)]
+
+    return dictionary
 
 
 def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
@@ -53,7 +145,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
         # current_stock_master_file = pd.concat([pd.read_csv('dbs/df_{}_current_stock_unique_202002_section_B_step_2.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
         current_stock_master_file = pd.concat(platforms_stock)
         current_stock_master_file['Part_Desc_PT'] = np.nan
-        # current_stock_master_file = current_stock_master_file.loc[current_stock_master_file['Part_Ref'] == '000010006']
+        # current_stock_master_file = current_stock_master_file.loc[current_stock_master_file['Part_Ref'] == 'A2118800905']
 
         # print('BEFORE \n', current_stock_master_file.head(10))
         # print('BEFORE Shape: ', current_stock_master_file.shape)
@@ -79,7 +171,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
 
                 if current_stock_master_file_filtered.shape[0]:
                     if master_file_brand == 'fiat':  # Fiat
-                        print('### FIAT - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### FIAT - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
 
                         # Plain Match
@@ -104,12 +196,12 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_MF']], 'Master Stock File', left_key='Part_Ref', right_key='Part_Ref')
                         # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'nissan':
-                        print('### NISSAN - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### NISSAN - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
                         # Plain Match
                         _, matched_refs_df, non_matched_refs_df = references_merge(current_stock_master_file_filtered, master_file[['Part_Ref', 'Part_Desc_PT']], 'Plain Match', left_key='Part_Ref', right_key='Part_Ref')
@@ -147,12 +239,12 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Nissan: \n', matched_df_brand.head())
                         # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'seat':
-                        print('### SEAT - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### SEAT - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
                         # Plain Match
                         _, matched_refs_df, non_matched_refs_df = references_merge(current_stock_master_file_filtered, master_file[['Part_Ref', 'Part_Desc_PT']], 'Plain Match', left_key='Part_Ref', right_key='Part_Ref')
@@ -172,12 +264,12 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']].drop_duplicates(subset='Part_Desc_PT'), 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
                         # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'peugeot':
-                        print('### PEUGEOT - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### PEUGEOT - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
                         # master_file['Part_Ref'] = master_file['Part_Ref'].apply(initial_code_removing)
 
@@ -199,12 +291,12 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']], 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
                         # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'citroen':
-                        print('### CITROEN - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### CITROEN - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
 
                         current_stock_master_file_filtered_copy = current_stock_master_file_filtered.copy()
@@ -228,12 +320,12 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']], 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
                         # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'opel':
-                        print('### OPEL - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### OPEL - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
 
                         # Plain Match
@@ -256,12 +348,12 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print(matched_df_brand[['Part_Ref', 'Part_Desc', 'Part_Desc_MF']].head(20))
                         # print(matched_df_brand[['Part_Ref', 'Part_Desc', 'Part_Desc_MF']].tail(20))
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'chevrolet':
-                        print('### CHEVROLET - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### CHEVROLET - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
 
                         # Plain Match
@@ -282,12 +374,12 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']], 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
                         # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     # if master_file_brand == 'audi':
-                    #     print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered.shape[0]))
+                    #     print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
                     #     # print(brand_codes_list)
                     #     matched_dfs = []
                     #
@@ -310,13 +402,13 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                     #     # print(matched_df_brand)
                     #     # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                     #     # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                    #     print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                    #     print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                    #     print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                    #     print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                     #     non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'volkswagen' or master_file_brand == 'audi':
                         if current_stock_master_file_filtered.shape[0]:
-                            print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered.shape[0]))
+                            print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
                             # print(brand_codes_list)
                             matched_dfs = []
 
@@ -367,12 +459,12 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                             # _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_MF']], 'Master Stock File', left_key='Part_Ref', right_key='Part_Ref', validate_option='many_to_one')
                             # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                             # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                            print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                            print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                            print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                            print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                             non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'skoda':
-                        print('### SKODA - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### SKODA - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
 
                         # Plain Match
@@ -393,12 +485,77 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']], 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
                         # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+
+                    if master_file_brand == 'mercedes':
+                        print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
+                        print('brand_codes_list', brand_codes_list)
+                        matched_dfs = []
+
+                        # print('1\n', master_file.loc[master_file['Part_Ref'] == 'A2118800905'])
+                        # Plain Match
+                        _, matched_refs_df, non_matched_refs_df = references_merge(current_stock_master_file_filtered, master_file[['Part_Ref', 'Part_Desc_PT']], 'Plain Match', left_key='Part_Ref', right_key='Part_Ref')
+                        matched_dfs.append(matched_refs_df)
+                        non_matched_dfs = non_matched_refs_df
+
+                        if non_matched_refs_df.shape[0]:
+                            # Removal of Brand_Code in the Reference:
+                            non_matched_refs_df['Part_Ref_Step_2'] = non_matched_refs_df['Part_Ref'].apply(brand_code_removal, args=(brand_codes_list + ['A'],)).apply(regex_string_replacement, args=(regex_dict['zero_at_beginning'],)).apply(regex_string_replacement, args=(regex_dict['middle_strip'],)).apply(regex_string_replacement, args=(regex_dict['zero_at_end'],))
+                            master_file['Part_Ref_Step_2'] = master_file['Part_Ref'].apply(brand_code_removal, args=(brand_codes_list + ['A'],)).apply(regex_string_replacement, args=(regex_dict['zero_at_beginning'],)).apply(regex_string_replacement, args=(regex_dict['middle_strip'],)).apply(regex_string_replacement, args=(regex_dict['zero_at_end'],))
+                            # print('2\n', master_file.loc[master_file['Part_Ref'] == 'A2118800905'])
+
+                            _, matched_refs_df_step_2, non_matched_refs_df_step_2 = references_merge(non_matched_refs_df, master_file[['Part_Ref_Step_2', 'Part_Desc_PT']], 'Brand Code Removal', left_key='Part_Ref_Step_2', right_key='Part_Ref_Step_2')
+                            matched_dfs.append(matched_refs_df_step_2)
+                            non_matched_dfs = non_matched_refs_df_step_2
+
+                            if non_matched_refs_df_step_2.shape[0]:
+                                # Removal of Brand_Code in the Reference:
+                                non_matched_refs_df_step_2['Part_Ref_Step_3'] = non_matched_refs_df_step_2['Part_Ref_Step_2'].apply(regex_string_replacement, args=(regex_dict['bmw_dot'],)).apply(regex_string_replacement, args=(regex_dict['right_bar'],)).apply(regex_string_replacement, args=(regex_dict['all_letters_at_beginning'],)).apply(regex_string_replacement, args=(regex_dict['bmw_AT_end'],))
+                                master_file['Part_Ref_Step_3'] = master_file['Part_Ref_Step_2'].apply(regex_string_replacement, args=(regex_dict['bmw_dot'],)).apply(regex_string_replacement, args=(regex_dict['right_bar'],)).apply(regex_string_replacement, args=(regex_dict['all_letters_at_beginning'],))
+                                # print('3\n', master_file.loc[master_file['Part_Ref'] == 'A2118800905'])
+
+                                _, matched_refs_df_step_3, non_matched_refs_df_step_3 = references_merge(non_matched_refs_df_step_2, master_file[['Part_Ref_Step_3', 'Part_Desc_PT']], 'Reference Cleanup', left_key='Part_Ref_Step_3', right_key='Part_Ref_Step_3')
+                                matched_dfs.append(matched_refs_df_step_3)
+                                non_matched_dfs = non_matched_refs_df_step_3
+
+                        matched_df_brand = pd.concat(matched_dfs)
+                        current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']], 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
+                        # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
+                        # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+
+                    if master_file_brand == 'bmw':
+                        print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
+                        matched_dfs = []
+
+                        # Plain Match
+                        _, matched_refs_df, non_matched_refs_df = references_merge(current_stock_master_file_filtered, master_file[['Part_Ref', 'Part_Desc_PT']], 'Plain Match', left_key='Part_Ref', right_key='Part_Ref')
+                        matched_dfs.append(matched_refs_df)
+                        non_matched_dfs = non_matched_refs_df
+
+                        if non_matched_refs_df.shape[0]:
+                            # Removal of Brand_Code in the Reference:
+                            non_matched_refs_df['Part_Ref_Step_2'] = non_matched_refs_df['Part_Ref'].apply(brand_code_removal, args=(brand_codes_list + ['ZZ' + 'ZG' + 'MN'],)).apply(regex_string_replacement, args=(regex_dict['zero_at_beginning'],)).apply(regex_string_replacement, args=(regex_dict['bmw_AT_end'],)).apply(regex_string_replacement, args=(regex_dict['bmw_dot'],))
+                            master_file['Part_Ref_Step_2'] = master_file['Part_Ref'].apply(brand_code_removal, args=(brand_codes_list + ['ZZ' + 'ZG' + 'MN'],)).apply(regex_string_replacement, args=(regex_dict['zero_at_beginning'],))
+
+                            _, matched_refs_df_step_2, non_matched_refs_df_step_2 = references_merge(non_matched_refs_df, master_file[['Part_Ref_Step_2', 'Part_Desc_PT']], 'Brand Code Removal', left_key='Part_Ref_Step_2', right_key='Part_Ref_Step_2')
+                            matched_dfs.append(matched_refs_df_step_2)
+                            non_matched_dfs = non_matched_refs_df_step_2
+
+                        matched_df_brand = pd.concat(matched_dfs)
+                        current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']], 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
+                        # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
+                        # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                     if master_file_brand == 'ford':
-                        print('### FORD - {} Refs ###'.format(current_stock_master_file_filtered.shape[0]))
+                        print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
                         matched_dfs = []
 
                         # Plain Match
@@ -409,7 +566,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         if non_matched_refs_df.shape[0]:
                             # Removal of Brand_Code in the Reference:
                             non_matched_refs_df['Part_Ref_Step_2'] = non_matched_refs_df['Part_Ref'].apply(brand_code_removal, args=(brand_codes_list,)).apply(regex_string_replacement, args=(regex_dict['zero_at_beginning'],))
-                            master_file['Part_Ref_Step_2'] = master_file['Part_Ref'].apply(regex_string_replacement, args=(regex_dict['zero_at_beginning'],))
+                            master_file['Part_Ref_Step_2'] = master_file['Part_Ref'].apply(brand_code_removal, args=(brand_codes_list,)).apply(regex_string_replacement, args=(regex_dict['zero_at_beginning'],))
 
                             _, matched_refs_df_step_2, non_matched_refs_df_step_2 = references_merge(non_matched_refs_df, master_file[['Part_Ref_Step_2', 'Part_Desc_PT']], 'Brand Code Removal', left_key='Part_Ref_Step_2', right_key='Part_Ref_Step_2')
                             matched_dfs.append(matched_refs_df_step_2)
@@ -419,8 +576,8 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']], 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
                         # matched_df_brand['Part_Desc_Comparison'] = np.where(matched_df_brand['Part_Desc'] != matched_df_brand['Part_Desc_MF'], 1, 0)
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
-                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand.shape[0]))
-                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs.shape[0]))
+                        print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
+                        print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
                         non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
 
                 else:
@@ -461,9 +618,16 @@ def references_merge(df, master_file, description_string, left_key, right_key, v
     if left_key != right_key:
         final.drop([right_key], axis=1, inplace=True)
 
-    non_matched = final['Part_Desc_PT'].isnull().sum()
-    matched = final['Part_Desc_PT'].notnull().sum()
-    print('{} - Matched/Non-Matched: {}/{} ({:.3f}s)'.format(description_string, matched, non_matched, time.time() - step_time))
+    non_matched = final.loc[final['Part_Desc_PT'].isnull(), :]
+    matched = final.loc[final['Part_Desc_PT'].notnull(), :]
+
+    non_matched_desc = final['Part_Desc_PT'].isnull().sum()
+    matched_desc = final['Part_Desc_PT'].notnull().sum()
+    non_matched_references = non_matched['Part_Ref'].nunique()
+    matched_references = matched['Part_Ref'].nunique()
+
+    print('{} - Matched Description/Non-Matched Description: {}/{}'.format(description_string, matched_desc, non_matched_desc))
+    # print('{} - Matched References/Non-Matched References: {}/{} -  ({:.3f}s)'.format(description_string, matched_references, non_matched_references, time.time() - step_time))
 
     matched_df = final.loc[~final['Part_Desc_PT'].isnull(), :].copy()
     non_matched_df = final.loc[final['Part_Desc_PT'].isnull(), :].copy()
@@ -506,75 +670,91 @@ def data_acquisition(platforms, dim_product_group_file, dim_clients_file):
 def data_processing(df_platforms_stock, dim_product_group, dim_clients):
     platforms_stock_unique = []
 
-    for platform, df_platform_stock in zip(current_platforms, df_platforms_stock):
-        print('Platform: {}'.format(platform))
+    try:
+        keyword_dictionary_df = read_csv('output/keywords_per_parts_family.csv', index_col=0)
+        print('Keyword Dictionary Found...')
+        for key, row in keyword_dictionary_df.iterrows():
+            keywords_per_parts_family_dict[key] = [x for x in row.values if x is not np.nan]
 
-        try:
-            df_current_stock_unique = read_csv('dbs/df_{}_current_stock_unique_{}_section_B_step_2.csv'.format(platform, sel_month), index_col=0, dtype={part_desc_col: str})
-            print('Current Stock already processed...')
-            platforms_stock_unique.append(df_current_stock_unique)
-        except FileNotFoundError:
-            print('Processing stock...')
+        return
 
-            # df_platform_stock = df_platform_stock.loc[df_platform_stock['Part_Ref'].isin(['5X0807217F', '1Z5839697D']), :]
+    except FileNotFoundError:
 
-            start_a = time.time()
-            df_platform_current_stock = lowercase_column_conversion(df_platform_stock, [part_desc_col])  # Lowercases the strings of these columns
-            df_platform_current_stock = literal_removal(df_platform_current_stock, part_desc_col)  # Removes literals from the selected column
-            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_punctuation_removal)  # Removes punctuation from string
-            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(unidecode_function)  # Removes accents marks from selected description column;
-            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_digit_removal)  # Removes accents marks from selected description column;
-            print('a - elapsed time: {:.3f}'.format(time.time() - start_a))
+        for platform, df_platform_stock in zip(current_platforms, df_platforms_stock):
+            print('Platform: {}'.format(platform))
 
-            start_b = time.time()
-            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(abbreviations_correction, args=(options_file.abbreviations_dict, ))  # Replacement of abbreviations by the respective full word
-            print('b - elapsed time: {:.3f}'.format(time.time() - start_b))
+            try:
+                df_current_stock_unique = read_csv('dbs/df_{}_current_stock_unique_{}_section_B_step_2.csv'.format(platform, sel_month), dtype={part_desc_col: str})
+                print('Current Stock already processed...')
+                platforms_stock_unique.append(df_current_stock_unique)
+            except FileNotFoundError:
+                print('Processing stock...')
 
-            start_c = time.time()
-            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform] + options_file.stop_words['Parts_Specific_Common_Stop_Words'] + nltk.corpus.stopwords.words('portuguese'),))  # Removal of Stop Words
-            print('c - elapsed time: {:.3f}'.format(time.time() - start_c))
+                # df_platform_stock = df_platform_stock.loc[df_platform_stock['Part_Ref'].isin(['5X0807217F', '1Z5839697D']), :]
 
-            step_c_1 = time.time()
-            stemmer_pt_2 = RSLPStemmer()
-            df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stemming, args=(stemmer_pt_2,))  # Stems each word using a Portuguese Stemmer
-            print('c_1 - elapsed time: {:.3f}'.format(time.time() - step_c_1))
+                start_a = time.time()
+                df_platform_current_stock = lowercase_column_conversion(df_platform_stock, [part_desc_col])  # Lowercases the strings of these columns
+                df_platform_current_stock = literal_removal(df_platform_current_stock, part_desc_col)  # Removes literals from the selected column
+                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_punctuation_removal)  # Removes punctuation from string
+                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(unidecode_function)  # Removes accents marks from selected description column;
+                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_digit_removal)  # Removes accents marks from selected description column;
+                print('a - elapsed time: {:.3f}'.format(time.time() - start_a))
 
-            start_d = time.time()
-            df_current_stock_unique = description_merge_per_reference(df_platform_current_stock)  # Merges descriptions for the same reference and removes repeated tokens;
-            print('d - elapsed time: {:.3f}'.format(time.time() - start_d))
+                start_b = time.time()
+                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(abbreviations_correction, args=(options_file.abbreviations_dict, ))  # Replacement of abbreviations by the respective full word
+                print('b - elapsed time: {:.3f}'.format(time.time() - start_b))
 
-            start_f = time.time()
-            df_current_stock_unique = removed_zero_length_descriptions(df_current_stock_unique)  # Removed descriptions with no information (length = 0)
-            print('f - elapsed time: {:.3f}'.format(time.time() - start_f))
+                start_c = time.time()
+                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform] + options_file.stop_words['Parts_Specific_Common_Stop_Words'] + nltk.corpus.stopwords.words('portuguese'),))  # Removal of Stop Words
+                print('c - elapsed time: {:.3f}'.format(time.time() - start_c))
 
-            print('total time: {:.3f}'.format(time.time() - start_a))
-            save_csv([df_current_stock_unique], ['dbs/df_{}_current_stock_unique_{}_section_B_step_2'.format(platform, sel_month)], index=False)
-        finally:
-            keyword_selection(platform, df_current_stock_unique)
+                step_c_1 = time.time()
+                stemmer_pt_2 = RSLPStemmer()
+                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stemming, args=(stemmer_pt_2,))  # Stems each word using a Portuguese Stemmer
+                print('c_1 - elapsed time: {:.3f}'.format(time.time() - step_c_1))
 
-    # print('Keyword Dictionary: \n', keyword_dict_per_parts_family)
-    # print('Keyword Dictionary Number of Keys', len(list(keyword_dict_per_parts_family.keys())))
-    pd.DataFrame.from_dict(keywords_per_parts_family_dict, orient='index').to_csv('dbs/keywords_per_parts_family.csv')
+                start_d = time.time()
+                df_current_stock_unique = description_merge_per_reference(df_platform_current_stock)  # Merges descriptions for the same reference and removes repeated tokens;
+                print('d - elapsed time: {:.3f}'.format(time.time() - start_d))
 
-    for key in keywords_per_parts_family_dict.keys():
-        print('Product Group DW: {}, Number of Words: {}, Words: {}'.format(key, len(keywords_per_parts_family_dict[key]), keywords_per_parts_family_dict[key]))
+                start_f = time.time()
+                df_current_stock_unique = removed_zero_length_descriptions(df_current_stock_unique)  # Removed descriptions with no information (length = 0)
+                print('f - elapsed time: {:.3f}'.format(time.time() - start_f))
+
+                print('total time: {:.3f}'.format(time.time() - start_a))
+                save_csv([df_current_stock_unique], ['dbs/df_{}_current_stock_unique_{}_section_B_step_2'.format(platform, sel_month)], index=False)
+            finally:
+                keyword_selection(platform, df_current_stock_unique)
+
+        # print('Keyword Dictionary: \n', keyword_dict_per_parts_family)
+        # print('Keyword Dictionary Number of Keys', len(list(keyword_dict_per_parts_family.keys())))
+        pd.DataFrame.from_dict(keywords_per_parts_family_dict, orient='index').to_csv('output/keywords_per_parts_family.csv')
+
+        for key in keywords_per_parts_family_dict.keys():
+            print('Product Group DW: {}, Number of Words: {}, Words: {}'.format(key, len(keywords_per_parts_family_dict[key]), keywords_per_parts_family_dict[key]))
+
+        return
 
 
 def keyword_selection(platform, df):
     start_k_1 = time.time()
+    train_dataset, test_dataset = pd.DataFrame(), pd.DataFrame()
 
     df_grouped_product_group_dw = df.loc[df['Product_Group_DW'] != 1, :].groupby('Product_Group_DW')
+    # df_train_grouped = df_train.groupby('Product_Group_DW')
     for key, group in df_grouped_product_group_dw:
         unique_parts_count = group['Part_Ref'].nunique()
         unique_descs_count = group[part_desc_col].nunique()
-        if platform == 'BI_CA' and key == 49:
-            print(group.head(10))
-            print(group.tail(10))
         if unique_descs_count > 1:
             # print('Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
-            group_train = group.sample(frac=0.8, random_state=42)
 
-            descriptions = list(group_train[part_desc_col])
+            # group_train = group.sample(frac=0.8, random_state=42)
+            # group_train, group_test = train_test_split(group, train_size=0.8, random_state=42)
+            group_train, group_test = train_test_split(group, train_size=0.8, stratify=group['Product_Group_DW'], random_state=42)
+            train_dataset = train_dataset.append(group_train)
+            test_dataset = test_dataset.append(group_test)
+
+            descriptions = list(group[part_desc_col])
 
             top_words = most_common_words(descriptions)
             # most_common_bigrams(descriptions)
@@ -613,6 +793,8 @@ def keyword_selection(platform, df):
             print('Not enough information - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
             pass
 
+    train_dataset.to_csv('output/{}_train_dataset.csv'.format(platform))
+    test_dataset.to_csv('output/{}_test_dataset.csv'.format(platform))
     print('k_1 - elapsed time: {:.3f}'.format(time.time() - start_k_1))
 
     return

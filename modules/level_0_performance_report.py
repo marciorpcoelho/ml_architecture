@@ -283,7 +283,7 @@ def performance_report_sql_inject(df, dsn, database, view, options_file, columns
 
         print('Duração: {:.2f} segundos.'.format(time.time() - start))
     except (pyodbc.ProgrammingError, pyodbc.DataError, pyodbc.Error) as error:
-        df.to_csv(base_path + 'output/{}_backup.csv'.format(view))
+        df.to_csv(base_path + '/output/{}_backup.csv'.format(view))
         log_record('Erro ao fazer upload - {} - A gravar localmente...'.format(error), options_file.project_id, flag=1)
 
     cnxn.commit()

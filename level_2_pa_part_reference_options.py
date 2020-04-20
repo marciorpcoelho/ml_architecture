@@ -135,6 +135,7 @@ master_files_to_convert = {
     'dbs/Master_Files/SEAT_I6459_Completa_200301_PO': [0, [3, 23, 46, 104, 108, 121, 125, 134], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#1', 'Tag#2', 'Currency', 'Cod#3'], 1, 1],
     'dbs/Master_Files/VAG_TPCNCAVW': [0, [0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
     'dbs/Master_Files/VAG_TPCNCSK': [0, [0, 15, 25, 38, 56, 63, 66], ['Part_Ref', 'Part_Desc_PT', 'Cod#2', 'Tag#2', 'Cod#3', 'Tag#3'], 0, 0],
+    'dbs/Master_Files/MBF820P': [0, [0, 19, 46, 54, 129, 135, 150], ['Part_Ref', 'Cod#1', 'Tag#2', 'Part_Desc_PT', 'Cod#3', 'Cod#2'], 0, 0]
     # 'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
     # 'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
     # 'dbs/Master_Files/BMW_Motos_RE_TARIF_BMM_20200318111608': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
@@ -150,6 +151,9 @@ master_files_converted = [
     'dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv',
     'dbs/Master_Files/VAG_TPCNCAVW.csv',
     'dbs/Master_Files/VAG_TPCNCSK.csv',
+    'dbs/Master_Files/MBF820P.csv',
+    'dbs/Master_Files/Preçario BMW.csv',
+    'dbs/Master_Files/FORD _ ref.csv',
     # 'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652.csv',
     # 'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912.csv',
     # 'dbs/Master_Files/Ford_RE_TARIF_FOR_20200318114459.csv',
@@ -166,12 +170,9 @@ master_files_and_brand = {
     # 'dbs/Master_Files/VAG_TPCNCAVW.csv': ['audi', 'volkswagen'],
     'dbs/Master_Files/VAG_TPCNCAVW.csv': ['volkswagen'],
     'dbs/Master_Files/VAG_TPCNCSK.csv': ['skoda'],
-    'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652.csv': ['skoda'],
-    'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912.csv': ['audi', 'volkswagen'],
-    'dbs/Master_Files/Ford_RE_TARIF_FOR_20200318114459.csv': ['ford'],
-    'dbs/Master_Files/Hyundai_RE_TARIF_HYN_20200318142512.csv': ['hyundai'],
-    'dbs/Master_Files/Honda_RE_TARIF_HON_20200318122510.csv': ['honda'],
-    'dbs/Master_Files/Opel_RE_TARIF_OPL_20200318145935.csv': ['opel'],
+    'dbs/Master_Files/MBF820P.csv': ['mercedes'],
+    'dbs/Master_Files/Preçario BMW.csv': ['bmw'],
+    'dbs/Master_Files/FORD _ ref.csv': ['ford']
 }
 
 # 'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.txt
@@ -316,9 +317,12 @@ master_files_and_brand = {
 
 regex_dict = {
     'zero_at_beginning': r'^0*',
+    'zero_at_end': r'0*$',
     'dms_code_at_beginning': r'^{}',
     'up_to_2_letters_at_end': r'[a-zA-Z]{1,2}?$',
     '2_letters_at_end': r'[a-zA-Z]{2}?$',
+    '1_letter_at_beginning': r'^[a-zA-Z]{1}?',
+    'all_letters_at_beginning': r'^[a-zA-Z]+',
     'remove_hifen': r'-',
     'remove_last_dot': r'\.{1}$',
     # '001_beginning_code_removal': r'^001',
@@ -326,4 +330,8 @@ regex_dict = {
     'space_removal': r'\s+',
     'letters_in_the_beginning': r'^[a-zA-Z]{2}',
     'single_V_in_the_beginning': r'^[V]',
+    'bmw_AT_end': r'AT$',
+    'bmw_dot': r'\.',
+    'right_bar': r'/',
+    'middle_strip': r'\s+',
 }

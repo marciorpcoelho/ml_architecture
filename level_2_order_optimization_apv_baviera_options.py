@@ -25,6 +25,7 @@ sql_info = {
     'stock_table': '',
     'final_table': 'PSE_Fact_BI_OrderOptimization',
     'optimization_solution_table': 'PSE_Fact_BI_OrderOptimization_Solver_Optimization',
+    'ta_table': 'PSE_Fact_BI_OrderOptimization_TA_Groups',
 }
 
 sql_info_stock_dbs = {
@@ -58,6 +59,7 @@ sql_info_stock_tables = {
 project_id = 2259
 pse_code = '0B'
 urgent_purchases_flags = [4, 5]
+min_date = '20180131'  # This is a placeholder for the minimum possible date - It already searches for the last processed date.
 
 log_files = {
     'full_log': 'logs/apv_baviera_2259.txt'
@@ -179,7 +181,7 @@ sales_query = '''
         SUM(Posting_Discount_Value* AdvPay_ValueIncluded) as Discount_Value, 
         SUM(((Posting_Sell_Value*AdvPay_ValueIncluded) + Menu_Difference) - (Posting_Discount_Value*AdvPay_ValueIncluded) - (Cost_Value*AdvPay_ValueIncluded)) as Gross_Margin  
     FROM [BI_CRP].[dbo].[PSE_Sales] AS Sales WITH (NOLOCK)  
-    WHERE Client_Id = 3  and Parts_Included = 1 AND NLR_Code = '701' and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM')  
+    WHERE Client_Id = 3  and Line_Type = 'P' AND NLR_Code = '701' and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM')  
     GROUP BY Sales.SLR_Document_Date,  
         Sales.Movement_Date,  
         Sales.SLR_Document, 
@@ -210,7 +212,7 @@ sales_query = '''
         SUM(Posting_Discount_Value* AdvPay_ValueIncluded) as Discount_Value, 
         SUM(((Posting_Sell_Value*AdvPay_ValueIncluded) + Menu_Difference) - (Posting_Discount_Value*AdvPay_ValueIncluded) - (Cost_Value*AdvPay_ValueIncluded)) as Gross_Margin  
     FROM [BI_DW_History].[dbo].[PSE_Sales] AS Sales WITH (NOLOCK)  
-    WHERE Client_Id = 3  and Parts_Included = 1 AND NLR_Code = '701' and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM') 
+    WHERE Client_Id = 3  and Line_Type='P' AND NLR_Code = '701' and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM') 
     GROUP BY Sales.SLR_Document_Date,  
         Sales.Movement_Date,  
         Sales.SLR_Document, 
@@ -300,6 +302,18 @@ dim_product_group_dw = '''
         PT_Product_Group_Level_2_Desc,
         PT_Product_Group_Desc
     FROM [BI_CRP].dbo.[PSE_Dim_Product_Groups_GSC] '''
+
+stock_history_query = '''
+    SELECT SO_Code, 
+        Part_Ref, 
+        Part_Desc, 
+        Quantity, 
+        PVP_1, 
+        Sales_Price, 
+        [Date]
+    FROM [DMS_MLG_01].[dbo].[DMS_CRP_01_SM_Parts_Stock]
+      where  SO_Code = '{}'
+      and [Date] >= '{}' '''
 
 regex_dict = {
     'bmw_part_ref_format': r'BM\d{2}\.\d{2}\.\d{1}\.\d{3}.\d{3}'
