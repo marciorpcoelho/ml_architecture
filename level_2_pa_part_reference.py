@@ -19,6 +19,7 @@ from level_2_pa_part_reference_options import regex_dict
 from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df_specified_query
 from modules.level_1_b_data_processing import lowercase_column_conversion, literal_removal, string_punctuation_removal, master_file_processing, regex_string_replacement, brand_code_removal, string_volkswagen_preparation, value_substitution, lemmatisation, stemming, unidecode_function, string_digit_removal, word_frequency, words_dataframe_creation
 from modules.level_1_e_deployment import save_csv, time_tags
+from collections import Counter
 from scipy.sparse import coo_matrix
 import matplotlib.pyplot as plt
 # nltk.download('stopwords')
@@ -28,7 +29,7 @@ local_flag = 1
 master_file_processing_flag = 0
 current_platforms = ['BI_AFR', 'BI_CRP', 'BI_IBE', 'BI_CA']
 sel_month = '202002'
-part_desc_col = 'Part_Desc_Merged'
+part_desc_col = 'Part_Desc_PT'
 # 'Part_Desc' - Part Description from DW
 # 'Part_Desc_PT' - Part Description from Master Files when available, and from DW when not available
 # 'Part_Desc_Merge' - Part Description from Master Files merged with Part Description from the DW
@@ -50,11 +51,11 @@ def data_modelling(keyword_dictionary):
     train_dataset = pd.concat([pd.read_csv('output/{}_train_dataset.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
     test_dataset = pd.concat([pd.read_csv('output/{}_test_dataset.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
 
-    requests_dict_2 = {}
+    matched_keywords_per_reference_dict = {}
     non_matched_keywords = []
 
     try:
-        test_dataset_words_eval = pd.read_csv('output/df_top_words_parts_reference_project.csv', index_col='Part_Ref')
+        test_dataset_words_eval = pd.read_csv('output/test_dataset_top_words_parts_reference_project.csv', index_col='Part_Ref')
         print('Test Datasets Keywords Found...')
     except FileNotFoundError:
         print('Evaluation Test Dataset Keywords...')
@@ -68,61 +69,83 @@ def data_modelling(keyword_dictionary):
         # print('df_top_words \n', df_top_words)
         # print('df_top_words shape \n', df_top_words.shape)
 
-        test_dataset_words_eval.to_csv('output/df_top_words_parts_reference_project.csv')
+        test_dataset_words_eval.to_csv('output/test_dataset_top_words_parts_reference_project.csv')
 
-    references = ['54501BA60A', '545011Y210']
+    # test_dataset_words_eval = test_dataset_words_eval.loc[test_dataset_words_eval.index == 'OP13432674', :]
 
-    # test_dataset = test_dataset.loc[test_dataset['Part_Ref'].isin(references)]
-    # print(test_dataset)
-    # test_dataset_words_eval = test_dataset_words_eval.loc[test_dataset_words_eval.index.isin(references)]
-    for label in keyword_dictionary.keys():
-        for keywords in keyword_dictionary[label]:
-
-            # tokenized_key_word = nltk.tokenize.word_tokenize(keywords)
-            # try:
-            #     selected_cols = test_dataset_words_eval[tokenized_key_word]
-            # except KeyError:
-            #     print('Palavras chave {} que foram reduzidas a {} não foram encontradas de forma consecutiva.'.format(keywords, tokenized_key_word))
-            #     continue
-            #
-            # matched_index = selected_cols[selected_cols == 1].dropna(axis=0).index.values  # returns the references with the keyword present
-            # if matched_index is not None:
-            #     test_dataset_words_eval.loc[test_dataset_words_eval.index.isin(matched_index), 'New_Product_Group_DW'] = label
-            # else:
-            #     print('Palavras chave {} que foram reduzidas a {} não foram encontradas de forma consecutiva.'.format(keywords, tokenized_key_word))
+    for product_dw_label in keyword_dictionary.keys():
+        rank = 0
+        for keywords in keyword_dictionary[product_dw_label]:
 
             try:
-                rank = 0
-                test_dataset_words_eval.loc[test_dataset_words_eval[keywords] == 1, 'New_Product_Group_DW'] = label
-                requests_dict_2 = request_matches(label, keywords, rank, test_dataset_words_eval[test_dataset_words_eval[keywords] == 1].index.values, requests_dict_2)
+                rank += 1
+                n_gram_level = keywords.count(' ')
+                if n_gram_level:
+                    tokenized_ngram = nltk.word_tokenize(keywords)
+                    if n_gram_level == 2:  # n-grams with n == 3
+                        df_mask = (test_dataset_words_eval[tokenized_ngram[0]] == 1) & (test_dataset_words_eval[tokenized_ngram[1]] == 1) & (test_dataset_words_eval[tokenized_ngram[2]] == 1)
+                    elif n_gram_level == 1:   # n-grams with n == 2
+                        df_mask = (test_dataset_words_eval[tokenized_ngram[0]] == 1) & (test_dataset_words_eval[tokenized_ngram[1]] == 1)
+                else:  # n-grams with n == 1
+                    df_mask = test_dataset_words_eval[keywords] == 1
+
+                # test_dataset_words_eval.loc[df_mask, 'New_Product_Group_DW'] = product_dw_label
+                matched_keywords_per_reference_dict = request_matches(product_dw_label, keywords, rank, list(test_dataset_words_eval.loc[df_mask, 'New_Product_Group_DW'].index), matched_keywords_per_reference_dict)
             except KeyError:
                 non_matched_keywords.append(keywords)
                 # print('Palavra chave não encontrada: {}'.format(keywords))
                 continue
 
+    # print(matched_keywords_per_reference_dict)
+    # print(len(matched_keywords_per_reference_dict.keys()))
+    test_dataset_words_eval = label_assignment(test_dataset_words_eval, matched_keywords_per_reference_dict)
+    # print('test_dataset_words_eval value counts \n', test_dataset_words_eval['New_Product_Group_DW'].value_counts())
+    # print(test_dataset_words_eval.loc[test_dataset_words_eval['New_Product_Group_DW'] == 'Não Definido', :].index)
+
     test_dataset.sort_values(by='Part_Ref', inplace=True)
     test_dataset_words_eval.sort_index(inplace=True)
 
-    # print('test_dataset\n', test_dataset['Product_Group_DW'].values)
-    # print('test_dataset_words_eval\n', test_dataset_words_eval['New_Product_Group_DW'].values)
-
-    # if [(x, y) for (x, y) in zip(test_dataset['Part_Ref'].values, test_dataset_words_eval.index.values) if x != y]:
-    #     unique_requests_df = test_dataset['Part_Ref'].unique()
-    #     unique_requests_df_top_words = test_dataset_words_eval.index.values
-    #     print('Referências não classificados no dataset original: {}'.format([x for x in unique_requests_df if x not in unique_requests_df_top_words]))
-    #     print('Referências não classificados no dataset Top_Words: {}'.format([x for x in unique_requests_df_top_words if x not in unique_requests_df]))
-    #     raise ValueError('Existem Referências sem classificação!')
-
     results = [1 if x == y else 0 for (x, y) in zip(test_dataset['Product_Group_DW'].values, test_dataset_words_eval['New_Product_Group_DW'].values)]
+
     correctly_classified = np.sum(results)
     total_classifications = len(results)
     print('Non Matched Keywords: \n{}'.format(non_matched_keywords))
-    print('requests_dict_2 \n', requests_dict_2)
 
     print('Correctly Labeled: {}'.format(correctly_classified))
     print('Incorrectly Labeled: {}'.format(total_classifications - correctly_classified))
     print('% Correctly Labeled: {:.2f}'.format(correctly_classified / total_classifications * 100))
+
     return
+
+
+def label_assignment(df, keywords_matched_per_reference_dict):
+
+    for reference, values in zip(keywords_matched_per_reference_dict.keys(), keywords_matched_per_reference_dict.values()):
+        product_groups = [x[0] for x in values]
+        product_groups_rank = [x[1] for x in values]
+
+        occurrence_count = Counter(product_groups)
+
+        # Approach 1 - Frequency > Ranking
+        if len(occurrence_count) > 1:  # More than one Product_Group_DW matched
+            if occurrence_count.most_common(2)[0][1] == occurrence_count.most_common(2)[1][1]:  # When the top 2 Product_Group_DW are tied in terms frequency
+                tied_frequency = occurrence_count.most_common()[0][1]  # Get the frequency for the tied product_group_dw
+                tied_product_groups = [x[0] for x in occurrence_count.most_common() if x[1] == tied_frequency]  # select all product_group_dw with the same frequency, as there might be more than 2
+
+                tied_product_groups_ranks = product_groups_rank[0:len(tied_product_groups)]  # get the ranks of the tied product_groups
+                highest_ranked_product_group_idx = tied_product_groups_ranks.index(min(tied_product_groups_ranks))  # get the index for the highest rank (lowest value)
+                highest_ranked_product_group = tied_product_groups[highest_ranked_product_group_idx]  # get the product_group_dw with the highest rank (lowest value)
+
+                product_group_dw = highest_ranked_product_group
+            else:
+                product_group_dw = occurrence_count.most_common(1)[0][0]
+        else:
+            product_group_dw = occurrence_count.most_common(1)[0][0]
+
+        # print('reference {}, product_group_dw {}, matched {}'.format(reference, product_group_dw, keywords_matched_per_reference_dict[reference]))
+        df.loc[df.index == reference, 'New_Product_Group_DW'] = product_group_dw
+
+    return df
 
 
 def request_matches(label, keywords, rank, requests_list, dictionary):
@@ -144,7 +167,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
     except FileNotFoundError:
         # current_stock_master_file = pd.concat([pd.read_csv('dbs/df_{}_current_stock_unique_202002_section_B_step_2.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
         current_stock_master_file = pd.concat(platforms_stock)
-        current_stock_master_file['Part_Desc_PT'] = np.nan
+        current_stock_master_file['Part_Desc_PT'] = np.NaN
         # current_stock_master_file = current_stock_master_file.loc[current_stock_master_file['Part_Ref'] == 'A2118800905']
 
         # print('BEFORE \n', current_stock_master_file.head(10))
@@ -590,7 +613,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
         # print('AFTER Null Descriptions: ', current_stock_master_file['Part_Desc_PT'].isnull().sum())
 
         current_stock_master_file['Part_Desc_Merged'] = current_stock_master_file['Part_Desc'].fillna('') + ' ' + current_stock_master_file['Part_Desc_PT'].fillna('')  # I'll start by merging both descriptions
-        current_stock_master_file = value_substitution(current_stock_master_file, non_null_column='Part_Desc', null_column='Part_Desc_PT')  # For references which didn't match in the Master Files, use the DW Description;
+        # current_stock_master_file = value_substitution(current_stock_master_file, non_null_column='Part_Desc', null_column='Part_Desc_PT')  # For references which didn't match in the Master Files, use the DW Description;
         current_stock_master_file.to_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(time_tag_date), index=False)
 
     platform_ids = [dim_clients[dim_clients['BI_Database'] == x]['Client_Id'].values[0] for x in current_platforms]
@@ -730,8 +753,8 @@ def data_processing(df_platforms_stock, dim_product_group, dim_clients):
         # print('Keyword Dictionary Number of Keys', len(list(keyword_dict_per_parts_family.keys())))
         pd.DataFrame.from_dict(keywords_per_parts_family_dict, orient='index').to_csv('output/keywords_per_parts_family.csv')
 
-        for key in keywords_per_parts_family_dict.keys():
-            print('Product Group DW: {}, Number of Words: {}, Words: {}'.format(key, len(keywords_per_parts_family_dict[key]), keywords_per_parts_family_dict[key]))
+        # for key in keywords_per_parts_family_dict.keys():
+        #     print('Product Group DW: {}, Number of Words: {}, Words: {}'.format(key, len(keywords_per_parts_family_dict[key]), keywords_per_parts_family_dict[key]))
 
         return
 
@@ -740,12 +763,15 @@ def keyword_selection(platform, df):
     start_k_1 = time.time()
     train_dataset, test_dataset = pd.DataFrame(), pd.DataFrame()
 
+    df = df.dropna(subset=[part_desc_col])
+
     df_grouped_product_group_dw = df.loc[df['Product_Group_DW'] != 1, :].groupby('Product_Group_DW')
     # df_train_grouped = df_train.groupby('Product_Group_DW')
     for key, group in df_grouped_product_group_dw:
+        top_words, tf_idf_keywords = [], {}
         unique_parts_count = group['Part_Ref'].nunique()
         unique_descs_count = group[part_desc_col].nunique()
-        if unique_descs_count > 1:
+        if unique_parts_count > 1:
             # print('Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
 
             # group_train = group.sample(frac=0.8, random_state=42)
@@ -756,7 +782,7 @@ def keyword_selection(platform, df):
 
             descriptions = list(group[part_desc_col])
 
-            top_words = most_common_words(descriptions)
+            # top_words = most_common_words(descriptions)
             # most_common_bigrams(descriptions)
             # most_common_trigrams(descriptions)
 
@@ -781,16 +807,17 @@ def keyword_selection(platform, df):
                 # print("\nTF-IDF Keywords:")
                 # for k in tf_idf_keywords:
                 #     print(k, tf_idf_keywords[k])
-                common_and_tf_idf_words = list(set(list(tf_idf_keywords.keys()) + top_words))
+                # common_and_tf_idf_words = list(set(list(tf_idf_keywords.keys()) + top_words))
                 # print('Top Common Words + TF-IDF Words: {}'.format(common_and_tf_idf_words))
-                keyword_dict_creation(key, common_and_tf_idf_words)
 
             except ValueError:
-                print('TF-IDF Error - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
+                # print('TF-IDF Error - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
                 pass
 
+            keyword_dict_creation(key, list(set(list(tf_idf_keywords.keys()) + top_words)))
+
         else:
-            print('Not enough information - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
+            # print('Not enough information - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
             pass
 
     train_dataset.to_csv('output/{}_train_dataset.csv'.format(platform))

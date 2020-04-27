@@ -3,9 +3,11 @@ import pandas as pd
 import numpy as np
 import cvxpy as cp
 import os
+import tkinter as tk
+from tkinter import filedialog
 import sys
 
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import level_2_order_optimization_apv_baviera_options as options_file
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
@@ -57,29 +59,29 @@ def main():
     # solve_dataset_name = base_path + 'output/df_solve_0B_{}.csv'.format(current_date)
 
     solve_data = get_data(options_file)
-    saved_suggestions_dict, saved_suggestions_df = get_suggestions_dict(options_file)
+    # saved_suggestions_dict, saved_suggestions_df = get_suggestions_dict(options_file)
 
     # sel_metric = st.sidebar.selectbox('Please select a metric:', ['-'] + ['DaysToSell_1_Part', 'DaysToSell_1_Part_v2_mean', 'DaysToSell_1_Part_v2_median'], index=0)
     sel_metric = 'Days_To_Sell_Median'
 
-    if saved_suggestions_df.shape[0]:
-        saved_suggestions_df_display = saved_suggestions_df.rename(columns=column_translate_dict).replace(options_file.part_groups_desc_mapping)
-        st.write('Sugestões gravadas:')
-
-        fig = go.Figure(data=[go.Table(
-            columnwidth=[250, 120],
-            header=dict(
-                values=[['Grupo de Peças'], ['Data']],
-                align=['center', 'center'],
-            ),
-            cells=dict(
-                values=[saved_suggestions_df_display['Grupo de Peças'], saved_suggestions_df_display['Data']],
-                align=['center', 'center'],
-            )
-            )
-        ])
-        fig.update_layout(width=600, height=240)
-        st.write(fig)
+    # if saved_suggestions_df.shape[0]:
+    #     saved_suggestions_df_display = saved_suggestions_df.rename(columns=column_translate_dict).replace(options_file.part_groups_desc_mapping)
+    #     st.write('Sugestões gravadas:')
+    #
+    #     fig = go.Figure(data=[go.Table(
+    #         columnwidth=[250, 120],
+    #         header=dict(
+    #             values=[['Grupo de Peças'], ['Data']],
+    #             align=['center', 'center'],
+    #         ),
+    #         cells=dict(
+    #             values=[saved_suggestions_df_display['Grupo de Peças'], saved_suggestions_df_display['Data']],
+    #             align=['center', 'center'],
+    #         )
+    #         )
+    #     ])
+    #     fig.update_layout(width=600, height=240)
+    #     st.write(fig)
 
     if sel_metric != '-':
         solve_data = solve_data[solve_data[sel_metric] > 0]
@@ -135,17 +137,28 @@ def main():
             if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
                 session_state.save_button_pressed_flag = 1
 
-                if sel_group in saved_suggestions_dict.keys() or session_state.overwrite_button_pressed == 1:
-                    st.write('Já existe Sugestão de Encomenda para o Grupo de Peças {}. Pretende substituir pela atual sugestão?'.format(sel_group_original))
-                    session_state.overwrite_button_pressed = 1
-                    if st.button('Sim'):
-                        solution_saving(df_solution_filtered, sel_group, sel_group_original)
-                        session_state.save_button_pressed_flag = 0
-                        session_state.overwrite_button_pressed = 0
-                else:
-                    solution_saving(df_solution_filtered, sel_group, sel_group_original)
-                    session_state.save_button_pressed_flag = 0
-                    session_state.overwrite_button_pressed = 0
+                file_export(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), file_name='Otimização ' + sel_group_original, file_extension='.xlsx')
+                # if sel_group in saved_suggestions_dict.keys() or session_state.overwrite_button_pressed == 1:
+                #     st.write('Já existe Sugestão de Encomenda para o Grupo de Peças {}. Pretende substituir pela atual sugestão?'.format(sel_group_original))
+                #     session_state.overwrite_button_pressed = 1
+                #     if st.button('Sim'):
+                #         solution_saving(df_solution_filtered, sel_group, sel_group_original)
+                #         session_state.save_button_pressed_flag = 0
+                #         session_state.overwrite_button_pressed = 0
+                # else:
+                #     solution_saving(df_solution_filtered, sel_group, sel_group_original)
+                #     session_state.save_button_pressed_flag = 0
+                #     session_state.overwrite_button_pressed = 0
+
+                session_state.save_button_pressed_flag = 0
+                session_state.overwrite_button_pressed = 0
+
+
+def file_export(df, file_name, file_extension):
+
+    root = tk.Tk()
+    export_file_path = filedialog.asksaveasfilename(defaultextension=file_extension, initialfile=file_name, master=root)
+    df.to_excel(export_file_path, index=False, header=True)
 
 
 def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
