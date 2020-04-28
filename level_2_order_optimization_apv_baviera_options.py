@@ -163,7 +163,7 @@ part_groups_desc_mapping = {
 
 # 'BMW - Peças + Óleos'
 # part_groups_desc = ['BMW - Pneus', 'BMW - Acessórios + Jantes + Lifestyle', 'BMW - Químicos', 'MINI - Pneus', 'MINI - Acessórios + Jantes + Lifestyle', 'MINI Regeneration', 'MINI - Peças + Óleos']
-part_groups_desc = ['BMW - Peças + Óleos', 'BMW - Pneus', 'BMW - Acessórios + Jantes + Lifestyle', 'BMW - Químicos', 'MINI - Pneus', 'MINI - Acessórios + Jantes + Lifestyle', 'MINI Regeneration', 'MINI - Peças + Óleos']
+part_groups_desc = ['BMW - Peças + Óleos', 'BMW - Pneus', 'BMW - Acessórios + Jantes + Lifestyle', 'BMW - Químicos', 'MINI - Pneus', 'MINI - Acessórios + Jantes + Lifestyle', 'MINI - Peças + Óleos']
 
 sales_query = '''
     Select Sales.SLR_Document_Date,  

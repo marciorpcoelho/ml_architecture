@@ -127,9 +127,16 @@ def main():
 
         if session_state.df_solution.shape[0]:
             df_solution_filtered = session_state.df_solution[session_state.df_solution['Quantity'] > 0]
-            st.write("Quantidade total de Peças: {:.0f}".format(df_solution_filtered['Quantity'].sum()))
-            st.write("Número de peças diferentes: {}".format(df_solution_filtered['Part_Ref'].nunique()))
-            # st.write("Dias estimados para venda da encomenda: {:.2f}".format(df_solution_filtered['DtS_Per_Qty'].max()))
+            st.markdown(
+                '''
+                - Quantidade total de Peças: {:.0f}
+                - Número de peças diferentes: {}
+                - Intervalo de Preços: [{:.2f}, {:.2f}] €
+                '''.format(df_solution_filtered['Quantity'].sum(),
+                           df_solution_filtered['Part_Ref'].nunique(),
+                           df_solution_filtered[goal_type].min(),
+                           df_solution_filtered[goal_type].max())
+            )
 
             df_display = df_solution_filtered[['Part_Ref', 'Quantity', goal_type, 'Days_To_Sell']]
             st.write(df_display.rename(columns=column_translate_dict).style.format({'Quantidade': '{:.1f}', 'PVP': '{:.2f}', 'Dias de Venda': '{:.2f}'}))
