@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 import cvxpy as cp
 import os
-import tkinter as tk
-from tkinter import filedialog
+import time
+import base64
 import sys
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
@@ -13,7 +13,6 @@ import level_2_order_optimization_apv_baviera_options as options_file
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment
 import modules.SessionState as SessionState
-from plotly import graph_objs as go
 
 saved_solutions_pairs_query = ''' SELECT DISTINCT Part_Ref_Group_Desc, [Date]
       FROM [BI_MLG].[dbo].[{}]
@@ -35,7 +34,8 @@ hide_menu_style = """
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
-session_state = SessionState.get(overwrite_button_pressed=0, save_button_pressed_flag=0, part_ref_group='')
+session_state = SessionState.get(overwrite_button_pressed=0, save_button_pressed_flag=0, part_ref_group='', total_value_optimized=0, df_solution=pd.DataFrame(),
+                                 dtss_goal=0, max_part_number=9999, minimum_cost_or_pvp=0, sel_group='')
 
 column_translate_dict = {
     'Part_Ref': 'Referência',
@@ -55,7 +55,7 @@ reb_subs = {v: k for v, k in options_file.part_groups_desc_mapping.items()}
 
 
 def main():
-    current_date = '20191031'
+    current_date, _ = level_1_e_deployment.time_tags(format_date='%Y%m%d')
     # solve_dataset_name = base_path + 'output/df_solve_0B_{}.csv'.format(current_date)
 
     solve_data = get_data(options_file)
@@ -87,7 +87,7 @@ def main():
         solve_data = solve_data[solve_data[sel_metric] > 0]
         solve_data = solve_data[(solve_data['Part_Ref_Group_Desc'] != 'NO_TA') & (solve_data['Part_Ref_Group_Desc'] != 'Outros')]
 
-    solve_data = solve_data[solve_data['Part_Ref_Group_Desc'] != 'BMW_Bonus_Group_1']
+    solve_data = solve_data[solve_data['Part_Ref_Group_Desc'] != 'MINI_Bonus_Group_2']
     sel_group_original = st.sidebar.selectbox('Por favor escolha um grupo de peças:', ['-'] + options_file.part_groups_desc, index=0)
 
     try:
@@ -110,23 +110,23 @@ def main():
         non_goal_type = [x for x in options_file.goal_types if x not in goal_type][0]
 
         data_filtered = filter_data(solve_data, sel_values_filters, sel_values_col_filters)
-
         st.write('Objetivo para o grupo de peças escolhido: {}'.format(goal_type_translation[goal_type]))
 
-        status, total_value_optimized, selection, above_goal_flag, df_solution = solver(data_filtered, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
-
-        st.write('Máxima solução atingida: {:.2f} €'.format(total_value_optimized))
+        if session_state.dtss_goal != dtss_goal or session_state.max_part_number != max_part_number or session_state.minimum_cost_or_pvp != minimum_cost_or_pvp or session_state.sel_group != sel_group:
+            session_state.total_value_optimized, session_state.df_solution = solver(data_filtered, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
+            session_state.dtss_goal, session_state.max_part_number, session_state.minimum_cost_or_pvp, session_state.sel_group = dtss_goal, max_part_number, minimum_cost_or_pvp, sel_group
 
         try:
-            if above_goal_flag:
-                st.write('Objetivo atingido: {:.2f}/{:.2f} ({:.2f}%)'.format(total_value_optimized, goal_value, total_value_optimized / goal_value * 100))
+            goal_completed_percentage = session_state.total_value_optimized / goal_value * 100
+            if session_state.total_value_optimized > goal_value:
+                st.write('Objetivo atingido: {:.2f}/{:.2f} ({:.2f}%)'.format(session_state.total_value_optimized, goal_value, goal_completed_percentage))
             else:
-                st.write('Objetivo ' + '$\\bold{não}$' + ' atingido: {:.2f}/{:.2f} ({:.2f}%)'.format(total_value_optimized, goal_value, total_value_optimized / goal_value * 100))
+                st.write('Objetivo ' + '$\\bold{não}$' + ' atingido: {:.2f}/{:.2f} ({:.2f}%)'.format(session_state.total_value_optimized, goal_value, goal_completed_percentage))
         except ZeroDivisionError:
             pass
 
-        if df_solution.shape[0]:
-            df_solution_filtered = df_solution[df_solution['Quantity'] > 0]
+        if session_state.df_solution.shape[0]:
+            df_solution_filtered = session_state.df_solution[session_state.df_solution['Quantity'] > 0]
             st.write("Quantidade total de Peças: {:.0f}".format(df_solution_filtered['Quantity'].sum()))
             st.write("Número de peças diferentes: {}".format(df_solution_filtered['Part_Ref'].nunique()))
             # st.write("Dias estimados para venda da encomenda: {:.2f}".format(df_solution_filtered['DtS_Per_Qty'].max()))
@@ -134,35 +134,53 @@ def main():
             df_display = df_solution_filtered[['Part_Ref', 'Quantity', goal_type, 'Days_To_Sell']]
             st.write(df_display.rename(columns=column_translate_dict).style.format({'Quantidade': '{:.1f}', 'PVP': '{:.2f}', 'Dias de Venda': '{:.2f}'}))
 
-            if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
-                session_state.save_button_pressed_flag = 1
+            # if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
+            #     session_state.save_button_pressed_flag = 1
 
-                file_export(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), file_name='Otimização ' + sel_group_original, file_extension='.xlsx')
-                # if sel_group in saved_suggestions_dict.keys() or session_state.overwrite_button_pressed == 1:
-                #     st.write('Já existe Sugestão de Encomenda para o Grupo de Peças {}. Pretende substituir pela atual sugestão?'.format(sel_group_original))
-                #     session_state.overwrite_button_pressed = 1
-                #     if st.button('Sim'):
-                #         solution_saving(df_solution_filtered, sel_group, sel_group_original)
-                #         session_state.save_button_pressed_flag = 0
-                #         session_state.overwrite_button_pressed = 0
-                # else:
-                #     solution_saving(df_solution_filtered, sel_group, sel_group_original)
-                #     session_state.save_button_pressed_flag = 0
-                #     session_state.overwrite_button_pressed = 0
+            # file_export(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), file_name='Otimização_{}_{}'.format(sel_group_original, current_date), file_extension='.xlsx')
+            file_export_2(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), 'Otimização_{}_{}'.format(sel_group_original, current_date))
 
-                session_state.save_button_pressed_flag = 0
-                session_state.overwrite_button_pressed = 0
+            # if sel_group in saved_suggestions_dict.keys() or session_state.overwrite_button_pressed == 1:
+            #     st.write('Já existe Sugestão de Encomenda para o Grupo de Peças {}. Pretende substituir pela atual sugestão?'.format(sel_group_original))
+            #     session_state.overwrite_button_pressed = 1
+            #     if st.button('Sim'):
+            #         solution_saving(df_solution_filtered, sel_group, sel_group_original)
+            #         session_state.save_button_pressed_flag = 0
+            #         session_state.overwrite_button_pressed = 0
+            # else:
+            #     solution_saving(df_solution_filtered, sel_group, sel_group_original)
+            #     session_state.save_button_pressed_flag = 0
+            #     session_state.overwrite_button_pressed = 0
+
+            # session_state.save_button_pressed_flag = 0
+            # session_state.overwrite_button_pressed = 0
+            # session_state.total_value_optimized = 0
+            # session_state.df_solution = pd.DataFrame()
 
 
-def file_export(df, file_name, file_extension):
+# def file_export(df, file_name, file_extension):
+#
+#     root = tk.Tk()
+#     export_file_path = filedialog.asksaveasfilename(defaultextension=file_extension, initialfile=file_name, master=root)
+#     if not export_file_path:
+#         return
+#
+#     df.to_excel(export_file_path, index=False, header=True)
+#     # session_state.total_value_optimized = 0
+#     # session_state.df_solution = pd.DataFrame()
+#
+#     return
 
-    root = tk.Tk()
-    export_file_path = filedialog.asksaveasfilename(defaultextension=file_extension, initialfile=file_name, master=root)
-    df.to_excel(export_file_path, index=False, header=True)
+
+def file_export_2(df, file_name):
+
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}">Gravar Otimização</a> (carregar botão direito e Guardar Link como: {file_name}.csv)'
+    st.markdown(href, unsafe_allow_html=True)
 
 
 def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
-    above_goal_flag = 0
     df_solution = pd.DataFrame()
     df_solve = df_solve[df_solve[sel_metric] <= dtss_goal]
 
@@ -189,7 +207,7 @@ def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max
     else:
         problem_testing_2 = cp.Problem(cp.Maximize(total_value), [dtss_constraint <= dtss_goal, selection >= 0, selection <= 100])
 
-    result = problem_testing_2.solve(solver=cp.GLPK_MI, verbose=False)
+    result = problem_testing_2.solve(solver=cp.GLPK_MI, verbose=False, parallel=True)
 
     if selection.value is not None:
         if result >= goal_value:
@@ -199,7 +217,7 @@ def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max
 
         df_solution = solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group)
 
-    return problem_testing_2.status, result, selection.value, above_goal_flag, df_solution
+    return result, df_solution
 
 
 def solution_saving(df_solution, group_name, group_name_original):
