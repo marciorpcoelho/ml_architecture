@@ -6,10 +6,14 @@ import os
 import time
 import base64
 import sys
+from traceback import format_exc
+from streamlit.ScriptRunner import RerunException
+from streamlit.ScriptRequestQueue import RerunData
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import level_2_order_optimization_apv_baviera_options as options_file
+from modules.level_0_performance_report import log_record, error_upload
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment
 import modules.SessionState as SessionState
@@ -34,7 +38,7 @@ hide_menu_style = """
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
-session_state = SessionState.get(overwrite_button_pressed=0, save_button_pressed_flag=0, part_ref_group='', total_value_optimized=0, df_solution=pd.DataFrame(),
+session_state = SessionState.get(run_id=0, overwrite_button_pressed=0, save_button_pressed_flag=0, part_ref_group='', total_value_optimized=0, df_solution=pd.DataFrame(),
                                  dtss_goal=0, max_part_number=9999, minimum_cost_or_pvp=0, sel_group='')
 
 column_translate_dict = {
@@ -88,7 +92,7 @@ def main():
         solve_data = solve_data[(solve_data['Part_Ref_Group_Desc'] != 'NO_TA') & (solve_data['Part_Ref_Group_Desc'] != 'Outros')]
 
     solve_data = solve_data[solve_data['Part_Ref_Group_Desc'] != 'MINI_Bonus_Group_2']
-    sel_group_original = st.sidebar.selectbox('Por favor escolha um grupo de peças:', ['-'] + options_file.part_groups_desc, index=0)
+    sel_group_original = st.sidebar.selectbox('Por favor escolha um grupo de peças:', ['-'] + options_file.part_groups_desc, index=0, key=session_state.run_id)
 
     try:
         sel_group = [x for x in options_file.part_groups_desc_mapping.keys() if options_file.part_groups_desc_mapping[x] == sel_group_original][0]
@@ -286,4 +290,13 @@ def filter_data(dataset, filters_list, col_filters_list):
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as exception:
+        project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
+        log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        session_state.run_id += 1
+        st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
+        time.sleep(10)
+        raise RerunException(RerunData(widget_state=None))
