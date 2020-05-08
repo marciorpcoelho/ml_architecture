@@ -209,7 +209,7 @@ def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max
 
     selection = cp.Variable(n_size, integer=True)
 
-    dtss_constraint = cp.max(cp.diag(cp.multiply(selection.T, dtss)))
+    dtss_constraint = cp.multiply(selection.T, dtss)
 
     total_value = selection * values
 
