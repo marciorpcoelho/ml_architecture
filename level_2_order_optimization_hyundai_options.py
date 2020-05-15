@@ -74,6 +74,11 @@ column_translate_dict = {
 
 parameters_desc = ['Modelo', 'Motorização', 'Transmissão', 'Versão', 'Cor Exterior', 'Cor Interior']
 
+nlr_code_desc = {
+    'Hyundai': 702,
+    'Honda': 706
+}
+
 sales_query_filtered = '''
         SELECT *
         FROM [BI_DTR].dbo.[VHE_Fact_BI_Sales_DTR] WITH (NOLOCK)

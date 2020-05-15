@@ -46,7 +46,7 @@ hide_menu_style = """
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
-session_state = SessionState.get(run_id=0, overwrite_button_pressed_flag=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, client_lvl_1='', client_lvl_2='', client_lvl_3='', client_lvl_4='', client_lvl_5='', client_lvl_6='', client_lvl_7='', model='')
+session_state = SessionState.get(run_id=0, overwrite_button_pressed_flag=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, client_lvl_1='', client_lvl_2='', client_lvl_3='', client_lvl_4='', client_lvl_5='', client_lvl_6='', client_lvl_7='', model='', brand='')
 
 
 def main():
@@ -56,8 +56,14 @@ def main():
     parameters_values, parameter_restriction_vectors = [], []
     max_number_of_cars_sold = max(data['Quantity_Sold'])
 
-    sel_range = st.sidebar.radio('Apenas Gama Viva?', ['Não', 'Sim'])
-    sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(data['PT_PDB_Model_Desc'].unique()), index=0, key=session_state.run_id)
+    sel_range = st.sidebar.radio('Apenas Gama Viva?', ['Não', 'Sim'], index=1)
+    sel_brand = st.sidebar.selectbox('Marca:', ['-', 'Hyundai', 'Honda'], index=0, key=session_state.run_id)
+
+    if '-' not in sel_brand:
+        sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(data.loc[data['NLR_Code'] == options_file.nlr_code_desc[sel_brand], 'PT_PDB_Model_Desc'].unique()), index=0, key=session_state.run_id)
+    else:
+        sel_model = ''
+
     sel_order_size = st.sidebar.number_input('Por favor escolha o número de viaturas a encomendar:', 1, 1000, value=100)
     sel_min_number_of_configuration = st.sidebar.number_input('Por favor escolha o número mínimo de configurações (default={}):'.format(min_number_of_configuration), 1, 100, value=min_number_of_configuration)
     sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, max_number_of_cars_sold, value=1)
@@ -83,7 +89,7 @@ def main():
 
     client_lvl_values = [sel_client_lvl_1, sel_client_lvl_2, sel_client_lvl_3, sel_client_lvl_4, sel_client_lvl_5, sel_client_lvl_6, sel_client_lvl_7]
 
-    if '-' not in [sel_model]:
+    if '-' not in [sel_model] and '-' not in [sel_brand]:
         data_filtered = filter_data(data, [sel_range, sel_model, sel_min_sold_cars] + client_lvl_values, ['Gama_Viva_Flag', 'PT_PDB_Model_Desc', 'Quantity_Sold'] + client_lvl_cols)
 
         if not data_filtered.shape[0]:
@@ -98,10 +104,9 @@ def main():
                 sel_parameter_max_number = data_filtered[parameter].nunique()
                 try:
                     sel_parameter_value = st.sidebar.number_input('Por favor escolha o número mínimo de diferentes {} a escolher (valor mínimo é {} e o valor máximo é {})'.format(options_file.column_translate_dict[parameter], 1, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number - 1)
-                except ValueError:
-                    sel_parameter_value = st.sidebar.number_input('O número de {} disponíveis values é de apenas {}'.format(options_file.column_translate_dict[parameter], sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number)
-
-                parameters_values.append(sel_parameter_value)
+                    parameters_values.append(sel_parameter_value)
+                except (ValueError, st.errors.StreamlitAPIException):
+                    st.sidebar.text('Existe apenas uma escolha de {}.'.format(options_file.column_translate_dict[parameter]))
 
         for parameter, parameter_value in zip(sel_parameters, parameters_values):
             parameter_restriction_vectors.append(get_parameter_positions(data_filtered.copy(), parameter, parameter_value))
@@ -149,12 +154,12 @@ def main():
                 st.write('Não foi possível gerar uma sugestão de encomenda.')
 
     else:
-        st.write('Por favor escolha um modelo para sugerir a respetiva encomenda.')
+        st.write('Por favor escolha uma marca e modelo para sugerir a respetiva encomenda.')
 
 
 @st.cache
 def get_data(options_file_in):
-    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
     df['PDB_End_Order_Date'] = pd.to_datetime(df['PDB_End_Order_Date'], format='%Y-%m-%d', errors='ignore')
     current_date, _ = level_1_e_deployment.time_tags(format_date='%Y-%m-%d')
 
@@ -189,6 +194,8 @@ def filter_data(dataset, value_filters_list, col_filters_list):
     for col_filter, filter_value in zip(col_filters_list, value_filters_list):
         if col_filter == 'Quantity_Sold':
             data_filtered = data_filtered.loc[data_filtered[col_filter].ge(filter_value), :]
+        elif col_filter == 'Gama_Viva_Flag' and filter_value == 'Não':
+            continue
         elif filter_value != '-':
             data_filtered = data_filtered.loc[data_filtered[col_filter] == filter_value, :]
 
