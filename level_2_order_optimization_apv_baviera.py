@@ -6,7 +6,7 @@ import level_2_order_optimization_apv_baviera_options as options_file
 from modules.level_1_a_data_acquisition import dw_data_retrieval, autoline_data_retrieval, read_csv
 from modules.level_1_b_data_processing import apv_dataset_treatment, column_rename
 from modules.level_1_c_data_modelling import apv_stock_evolution_calculation, part_ref_selection, part_ref_ta_definition, apv_last_stock_calculation, apv_photo_stock_treatment, solver_dataset_preparation
-from modules.level_1_e_deployment import time_tags, sql_inject
+from modules.level_1_e_deployment import time_tags, sql_inject, sql_truncate
 from modules.level_0_performance_report import log_record, project_dict, error_upload, performance_info, performance_info_append
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
@@ -25,7 +25,7 @@ def main():
     df_sales, df_product_group_dw, df_history = data_acquisition(options_file, last_processed_date, current_date)
     df_sales_cleaned = data_processing(df_sales, options_file)
     df_solver, df_part_ref_ta = data_modelling(options_file.pse_code, df_sales_cleaned, df_history, last_processed_date, current_date, preprocessed_data_exists_flag, options_file.project_id)
-    deployment(df_solver, df_part_ref_ta)
+    deployment(df_solver, df_part_ref_ta, options_file.pse_code)
 
     performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df_solver.shape[0])
 
@@ -79,7 +79,7 @@ def data_modelling(pse_code, df_sales, df_history, min_date, max_date, preproces
     return df_solver, part_ref_matchup_df
 
 
-def deployment(df_solver, df_part_ref_ta):
+def deployment(df_solver, df_part_ref_ta, pse_code):
     performance_info_append(time.time(), 'Section_E_Start')
     log_record('Início Secção E...', options_file.project_id)
 
@@ -87,7 +87,10 @@ def deployment(df_solver, df_part_ref_ta):
     df_solver = df_solver.dropna(subset=[options_file.column_sql_renaming['Group']])
     df_part_ref_ta = column_rename(df_part_ref_ta, ['Group'], [options_file.column_sql_renaming['Group']])
 
+    sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'], query=options_file.truncate_table_query.format(options_file.sql_info['final_table'], pse_code))
     sql_inject(df_solver, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, columns=list(options_file.column_sql_renaming.values()), truncate=1, check_date=1)
+
+    sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['ta_table'], query=options_file.truncate_table_query.format(options_file.sql_info['ta_table'], pse_code))
     sql_inject(df_part_ref_ta, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['ta_table'], options_file, columns=list(df_part_ref_ta), truncate=1, check_date=1)
 
     log_record('Fim Secção E.', options_file.project_id)

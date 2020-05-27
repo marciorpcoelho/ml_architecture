@@ -322,6 +322,11 @@ regex_dict = {
     'bmw_part_ref_format': r'BM\d{2}\.\d{2}\.\d{1}\.\d{3}.\d{3}'
 }
 
+truncate_table_query = '''
+    DELETE 
+    FROM [BI_MLG].[dbo].[{}]
+    WHERE PSE_Code = '{}' '''
+
 bmw_original_oil_words = ['óleo', 'oleo', 'oil', 'óleos', 'oleos', 'oils']
 
 

@@ -895,6 +895,7 @@ def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mapping
         df_part_ref_ta['Part_Ref'] = part_refs
         df_part_ref_ta['TA'] = part_ref_tas
         df_part_ref_ta['Group'] = part_ref_tas
+        df_part_ref_ta['PSE_Code'] = pse_code
 
         df_bmw = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')].copy(), ['Group'], [mappings[0]], project_id)
         df_mini = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')].copy(), ['Group'], [mappings[1]], project_id)
@@ -978,6 +979,7 @@ def solver_dataset_preparation(df_sales, df_part_refs_ta, dtss_goal, pse_code, c
     df_solve = pd.concat([result for result in results if result is not None])
 
     df_solve = level_1_b_data_processing.df_join_function(df_solve, df_part_refs_ta[['Part_Ref', 'Group']].set_index('Part_Ref'), on='Part_Ref')  # Addition of the Groups Description
+    df_solve['PSE_Code'] = pse_code
 
     df_solve.to_csv('output/df_solver_{}_{}.csv'.format(pse_code, current_date))
 
