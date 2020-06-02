@@ -39,7 +39,7 @@ hide_menu_style = """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 session_state = SessionState.get(run_id=0, overwrite_button_pressed=0, save_button_pressed_flag=0, part_ref_group='', total_value_optimized=0, df_solution=pd.DataFrame(),
-                                 dtss_goal=0, max_part_number=9999, minimum_cost_or_pvp=0, sel_group='')
+                                 dtss_goal=0, max_part_number=9999, minimum_cost_or_pvp=0, sel_group='', sel_local='')
 
 column_translate_dict = {
     'Part_Ref': 'Referência',
@@ -92,10 +92,12 @@ def main():
         solve_data = solve_data[(solve_data['Part_Ref_Group_Desc'] != 'NO_TA') & (solve_data['Part_Ref_Group_Desc'] != 'Outros')]
 
     solve_data = solve_data[solve_data['Part_Ref_Group_Desc'] != 'MINI_Bonus_Group_2']
+    sel_local_original = st.sidebar.selectbox('Por favor escolha uma Concessão:', ['-'] + list(options_file.pse_code_desc_mapping.values()), index=0, key=session_state.run_id)
     sel_group_original = st.sidebar.selectbox('Por favor escolha um grupo de peças:', ['-'] + options_file.part_groups_desc, index=0, key=session_state.run_id)
 
     try:
         sel_group = [x for x in options_file.part_groups_desc_mapping.keys() if options_file.part_groups_desc_mapping[x] == sel_group_original][0]
+        sel_local = [x for x in options_file.pse_code_desc_mapping.keys() if options_file.pse_code_desc_mapping[x] == sel_local_original][0]
     except IndexError:
         return '-'
 
@@ -103,8 +105,8 @@ def main():
     max_part_number = st.sidebar.number_input('Por favor escolha um valor máximo de peças (0=Sem Limite):', 0, 5000, value=0)
     minimum_cost_or_pvp = st.sidebar.number_input('Por favor escolha um valor mínimo de Custo/PVP para cada peça (0=Sem Limite):', 0.0, max([max(solve_data['PVP']), max(solve_data['Cost'])]), value=0.0)
 
-    sel_values_filters = [sel_group]
-    sel_values_col_filters = ['Part_Ref_Group_Desc']
+    sel_values_filters = [sel_local, sel_group]
+    sel_values_col_filters = ['PSE_Code', 'Part_Ref_Group_Desc']
 
     if '-' not in sel_values_filters:
 
@@ -114,11 +116,16 @@ def main():
         non_goal_type = [x for x in options_file.goal_types if x not in goal_type][0]
 
         data_filtered = filter_data(solve_data, sel_values_filters, sel_values_col_filters)
+        st.write(data_filtered.shape)
+        if data_filtered.shape[0] == 0:
+            st.error('AVISO: Não existem dados para a concessão e/ou grupo de peças escolhido. Por favor escolha outra combinação de parâmetros.')
+            return
+
         st.write('Objetivo para o grupo de peças escolhido: {}'.format(goal_type_translation[goal_type]))
 
-        if session_state.dtss_goal != dtss_goal or session_state.max_part_number != max_part_number or session_state.minimum_cost_or_pvp != minimum_cost_or_pvp or session_state.sel_group != sel_group:
-            session_state.total_value_optimized, session_state.df_solution = solver(data_filtered, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
-            session_state.dtss_goal, session_state.max_part_number, session_state.minimum_cost_or_pvp, session_state.sel_group = dtss_goal, max_part_number, minimum_cost_or_pvp, sel_group
+        if session_state.dtss_goal != dtss_goal or session_state.max_part_number != max_part_number or session_state.minimum_cost_or_pvp != minimum_cost_or_pvp or session_state.sel_group != sel_group or session_state.sel_local != sel_local:
+            session_state.total_value_optimized, session_state.df_solution = solver(data_filtered, sel_local, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
+            session_state.dtss_goal, session_state.max_part_number, session_state.minimum_cost_or_pvp, session_state.sel_group, session_state.sel_local = dtss_goal, max_part_number, minimum_cost_or_pvp, sel_group, sel_local
 
         try:
             goal_completed_percentage = session_state.total_value_optimized / goal_value * 100
@@ -191,7 +198,7 @@ def file_export_2(df, file_name):
     st.markdown(href, unsafe_allow_html=True)
 
 
-def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
+def solver(df_solve, sel_local, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
     df_solution = pd.DataFrame()
     df_solve = df_solve[df_solve[sel_metric] <= dtss_goal]
 
@@ -226,7 +233,7 @@ def solver(df_solve, group, goal_value, goal_type, non_goal_type, dtss_goal, max
         else:
             above_goal_flag = 0
 
-        df_solution = solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group)
+        df_solution = solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group, sel_local)
 
     return result, df_solution
 
@@ -247,7 +254,7 @@ def solution_saving(df_solution, group_name, group_name_original):
     return
 
 
-def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group_name):
+def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group_name, sel_local):
     df_solution = pd.DataFrame(columns={'Part_Ref', 'Quantity', goal_type, 'Days_To_Sell', 'DtS_Per_Qty'})
 
     df_solution['Part_Ref'] = [part for part in unique_parts]
@@ -258,6 +265,7 @@ def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_part
     df_solution['DtS_Per_Qty'] = [qty * dts for qty, dts in zip(selection.value, dtss)]
     df_solution['Above_Goal_Flag'] = [above_goal_flag] * len(unique_parts)
     df_solution['Part_Ref_Group_Desc'] = [group_name] * len(unique_parts)
+    df_solution['PSE_Code'] = sel_local
 
     return df_solution
 

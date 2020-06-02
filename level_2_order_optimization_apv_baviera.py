@@ -2,6 +2,7 @@ import time
 import sys
 import logging
 from traceback import format_exc
+import pandas as pd
 import level_2_order_optimization_apv_baviera_options as options_file
 from modules.level_1_a_data_acquisition import dw_data_retrieval, autoline_data_retrieval, read_csv
 from modules.level_1_b_data_processing import apv_dataset_treatment, column_rename
@@ -85,13 +86,16 @@ def deployment(df_solver, df_part_ref_ta, pse_code):
 
     df_solver = column_rename(df_solver, list(options_file.column_sql_renaming.keys()), list(options_file.column_sql_renaming.values()))
     df_solver = df_solver.dropna(subset=[options_file.column_sql_renaming['Group']])
+    df_solver['Cost'] = pd.to_numeric(df_solver['Cost'], errors='coerce')
+    df_solver.dropna(axis=0, subset=['Cost'], inplace=True)
+
     df_part_ref_ta = column_rename(df_part_ref_ta, ['Group'], [options_file.column_sql_renaming['Group']])
 
     sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'], query=options_file.truncate_table_query.format(options_file.sql_info['final_table'], pse_code))
-    sql_inject(df_solver, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, columns=list(options_file.column_sql_renaming.values()), truncate=1, check_date=1)
+    sql_inject(df_solver, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, columns=list(options_file.column_sql_renaming.values()), check_date=1)
 
     sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['ta_table'], query=options_file.truncate_table_query.format(options_file.sql_info['ta_table'], pse_code))
-    sql_inject(df_part_ref_ta, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['ta_table'], options_file, columns=list(df_part_ref_ta), truncate=1, check_date=1)
+    sql_inject(df_part_ref_ta, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['ta_table'], options_file, columns=list(df_part_ref_ta), check_date=1)
 
     log_record('Fim Secção E.', options_file.project_id)
     performance_info_append(time.time(), 'Section_E_End')

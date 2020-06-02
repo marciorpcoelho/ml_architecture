@@ -31,7 +31,7 @@ margin_threshold = "nan"  # Currently there is no threshold;
 
 metric, metric_threshold = 'R2', 0.50  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 10, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
-
+gamas_match_temp_file = base_path + '/dbs/gamas_match_{}.xlsx'
 
 sql_info = {
     'database_source': 'BI_DTR',
@@ -511,7 +511,7 @@ version_translation = {
     'Premium': ['premium', 'premium my19', 'premium my19 + pack pele', 'premium my20', 'premium + pack pele + pack style my19\'5', 'premium + pack pele + style plus my19\'5', 'premium + pack pele my19\'5', 'premium my19\'5'],
     'Prestige': ['prestige'],
     'Pro': ['pro edition'],
-    'Sport': ['sport plus', 'sport'],
+    'Sport': ['sport plus', 'sport', 'turbo sport'],
     'Style': ['style', 'comfort my18', 'style my18', 'style plus my18', 'style+', 'blue style hp my17', 'blue style', 'style my19'],
     'Type R': ['gt pack', 'gt'],
     'Trend': ['trend', 'trend '],

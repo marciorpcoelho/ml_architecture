@@ -763,6 +763,7 @@ def new_features(df, sel_cols, project_id):
         return df.fillna(0)
 
     if project_id == 2406:
+        df.dropna(subset=['Registration_Request_Date'], inplace=True)
         df_grouped = df.sort_values(by='Registration_Request_Date').groupby(sel_cols)
         pool = Pool(processes=level_0_performance_report.pool_workers_count)
         results = pool.map(additional_info_optimization_hyundai, [(key, group) for (key, group) in df_grouped])

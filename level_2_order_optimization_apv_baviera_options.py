@@ -160,6 +160,24 @@ part_groups_desc_mapping = {
     'MINI_Bonus_Group_3': 'MINI - Acessórios + Jantes + Lifestyle',  # Acessórios + Jantes + Lifestyle
     'MINI_Bonus_Group_4': 'MINI - Pneus',   # Pneus
 }
+pse_code_desc_mapping = {
+    '0B': 'V.N. Gaia',
+    '0I': 'P. Nações',
+    '0C': 'S.M. Feira',
+    '0H': 'Cascais',
+    '0E': 'M.P. Azevedo',
+    '0F': 'Maia',
+    '0G': 'B. Roma',
+    '0K': 'Faro',
+    '0L': 'Portimão',
+    '0N': 'Aveiro',
+    '0Q': 'Motorrad - Entrecampos',
+    # '0J': 'Setúbal',
+    # '0M': 'Coimbra',
+    # '0O': 'Viseu',
+    # '0P': 'Viseu - Colisão',
+}
+
 
 # 'BMW - Peças + Óleos'
 # part_groups_desc = ['BMW - Pneus', 'BMW - Acessórios + Jantes + Lifestyle', 'BMW - Químicos', 'MINI - Pneus', 'MINI - Acessórios + Jantes + Lifestyle', 'MINI Regeneration', 'MINI - Peças + Óleos']
@@ -342,6 +360,7 @@ column_sql_renaming = {
     'DaysToSell_1_Part_v2_mean': 'Days_To_Sell_Mean',
     'DaysToSell_1_Part_v2_median': 'Days_To_Sell_Median',
     'Group': 'Part_Ref_Group_Desc',
+    'PSE_Code': 'PSE_Code',
 }
 
 columns_sql_solver_solution = [

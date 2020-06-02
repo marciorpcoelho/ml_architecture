@@ -856,10 +856,10 @@ def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mapping
     # start = time.time()
 
     try:
-        df_part_ref_ta_grouped = level_1_a_data_acquisition.read_csv(base_path + '/output/part_ref_ta_{}.csv'.format(max_date), index_col=0)
+        df_part_ref_ta_grouped = level_1_a_data_acquisition.read_csv(base_path + '/output/part_ref_ta_{}_{}.csv'.format(pse_code, max_date), index_col=0)
 
     except FileNotFoundError:
-        level_0_performance_report.log_record('Não foi encontrado o ficheiro part_ref_ta_{}. A processar...'.format(max_date), project_id)
+        level_0_performance_report.log_record('Não foi encontrado o ficheiro part_ref_ta_{}_{}. A processar...'.format(pse_code, max_date), project_id)
         df_part_ref_ta = pd.DataFrame(columns={'Part_Ref', 'TA'})
         part_refs, part_ref_tas = [], []
 
@@ -902,7 +902,7 @@ def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mapping
 
         df_part_ref_ta_grouped = pd.concat([df_bmw, df_mini])
 
-        df_part_ref_ta_grouped.to_csv(base_path + '/output/part_ref_ta_{}.csv'.format(max_date))
+        df_part_ref_ta_grouped.to_csv(base_path + '/output/part_ref_ta_{}_{}.csv'.format(pse_code, max_date))
 
     # print('Elapsed Time: {:.2f}'.format(time.time() - start))
     return df_part_ref_ta_grouped
