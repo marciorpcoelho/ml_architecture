@@ -18,29 +18,39 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the 
 
 def main():
     log_record('Projeto: {}'.format(project_dict[options_file.project_id]), options_file.project_id)
-    current_date, _ = time_tags(format_date='%Y%m%d')
 
-    last_processed_date, preprocessed_data_exists_flag = apv_last_stock_calculation(options_file.min_date, current_date, options_file.pse_code, options_file.project_id)
-    print('Processing data from {} to {}'.format(last_processed_date, current_date))
+    for pse_group in options_file.pse_codes_groups:
+        current_date, _ = time_tags(format_date='%Y%m%d')
 
-    df_sales, df_product_group_dw, df_history = data_acquisition(options_file, last_processed_date, current_date)
-    df_sales_cleaned = data_processing(df_sales, options_file)
-    df_solver, df_part_ref_ta = data_modelling(options_file.pse_code, df_sales_cleaned, df_history, last_processed_date, current_date, preprocessed_data_exists_flag, options_file.project_id)
-    deployment(df_solver, df_part_ref_ta, options_file.pse_code)
+        last_processed_date, preprocessed_data_exists_flag = apv_last_stock_calculation(options_file.min_date, current_date, pse_group[0], options_file.project_id)  # Considering all PSE Groups were processed in the same day
+        print('Processing data from {} to {}'.format(last_processed_date, current_date))
 
-    performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df_solver.shape[0])
+        df_sales_group, df_product_group_dw, df_history_group = data_acquisition(options_file, pse_group, last_processed_date, current_date)
+
+        for pse_code in pse_group:
+            df_sales = df_sales_group.loc[df_sales_group['PSE_Code'] == pse_code, :]
+            df_history = df_history_group.loc[df_history_group['SO_Code'] == pse_code, :]
+
+            log_record('Começou PSE = {}'.format(pse_code), options_file.project_id)
+
+            df_sales_cleaned = data_processing(df_sales, pse_code, options_file)
+            df_solver, df_part_ref_ta = data_modelling(pse_code, df_sales_cleaned, df_history, last_processed_date, current_date, preprocessed_data_exists_flag, options_file.project_id)
+            deployment(df_solver, df_part_ref_ta, pse_code)
+
+            log_record('Terminou PSE = {}'.format(pse_code), options_file.project_id)
+
+    performance_info(options_file.project_id, options_file, model_choice_message='N/A')
 
     log_record('Conclusão com sucesso - Projeto: {} .\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
-def data_acquisition(options_info, last_processed_date, current_date):
+def data_acquisition(options_info, pse_group, last_processed_date, current_date):
     performance_info_append(time.time(), 'Section_A_Start')
     log_record('Início Secção A...', options_file.project_id)
 
-    pse_code = options_info.pse_code
     start = time.time()
 
-    df_sales, df_history, df_product_group_dw = dw_data_retrieval(pse_code, current_date, options_info, last_processed_date)
+    df_sales, df_history, df_product_group_dw = dw_data_retrieval(pse_group, current_date, options_info, last_processed_date)
 
     print('Elapsed time: {:.2f} seconds.'.format(time.time() - start))
 
@@ -49,12 +59,12 @@ def data_acquisition(options_info, last_processed_date, current_date):
     return df_sales, df_product_group_dw, df_history
 
 
-def data_processing(df_sales, options_info):
+def data_processing(df_sales, pse_code, options_info):
     performance_info_append(time.time(), 'Section_B_Start')
     log_record('Início Secção B...', options_file.project_id)
     start_treatment = time.time()
 
-    df_sales = apv_dataset_treatment(df_sales, options_info.pse_code, options_info.urgent_purchases_flags, options_info.project_id)
+    df_sales = apv_dataset_treatment(df_sales, pse_code, options_info.urgent_purchases_flags, options_info.project_id)
 
     print('Elapsed time: {:.2f} seconds.'.format(time.time() - start_treatment))
 

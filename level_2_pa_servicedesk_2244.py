@@ -46,7 +46,7 @@ def main():
 
     # pca_analysis()
     deployment(df)
-    performance_info(options_file.project_id, options_file, model_choice_message='N/A', unit_count=df.shape[0])
+    performance_info(options_file.project_id, options_file, model_choice_message='N/A')
 
     log_record('Conclusão com sucesso - Projeto: {}'.format(project_dict[options_file.project_id]), options_file.project_id)
 

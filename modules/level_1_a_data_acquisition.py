@@ -141,18 +141,21 @@ def sql_mapping_retrieval(dsn, db, mapping_tables, mapped_column_name, options_f
     return dictionary_list, dictionary_ranking
 
 
-def dw_data_retrieval(pse_code, current_date, options_info, last_processed_date):
+def dw_data_retrieval(pse_group, current_date, options_info, last_processed_date):
     # PRJ-2259
-    print('Retrieving data for PSE_Code = {}'.format(pse_code))
+    print('Retrieving data for PSE_Codes {}'.format(pse_group))
 
-    sales_info = [base_path + '/dbs/df_sales', options_info.sales_query]
+    pse_group_sql = '\'' + '\', \''.join(pse_group) + '\''
+    pse_group_file_name = str('_'.join(pse_group))
+
+    sales_info = [base_path + '/dbs/df_sales', options_info.sales_query.format(pse_group_sql, pse_group_sql)]
     product_group_dw = [base_path + '/dbs/df_product_group_dw', options_info.dim_product_group_dw]
-    stock_history = [base_path + '/dbs/stock_history', options_info.stock_history_query.format(pse_code, last_processed_date)]
+    stock_history = [base_path + '/dbs/stock_history', options_info.stock_history_query.format(pse_group_sql, last_processed_date)]
 
     dfs = []
 
     for dimension in [sales_info, product_group_dw]:
-        file_name = dimension[0] + '_' + str(pse_code) + '_' + str(current_date)
+        file_name = dimension[0] + '_' + pse_group_file_name + '_' + str(current_date)
 
         try:
             df = read_csv(file_name + '.csv', index_col=0)
@@ -164,7 +167,7 @@ def dw_data_retrieval(pse_code, current_date, options_info, last_processed_date)
         dfs.append(df)
 
     # ToDo Integrate the following the previous loop
-    df_history_file_name = stock_history[0] + '_' + str(pse_code) + '_' + str(current_date)
+    df_history_file_name = stock_history[0] + '_' + pse_group_file_name + '_' + str(current_date)
     try:
         df_history = read_csv(df_history_file_name + '.csv', index_col=0)
     except FileNotFoundError:

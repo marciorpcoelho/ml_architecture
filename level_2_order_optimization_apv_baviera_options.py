@@ -28,9 +28,6 @@ sql_info = {
     'ta_table': 'PSE_Fact_BI_OrderOptimization_TA_Groups',
 }
 
-# Top 0I Parts: ['BM83.21.2.405.675', 'BM07.12.9.952.104', 'BM07.14.9.213.164', 'BM83.19.2.158.851', 'BM64.11.9.237.555']  # PSE_Code = 0I, Lisboa - Expo
-# Top 0B Parts: ['BM83.21.0.406.573', 'BM83.13.9.415.965', 'BM51.18.1.813.017', 'BM11.42.8.507.683', 'BM64.11.9.237.555']  # PSE_Code = 0B, Gaia
-
 sql_info_stock_dbs = {
     'AFR_SPG_01': 'DMS_AFR_01',
     'AFR_SPG_03': 'DMS_AFR_03',
@@ -60,7 +57,6 @@ sql_info_stock_tables = {
 }
 
 project_id = 2259
-pse_code = '0B'
 urgent_purchases_flags = [4, 5]
 min_date = '20180131'  # This is a placeholder for the minimum possible date - It already searches for the last processed date.
 
@@ -178,6 +174,8 @@ pse_code_desc_mapping = {
     # '0P': 'Viseu - Colisão',
 }
 
+pse_codes_groups = [['0B', '0H', '0C', '0N', '0G', '0Q'], ['0I', '0E', '0K', '0L', '0F']]
+
 
 # 'BMW - Peças + Óleos'
 # part_groups_desc = ['BMW - Pneus', 'BMW - Acessórios + Jantes + Lifestyle', 'BMW - Químicos', 'MINI - Pneus', 'MINI - Acessórios + Jantes + Lifestyle', 'MINI Regeneration', 'MINI - Peças + Óleos']
@@ -202,7 +200,7 @@ sales_query = '''
         SUM(Posting_Discount_Value* AdvPay_ValueIncluded) as Discount_Value, 
         SUM(((Posting_Sell_Value*AdvPay_ValueIncluded) + Menu_Difference) - (Posting_Discount_Value*AdvPay_ValueIncluded) - (Cost_Value*AdvPay_ValueIncluded)) as Gross_Margin  
     FROM [BI_CRP].[dbo].[PSE_Sales] AS Sales WITH (NOLOCK)  
-    WHERE Client_Id = 3  and Line_Type = 'P' AND NLR_Code = '701' and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM')  
+    WHERE Client_Id = 3  and Line_Type = 'P' AND NLR_Code = '701' and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  
     GROUP BY Sales.SLR_Document_Date,  
         Sales.Movement_Date,  
         Sales.SLR_Document, 
@@ -233,7 +231,7 @@ sales_query = '''
         SUM(Posting_Discount_Value* AdvPay_ValueIncluded) as Discount_Value, 
         SUM(((Posting_Sell_Value*AdvPay_ValueIncluded) + Menu_Difference) - (Posting_Discount_Value*AdvPay_ValueIncluded) - (Cost_Value*AdvPay_ValueIncluded)) as Gross_Margin  
     FROM [BI_DW_History].[dbo].[PSE_Sales] AS Sales WITH (NOLOCK)  
-    WHERE Client_Id = 3  and Line_Type='P' AND NLR_Code = '701' and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM') 
+    WHERE Client_Id = 3  and Line_Type='P' AND NLR_Code = '701' and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM') 
     GROUP BY Sales.SLR_Document_Date,  
         Sales.Movement_Date,  
         Sales.SLR_Document, 
@@ -244,7 +242,7 @@ sales_query = '''
         Sales.NLR_Code, 
         Sales.PSE_Code, 
         Sales.WIP_Number,  
-        Sales.WIP_Date_Created '''.format(pse_code, pse_code)
+        Sales.WIP_Date_Created '''
 
 purchases_query = '''
     SELECT Movement_Date,  
@@ -258,7 +256,7 @@ purchases_query = '''
         WIP_Number, 
         WIP_Date_Created  
     FROM [BI_CRP].[dbo].[PSE_parts_purchase] WITH (NOLOCK)  
-    WHERE NLR_Code = '701'  AND Parts_Included=1 and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM')  
+    WHERE NLR_Code = '701'  AND Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  
     union all  
     SELECT Movement_Date,  
         PLR_Document, 
@@ -271,7 +269,7 @@ purchases_query = '''
         WIP_Number, 
         WIP_Date_Created  
     FROM [BI_DW_History].[dbo].[PSE_parts_purchase] WITH (NOLOCK)  
-    WHERE NLR_Code = '701' AND Parts_Included=1 and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM') '''.format(pse_code, pse_code)
+    WHERE NLR_Code = '701' AND Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM') '''
 
 stock_query = '''
     SELECT Part_Ref, 
@@ -283,7 +281,7 @@ stock_query = '''
         Stock_Age_Days as Last_Enter,  
         Stock_Age2_Days as Last_Exit  
     FROM [BI_CRP].[dbo].[PSE_Fact_BI_Parts_Stock_Month] WITH (NOLOCK)  
-    WHERE NLR_Code = '701' and Parts_Included=1 and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM')  and Warehouse_Code <> -1  
+    WHERE NLR_Code = '701' and Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  and Warehouse_Code <> -1  
     union all  
     SELECT Part_Ref, 
         Part_Desc, 
@@ -293,7 +291,7 @@ stock_query = '''
         Stock_Age_Days as Last_Enter, 
         Stock_Age2_Days as Last_Exit  
     FROM [BI_DW_History].[dbo].[PSE_Fact_BI_Parts_Stock_Month] WITH (NOLOCK)  
-    WHERE NLR_Code = '701' and Parts_Included=1 and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM')  and Warehouse_Code <> -1 '''.format(pse_code, pse_code)
+    WHERE NLR_Code = '701' and Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  and Warehouse_Code <> -1 '''
 
 reg_query = '''
     SELECT Movement_Date,  
@@ -304,7 +302,7 @@ reg_query = '''
         Quantity,Part_Ref,  
         Part_Desc  
     FROM [BI_CRP].[dbo].[PSE_Parts_Adjustments] WITH (NOLOCK)  
-    WHERE NLR_Code = '701' and PSE_Code = '{}' and LEFT(Part_Ref, 2) in ('MN', 'BM')'''.format(pse_code)
+    WHERE NLR_Code = '701' and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')'''
 
 reg_autoline_clients = '''
     SELECT *  
@@ -333,7 +331,7 @@ stock_history_query = '''
         Sales_Price, 
         [Date]
     FROM [DMS_MLG_01].[dbo].[DMS_CRP_01_SM_Parts_Stock]
-      where  SO_Code = '{}'
+      where  SO_Code in ({})
       and [Date] >= '{}' '''
 
 regex_dict = {

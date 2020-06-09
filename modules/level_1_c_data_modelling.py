@@ -853,7 +853,7 @@ def purchases_reg_cleaning(df_al, purchases_unique_plr, reg_unique_slr):
 
 def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mappings, regex_dict, bmw_original_oil_words, project_id):  # From PSE_Sales
     level_0_performance_report.log_record('A procurar TA para cada referência...', project_id)
-    # start = time.time()
+    start = time.time()
 
     try:
         df_part_ref_ta_grouped = level_1_a_data_acquisition.read_csv(base_path + '/output/part_ref_ta_{}_{}.csv'.format(pse_code, max_date), index_col=0)
@@ -861,40 +861,16 @@ def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mapping
     except FileNotFoundError:
         level_0_performance_report.log_record('Não foi encontrado o ficheiro part_ref_ta_{}_{}. A processar...'.format(pse_code, max_date), project_id)
         df_part_ref_ta = pd.DataFrame(columns={'Part_Ref', 'TA'})
-        part_refs, part_ref_tas = [], []
 
         df_sales = df_sales[df_sales['Product_Group'].notnull()]
-        # i, parts_count, positions = 1, len(selected_parts), []
+        df_sales_sel_parts_grouped = df_sales.loc[df_sales['Part_Ref'].isin(selected_parts), :].groupby('Part_Ref')
 
-        for part_ref in selected_parts:
-            if part_ref.startswith('BM83.'):
-                if not part_ref.startswith('BM83.25.1.1') or not part_ref.startswith('BM83.25.1.3'):
-                    part_refs.append(part_ref)
-                    part_ref_tas.append('Chemical')
-
-            else:
-                part_ref_ta = ta_selection(df_sales, part_ref, regex_dict, bmw_original_oil_words, project_id, product_group_col='Product_Group')
-                # if part_ref_ta in ['NO_TA', 'NO_SAME_BRAND_TA']:
-                #     part_ref_ta = ta_selection(df_al, part_ref, regex_dict, bmw_original_oil_words, product_group_col='TA')
-
-                if part_ref in ['NO_TA', 'NO_SAME_BRAND_TA']:
-                    # print('part_ref {} has the following result: {}'.format(part_ref, part_ref_ta))
-                    continue
-
-                part_refs.append(part_ref)
-                part_ref_tas.append(part_ref_ta)
-
-            #     position = int((i / parts_count) * 100)
-            #     if not position % 1:
-            #         if position not in positions:
-            #             print('{}% completed'.format(position))
-            #             positions.append(position)
-            #
-            # i += 1
-
-        df_part_ref_ta['Part_Ref'] = part_refs
-        df_part_ref_ta['TA'] = part_ref_tas
-        df_part_ref_ta['Group'] = part_ref_tas
+        pool = Pool(processes=level_0_performance_report.pool_workers_count)
+        results = pool.map(ta_selection, [(part_ref, df_sales_per_part_ref, regex_dict, bmw_original_oil_words, project_id, 'Product_Group') for (part_ref, df_sales_per_part_ref) in df_sales_sel_parts_grouped])
+        pool.close()
+        df_part_ref_ta['Part_Ref'] = [result[0] for result in results if result is not None]
+        df_part_ref_ta['TA'] = [result[1] for result in results if result is not None]
+        df_part_ref_ta['Group'] = df_part_ref_ta['TA']
         df_part_ref_ta['PSE_Code'] = pse_code
 
         df_bmw = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')].copy(), ['Group'], [mappings[0]], project_id)
@@ -904,21 +880,21 @@ def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mapping
 
         df_part_ref_ta_grouped.to_csv(base_path + '/output/part_ref_ta_{}_{}.csv'.format(pse_code, max_date))
 
-    # print('Elapsed Time: {:.2f}'.format(time.time() - start))
+    print('TA Def v2: Elapsed Time: {:.2f}'.format(time.time() - start))
     return df_part_ref_ta_grouped
 
 
-def ta_selection(df, part_ref, regex_dict, bmw_original_oil_words, project_id, product_group_col):
-    part_ref_ta = 'NO_TA'
-    part_ref_desc = df[df['Part_Ref'] == part_ref]['Part_Desc'].value_counts().head(1).index  # Gets the most common Part_Desc, for the part_ref which have multiple descriptions;
+def ta_selection(args):
+    part_ref, df, regex_dict, bmw_original_oil_words, project_id, product_group_col = args
 
-    part_ref_unique_ta = df[df['Part_Ref'] == part_ref][product_group_col].unique()
+    part_ref_ta = 'NO_TA'
+    part_ref_desc = df['Part_Desc'].value_counts().head(1).index  # Gets the most common Part_Desc, for the part_ref which have multiple descriptions;
+    part_ref_unique_ta = df[product_group_col].unique()
 
     if len(part_ref_unique_ta) == 1:
         try:
             part_ref_ta = part_ref_unique_ta[0][1]
         except (IndexError, TypeError):
-            # print('part_ref {} with part_ref_ta {} has no TA'.format(part_ref, part_ref_unique_ta))
             return 'NO_TA'
             # Cases where only the part_ref only has one TA but it is only a letter and not letter + number, which provides no information
 
@@ -938,7 +914,7 @@ def ta_selection(df, part_ref, regex_dict, bmw_original_oil_words, project_id, p
     elif not part_ref_unique_ta:
         return 'NO_TA'
 
-    return part_ref_ta
+    return part_ref, part_ref_ta
 
 
 def load_model(model_name, project_id):

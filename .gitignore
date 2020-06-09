@@ -111,3 +111,4 @@ venv.bak/
 !/testing.py
 /level_3_scheduler.py
 /modules/info.env
+/streamlit_reports/streamlit_as_demo.py

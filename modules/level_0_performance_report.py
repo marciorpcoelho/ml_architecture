@@ -127,7 +127,7 @@ def performance_warnings_append(warning):
     warnings_global.append(warning)
 
 
-def performance_info(project_id, options_file, model_choice_message, unit_count):
+def performance_info(project_id, options_file, model_choice_message, unit_count=0):
 
     df_performance, df_warnings = pd.DataFrame(), pd.DataFrame()
     current_date = time.strftime("%Y-%m-%d")
