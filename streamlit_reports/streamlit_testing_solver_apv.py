@@ -6,6 +6,7 @@ import os
 import time
 import base64
 import sys
+import datetime
 from traceback import format_exc
 from streamlit.ScriptRunner import RerunException
 from streamlit.ScriptRequestQueue import RerunData
@@ -60,9 +61,11 @@ reb_subs = {v: k for v, k in options_file.part_groups_desc_mapping.items()}
 
 def main():
     current_date, _ = level_1_e_deployment.time_tags(format_date='%Y%m%d')
+    current_month = datetime.date(1900, int(current_date[4:6]), 1).strftime('%B')
+
     # solve_dataset_name = base_path + 'output/df_solve_0B_{}.csv'.format(current_date)
 
-    solve_data = get_data(options_file)
+    solve_data, df_goals = get_data(options_file)
     # saved_suggestions_dict, saved_suggestions_df = get_suggestions_dict(options_file)
 
     # sel_metric = st.sidebar.selectbox('Please select a metric:', ['-'] + ['DaysToSell_1_Part', 'DaysToSell_1_Part_v2_mean', 'DaysToSell_1_Part_v2_median'], index=0)
@@ -110,13 +113,12 @@ def main():
 
     if '-' not in sel_values_filters:
 
-        goal_value = options_file.group_goals[sel_group][0]
-
+        goal_value = int(df_goals.loc[(df_goals['PSE_Code'] == sel_local) & (df_goals['Parts_Group'] == sel_group) & (df_goals['Month'] == current_month), 'Parts_Group_Goal'].values[0])
         goal_type = options_file.group_goals_type[sel_group]
+
         non_goal_type = [x for x in options_file.goal_types if x not in goal_type][0]
 
         data_filtered = filter_data(solve_data, sel_values_filters, sel_values_col_filters)
-        st.write(data_filtered.shape)
         if data_filtered.shape[0] == 0:
             st.error('AVISO: Não existem dados para a concessão e/ou grupo de peças escolhido. Por favor escolha outra combinação de parâmetros.')
             return
@@ -273,8 +275,9 @@ def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_part
 @st.cache
 def get_data(options_file_in):
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
+    df_goals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['goals_table'], options_file_in)
 
-    return df
+    return df, df_goals
 
 
 def get_suggestions_dict(options_file_in):

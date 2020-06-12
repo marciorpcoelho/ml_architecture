@@ -26,6 +26,7 @@ sql_info = {
     'final_table': 'PSE_Fact_BI_OrderOptimization',
     'optimization_solution_table': 'PSE_Fact_BI_OrderOptimization_Solver_Optimization',
     'ta_table': 'PSE_Fact_BI_OrderOptimization_TA_Groups',
+    'goals_table': 'PSE_Fact_BI_OrderOptimization_Goals',
 }
 
 sql_info_stock_dbs = {
@@ -107,20 +108,20 @@ group_goals = {
     # 'BMW_Bonus_Group_3': [4630 * 1.05],  # Purchase
     # 'BMW_Bonus_Group_4': [9139 * 1.05],  # Sales
     # 'BMW_Bonus_Group_5': [8132 * 1.05],  # Sales
-    'BMW_Bonus_Group_1': [223713 - 208239],  # Purchase - September Goal
-    'BMW_Bonus_Group_3': [4504 - 2226],  # Purchase
-    'BMW_Bonus_Group_4': [8890 - 8250],  # Sales
-    'BMW_Bonus_Group_5': [8085 - 3320],  # Sales
-    'BMW_Bonus_Group_1_limit': [223713 * 1.05 - 208239],  # Purchase - September Goal
-    'BMW_Bonus_Group_3_limit': [4504 * 1.05 - 2226],  # Purchase
-    'BMW_Bonus_Group_4_limit': [8890 * 1.05 - 8250],  # Sales
-    'BMW_Bonus_Group_5_limit': [8085 * 1.05 - 3320],  # Sales
-    'MINI_Bonus_Group_1': [0],
-    'MINI_Bonus_Group_3': [0],
-    'MINI_Bonus_Group_4': [0],
-    'MINI_Bonus_Group_1_limit': [0],
-    'MINI_Bonus_Group_3_limit': [0],
-    'MINI_Bonus_Group_4_limit': [0],
+    # 'BMW_Bonus_Group_1': [223713 - 208239],  # Purchase - September Goal
+    # 'BMW_Bonus_Group_3': [4504 - 2226],  # Purchase
+    # 'BMW_Bonus_Group_4': [8890 - 8250],  # Sales
+    # 'BMW_Bonus_Group_5': [8085 - 3320],  # Sales
+    # 'BMW_Bonus_Group_1_limit': [223713 * 1.05 - 208239],  # Purchase - September Goal
+    # 'BMW_Bonus_Group_3_limit': [4504 * 1.05 - 2226],  # Purchase
+    # 'BMW_Bonus_Group_4_limit': [8890 * 1.05 - 8250],  # Sales
+    # 'BMW_Bonus_Group_5_limit': [8085 * 1.05 - 3320],  # Sales
+    # 'MINI_Bonus_Group_1': [0],
+    # 'MINI_Bonus_Group_3': [0],
+    # 'MINI_Bonus_Group_4': [0],
+    # 'MINI_Bonus_Group_1_limit': [0],
+    # 'MINI_Bonus_Group_3_limit': [0],
+    # 'MINI_Bonus_Group_4_limit': [0],
 }
 
 group_goals_type = {
