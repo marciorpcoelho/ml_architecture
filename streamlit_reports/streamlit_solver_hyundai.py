@@ -160,11 +160,12 @@ def main():
 @st.cache
 def get_data(options_file_in):
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
-    df['PDB_End_Order_Date'] = pd.to_datetime(df['PDB_End_Order_Date'], format='%Y-%m-%d', errors='ignore')
+    df_pdb = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['product_db'], options_file_in)
+    df_pdb['PDB_End_Order_Date'] = pd.to_datetime(df_pdb['PDB_End_Order_Date'], format='%Y-%m-%d', errors='ignore')
     current_date, _ = level_1_e_deployment.time_tags(format_date='%Y-%m-%d')
 
-    gama_viva_mask = df['PDB_End_Order_Date'] >= current_date
-    gama_viva_mask_2 = df['PDB_End_Order_Date'].isnull()
+    sel_vehicledata_codes = gamas_selection(df, df_pdb, current_date)
+    gama_viva_mask = df['VehicleData_Code'].isin(sel_vehicledata_codes)
 
     df['Custo_Stock_Dist'] = df['Measure_9'] * 0.015 / 365 * df['DaysInStock_Distributor'] * (-1)
     df['Score_Euros'] = df['Fixed_Margin_II'] - df['Custo_Stock_Dist']
@@ -173,7 +174,7 @@ def get_data(options_file_in):
     df['Average_DaysInStock_Global'] = df_grouped['DaysInStock_Global'].transform('mean')
     df['Quantity_Sold'] = df_grouped['Chassis_Number'].transform('nunique')
     df['Average_Score_Euros'] = df_grouped['Score_Euros'].transform('mean')
-    df['Gama_Viva_Flag'] = np.where(gama_viva_mask | gama_viva_mask_2, "Sim", "Não")
+    df['Gama_Viva_Flag'] = np.where(gama_viva_mask, "Sim", "Não")
 
     for model in df['PT_PDB_Model_Desc'].unique():
         if model == 'cr-v':
@@ -186,6 +187,21 @@ def get_data(options_file_in):
             df.loc[df['PT_PDB_Model_Desc'] == model, 'PT_PDB_Model_Desc'] = model.capitalize()
 
     return df
+
+
+@st.cache
+def gamas_selection(df, df_pdb, current_date):
+
+    # Client Criteria
+    gama_viva_mask = df_pdb['PDB_End_Order_Date'] >= current_date
+    gama_viva_mask_2 = df_pdb['PDB_End_Order_Date'].isnull()
+
+    # Matchup Criteria - Search for the old gamas which have already been matched
+    gama_viva_mask_matchup = df_pdb['PT_PDB_Commercial_Version_Desc_New'].notnull()
+
+    sel_vehicledata_codes = df_pdb.loc[gama_viva_mask | gama_viva_mask_2 | gama_viva_mask_matchup, :]['VehicleData_Code'].unique()
+
+    return sel_vehicledata_codes
 
 
 def filter_data(dataset, value_filters_list, col_filters_list):

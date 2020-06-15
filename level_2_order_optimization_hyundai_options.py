@@ -42,6 +42,7 @@ sql_info = {
     'final_table': 'VHE_Fact_BI_Sales_DTR',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
     'optimization_solution_table': 'VHE_Fact_BI_OrderOptimization_Solver_Optimization_DTR',
+    'commercial_version_matching': 'VHE_MapDMS_Vehicle_Commercial_Versions_DTR',
 }
 
 log_files = {
@@ -512,7 +513,7 @@ version_translation = {
     'Prestige': ['prestige'],
     'Pro': ['pro edition'],
     'Sport': ['sport plus', 'sport', 'turbo sport'],
-    'Style': ['style', 'comfort my18', 'style my18', 'style plus my18', 'style+', 'blue style hp my17', 'blue style', 'style my19'],
+    'Style': ['style', 'comfort my18', 'style my18', 'style plus my18', 'style+', 'blue style hp my17', 'blue style', 'style my19', 'style plus my19'],
     'Type R': ['gt pack', 'gt'],
     'Trend': ['trend', 'trend '],
     'X-Road': ['x-road navi'],
