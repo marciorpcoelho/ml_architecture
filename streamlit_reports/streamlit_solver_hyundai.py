@@ -46,6 +46,11 @@ hide_menu_style = """
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
+url_hyperlink = '''
+    <a href= "{}" > <p style="text-align:right"> Documentação </p></a>
+'''.format(options_file.documentation_url_solver_app)
+st.markdown(url_hyperlink, unsafe_allow_html=True)
+
 session_state = SessionState.get(run_id=0, overwrite_button_pressed_flag=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, client_lvl_1='', client_lvl_2='', client_lvl_3='', client_lvl_4='', client_lvl_5='', client_lvl_6='', client_lvl_7='', model='', brand='')
 
 
@@ -329,7 +334,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)

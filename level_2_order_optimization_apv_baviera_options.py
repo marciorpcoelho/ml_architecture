@@ -60,6 +60,7 @@ sql_info_stock_tables = {
 project_id = 2259
 urgent_purchases_flags = [4, 5]
 min_date = '20180131'  # This is a placeholder for the minimum possible date - It already searches for the last processed date.
+documentation_url_solver_apv = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/ERAmjgJYWztNiMhPUZQHAVIBWZFd_xqdQDzKSbWB7VtTkQ?e=xXzBwu'
 
 log_files = {
     'full_log': 'logs/apv_baviera_2259.txt'

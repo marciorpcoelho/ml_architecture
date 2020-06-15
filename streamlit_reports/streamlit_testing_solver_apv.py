@@ -39,6 +39,11 @@ hide_menu_style = """
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
+url_hyperlink = '''
+    <a href= "{}" > <p style="text-align:right"> Documentação </p></a>
+'''.format(options_file.documentation_url_solver_apv)
+st.markdown(url_hyperlink, unsafe_allow_html=True)
+
 session_state = SessionState.get(run_id=0, overwrite_button_pressed=0, save_button_pressed_flag=0, part_ref_group='', total_value_optimized=0, df_solution=pd.DataFrame(),
                                  dtss_goal=0, max_part_number=9999, minimum_cost_or_pvp=0, sel_group='', sel_local='')
 

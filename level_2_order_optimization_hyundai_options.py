@@ -32,6 +32,8 @@ margin_threshold = "nan"  # Currently there is no threshold;
 metric, metric_threshold = 'R2', 0.50  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 10, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 gamas_match_temp_file = base_path + '/dbs/gamas_match_{}.xlsx'
+documentation_url_solver_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/ETn-fkuxzHVJj1L5KdQrUeUBMWxtiPU8wkEH9CxXRxsoNg?e=Ja90Mb'
+documentation_url_gamas_match_app = ''
 
 sql_info = {
     'database_source': 'BI_DTR',
