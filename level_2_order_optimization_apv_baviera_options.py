@@ -168,7 +168,7 @@ pse_code_desc_mapping = {
     '0K': 'Faro',
     '0L': 'Portimão',
     '0N': 'Aveiro',
-    '0Q': 'Motorrad - Entrecampos',
+    # '0Q': 'Motorrad - Entrecampos',
     # '0J': 'Setúbal',
     # '0M': 'Coimbra',
     # '0O': 'Viseu',

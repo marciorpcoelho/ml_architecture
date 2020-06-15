@@ -113,7 +113,11 @@ def main():
 
     if '-' not in sel_values_filters:
 
-        goal_value = int(df_goals.loc[(df_goals['PSE_Code'] == sel_local) & (df_goals['Parts_Group'] == sel_group) & (df_goals['Month'] == current_month), 'Parts_Group_Goal'].values[0])
+        try:
+            goal_value = int(df_goals.loc[(df_goals['PSE_Code'] == sel_local) & (df_goals['Parts_Group'] == sel_group) & (df_goals['Month'] == current_month), 'Parts_Group_Goal'].values[0])
+        except IndexError:
+            goal_value = 1
+            st.write('Não existe objetivo definido para a Concessão: {}'.format(sel_local_original))
         goal_type = options_file.group_goals_type[sel_group]
 
         non_goal_type = [x for x in options_file.goal_types if x not in goal_type][0]
