@@ -61,6 +61,7 @@ project_dict = {2244: 'PA@Service Desk',
                 2259: 'Otimização Encomenda Baviera APV',
                 2406: 'Otimização Encomenda Hyundai/Honda',
                 1111: 'Fotografia Stock',
+                1112: 'Fotografia Stock - CRP ATL',
                 2610: 'Catalogação Peças @ DGO',
                 0000: 'Performance Analysis',
                 }
@@ -77,6 +78,7 @@ project_sql_dict = {2244: 'Project_SD',
                     2406: 'Project_VHE_DTR',
                     2610: 'Project_Part_Ref_Catalog',
                     1111: 'DMS Stock Photograph',
+                    1112: 'DMS Stock Photograph - CRP, ATL',
                     }
 
 project_pbi_performance_link = 'https://bit.ly/2SJIYJy'
