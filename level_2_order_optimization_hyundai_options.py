@@ -45,6 +45,7 @@ sql_info = {
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
     'optimization_solution_table': 'VHE_Fact_BI_OrderOptimization_Solver_Optimization_DTR',
     'commercial_version_matching': 'VHE_MapDMS_Vehicle_Commercial_Versions_DTR',
+    'proposals_table': 'VHE_Fact_DW_HPK_Proposals_DTR',
 }
 
 log_files = {

@@ -176,7 +176,7 @@ pse_code_desc_mapping = {
     # '0P': 'Viseu - Colisão',
 }
 
-pse_codes_groups = [['0B', '0H', '0C', '0N', '0G', '0Q'], ['0I', '0E', '0K', '0L', '0F']]
+pse_codes_groups = [['0B', '0H', '0C', '0N', '0G'], ['0I', '0E', '0K', '0L', '0F']]
 
 
 # 'BMW - Peças + Óleos'
@@ -187,7 +187,7 @@ sales_query = '''
     Select Sales.SLR_Document_Date,  
         Sales.Movement_Date,  
         Sales.SLR_Document, 
-        Sales.Part_Ref,  
+        LTRIM(RTRIM(Sales.Part_Ref)) as Part_Ref,  
         Sales.Part_Desc,
         Sales.Product_Group, 
         Sales.Client_Id, 
@@ -218,7 +218,7 @@ sales_query = '''
     Select Sales.SLR_Document_Date,  
         Sales.Movement_Date,  
         Sales.SLR_Document, 
-        Sales.Part_Ref,  
+        LTRIM(RTRIM(Sales.Part_Ref)) as Part_Ref,  
         Sales.Part_Desc,  
         Sales.Product_Group, 
         Sales.Client_Id, 
@@ -251,7 +251,7 @@ purchases_query = '''
         PLR_Document,  
         Quantity,  
         Cost_Value, 
-        Part_Ref, 
+        LTRIM(RTRIM(Part_Ref)) as Part_Ref, 
         Part_Desc, 
         Product_Group_DW,  
         Order_Type_DW,  
@@ -264,7 +264,7 @@ purchases_query = '''
         PLR_Document, 
         Quantity,  
         Cost_Value, 
-        Part_Ref, 
+        LTRIM(RTRIM(Part_Ref)) as Part_Ref, 
         Part_Desc, 
         Product_Group_DW,  
         Order_Type_DW,  
@@ -274,7 +274,7 @@ purchases_query = '''
     WHERE NLR_Code = '701' AND Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM') '''
 
 stock_query = '''
-    SELECT Part_Ref, 
+    SELECT LTRIM(RTRIM(Part_Ref)) as Part_Ref, 
         Part_Desc, 
         Product_Group_DW, 
         Quantity, 
@@ -285,7 +285,7 @@ stock_query = '''
     FROM [BI_CRP].[dbo].[PSE_Fact_BI_Parts_Stock_Month] WITH (NOLOCK)  
     WHERE NLR_Code = '701' and Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  and Warehouse_Code <> -1  
     union all  
-    SELECT Part_Ref, 
+    SELECT LTRIM(RTRIM(Part_Ref)) as Part_Ref, 
         Part_Desc, 
         Product_Group_DW, Quantity, 
         PSE_Code, 
@@ -301,7 +301,8 @@ reg_query = '''
         SLR_Document, 
         Record_Date,  
         WIP_Date_Created,  
-        Quantity,Part_Ref,  
+        Quantity, 
+        LTRIM(RTRIM(Part_Ref)) as Part_Ref,  
         Part_Desc  
     FROM [BI_CRP].[dbo].[PSE_Parts_Adjustments] WITH (NOLOCK)  
     WHERE NLR_Code = '701' and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')'''
@@ -326,7 +327,7 @@ dim_product_group_dw = '''
 
 stock_history_query = '''
     SELECT SO_Code, 
-        Part_Ref, 
+        LTRIM(RTRIM(Part_Ref)) as Part_Ref, 
         Part_Desc, 
         Quantity, 
         PVP_1, 
