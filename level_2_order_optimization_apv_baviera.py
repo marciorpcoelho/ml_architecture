@@ -1,5 +1,6 @@
 import time
 import sys
+import os
 import logging
 from traceback import format_exc
 import pandas as pd
@@ -22,7 +23,7 @@ def main():
     for pse_group in options_file.pse_codes_groups:
         current_date, _ = time_tags(format_date='%Y%m%d')
 
-        last_processed_date, preprocessed_data_exists_flag = apv_last_stock_calculation(options_file.min_date, current_date, pse_group[0], options_file.project_id)  # Considering all PSE Groups were processed in the same day
+        last_processed_date, second_to_last_processed_date, preprocessed_data_exists_flag = apv_last_stock_calculation(options_file.min_date, current_date, pse_group[0], options_file.project_id)  # Considering all PSE Groups were processed in the same day
         print('Processing data from {} to {}'.format(last_processed_date, current_date))
 
         df_sales_group, df_product_group_dw, df_history_group = data_acquisition(options_file, pse_group, last_processed_date, current_date)
@@ -40,6 +41,8 @@ def main():
             log_record('Terminou PSE = {}'.format(pse_code), options_file.project_id)
 
     performance_info(options_file.project_id, options_file, model_choice_message='N/A')
+
+    delete_temp_files(options_file.pse_codes_groups, second_to_last_processed_date)
 
     log_record('Conclusão com sucesso - Projeto: {} .\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 
@@ -110,6 +113,25 @@ def deployment(df_solver, df_part_ref_ta, pse_code):
     log_record('Fim Secção E.', options_file.project_id)
     performance_info_append(time.time(), 'Section_E_End')
     return
+
+
+def delete_temp_files(pse_groups, second_last_processed_date):
+    for pse_group in pse_groups:
+        pse_group_file_name = str('_'.join(pse_group))
+
+        os.remove('dbs/stock_history_{}_{}.csv'.format(pse_group_file_name, second_last_processed_date))
+        os.remove('dbs/df_product_group_dw_{}_{}.csv'.format(pse_group_file_name, second_last_processed_date))
+        os.remove('dbs/df_sales_{}_{}.csv'.format(pse_group_file_name, second_last_processed_date))
+
+        for pse in pse_group:
+            os.remove('dbs/df_sales_cleaned_{}_{}.csv'.format(pse, second_last_processed_date))
+            os.remove('dbs/df_sales_processed_{}_{}.csv'.format(pse, second_last_processed_date))
+            os.remove('output/df_solver_{}_{}.csv'.format(pse, second_last_processed_date))
+            os.remove('output/part_ref_ta_{}_{}.csv'.format(pse, second_last_processed_date))
+            os.remove('output/results_merge_{}_{}.csv'.format(pse, second_last_processed_date))
+
+    return
+
 
 
 if __name__ == '__main__':

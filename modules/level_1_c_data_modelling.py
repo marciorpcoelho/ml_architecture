@@ -464,8 +464,12 @@ def apv_last_stock_calculation(min_date_str, current_date, pse_code, project_id)
     max_date_datetime = datetime.datetime.strptime(current_date, format('%Y%m%d'))
     preprocessed_data_exists_flag = 0
 
+    top_2_idx = np.argsort(results_files)[-2:]
+    results_files = [results_files[i] for i in top_2_idx]
+    second_to_last_processed_date = results_files[0]
+
     try:
-        max_file_date = np.max(results_files)
+        max_file_date = np.max([results_files[1]])
         if min_date_datetime < max_file_date:
             if max_file_date == max_date_datetime:
                 raise Exception('All data has been processed already up to date {}.'.format(max_file_date))
@@ -473,11 +477,11 @@ def apv_last_stock_calculation(min_date_str, current_date, pse_code, project_id)
                 preprocessed_data_exists_flag = 1
                 level_0_performance_report.log_record('Data already processed from {} to {} for PSE {}. Will adjust accordingly: minimum date to process is now: {}.'.format(min_date_str, max_file_date, pse_code, max_file_date), project_id)
                 # print('Data already processed from {} to {} for PSE {}. Will adjust accordingly: minimum date to process is now: {}.'.format(min_date_str, max_file_date, pse_code, max_file_date))
-            return datetime.datetime.strftime(max_file_date, format('%Y%m%d')), preprocessed_data_exists_flag
+            return datetime.datetime.strftime(max_file_date, format('%Y%m%d')), datetime.datetime.strftime(second_to_last_processed_date, format('%Y%m%d')), preprocessed_data_exists_flag
         else:  # Do nothing
-            return min_date_str, preprocessed_data_exists_flag
+            return min_date_str, '', preprocessed_data_exists_flag
     except ValueError:  # No Files found
-        return min_date_str, preprocessed_data_exists_flag
+        return min_date_str, '', preprocessed_data_exists_flag
 
 
 def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, df_stock, df_reg_al_clients, df_purchases, min_date, max_date, project_id):
@@ -488,7 +492,7 @@ def apv_stock_evolution_calculation(pse_code, selected_parts, df_sales, df_al, d
 
     except FileNotFoundError:
         level_0_performance_report.log_record('Ficheiro results_merge_{}_{} não encontrado. A processar...'.format(pse_code, max_date), project_id)
-        min_date, preprocessed_data_exists_flag = apv_last_stock_calculation(min_date, max_date, pse_code, project_id)
+        min_date, _, preprocessed_data_exists_flag = apv_last_stock_calculation(min_date, max_date, pse_code, project_id)
 
         df_stock.set_index('Record_Date', inplace=True)
         df_purchases.set_index('Movement_Date', inplace=True)

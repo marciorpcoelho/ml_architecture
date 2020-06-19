@@ -212,6 +212,22 @@ def sql_join(df, dsn, database, view, options_file):
     return
 
 
+def sql_query(query, dsn, database, view, options_file):
+    start = time.time()
+
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
+    cursor = cnxn.cursor()
+    cursor.execute(query)
+
+    print('Duração: {:.2f} segundos.'.format(time.time() - start))
+
+    cnxn.commit()
+    cursor.close()
+    cnxn.close()
+
+    return
+
+
 def sql_string_preparation_v2(values_list):
     columns_string = '[%s]' % "], [".join(values_list)
 
