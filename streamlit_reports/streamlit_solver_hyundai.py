@@ -47,7 +47,7 @@ hide_menu_style = """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 url_hyperlink = '''
-    <a href= "{}" > <p style="text-align:right"> Documentação </p></a>
+    <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
 '''.format(options_file.documentation_url_solver_app)
 st.markdown(url_hyperlink, unsafe_allow_html=True)
 
@@ -167,6 +167,8 @@ def get_data(options_file_in):
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
     df_pdb = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['product_db'], options_file_in)
     df_pdb['PDB_End_Order_Date'] = pd.to_datetime(df_pdb['PDB_End_Order_Date'], format='%Y-%m-%d', errors='ignore')
+    # df_proposals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['proposals_table'], options_file_in, columns=['VehicleData_Code', 'Concession'], query_filters={'Stage': 'Não Entregue'})
+    # df_proposals = df_proposals.loc[df_proposals['VehicleData_Code'] > 1, :]
     current_date, _ = level_1_e_deployment.time_tags(format_date='%Y-%m-%d')
 
     sel_vehicledata_codes = gamas_selection(df, df_pdb, current_date)
@@ -181,6 +183,8 @@ def get_data(options_file_in):
     df['Average_Score_Euros'] = df_grouped['Score_Euros'].transform('mean')
     df['Gama_Viva_Flag'] = np.where(gama_viva_mask, "Sim", "Não")
 
+    # df = proposals_calculation(df, df_proposals)  # ToDo: This will be ready to use as soon as I get the codes to identify the clients/concessions
+
     for model in df['PT_PDB_Model_Desc'].unique():
         if model == 'cr-v':
             df.loc[df['PT_PDB_Model_Desc'] == model, 'PT_PDB_Model_Desc'] = 'CR-V'
@@ -193,6 +197,18 @@ def get_data(options_file_in):
 
     return df
 
+
+# def proposals_calculation(df, df_proposals):
+#
+#     # Counts the number of proposals per VehicleData_Code and Concession
+#     df_proposals['Count'] = 0
+#     df_proposals['Count'] = df_proposals.groupby(['VehicleData_Code', 'Concession']).transform('count')
+#     df_proposals = df_proposals.drop_duplicates()
+#
+#     # Merges the number of proposals to the current dataframe, filling with 0 those who have no proposals
+#     df_join = pd.merge(df, df_proposals, on=['VehicleData_Code', 'Concession'], how='left').fillna(0)
+#
+#     return df_join
 
 @st.cache
 def gamas_selection(df, df_pdb, current_date):
@@ -334,7 +350,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)

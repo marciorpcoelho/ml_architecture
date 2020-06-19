@@ -11,6 +11,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import level_2_order_optimization_hyundai_options as options_file
+import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.SessionState as SessionState
 import modules.level_1_e_deployment as level_1_e_deployment
 from modules.level_0_performance_report import log_record, error_upload
@@ -28,7 +29,7 @@ st.markdown(hide_menu_style, unsafe_allow_html=True)
 # '''.format(options_file.url_doc)
 # st.markdown(url_hyperlink, unsafe_allow_html=True)
 
-session_state = SessionState.get(run_id=0, sel_brand='-', sel_model='-', draws_gama_morta=pd.DataFrame(), high_confidence_matches=pd.DataFrame(), not_high_confidence_matches=pd.DataFrame(), sel_df='-', df_sim=pd.DataFrame(), sel_table='-', validate_button_pressed=0)
+session_state = SessionState.get(run_id=0, sel_brand='-', sel_model='-', draws_gama_morta=pd.DataFrame(), high_confidence_matches=pd.DataFrame(), not_high_confidence_matches=pd.DataFrame(), sel_df='-', df_sim=pd.DataFrame(), sel_table='-', validate_button_pressed=0, unmatched_data_filtered=pd.DataFrame())
 
 """
 # Correspondência Gamas - Importador
@@ -37,182 +38,219 @@ Correspondência entre Gamas Mortas e Vivas
 
 
 def main():
-    sel_brand = st.sidebar.selectbox('Marca:', ['-', 'Hyundai', 'Honda'], index=0)
+    data = get_data(options_file)
+    unmatched_data = get_data_non_cached(options_file, 0)
+    matched_data = get_data_non_cached(options_file, 1)
 
-    if sel_brand != '-':
-        data = get_data(options_file.gamas_match_temp_file.format(sel_brand.lower()))
-        unique_models = list(data['Modelo'].unique())
+    sel_goal = st.sidebar.radio('Apenas Gama Viva?', ['Gamas por Corresponder', 'Gamas Correspondidas'], index=0)
 
-        sel_model = st.sidebar.selectbox('Modelo', ['-'] + unique_models, index=0)
-        sel_confidence_threshold = st.sidebar.slider('Grau de Semelhança', min_value=0.0, max_value=1.0, value=0.8, step=0.01)
+    if sel_goal == 'Gamas por Corresponder':
+        session_state.validate_button_pressed = 0
 
-        if sel_model != '-':
-            if sel_brand != session_state.sel_brand or sel_model != session_state.sel_model:
-                session_state.sel_brand = sel_brand
-                session_state.sel_model = sel_model
+        if not unmatched_data.shape[0]:
+            st.write('Não existem gamas sem correspondência.')
+            return
 
-                data_filtered = filter_data(data, [sel_model], ['Modelo'])
-                session_state.gama_viva_per_model = data_filtered['Gama Viva'].unique()
+        else:
+            sel_brand = st.sidebar.selectbox('Marca:', ['-'] + list(unmatched_data['PT_PDB_Franchise_Desc'].unique()), index=0)
 
-                session_state.df_sim = calculate_cosine_similarity(data_filtered)
-                idx_max_similarity = session_state.df_sim.groupby(['Gama Morta'])['similarity_cosine'].transform(max) == session_state.df_sim['similarity_cosine']
-                df_max_similarity = session_state.df_sim[idx_max_similarity]
+            if sel_brand != '-':
+                unmatched_data = unmatched_data.loc[unmatched_data['PT_PDB_Franchise_Desc'] == sel_brand.upper(), :]
+                print('2 - ', unmatched_data.shape)
 
-                session_state.draws = df_max_similarity.groupby(['Gama Morta']).filter(lambda x: len(x) > 1).sort_values(by='similarity_cosine', ascending=False)
-                draws_gama_morta = session_state.draws['Gama Morta'].unique()
-                session_state.high_confidence_matches = df_max_similarity.loc[(df_max_similarity['similarity_cosine'] >= sel_confidence_threshold - 0.001) & (~df_max_similarity['Gama Morta'].isin(draws_gama_morta)), ['Gama Morta', 'Gama Viva', 'similarity_cosine']].sort_values(by='similarity_cosine', ascending=False)
-                session_state.not_high_confidence_matches = df_max_similarity.loc[(df_max_similarity['similarity_cosine'] < sel_confidence_threshold - 0.001) & (~df_max_similarity['Gama Morta'].isin(draws_gama_morta)), ['Gama Morta', 'Gama Viva', 'similarity_cosine']].sort_values(by='similarity_cosine', ascending=False)
+                unique_models = [x for x in list(unmatched_data['PT_PDB_Model_Desc'].unique()) if x not in ['H-1', 'H-1 3 lugares', 'H-1 6 lugares', 'H350', 'i20 Coupe', 'i20 VAN']]
 
-            row_even_color = 'lightgrey'
-            row_odd_color = 'white'
+                sel_model = st.sidebar.selectbox('Modelo', ['-'] + unique_models, index=0)
+                # sel_confidence_threshold = st.sidebar.slider('Grau de Semelhança', min_value=0.0, max_value=1.0, value=0.8, step=0.01)
 
-            if session_state.high_confidence_matches.shape[0]:
-                st.subheader('Alta Semelhança:')
-                fig = go.Figure(data=[go.Table(
-                    columnwidth=[500, 500, 100],
-                    header=dict(
-                        values=[['Gama Morta'], ['Gama Viva'], ['Semelhança']],
-                        align=['center', 'center', 'center'],
-                    ),
-                    cells=dict(
-                        values=[session_state.high_confidence_matches['Gama Morta'], session_state.high_confidence_matches['Gama Viva'], session_state.high_confidence_matches['similarity_cosine'].round(2)],
-                        align=['center', 'center', 'center'],
-                        fill_color=[[row_odd_color, row_even_color] * session_state.high_confidence_matches.shape[0]],
-                    )
-                )
-                ])
-                st.button('Validar Alta Semelhança')
+                if sel_model != '-':
+                    if sel_brand != session_state.sel_brand or sel_model != session_state.sel_model:
+                        # session_state.sel_brand = sel_brand
+                        # session_state.sel_model = sel_model
 
-                fig.update_layout(width=1100)
-                st.write(fig)
+                        session_state.unmatched_data_filtered = filter_data(unmatched_data, [sel_model], ['PT_PDB_Model_Desc'])
+                        matched_data_filtered = filter_data(data, [sel_model, sel_brand], ['PT_PDB_Model_Desc', 'PT_PDB_Franchise_Desc'])
 
-            if session_state.draws_gama_morta.shape[0]:
-                st.subheader('Empates:')
-                fig = go.Figure(data=[go.Table(
-                    columnwidth=[500, 500, 100],
-                    header=dict(
-                        values=[['Gama Morta'], ['Gama Viva'], ['Semelhança']],
-                        align=['center', 'center', 'center'],
-                    ),
-                    cells=dict(
-                        values=[session_state.draws['Gama Morta'], session_state.draws['Gama Viva'], session_state.draws['similarity_cosine'].round(2)],
-                        align=['center', 'center', 'center'],
-                        fill_color=[[row_odd_color, row_even_color] * session_state.draws.shape[0]],
-                    )
-                )
-                ])
+                        st.write('Existem as seguintes gamas por corresponder para a marca {} e modelo {}:'.format(sel_brand, sel_model))
 
-                fig.update_layout(width=1100)
-                st.write(fig)
+                        st.write('Gamas Mortas:')
+                        st.table(session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1, :]['PT_PDB_Commercial_Version_Desc_Old'].rename('Gama'))
+                        st.write('Gamas Vivas:')
+                        st.table(session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1, :]['PT_PDB_Commercial_Version_Desc_Old'].rename('Gama'))
 
-            if session_state.not_high_confidence_matches.shape[0]:
-                st.subheader('Baixa Semelhança:')
-                fig = go.Figure(data=[go.Table(
-                    columnwidth=[500, 500, 100],
-                    header=dict(
-                        values=[['Gama Morta'], ['Gama Viva'], ['Semelhança']],
-                        align=['center', 'center', 'center'],
-                    ),
-                    cells=dict(
-                        values=[session_state.not_high_confidence_matches['Gama Morta'], session_state.not_high_confidence_matches['Gama Viva'], session_state.not_high_confidence_matches['similarity_cosine'].round(2)],
-                        align=['center', 'center', 'center'],
-                        fill_color=[[row_odd_color, row_even_color] * session_state.not_high_confidence_matches.shape[0]],
-                    )
-                )
-                ])
-                st.button('Validar Baixa Semelhança')
+                        session_state.gama_viva_per_model = matched_data_filtered['PT_PDB_Commercial_Version_Desc_New'].unique()
+                        session_state.gama_morta_per_model = matched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].unique()
+                        unmatched_gamas = list(session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].unique())
+                        sel_gama = st.selectbox('Por favor escolha uma Gama:', ['-'] + list(session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].unique()), index=0, key=session_state.run_id)
 
-                fig.update_layout(width=1100)
-                st.write(fig)
+                        if sel_gama != '-':
+                            sel_gama_flag = session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'] == sel_gama, 'PT_PDB_Commercial_Version_Flag'].values[0]
 
-            sel_table = st.sidebar.selectbox('Tabela a editar:', ['-'] + ['Alta Semelhança', 'Empates', 'Baixa Semelhança'], index=0)
+                            session_state.df_sim = calculate_cosine_similarity(sel_gama, sel_gama_flag, matched_data_filtered, unmatched_gamas)
 
-            if sel_table != '-':
-                if sel_table == 'Alta Semelhança':
-                    sel_df = session_state.high_confidence_matches
-                elif sel_table == 'Baixa Semelhança':
-                    sel_df = session_state.not_high_confidence_matches
-                elif sel_table == 'Empates':
-                    sel_df = session_state.draws
+                            suggestions = session_state.df_sim[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
+                            if sel_gama_flag == -1:
+                                st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama Viva', 'similarity_cosine': 'Grau de Semelhança'}))
+                                sel_gama_match = st.selectbox('Por favor escolha a correspondente Gama:', ['-', 's/ correspondência'] + list([x for x in session_state.gama_viva_per_model if x not in [' ', '']]), index=0, key=session_state.run_id)
 
-                session_state.sel_table = sel_table
-                session_state.sel_df = sel_df
+                            elif sel_gama_flag == 1:
+                                st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama Morta', 'similarity_cosine': 'Grau de Semelhança'}))
+                                sel_gama_match = st.selectbox('Por favor escolha a correspondente Gama:', ['-', 's/ correspondência'] + list([x for x in session_state.gama_morta_per_model if x not in [' ', '']]), index=0, key=session_state.run_id)
 
-                sel_gama_morta = st.selectbox('Por favor escolha uma Gama Morta:', ['-'] + list(session_state.sel_df['Gama Morta'].unique()), index=0, key=session_state.run_id)
-                if sel_gama_morta != '-':
-                    # st.table('Sugestões:', df_sim.loc[df_sim['Gama Morta'] == sel_gama_morta, ['Gama Viva', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5))
-                    suggestions = session_state.df_sim.loc[session_state.df_sim['Gama Morta'] == sel_gama_morta, :].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
-                    st.table(suggestions[['Gama Viva', 'similarity_cosine']])
+                            if sel_gama_match != '-':
+                                if st.button('Validar') or session_state.validate_button_pressed == 1:
+                                    session_state.validate_button_pressed = 1
 
-                    sel_gama_viva = st.selectbox('Por favor escolha a correspondente Gama Viva', ['-', 's/ correspondência'] + list([x for x in session_state.gama_viva_per_model if x != ' ']), index=0, key=session_state.run_id)
+                                    if sel_gama_flag == -1:
+                                        st.write('A gama morta: \n{} corresponde à gama morta \n{}'.format(sel_gama, sel_gama_match))
+                                    else:
+                                        st.write('A gama viva: \n{} corresponde à gama morta \n{}'.format(sel_gama, sel_gama_match))
 
-                    if sel_gama_viva != '-':
-                        if st.button('Validar') or session_state.validate_button_pressed == 1:
-                            session_state.validate_button_pressed = 1
+                                    save_function(sel_gama, sel_gama_match, sel_brand, sel_model)
 
-                            st.write('A gama morta: \n{} corresponde à Gama Viva \n{}'.format(sel_gama_morta, sel_gama_viva))
-                            save_function(sel_gama_morta, sel_gama_viva, sel_brand, sel_model)
+                                    session_state.validate_button_pressed = 0
+                                    session_state.run_id += 1
+                                    time.sleep(0.1)
+                                    raise RerunException(RerunData(widget_state=None))
 
-                            session_state.validate_button_pressed = 0
-                            session_state.run_id += 1
-                            time.sleep(0.1)
-                            raise RerunException(RerunData(widget_state=None))
+    elif sel_goal == 'Gamas Correspondidas':
+        session_state.validate_button_pressed = 0
+        sel_brand = st.sidebar.selectbox('Marca:', ['-'] + list(matched_data['PT_PDB_Franchise_Desc'].unique()), index=0)
+
+        if sel_brand != '-':
+            matched_data = matched_data.loc[matched_data['PT_PDB_Franchise_Desc'] == sel_brand.upper(), :]
+            print('2 - ', matched_data.shape)
+
+            unique_models = [x for x in list(matched_data['PT_PDB_Model_Desc'].unique()) if x not in ['H-1', 'H-1 3 lugares', 'H-1 6 lugares', 'H350', 'i20 Coupe', 'i20 VAN']]
+
+            sel_model = st.sidebar.selectbox('Modelo', ['-'] + unique_models, index=0)
+            # sel_confidence_threshold = st.sidebar.slider('Grau de Semelhança', min_value=0.0, max_value=1.0, value=0.8, step=0.01)
+
+            if sel_model != '-':
+                if sel_brand != session_state.sel_brand or sel_model != session_state.sel_model:
+                    # session_state.sel_brand = sel_brand
+                    # session_state.sel_model = sel_model
+
+                    matched_data_filtered = filter_data(data, [sel_model, sel_brand], ['PT_PDB_Model_Desc', 'PT_PDB_Franchise_Desc'])
+                    session_state.gama_viva_per_model = matched_data_filtered['PT_PDB_Commercial_Version_Desc_New'].unique()
+
+                    st.write('Existem as seguintes gamas correspondidas para a marca {} e modelo {}:'.format(sel_brand, sel_model))
+
+                    row_even_color = 'lightgrey'
+                    row_odd_color = 'white'
+
+                    if matched_data_filtered.shape[0]:
+                        matched_data_temp = matched_data_filtered.loc[~matched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].isin(matched_data_filtered['PT_PDB_Commercial_Version_Desc_New'].unique()), :]
+                        st.subheader('Correspondências:')
+                        fig = go.Figure(data=[go.Table(
+                            columnwidth=[500, 500],
+                            header=dict(
+                                values=[['Gama Morta'], ['Gama Viva']],
+                                align=['center', 'center'],
+                            ),
+                            cells=dict(
+                                values=[matched_data_temp['PT_PDB_Commercial_Version_Desc_Old'], matched_data_temp['PT_PDB_Commercial_Version_Desc_New']],
+                                align=['center', 'center'],
+                                fill_color=[[row_odd_color, row_even_color] * matched_data_temp.shape[0]],
+                            )
+                        )
+                        ])
+
+                        fig.update_layout(width=1100)
+                        st.write(fig)
+
+                        sel_gama = st.selectbox('Por favor escolha uma Gama Morta:', ['-'] + list(matched_data_temp['PT_PDB_Commercial_Version_Desc_Old'].unique()), index=0, key=session_state.run_id)
+                        if sel_gama != '-':
+                            matched_sel_gama = matched_data_filtered.loc[matched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'] == sel_gama, :]['PT_PDB_Commercial_Version_Desc_New'].values[0]
+
+                            if len(matched_sel_gama) > 1:
+                                st.write('A Gama Viva correspondente é: {}. Se desejar alterar, escolha entre as seguintes:'.format(matched_sel_gama))
+                            else:
+                                st.write('Para escolher uma nova correspondência, escolha entre as seguintes:')
+
+                            session_state.df_sim = calculate_cosine_similarity(sel_gama, -1, matched_data_filtered)
+
+                            suggestions = session_state.df_sim[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
+                            st.write('Sugestões:')
+                            st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama Morta', 'similarity_cosine': 'Grau de Semelhança'}))
+
+                            sel_gama_match = st.selectbox('Por favor escolha a correspondente Gama:', ['-', 's/ correspondência'] + list([x for x in session_state.gama_viva_per_model if x not in [' ', '']]), index=0, key=session_state.run_id)
+
+                            if sel_gama_match != '-':
+                                if st.button('Validar') or session_state.validate_button_pressed == 1:
+                                    session_state.validate_button_pressed = 1
+
+                                    st.write('A gama morta: \n{} corresponde à gama morta \n{}'.format(sel_gama, sel_gama_match))
+                                    save_function(sel_gama, sel_gama_match, sel_brand, sel_model)
+
+                                    session_state.validate_button_pressed = 0
+                                    session_state.run_id += 1
+                                    time.sleep(0.1)
+                                    raise RerunException(RerunData(widget_state=None))
 
 
 def save_function(gama_morta, gama_viva, sel_brand, sel_model):
+    if gama_viva == 's/ correspondência':
+        gama_viva_sql = 'NULL'
+    else:
+        gama_viva_sql = '\'' + gama_viva.replace('\'', '\'\'') + '\''
 
-    df_solution = solution_dataframe_creation(gama_morta, gama_viva, sel_brand, sel_model)
+    query = '''
+    UPDATE [BI_DTR].[dbo].[VHE_MapDMS_Vehicle_Commercial_Versions_DTR]
+    SET PT_PDB_Commercial_Version_Desc_New = {}, Classification_Flag = 1
+    WHERE PT_PDB_Commercial_Version_Desc_Old = '{}'
+    and PT_PDB_Franchise_Desc = '{}'
+    and PT_PDB_Model_Desc = '{}' '''.format(gama_viva_sql, gama_morta.replace('\'', '\'\''), sel_brand, sel_model)
 
-    level_1_e_deployment.sql_inject(df_solution, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['commercial_version_matching'], options_file, list(df_solution))
+    st.write(query)
 
-    st.write('Correspondência gravada com sucesso.')
+    level_1_e_deployment.sql_query(query, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['commercial_version_matching'], options_file)
     return
 
 
-def solution_dataframe_creation(gama_morta, gama_viva, sel_brand, sel_model):
-    df_solution = pd.DataFrame()
-    current_year_month = level_1_e_deployment.time_tags(format_date="%Y%m")[0]
-    if gama_viva == 's/ correspondência':
-        gama_viva = None
+def calculate_cosine_similarity(gama, gama_flag, df, unmatched_gamas=None):
+    # start = time.time()
 
-    df_solution['Client_Id'] = [7]
-    df_solution['PT_PDB_Franchise_Desc'] = sel_brand
-    df_solution['PT_PDB_Model_Desc'] = sel_model
-    df_solution['PT_PDB_Commercial_Version_Desc_Old'] = gama_morta
-    df_solution['PT_PDB_Commercial_Version_Desc_New'] = gama_viva
-    df_solution['Classification_Flag'] = 1
-    df_solution['Initial_Period'] = current_year_month  # Convert to int?
-    df_solution['Final_Period'] = 99912  # Place Holder
+    if unmatched_gamas is None:
+        unmatched_gamas = []
 
-    st.write(df_solution)
+    if gama_flag == -1:  # Gama Morta
+        unique_designacao_comercial_morta_original = [gama]
+        unique_designacao_comercial_viva_original = [x for x in list(df['PT_PDB_Commercial_Version_Desc_New'].unique()) if x not in ['', ' ']]
 
-    return df_solution
+        df_end = pd.DataFrame()
+        for designacao_comercial_viva_original in unique_designacao_comercial_viva_original:
 
+            df_middle = pd.DataFrame()
+            df_middle['PT_PDB_Commercial_Version_Desc_New'] = unique_designacao_comercial_morta_original
+            df_middle['PT_PDB_Commercial_Version_Desc_Old'] = designacao_comercial_viva_original
 
-def calculate_cosine_similarity(df):
-    unique_designacao_comercial_morta_original = list(df['Gama Morta'].unique())
-    unique_designacao_comercial_viva_original = list(df['Gama Viva'].unique())
+            for key, row in df_middle.iterrows():
+                vec_designacao_comercial_viva = CountVectorizer().fit_transform([row['PT_PDB_Commercial_Version_Desc_Old']] + [row['PT_PDB_Commercial_Version_Desc_New']]).toarray()
+                row['similarity_cosine'] = cosine_sim_vectors(vec_designacao_comercial_viva[0], vec_designacao_comercial_viva[1])
+                df_end = df_end.append(row)
 
-    try:
-        unique_designacao_comercial_viva_original.remove(' ')
-    except ValueError:
-        pass
+        df_end.reset_index(inplace=True)
 
-    df_end = pd.DataFrame()
-    for designacao_comercial_morta_original in unique_designacao_comercial_morta_original:
+    elif gama_flag == 1:  # Gama Viva  # WORKS
+        unique_designacao_comercial_morta_original = [x for x in list(df['PT_PDB_Commercial_Version_Desc_Old'].unique()) if x not in ['', ' '] + unmatched_gamas]
+        unique_designacao_comercial_viva_original = [gama]
 
-        df_middle = pd.DataFrame()
-        df_middle['Gama Viva'] = unique_designacao_comercial_viva_original
-        df_middle['Gama Morta'] = designacao_comercial_morta_original
-        correct_gama_viva = df.loc[df['Gama Morta'] == designacao_comercial_morta_original, 'Gama Viva'].values
-        df_middle['correct_gama_viva'] = [correct_gama_viva] * len(unique_designacao_comercial_viva_original)
+        df_end = pd.DataFrame()
+        for designacao_comercial_morta_original in unique_designacao_comercial_morta_original:
 
-        for key, row in df_middle.iterrows():
-            vec_designacao_comercial_viva = CountVectorizer().fit_transform([row['Gama Morta']] + [row['Gama Viva']]).toarray()
-            row['similarity_cosine'] = cosine_sim_vectors(vec_designacao_comercial_viva[0], vec_designacao_comercial_viva[1])
-            df_end = df_end.append(row)
+            df_middle = pd.DataFrame()
+            df_middle['PT_PDB_Commercial_Version_Desc_New'] = unique_designacao_comercial_viva_original
+            df_middle['PT_PDB_Commercial_Version_Desc_Old'] = designacao_comercial_morta_original
 
-    df_end.reset_index(inplace=True)
+            for key, row in df_middle.iterrows():
+                vec_designacao_comercial_viva = CountVectorizer().fit_transform([row['PT_PDB_Commercial_Version_Desc_Old']] + [row['PT_PDB_Commercial_Version_Desc_New']]).toarray()
+                row['similarity_cosine'] = cosine_sim_vectors(vec_designacao_comercial_viva[0], vec_designacao_comercial_viva[1])
+                df_end = df_end.append(row)
+
+        df_end.reset_index(inplace=True)
+
+    # print('cosine sim elapsed time: {}'.format(time.time() - start))
     return df_end
 
 
@@ -234,13 +272,27 @@ def filter_data(dataset, value_filters_list, col_filters_list):
 
 
 @st.cache
-def get_data(input_file):
-    gamas_match = pd.read_excel(input_file)
-    gamas_match.dropna(subset=['Gama Morta'], inplace=True)
-    gamas_match.drop_duplicates(subset=['Modelo', 'Gama Morta', 'Gama Viva'], inplace=True)  # This removes duplicates matching rows, even the ones without corresponding Gama Viva. There is however a case where the same Gama Morta has two matches: null and a corresponding Gama Viva - 1.4 TGDi DCT Style MY19'5 + TA for model i30 SW
-    gamas_match['Gama Viva'].fillna(' ', inplace=True)
+def get_data(options_file_in):
+    # gamas_match = pd.read_excel(input_file)
+    gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in)
 
-    return gamas_match
+    # print('1 - ', gamas.shape)
+    gamas.dropna(subset=['PT_PDB_Commercial_Version_Desc_Old'], inplace=True)
+    gamas.drop_duplicates(subset=['PT_PDB_Model_Desc', 'PT_PDB_Commercial_Version_Desc_Old', 'PT_PDB_Commercial_Version_Desc_New'], inplace=True)  # This removes duplicates matching rows, even the ones without corresponding Gama Viva. There is however a case where the same Gama Morta has two matches: null and a corresponding Gama Viva - 1.4 TGDi DCT Style MY19'5 + TA for model i30 SW
+    gamas['PT_PDB_Commercial_Version_Desc_New'].fillna(' ', inplace=True)
+
+    return gamas
+
+
+def get_data_non_cached(options_file_in, classification_flag):
+    gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in, query_filters={'Classification_Flag': classification_flag})
+
+    # print('3 - ', gamas.shape)
+    gamas.dropna(subset=['PT_PDB_Commercial_Version_Desc_Old'], inplace=True)
+    gamas.drop_duplicates(subset=['PT_PDB_Model_Desc', 'PT_PDB_Commercial_Version_Desc_Old', 'PT_PDB_Commercial_Version_Desc_New'], inplace=True)  # This removes duplicates matching rows, even the ones without corresponding Gama Viva. There is however a case where the same Gama Morta has two matches: null and a corresponding Gama Viva - 1.4 TGDi DCT Style MY19'5 + TA for model i30 SW
+    gamas['PT_PDB_Commercial_Version_Desc_New'].fillna(' ', inplace=True)
+
+    return gamas
 
 
 if __name__ == '__main__':
