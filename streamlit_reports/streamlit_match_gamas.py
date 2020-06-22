@@ -24,11 +24,6 @@ hide_menu_style = """
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
-# url_hyperlink = '''
-#     <a href= "{}" > <p style="text-align:right"> Documentação </p></a>
-# '''.format(options_file.url_doc)
-# st.markdown(url_hyperlink, unsafe_allow_html=True)
-
 session_state = SessionState.get(run_id=0, sel_brand='-', sel_model='-', draws_gama_morta=pd.DataFrame(), high_confidence_matches=pd.DataFrame(), not_high_confidence_matches=pd.DataFrame(), sel_df='-', df_sim=pd.DataFrame(), sel_table='-', validate_button_pressed=0, unmatched_data_filtered=pd.DataFrame())
 
 """
@@ -36,13 +31,18 @@ session_state = SessionState.get(run_id=0, sel_brand='-', sel_model='-', draws_g
 Correspondência entre Gamas Mortas e Vivas
 """
 
+url_hyperlink = '''
+    <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
+'''.format(options_file.documentation_url_gamas_match_app)
+st.markdown(url_hyperlink, unsafe_allow_html=True)
+
 
 def main():
     data = get_data(options_file)
     unmatched_data = get_data_non_cached(options_file, 0)
     matched_data = get_data_non_cached(options_file, 1)
 
-    sel_goal = st.sidebar.radio('Apenas Gama Viva?', ['Gamas por Corresponder', 'Gamas Correspondidas'], index=0)
+    sel_goal = st.sidebar.radio('Modo de utilização:', ['Gamas por Corresponder', 'Gamas Correspondidas'], index=0)
 
     if sel_goal == 'Gamas por Corresponder':
         session_state.validate_button_pressed = 0
@@ -102,9 +102,15 @@ def main():
                                     session_state.validate_button_pressed = 1
 
                                     if sel_gama_flag == -1:
-                                        st.write('A gama morta: \n{} corresponde à gama morta \n{}'.format(sel_gama, sel_gama_match))
+                                        if sel_gama_match == 's/ correspondência':
+                                            st.write('A gama morta: \n{} não possui correspondência.'.format(sel_gama))
+                                        else:
+                                            st.write('A gama morta: \n{} corresponde à gama viva \n{}'.format(sel_gama, sel_gama_match))
                                     else:
-                                        st.write('A gama viva: \n{} corresponde à gama morta \n{}'.format(sel_gama, sel_gama_match))
+                                        if sel_gama_match == 's/ correspondência':
+                                            st.write('A gama viva: \n{} não possui correspondência.'.format(sel_gama))
+                                        else:
+                                            st.write('A gama viva: \n{} corresponde à gama morta \n{}'.format(sel_gama, sel_gama_match))
 
                                     save_function(sel_gama, sel_gama_match, sel_brand, sel_model)
 
@@ -201,8 +207,6 @@ def save_function(gama_morta, gama_viva, sel_brand, sel_model):
     WHERE PT_PDB_Commercial_Version_Desc_Old = '{}'
     and PT_PDB_Franchise_Desc = '{}'
     and PT_PDB_Model_Desc = '{}' '''.format(gama_viva_sql, gama_morta.replace('\'', '\'\''), sel_brand, sel_model)
-
-    st.write(query)
 
     level_1_e_deployment.sql_query(query, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['commercial_version_matching'], options_file)
     return
