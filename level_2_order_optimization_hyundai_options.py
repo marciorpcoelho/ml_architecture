@@ -525,7 +525,7 @@ version_translation = {
     'MY18': ['my18'],
     'LED': ['led'],
     'Panorama': ['panorama'],
-    'N': ['250cv', 'n-line my19\'5'],  # Represents Hyundai i30 N
+    'N': ['250cv', 'n-line my19\'5', 'n-line'],  # Represents Hyundai i30 N
     'NÃO_PARAMETRIZADOS': ['dynamic + connect navi ', 'auto ribeiro', 'teclife', 'van 6 lugares', 'style + navi']
 }
 
