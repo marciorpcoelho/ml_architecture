@@ -156,6 +156,8 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
         log_record('9 - Remoção de Viaturas sem informação de Dias em Stock - Distribuidor - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['DaysInStock_Dealer'].notnull()]
         log_record('10 - Remoção de Viaturas sem informação de Dias em Stock - Dealer - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        df_sales = df_sales[df_sales['PT_PDB_Model_Desc'] != 'Não Definido']
+        log_record('11 - Remoção de Viaturas sem informação de Modelo na PDB - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
 
         df_sales = new_features(df_sales, configuration_parameters_cols, options_file.project_id)
 
