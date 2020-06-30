@@ -135,57 +135,61 @@ def main():
         st.write('Objetivo para o grupo de peças escolhido: {}'.format(goal_type_translation[goal_type]))
 
         if session_state.dtss_goal != dtss_goal or session_state.max_part_number != max_part_number or session_state.minimum_cost_or_pvp != minimum_cost_or_pvp or session_state.sel_group != sel_group or session_state.sel_local != sel_local:
-            session_state.total_value_optimized, session_state.df_solution = solver(data_filtered, sel_local, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
-            session_state.dtss_goal, session_state.max_part_number, session_state.minimum_cost_or_pvp, session_state.sel_group, session_state.sel_local = dtss_goal, max_part_number, minimum_cost_or_pvp, sel_group, sel_local
+            try:
+                session_state.total_value_optimized, session_state.df_solution = solver(data_filtered, sel_local, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
+                session_state.dtss_goal, session_state.max_part_number, session_state.minimum_cost_or_pvp, session_state.sel_group, session_state.sel_local = dtss_goal, max_part_number, minimum_cost_or_pvp, sel_group, sel_local
 
-        try:
-            goal_completed_percentage = session_state.total_value_optimized / goal_value * 100
-            if session_state.total_value_optimized > goal_value:
-                st.write('Objetivo atingido: {:.2f}/{:.2f} ({:.2f}%)'.format(session_state.total_value_optimized, goal_value, goal_completed_percentage))
-            else:
-                st.write('Objetivo ' + '$\\bold{não}$' + ' atingido: {:.2f}/{:.2f} ({:.2f}%)'.format(session_state.total_value_optimized, goal_value, goal_completed_percentage))
-        except ZeroDivisionError:
-            pass
+                try:
+                    goal_completed_percentage = session_state.total_value_optimized / goal_value * 100
+                    if session_state.total_value_optimized > goal_value:
+                        st.write('Objetivo atingido: {:.2f}/{:.2f} ({:.2f}%)'.format(session_state.total_value_optimized, goal_value, goal_completed_percentage))
+                    else:
+                        st.write('Objetivo ' + '$\\bold{não}$' + ' atingido: {:.2f}/{:.2f} ({:.2f}%)'.format(session_state.total_value_optimized, goal_value, goal_completed_percentage))
+                except ZeroDivisionError:
+                    pass
 
-        if session_state.df_solution.shape[0]:
-            df_solution_filtered = session_state.df_solution[session_state.df_solution['Quantity'] > 0]
-            st.markdown(
-                '''
-                - Quantidade total de Peças: {:.0f}
-                - Número de peças diferentes: {}
-                - Intervalo de Preços: [{:.2f}, {:.2f}] €
-                '''.format(df_solution_filtered['Quantity'].sum(),
-                           df_solution_filtered['Part_Ref'].nunique(),
-                           df_solution_filtered[goal_type].min(),
-                           df_solution_filtered[goal_type].max())
-            )
+                if session_state.df_solution.shape[0]:
+                    df_solution_filtered = session_state.df_solution[session_state.df_solution['Quantity'] > 0]
+                    st.markdown(
+                        '''
+                        - Quantidade total de Peças: {:.0f}
+                        - Número de peças diferentes: {}
+                        - Intervalo de Preços: [{:.2f}, {:.2f}] €
+                        '''.format(df_solution_filtered['Quantity'].sum(),
+                                   df_solution_filtered['Part_Ref'].nunique(),
+                                   df_solution_filtered[goal_type].min(),
+                                   df_solution_filtered[goal_type].max())
+                    )
 
-            df_display = df_solution_filtered[['Part_Ref', 'Quantity', goal_type, 'Days_To_Sell']]
-            st.write(df_display.rename(columns=column_translate_dict).style.format({'Quantidade': '{:.1f}', 'PVP': '{:.2f}', 'Dias de Venda': '{:.2f}'}))
+                    df_display = df_solution_filtered[['Part_Ref', 'Quantity', goal_type, 'Days_To_Sell']]
+                    st.write(df_display.rename(columns=column_translate_dict).style.format({'Quantidade': '{:.1f}', 'PVP': '{:.2f}', 'Dias de Venda': '{:.2f}'}))
 
-            # if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
-            #     session_state.save_button_pressed_flag = 1
+                    # if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
+                    #     session_state.save_button_pressed_flag = 1
 
-            # file_export(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), file_name='Otimização_{}_{}'.format(sel_group_original, current_date), file_extension='.xlsx')
-            file_export_2(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), 'Otimização_{}_{}'.format(sel_group_original, current_date))
+                    # file_export(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), file_name='Otimização_{}_{}'.format(sel_group_original, current_date), file_extension='.xlsx')
+                    file_export_2(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), 'Otimização_{}_{}'.format(sel_group_original, current_date))
 
-            # if sel_group in saved_suggestions_dict.keys() or session_state.overwrite_button_pressed == 1:
-            #     st.write('Já existe Sugestão de Encomenda para o Grupo de Peças {}. Pretende substituir pela atual sugestão?'.format(sel_group_original))
-            #     session_state.overwrite_button_pressed = 1
-            #     if st.button('Sim'):
-            #         solution_saving(df_solution_filtered, sel_group, sel_group_original)
-            #         session_state.save_button_pressed_flag = 0
-            #         session_state.overwrite_button_pressed = 0
-            # else:
-            #     solution_saving(df_solution_filtered, sel_group, sel_group_original)
-            #     session_state.save_button_pressed_flag = 0
-            #     session_state.overwrite_button_pressed = 0
+                    # if sel_group in saved_suggestions_dict.keys() or session_state.overwrite_button_pressed == 1:
+                    #     st.write('Já existe Sugestão de Encomenda para o Grupo de Peças {}. Pretende substituir pela atual sugestão?'.format(sel_group_original))
+                    #     session_state.overwrite_button_pressed = 1
+                    #     if st.button('Sim'):
+                    #         solution_saving(df_solution_filtered, sel_group, sel_group_original)
+                    #         session_state.save_button_pressed_flag = 0
+                    #         session_state.overwrite_button_pressed = 0
+                    # else:
+                    #     solution_saving(df_solution_filtered, sel_group, sel_group_original)
+                    #     session_state.save_button_pressed_flag = 0
+                    #     session_state.overwrite_button_pressed = 0
 
-            # session_state.save_button_pressed_flag = 0
-            # session_state.overwrite_button_pressed = 0
-            # session_state.total_value_optimized = 0
-            # session_state.df_solution = pd.DataFrame()
+                    # session_state.save_button_pressed_flag = 0
+                    # session_state.overwrite_button_pressed = 0
+                    # session_state.total_value_optimized = 0
+                    # session_state.df_solution = pd.DataFrame()
 
+            except TypeError:
+                st.error('AVISO: Não existem peças disponíveis para sugestão para os parâmetros que escolheu. Por favor escolha outra combinação de parâmetros.')
+                return
 
 # def file_export(df, file_name, file_extension):
 #
@@ -220,6 +224,8 @@ def solver(df_solve, sel_local, group, goal_value, goal_type, non_goal_type, dts
     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
 
     n_size = df_solve['Part_Ref'].nunique()  # Number of different parts
+    if not n_size:
+        return None
 
     values = np.array(df_solve[goal_type].values.tolist())  # Costs/Sale prices for each reference, info#1
     other_values = df_solve[non_goal_type].values.tolist()
@@ -315,7 +321,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)

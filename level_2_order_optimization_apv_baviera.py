@@ -25,6 +25,7 @@ def main():
 
         last_processed_date, second_to_last_processed_date, preprocessed_data_exists_flag = apv_last_stock_calculation(options_file.min_date, current_date, pse_group[0], options_file.project_id)  # Considering all PSE Groups were processed in the same day
         print('Processing data from {} to {}'.format(last_processed_date, current_date))
+        print('Deleting data for the day of {}'.format(second_to_last_processed_date))
 
         df_sales_group, df_product_group_dw, df_history_group = data_acquisition(options_file, pse_group, last_processed_date, current_date)
 
