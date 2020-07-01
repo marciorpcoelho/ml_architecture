@@ -434,7 +434,8 @@ dealers_query = '''
         AS "Customer_Group_Code", "SLR_Dim_Dealers_DTR_VHE"."VAT_Number_Display" AS "VAT_Number_Display",
         "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Key" AS "SLR_Account_CHS_Key", "SLR_Dim_Dealers_DTR_VHE"."SLR_AccountGroup_Code"
         AS "SLR_AccountGroup_Code", "SLR_Dim_Dealers_DTR_VHE"."NDB_Dealer_Desc" AS "NDB_Dealer_Desc",
-        "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Invoice" AS "SLR_Account_Invoice"
+        "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Invoice" AS "SLR_Account_Invoice",
+        "SLR_Dim_Dealers_DTR_VHE"."NDB_Dealer_Code" AS "NDB_Dealer_Code"
          from "SLR_Dim_Dealers_DTR"
         "SLR_Dim_Dealers_DTR_VHE"
          where "SLR_Dim_Dealers_DTR_VHE"."Record_Type" <> 3 '''
@@ -631,7 +632,7 @@ sql_columns_vhe_fact_bi = [
     'Measure_42', 'Measure_43', 'Measure_44', 'Measure_45', 'Measure_46', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc',
     'Customer_Display', 'Customer_Group_Code', 'Customer_Group_Desc', 'No_Registration_Number_Flag', 'Registration_Number_No_SLR_Document_RGN_Flag', 'SLR_Document_RGN_Flag', 'Undefined_VHE_Status',
     'prev_sales_check', 'number_prev_sales', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc',
-    'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code', 'Fixed_Margin_II', 'PDB_Start_Order_Date', 'PDB_End_Order_Date'
+    'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code', 'Fixed_Margin_II', 'PDB_Start_Order_Date', 'PDB_End_Order_Date', 'NDB_Dealer_Code'
 ]
 
 

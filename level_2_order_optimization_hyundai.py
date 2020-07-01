@@ -63,7 +63,7 @@ def data_acquisition():
 
     # Addition of customer information
     df_customers_and_dealers = df_join_function(df_dealers, df_customers[['Customer_Group_Code', 'Customer_Group_Desc']].set_index('Customer_Group_Code'), on='Customer_Group_Code', how='left')
-    df_sales = df_join_function(df_sales, df_customers_and_dealers[['SLR_Account_CHS_Key', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Code', 'Customer_Group_Desc']].set_index('SLR_Account_CHS_Key'), on='SLR_Account_CHS_Key', how='left')
+    df_sales = df_join_function(df_sales, df_customers_and_dealers[['SLR_Account_CHS_Key', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Code', 'Customer_Group_Desc', 'NDB_Dealer_Code']].set_index('SLR_Account_CHS_Key'), on='SLR_Account_CHS_Key', how='left')
 
     log_record('Fim Secção A.', options_file.project_id)
     performance_info_append(time.time(), 'Section_A_End')
@@ -81,13 +81,13 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
                                                                                                                    'Customer_Group_Desc': 'category', 'SLR_Account_Dealer_Code': 'category', 'Product_Code': 'category',
                                                                                                                    'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category',
                                                                                                                    'PT_PDB_Model_Desc': 'category', 'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
-                                                                                                                   'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
+                                                                                                                   'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category', 'NDB_Dealer_Code': 'category'})
         df_non_ohe = read_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date), index_col=0, dtype={'NDB_VATGroup_Desc': 'category', 'VAT_Number_Display': 'category', 'NDB_Contract_Dealer_Desc': 'category',
                                                                                                                    'NDB_VHE_PerformGroup_Desc': 'category', 'NDB_VHE_Team_Desc': 'category', 'Customer_Display': 'category',
                                                                                                                    'Customer_Group_Desc': 'category', 'SLR_Account_Dealer_Code': 'category', 'Product_Code': 'category',
                                                                                                                    'Sales_Type_Dealer_Code': 'category', 'Sales_Type_Code': 'category', 'Vehicle_Type_Code': 'category', 'Fuel_Type_Code': 'category',
                                                                                                                    'PT_PDB_Model_Desc': 'category', 'PT_PDB_Engine_Desc': 'category', 'PT_PDB_Transmission_Type_Desc': 'category', 'PT_PDB_Version_Desc': 'category',
-                                                                                                                   'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category'})
+                                                                                                                   'PT_PDB_Exterior_Color_Desc': 'category', 'PT_PDB_Interior_Color_Desc': 'category', 'NDB_Dealer_Code': 'category'})
         df_sales = read_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date), index_col=0, dtype={'SLR_Account_Dealer_Code': object, 'Immobilized_Number': object}, parse_dates=options_file.date_columns)
 
         log_record('Dados do dia atual foram encontrados. A passar para a próxima secção...', options_file.project_id)
@@ -156,7 +156,7 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
         log_record('9 - Remoção de Viaturas sem informação de Dias em Stock - Distribuidor - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['DaysInStock_Dealer'].notnull()]
         log_record('10 - Remoção de Viaturas sem informação de Dias em Stock - Dealer - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
-        df_sales = df_sales[df_sales['PT_PDB_Model_Desc'] != 'Não Definido']
+        df_sales = df_sales[df_sales['PT_PDB_Model_Desc'] != 'não definido']
         log_record('11 - Remoção de Viaturas sem informação de Modelo na PDB - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
 
         df_sales = new_features(df_sales, configuration_parameters_cols, options_file.project_id)
@@ -210,7 +210,7 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
                                       'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
                                       'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
                                       'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
-                                      'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code']
+                                      'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code', 'NDB_Dealer_Code']
 
         df_non_ohe = remove_columns(df_sales_ml.copy(), [x for x in columns_with_too_much_info if x not in target], options_file.project_id)
 
