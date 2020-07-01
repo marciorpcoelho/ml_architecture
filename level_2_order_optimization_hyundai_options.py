@@ -434,8 +434,7 @@ dealers_query = '''
         AS "Customer_Group_Code", "SLR_Dim_Dealers_DTR_VHE"."VAT_Number_Display" AS "VAT_Number_Display",
         "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Key" AS "SLR_Account_CHS_Key", "SLR_Dim_Dealers_DTR_VHE"."SLR_AccountGroup_Code"
         AS "SLR_AccountGroup_Code", "SLR_Dim_Dealers_DTR_VHE"."NDB_Dealer_Desc" AS "NDB_Dealer_Desc",
-        "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Invoice" AS "SLR_Account_Invoice",
-        "SLR_Dim_Dealers_DTR_VHE"."NDB_Dealer_Code" AS "NDB_Dealer_Code"
+        "SLR_Dim_Dealers_DTR_VHE"."SLR_Account_Invoice" AS "SLR_Account_Invoice"
          from "SLR_Dim_Dealers_DTR"
         "SLR_Dim_Dealers_DTR_VHE"
          where "SLR_Dim_Dealers_DTR_VHE"."Record_Type" <> 3 '''
