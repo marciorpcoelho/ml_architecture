@@ -56,7 +56,7 @@ def main():
 
             if sel_brand != '-':
                 unmatched_data = unmatched_data.loc[unmatched_data['PT_PDB_Franchise_Desc'] == sel_brand.upper(), :]
-                print('2 - ', unmatched_data.shape)
+                # print('2 - ', unmatched_data.shape)
 
                 unique_models = [x for x in list(unmatched_data['PT_PDB_Model_Desc'].unique()) if x not in ['H-1', 'H-1 3 lugares', 'H-1 6 lugares', 'H350', 'i20 Coupe', 'i20 VAN']]
 
@@ -73,20 +73,31 @@ def main():
 
                         st.write('Existem as seguintes gamas por corresponder para a marca {} e modelo {}:'.format(sel_brand, sel_model))
 
-                        st.write('Gamas Mortas:')
-                        st.table(session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1, :]['PT_PDB_Commercial_Version_Desc_Old'].rename('Gama'))
-                        st.write('Gamas Vivas:')
-                        st.table(session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1, :]['PT_PDB_Commercial_Version_Desc_Old'].rename('Gama'))
+                        display_gamas_mortas = session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1, :]['PT_PDB_Commercial_Version_Desc_Old'].rename('Gama').reset_index(drop=True)
+                        if display_gamas_mortas.shape[0]:
+                            st.write('Gamas Mortas:')
+                            st.table(display_gamas_mortas)
 
-                        session_state.gama_viva_per_model = matched_data_filtered['PT_PDB_Commercial_Version_Desc_New'].unique()
-                        session_state.gama_morta_per_model = matched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].unique()
+                        display_gamas_vivas = session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1, :]['PT_PDB_Commercial_Version_Desc_Old'].rename('Gama').reset_index(drop=True)
+                        if display_gamas_vivas.shape[0]:
+                            st.write('Gamas Vivas:')
+                            st.table(display_gamas_vivas)
+
+                        # session_state.gama_viva_per_model = matched_data_filtered['PT_PDB_Commercial_Version_Desc_New'].unique()
+                        session_state.gama_viva_per_model = list(matched_data_filtered.loc[matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1, 'PT_PDB_Commercial_Version_Desc_Old'].unique()) + list(session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1, 'PT_PDB_Commercial_Version_Desc_Old'].unique())
+                        # session_state.gama_morta_per_model = matched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].unique()
+                        session_state.gama_morta_per_model = list(matched_data_filtered.loc[matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1, 'PT_PDB_Commercial_Version_Desc_Old'].unique()) + list(session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1, 'PT_PDB_Commercial_Version_Desc_Old'].unique())
+
                         unmatched_gamas = list(session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].unique())
                         sel_gama = st.selectbox('Por favor escolha uma Gama:', ['-'] + list(session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].unique()), index=0, key=session_state.run_id)
 
                         if sel_gama != '-':
                             sel_gama_flag = session_state.unmatched_data_filtered.loc[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'] == sel_gama, 'PT_PDB_Commercial_Version_Flag'].values[0]
 
-                            session_state.df_sim = calculate_cosine_similarity(sel_gama, sel_gama_flag, matched_data_filtered, unmatched_gamas)
+                            session_state.df_sim = calculate_cosine_similarity(sel_gama, sel_gama_flag, session_state.gama_viva_per_model, session_state.gama_morta_per_model, unmatched_gamas)
+
+                            # print(matched_data_filtered[matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1])
+                            # print(session_state.unmatched_data_filtered[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1])
 
                             suggestions = session_state.df_sim[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
                             if sel_gama_flag == -1:
@@ -212,15 +223,21 @@ def save_function(gama_morta, gama_viva, sel_brand, sel_model):
     return
 
 
-def calculate_cosine_similarity(gama, gama_flag, df, unmatched_gamas=None):
+def calculate_cosine_similarity(gama, gama_flag, gama_viva, gama_morta, unmatched_gamas=None):
     # start = time.time()
+    print('gama', gama)
+    print('gama_flag', gama_flag)
+    # print('df \n', df)
+    print('unmatched_gamas', unmatched_gamas)
 
     if unmatched_gamas is None:
         unmatched_gamas = []
 
     if gama_flag == -1:  # Gama Morta
         unique_designacao_comercial_morta_original = [gama]
-        unique_designacao_comercial_viva_original = [x for x in list(df['PT_PDB_Commercial_Version_Desc_New'].unique()) if x not in ['', ' ']]
+        unique_designacao_comercial_viva_original = [x for x in gama_viva if x not in ['', ' ']]
+        print('unique_designacao_comercial_morta_original', unique_designacao_comercial_morta_original)
+        print('unique_designacao_comercial_viva_original', unique_designacao_comercial_viva_original)
 
         df_end = pd.DataFrame()
         for designacao_comercial_viva_original in unique_designacao_comercial_viva_original:
@@ -237,7 +254,7 @@ def calculate_cosine_similarity(gama, gama_flag, df, unmatched_gamas=None):
         df_end.reset_index(inplace=True)
 
     elif gama_flag == 1:  # Gama Viva  # WORKS
-        unique_designacao_comercial_morta_original = [x for x in list(df['PT_PDB_Commercial_Version_Desc_Old'].unique()) if x not in ['', ' '] + unmatched_gamas]
+        unique_designacao_comercial_morta_original = [x for x in gama_morta if x not in ['', ' '] + unmatched_gamas]
         unique_designacao_comercial_viva_original = [gama]
 
         df_end = pd.DataFrame()
@@ -281,6 +298,7 @@ def get_data(options_file_in):
     gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in)
 
     # print('1 - ', gamas.shape)
+    gamas['PT_PDB_Model_Desc'] = gamas['PT_PDB_Model_Desc'].str.lower()
     gamas.dropna(subset=['PT_PDB_Commercial_Version_Desc_Old'], inplace=True)
     gamas.drop_duplicates(subset=['PT_PDB_Model_Desc', 'PT_PDB_Commercial_Version_Desc_Old', 'PT_PDB_Commercial_Version_Desc_New'], inplace=True)  # This removes duplicates matching rows, even the ones without corresponding Gama Viva. There is however a case where the same Gama Morta has two matches: null and a corresponding Gama Viva - 1.4 TGDi DCT Style MY19'5 + TA for model i30 SW
     gamas['PT_PDB_Commercial_Version_Desc_New'].fillna(' ', inplace=True)
@@ -292,6 +310,7 @@ def get_data_non_cached(options_file_in, classification_flag):
     gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in, query_filters={'Classification_Flag': classification_flag})
 
     # print('3 - ', gamas.shape)
+    gamas['PT_PDB_Model_Desc'] = gamas['PT_PDB_Model_Desc'].str.lower()
     gamas.dropna(subset=['PT_PDB_Commercial_Version_Desc_Old'], inplace=True)
     gamas.drop_duplicates(subset=['PT_PDB_Model_Desc', 'PT_PDB_Commercial_Version_Desc_Old', 'PT_PDB_Commercial_Version_Desc_New'], inplace=True)  # This removes duplicates matching rows, even the ones without corresponding Gama Viva. There is however a case where the same Gama Morta has two matches: null and a corresponding Gama Viva - 1.4 TGDi DCT Style MY19'5 + TA for model i30 SW
     gamas['PT_PDB_Commercial_Version_Desc_New'].fillna(' ', inplace=True)
