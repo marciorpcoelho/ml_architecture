@@ -130,7 +130,7 @@ def main():
                 sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size, proposals_col, stock_col, sel_min_number_of_configuration)
                 if sel_configurations.shape[0]:
                     sel_configurations.rename(index=str, columns={'Quantity': 'Sug.Encomenda'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
-                    st.write('Sugestão Encomenda:', sel_configurations[['VehicleData_Code'] + ['Sug.Encomenda'] + [proposals_col] + [stock_col] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
+                    st.write('Sugestão Encomenda:', sel_configurations[['Sug.Encomenda'] + [proposals_col] + [stock_col] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
                              .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
                              .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}', 'Propostas Entregues': '{:.0f}', 'Em Stock': '{:.0f}'})
                              )
