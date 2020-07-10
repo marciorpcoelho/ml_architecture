@@ -29,6 +29,14 @@ update_frequency_days = 0
 stock_days_threshold = [90, 120, 150, 180, 270, 365]
 margin_threshold = "nan"  # Currently there is no threshold;
 
+models = ['rf', 'lgb', 'xgb', 'ridge', 'll_cv', 'elastic_cv', 'svr']
+target = 'DaysInStock_Global'
+configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
+# configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Painting_Type_Desc', 'PT_PDB_Bodywork_Desc']
+client_lvl_cols = ['Customer_Group_Desc', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display']
+client_lvl_cols_renamed = ['Tipo Cliente', 'Agrupamento NIF', 'NIF - Nome', 'Contrato Concessionário', 'Agrupamento Performance', 'Equipa de Vendas', 'Cliente Morada']
+range_dates = ['PDB_Start_Order_Date', 'PDB_End_Order_Date']
+
 metric, metric_threshold = 'R2', 0.50  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 10, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 gamas_match_temp_file = base_path + '/dbs/gamas_match_{}.xlsx'
@@ -41,11 +49,14 @@ sql_info = {
     'product_db': 'VHE_Dim_VehicleData_DTR',
     'sales': 'VHE_Fact_BI_Sales_DTR',
     'stock': 'VHE_Fact_BI_Stock_DTR',
+    'final_table_test': 'VHE_Fact_BI_Sales_DTR_test',
     'final_table': 'VHE_Fact_BI_Sales_DTR',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
     'optimization_solution_table': 'VHE_Fact_BI_OrderOptimization_Solver_Optimization_DTR',
     'commercial_version_matching': 'VHE_MapDMS_Vehicle_Commercial_Versions_DTR',
     'proposals_table': 'VHE_Fact_DW_HPK_Proposals_DTR',
+    'proposals_view': 'View_VHE_HPK_Proposals_DTR',
+    'stock_view': 'View_VHE_Stock_DTR'
 }
 
 log_files = {
@@ -74,9 +85,11 @@ column_translate_dict = {
     'Measure_10': 'Custo Base - Outros',
     'number_prev_sales': '#Vendas Anteriores',
     'Quantity:': 'Sug.Encomenda',
+    'Proposals_Count': 'Propostas Entregues',
+    'Stock_Count': 'Em Stock',
+    'Proposals_Count_VDC': 'Propostas Entregues',
+    'Stock_Count_VDC': 'Em Stock'
 }
-
-parameters_desc = ['Modelo', 'Motorização', 'Transmissão', 'Versão', 'Cor Exterior', 'Cor Interior']
 
 nlr_code_desc = {
     'Hyundai': 702,
@@ -388,7 +401,9 @@ product_db_query = '''
       ,[PT_PDB_Serie_Desc]
       ,[PT_PDB_Bodywork_Desc]
       ,[PT_PDB_Version_Desc]
+      ,[PT_PDB_Version_Desc_New]
       ,[PT_PDB_Engine_Desc]
+      ,[PT_PDB_Engine_Desc_New]
       ,[PT_PDB_Exterior_Color_Desc]
       ,[PT_PDB_Interior_Color_Desc]
       ,[PT_PDB_Painting_Type_Desc]
@@ -396,6 +411,7 @@ product_db_query = '''
       ,[PT_PDB_Fuel_Type_Desc]
       ,[PT_PDB_Vehicle_Type_Desc]
       ,[PT_PDB_Commercial_Version_Desc]
+      ,[PT_PDB_Commercial_Version_Desc_New]
       ,[PDB_Total_Tara]
       ,[PDB_Displacement]
       ,[PDB_Combined_CO2]
@@ -498,28 +514,50 @@ transmission_grouping = {
 }
 
 # Versão
+# version_translation = {
+#     'Access': ['access', 'access plus', 'access my17'],
+#     'Comfort': ['comfort ', 'comfort', 'comfort + connect navi ', 'comfort', 'van 3 lugares', 'comfort my19', 'comfort navi', 'blue comfort my17', 'blue comfort hp my17', 'comfort + navi', 'comfort + connect navi', 'blue comfort', 'comfort my19\'5', 'comfort my20', 'blue comfort hp my16'],
+#     'Creative': ['creative plus'],
+#     'Dynamic': ['dynamic', 'dynamic + connect navi'],
+#     'Elegance': ['elegance navi', '1.5 i-vtec turbo cvt elegance navi', '1.6 i-dtec turbo elegance navi', 'elegance ', 'elegance + connect navi ', 'elegance plus + connect n', 'elegance', 'elegance + connect navi', '1.5 i-vtec turbo elegance'],
+#     'EV': ['ev'],
+#     'Executive': ['executive ', 'executive', 'executive premium', '1.5 i-vtec turbo executive', '1.5 i-vtec turbo cvt executive', '1.6 i-dtec turbo executive', 'executive', 'executive my19', 'executive my20', 'executive my19\'5'],
+#     'GO': ['go', 'go+', 'go!', 'go!+'],
+#     'HEV': ['hev'],
+#     'Launch': ['launch edition'],
+#     'Lifestyle': ['lifestyle', 'lifestyle + navi', 'lifestyle + connect navi'],
+#     'Performance': ['performance pack'],
+#     'PHEV': ['phev'],
+#     'Premium': ['premium', 'premium my19', 'premium my19 + pack pele', 'premium my20', 'premium + pack pele + pack style my19\'5', 'premium + pack pele + style plus my19\'5', 'premium + pack pele my19\'5', 'premium my19\'5'],
+#     'Prestige': ['prestige'],
+#     'Pro': ['pro edition'],
+#     'Sport': ['sport plus', 'sport', 'turbo sport'],
+#     'Style': ['style', 'comfort my18', 'style my18', 'style plus my18', 'style+', 'blue style hp my17', 'blue style', 'style my19', 'style plus my19'],
+#     'Type R': ['gt pack', 'gt'],
+#     'Trend': ['trend', 'trend '],
+#     'X-Road': ['x-road navi'],
+#     'Teclife': ['teclife'],
+#     'Turbo': ['turbo'],
+#     'MY18': ['my18'],
+#     'LED': ['led'],
+#     'Panorama': ['panorama'],
+#     'N': ['250cv', 'n-line my19\'5', 'n-line'],  # Represents Hyundai i30 N
+#     'NÃO_PARAMETRIZADOS': ['dynamic + connect navi ', 'auto ribeiro', 'teclife', 'van 6 lugares', 'style + navi']
+# }
+
 version_translation = {
-    'Access': ['access', 'access plus', 'access my17'],
-    'Comfort': ['comfort ', 'comfort', 'comfort + connect navi ', 'comfort', 'van 3 lugares', 'comfort my19', 'comfort navi', 'blue comfort my17', 'blue comfort hp my17', 'comfort + navi', 'comfort + connect navi', 'blue comfort', 'comfort my19\'5', 'comfort my20', 'blue comfort hp my16'],
-    'Creative': ['creative plus'],
-    'Dynamic': ['dynamic', 'dynamic + connect navi'],
-    'Elegance': ['elegance navi', '1.5 i-vtec turbo cvt elegance navi', '1.6 i-dtec turbo elegance navi', 'elegance ', 'elegance + connect navi ', 'elegance plus + connect n', 'elegance', 'elegance + connect navi', '1.5 i-vtec turbo elegance'],
+    'Access': ['access my17'],
+    'Comfort': ['comfort ' 'comfort my18', 'comfort', 'comfort', 'comfort my19', 'blue comfort my17', 'blue comfort hp my17', 'blue comfort', 'comfort my19\'5', 'comfort my20', 'blue comfort hp my16'],
+    'Elegance': ['elegance ', 'elegance'],
     'EV': ['ev'],
-    'Executive': ['executive ', 'executive', 'executive premium', '1.5 i-vtec turbo executive', '1.5 i-vtec turbo cvt executive', '1.6 i-dtec turbo executive', 'executive', 'executive my19', 'executive my20', 'executive my19\'5'],
-    'GO': ['go', 'go+', 'go!', 'go!+'],
+    'Executive': ['executive ', 'executive', 'executive my19', 'executive my20', 'executive my19\'5'],
     'HEV': ['hev'],
-    'Launch': ['launch edition'],
-    'Lifestyle': ['lifestyle', 'lifestyle + navi', 'lifestyle + connect navi'],
-    'Performance': ['performance pack'],
+    'Lifestyle': ['lifestyle'],
     'PHEV': ['phev'],
-    'Premium': ['premium', 'premium my19', 'premium my19 + pack pele', 'premium my20', 'premium + pack pele + pack style my19\'5', 'premium + pack pele + style plus my19\'5', 'premium + pack pele my19\'5', 'premium my19\'5'],
+    'Premium': ['premium', 'premium my19', 'premium my20', 'premium my19\'5'],
     'Prestige': ['prestige'],
-    'Pro': ['pro edition'],
-    'Sport': ['sport plus', 'sport', 'turbo sport'],
-    'Style': ['style', 'comfort my18', 'style my18', 'style plus my18', 'style+', 'blue style hp my17', 'blue style', 'style my19', 'style plus my19'],
-    'Type R': ['gt pack', 'gt'],
+    'Style': ['style', 'style my18', 'blue style hp my17', 'blue style', 'style my19'],
     'Trend': ['trend', 'trend '],
-    'X-Road': ['x-road navi'],
     'Teclife': ['teclife'],
     'Turbo': ['turbo'],
     'MY18': ['my18'],

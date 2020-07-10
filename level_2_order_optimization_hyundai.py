@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from traceback import format_exc
 from modules.level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv, missing_customer_info_treatment
-from modules.level_1_b_data_processing import robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, lowercase_column_conversion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
+from modules.level_1_b_data_processing import update_new_gamas, robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, lowercase_column_conversion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from modules.level_1_c_data_modelling import regression_model_training, save_model
 from modules.level_1_d_model_evaluation import performance_evaluation_regression, model_choice
 from modules.level_1_e_deployment import time_tags, sql_inject
@@ -21,13 +21,9 @@ oversample_flag = 0
 
 
 def main():
-    models = ['rf', 'lgb', 'xgb', 'ridge', 'll_cv', 'elastic_cv', 'svr']
-    target = 'DaysInStock_Global'
-    configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
-    range_dates = ['PDB_Start_Order_Date', 'PDB_End_Order_Date']
 
     df_sales, df_stock, df_pdb_dim, df_customers, df_dealers = data_acquisition()
-    df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_pdb_dim, configuration_parameters, range_dates, target)
+    df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_pdb_dim, options_file.configuration_parameters, options_file.range_dates, options_file.target)
     # best_models, running_times = data_modelling(datasets, datasets_non_ohe, models)
     # model_choice_message, best_model_name = model_evaluation(models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
     deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
@@ -131,6 +127,7 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
         # Step 2: BI Processing
         # print('Number of unique Chassis: {} and number of rows: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]))
         df_sales = df_join_function(df_sales, df_pdb_dim[['VehicleData_Code'] + configuration_parameters_cols + range_dates].set_index('VehicleData_Code'), on='VehicleData_Code', how='left')
+        df_sales = update_new_gamas(df_sales, df_pdb_dim)
 
         df_sales = lowercase_column_conversion(df_sales, configuration_parameters_cols)
 
@@ -170,14 +167,14 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
 
         df_sales = lowercase_column_conversion(df_sales, configuration_parameters_cols)  # Lowercases the strings of these columns
 
-        df_sales = parameter_processing_hyundai(df_sales, options_file, configuration_parameters_cols)
+        # df_sales = parameter_processing_hyundai(df_sales, options_file, configuration_parameters_cols)
 
-        translation_dictionaries = [options_file.motor_translation, options_file.transmission_translation, options_file.version_translation]
+        translation_dictionaries = [options_file.transmission_translation, options_file.ext_color_translation, options_file.int_color_translation]
         # grouping_dictionaries = [options_file.motor_grouping, options_file.transmission_grouping, options_file.version_grouping, options_file.ext_color_grouping, options_file.int_color_grouping]
 
         # Parameter Translation
         # df_sales = col_group(df_sales, [x for x in configuration_parameters_cols if 'Model' not in x], translation_dictionaries, options_file.project_id)
-        df_sales = col_group(df_sales, ['PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc'], translation_dictionaries, options_file.project_id)
+        df_sales = col_group(df_sales, ['PT_PDB_Transmission_Type_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc'], translation_dictionaries, options_file.project_id)
         df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']
         log_record('9 - Remoção de Viaturas sem versão parametrizada - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
 

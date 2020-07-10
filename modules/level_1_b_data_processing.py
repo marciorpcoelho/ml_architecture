@@ -1745,5 +1745,14 @@ def stemming(x, stemmer):
     return ' '.join([stemmer.stem(w) for w in nltk.word_tokenize(x)])
 
 
+def update_new_gamas(df, df_pdb):
+    # PRJ-2406
+    gama_viva_mask_matchup = df_pdb['PT_PDB_Commercial_Version_Desc_New'].notnull()
 
+    df_pdb_sel = df_pdb.loc[gama_viva_mask_matchup]
 
+    for key, row in df_pdb_sel.iterrows():
+        df.loc[df['VehicleData_Code'] == row['VehicleData_Code'], 'PT_PDB_Version_Desc'] = row['PT_PDB_Version_Desc_New']
+        df.loc[df['VehicleData_Code'] == row['VehicleData_Code'], 'PT_PDB_Engine_Desc'] = row['PT_PDB_Engine_Desc_New']
+
+    return df

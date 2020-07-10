@@ -16,14 +16,12 @@ import modules.level_1_e_deployment as level_1_e_deployment
 from modules.level_0_performance_report import log_record, error_upload
 import level_2_order_optimization_hyundai_options as options_file
 import modules.SessionState as SessionState
+from level_2_order_optimization_hyundai_options import configuration_parameters, client_lvl_cols, client_lvl_cols_renamed
 
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
 # logging.Logger('errors')
 # logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
-configuration_parameters = ['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']
-client_lvl_cols = ['Customer_Group_Desc', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display']
-client_lvl_cols_renamed = ['Tipo Cliente', 'Agrupamento NIF', 'NIF - Nome', 'Contrato Concessionário', 'Agrupamento Performance', 'Equipa de Vendas', 'Cliente Morada']
 min_number_of_configuration = 5
 
 saved_solutions_pairs_query = ' SELECT DISTINCT PT_PDB_Model_Desc, ' + ', '.join(client_lvl_cols) + ', [Date] ' \
@@ -117,27 +115,33 @@ def main():
             parameter_restriction_vectors.append(get_parameter_positions(data_filtered.copy(), parameter, parameter_value))
 
         if st.button('Criar Sugestão') or session_state.order_suggestion_button_pressed_flag == 1:
+            if any(x != '-' for x in client_lvl_values):
+                proposals_col = 'Proposals_Count'
+                stock_col = 'Stock_Count'
+            else:
+                proposals_col = 'Proposals_Count_VDC'
+                stock_col = 'Stock_Count_VDC'
+
             session_state.order_suggestion_button_pressed_flag = 1
             status, total_value_optimized, selection, selection_configuration_ids = solver(data_filtered, parameter_restriction_vectors, sel_order_size)
             data_filtered['Quantity'] = selection
 
             if status == 'optimal':
-                current_solution_size = len([x for x in selection if x > 0])
+                sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size, proposals_col, stock_col, sel_min_number_of_configuration)
+                if sel_configurations.shape[0]:
+                    sel_configurations.rename(index=str, columns={'Quantity': 'Sug.Encomenda'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
+                    st.write('Sugestão Encomenda:', sel_configurations[['VehicleData_Code'] + ['Sug.Encomenda'] + [proposals_col] + [stock_col] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
+                             .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
+                             .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}', 'Propostas Entregues': '{:.0f}', 'Em Stock': '{:.0f}'})
+                             )
 
-                if current_solution_size < sel_min_number_of_configuration:
-                    complementary_configurations, complementary_configurations_index = complementary_configurations_function(data_filtered.copy(), current_solution_size, sel_min_number_of_configuration)
-                    data_filtered.loc[data_filtered.index.isin(complementary_configurations_index), 'Quantity'] = 1
-
-                if saved_suggestions_df.shape[0]:
-                    st.write('Sugestões gravadas:', saved_suggestions_df.rename(columns=options_file.column_translate_dict))
-
-                sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size)
-                sel_configurations.rename(index=str, columns={'Quantity': 'Sug.Encomenda'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
-                st.write('Sugestão Encomenda:', sel_configurations[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
-                         .rename(columns=options_file.column_translate_dict)
-                         .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}'})
-                         )
-                sel_configurations.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
+                    st.write('Propostas Entregues para esta sugestão: ', int(sel_configurations[proposals_col].sum()))
+                    st.write('Viaturas em Stock para esta sugestão: ', int(sel_configurations[stock_col].sum()))
+                    # st.write('CONTROL VALUE - Qty Total', int(sel_configurations['Sug.Encomenda'].sum()))
+                    # st.write('CONTROL VALUE - QTY TOTAL + PROPOSTAS: {}'.format(int(sel_configurations['Sug.Encomenda'].sum()) + int(sel_configurations[proposals_col].sum())))
+                    sel_configurations.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
+                else:
+                    return
 
                 if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
                     session_state.save_button_pressed_flag = 1
@@ -164,14 +168,23 @@ def main():
 
 @st.cache
 def get_data(options_file_in):
-    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table_test'], options_file_in, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
     df_pdb = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['product_db'], options_file_in)
+    df_proposals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['proposals_view'], options_file_in)
+    df_stock = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['stock_view'], options_file_in)
+
+    proposals_grouped = df_proposals[['VehicleData_Code', 'Proposals_Count']].copy(deep=True)
+    proposals_grouped['Proposals_Count_VDC'] = proposals_grouped.groupby('VehicleData_Code')['Proposals_Count'].transform('sum')
+    proposals_grouped = proposals_grouped.drop(['Proposals_Count'], axis=1).drop_duplicates()
+
+    stock_grouped = df_stock[['VehicleData_Code', 'Stock_Count']].copy(deep=True)
+    stock_grouped['Stock_Count_VDC'] = stock_grouped.groupby('VehicleData_Code')['Stock_Count'].transform('sum')
+    stock_grouped = stock_grouped.drop(['Stock_Count'], axis=1).drop_duplicates()
+
     df_pdb['PDB_End_Order_Date'] = pd.to_datetime(df_pdb['PDB_End_Order_Date'], format='%Y-%m-%d', errors='ignore')
-    # df_proposals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['proposals_table'], options_file_in, columns=['VehicleData_Code', 'Concession'], query_filters={'Stage': 'Não Entregue'})
-    # df_proposals = df_proposals.loc[df_proposals['VehicleData_Code'] > 1, :]
     current_date, _ = level_1_e_deployment.time_tags(format_date='%Y-%m-%d')
 
-    sel_vehicledata_codes = gamas_selection(df, df_pdb, current_date)
+    df, sel_vehicledata_codes = gamas_selection(df, df_pdb, current_date)
     gama_viva_mask = df['VehicleData_Code'].isin(sel_vehicledata_codes)
 
     df['Custo_Stock_Dist'] = df['Measure_9'] * 0.015 / 365 * df['DaysInStock_Distributor'] * (-1)
@@ -183,7 +196,11 @@ def get_data(options_file_in):
     df['Average_Score_Euros'] = df_grouped['Score_Euros'].transform('mean')
     df['Gama_Viva_Flag'] = np.where(gama_viva_mask, "Sim", "Não")
 
-    # df = proposals_calculation(df, df_proposals)  # ToDo: This will be ready to use as soon as I get the codes to identify the clients/concessions
+    df['NDB_Dealer_Code_alt'] = df['NDB_Dealer_Code'].str.replace(r'[A-Z]$', '')
+    df = pd.merge(df, proposals_grouped, left_on=['VehicleData_Code'], right_on=['VehicleData_Code'], how='left').fillna(0)
+    df = pd.merge(df, df_proposals, left_on=['VehicleData_Code', 'NDB_Dealer_Code_alt'], right_on=['VehicleData_Code', 'NDB_Installation_Code'], how='left').fillna(0)
+    df = pd.merge(df, stock_grouped, left_on=['VehicleData_Code'], right_on=['VehicleData_Code'], how='left').fillna(0)
+    df = pd.merge(df, df_stock, left_on=['VehicleData_Code', 'NDB_Dealer_Code'], right_on=['VehicleData_Code', 'NDB_Dealer_Code'], how='left').fillna(0)
 
     for model in df['PT_PDB_Model_Desc'].unique():
         if model == 'cr-v':
@@ -195,20 +212,10 @@ def get_data(options_file_in):
         elif model[0] != 'i':
             df.loc[df['PT_PDB_Model_Desc'] == model, 'PT_PDB_Model_Desc'] = model.capitalize()
 
+    df = df[~df['PT_PDB_Model_Desc'].isin(['i20 van', 'i20 coupe', 'i30 fastback n', 'i40'])]
+    df = df[df['Average_Score_Euros'] > 0]
     return df
 
-
-# def proposals_calculation(df, df_proposals):
-#
-#     # Counts the number of proposals per VehicleData_Code and Concession
-#     df_proposals['Count'] = 0
-#     df_proposals['Count'] = df_proposals.groupby(['VehicleData_Code', 'Concession']).transform('count')
-#     df_proposals = df_proposals.drop_duplicates()
-#
-#     # Merges the number of proposals to the current dataframe, filling with 0 those who have no proposals
-#     df_join = pd.merge(df, df_proposals, on=['VehicleData_Code', 'Concession'], how='left').fillna(0)
-#
-#     return df_join
 
 @st.cache
 def gamas_selection(df, df_pdb, current_date):
@@ -216,13 +223,33 @@ def gamas_selection(df, df_pdb, current_date):
     # Client Criteria
     gama_viva_mask = df_pdb['PDB_End_Order_Date'] >= current_date
     gama_viva_mask_2 = df_pdb['PDB_End_Order_Date'].isnull()
+    sel_vehicledata_codes = df_pdb.loc[gama_viva_mask | gama_viva_mask_2]['VehicleData_Code'].unique()
 
     # Matchup Criteria - Search for the old gamas which have already been matched
-    gama_viva_mask_matchup = df_pdb['PT_PDB_Commercial_Version_Desc_New'].notnull()
+    df_pdb = df_pdb.loc[df_pdb['PT_PDB_Commercial_Version_Desc_New'].notnull()]
+    df_pdb = df_pdb.loc[df_pdb['PT_PDB_Version_Desc_New'].notnull()]
+    sel_vehicledata_codes_matchup = df_pdb['VehicleData_Code'].unique()
 
-    sel_vehicledata_codes = df_pdb.loc[gama_viva_mask | gama_viva_mask_2 | gama_viva_mask_matchup, :]['VehicleData_Code'].unique()
+    df_updated = update_new_gamas(df, df_pdb)
 
-    return sel_vehicledata_codes
+    return df_updated, list(sel_vehicledata_codes) + list(sel_vehicledata_codes_matchup)
+
+
+def update_new_gamas(df, df_pdb):
+    start = time.time()
+    # When a gama is replaced, sometimes it changes its characteristics. To handle such cases, they will be updated in the original df
+
+    df_pdb.drop(['PT_PDB_Version_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc'], axis=1, inplace=True)
+    df_pdb.rename(columns={'PT_PDB_Version_Desc_New': 'PT_PDB_Version_Desc', 'PT_PDB_Engine_Desc_New': 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc_New': 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Exterior_Color_Desc_New': 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc_New': 'PT_PDB_Interior_Color_Desc'}, inplace=True)
+    df_pdb.set_index('VehicleData_Code', inplace=True)
+    df_pdb_version = df_pdb[['PT_PDB_Version_Desc', 'PT_PDB_Engine_Desc']]
+
+    df.set_index('VehicleData_Code', inplace=True)
+    df.update(df_pdb_version)
+    df.reset_index(inplace=True)
+
+    print('Elapsed time update new gamas {:.2f}'.format(time.time() - start))
+    return df
 
 
 def filter_data(dataset, value_filters_list, col_filters_list):
@@ -248,12 +275,12 @@ def solver(dataset, parameter_restriction_vectors, sel_order_size):
 
     unique_ids_count = dataset['ML_VehicleData_Code'].nunique()
     unique_ids = dataset['ML_VehicleData_Code'].unique()
-    # scores = dataset['Average_Score_Euros'].unique()
+
     scores_values = [dataset[dataset['ML_VehicleData_Code'] == x]['Average_Score_Euros'].head(1).values[0] for x in unique_ids]  # uniques() command doesn't work as intended because there are configurations (Configuration IDs) with repeated average score
 
     selection = cp.Variable(unique_ids_count, integer=True)
     for parameter_vector in parameter_restriction_vectors:
-        parameter_restriction.append(selection >= parameter_vector)
+        parameter_restriction.append(selection == parameter_vector)
 
     order_size_restriction = cp.sum(selection) <= sel_order_size
     total_value = selection * scores_values
@@ -285,27 +312,56 @@ def complementary_configurations_function(df, current_solution_size, sel_min_num
     return sel_complementary_configurations, sel_complementary_configurations_index
 
 
-def quantity_processing(df, sel_order_size):
-    df = df.loc[df['Quantity'] > 0, :]
+def quantity_processing(df, sel_order_size, proposal_col, stock_col, sel_min_number_of_configuration):
+    df = df.head(sel_min_number_of_configuration)
+    proposals_total = df[proposal_col].sum()
+    stock_total = df[stock_col].sum()
+
+    if proposals_total >= sel_order_size:
+        st.error('Aviso: Existem mais ou igual número de propostas ({}) do que viaturas a encomendar ({}). Por favor alterar alguma dos parâmetros como nº mínimo de configurações a mostrar, valor mínimo de viaturas vendidas ou cliente.'.format(int(proposals_total), int(sel_order_size)))
+        return pd.DataFrame()
+
+    sel_order_size = sel_order_size - proposals_total
     total_score = df['Average_Score_Euros'].sum()
 
     df.loc[:, 'Score Weight'] = df.loc[:, 'Average_Score_Euros'] / total_score
-    df.loc[:, 'Weighted Order'] = df.loc[:, 'Score Weight'] * sel_order_size
+    df.loc[:, 'Weighted Order'] = df.loc[:, 'Score Weight'] * (sel_order_size - stock_total)
     df.loc[:, 'Quantity'] = df.loc[:, 'Weighted Order'].round()
+
+    # Stock Handling
+    df_wo_stock_values = df.loc[df[stock_col] == 0, :]
+    df_wo_stock_values_index = df.loc[df[stock_col] == 0, :].index
+    df_wo_stock_values.loc[:, 'Score Weight Stock'] = df_wo_stock_values.loc[:, 'Average_Score_Euros'] / total_score
+    df_wo_stock_values.loc[:, 'Weighted Order Stock'] = df_wo_stock_values.loc[:, 'Score Weight Stock'] * stock_total
+    df_wo_stock_values.loc[:, 'Quantity'] = df_wo_stock_values.loc[:, 'Weighted Order Stock'].round()
+    df.loc[df.index.isin(df_wo_stock_values_index), 'Quantity'] = df.loc[df.index.isin(df_wo_stock_values_index), 'Quantity'] + df_wo_stock_values['Quantity']
 
     # What if the total value of the suggested order is not according to sel_order_size due to roundings?
     current_order_total = df['Quantity'].sum()
 
     if current_order_total < sel_order_size:
-        first_row_index = df.head(1).index
         order_diff = sel_order_size - current_order_total
-        df.loc[first_row_index, 'Quantity'] = df.loc[first_row_index, 'Quantity'] + order_diff
-    elif current_order_total > sel_order_size:
-        last_row_index = df[df['Quantity'] > 0].tail(1).index
-        order_diff = current_order_total - sel_order_size
-        df.loc[last_row_index, 'Quantity'] = df.loc[last_row_index, 'Quantity'] - order_diff
 
-    return df.loc[df['Quantity'] > 0, :]
+        df.loc[:, 'Score Weight Tunning'] = df.loc[:, 'Average_Score_Euros'] / total_score
+        df.loc[:, 'Weighted Order Tunning'] = df.loc[:, 'Score Weight Tunning'] * order_diff
+        df.loc[:, 'Quantity Tunning'] = df.loc[:, 'Weighted Order Tunning'].round()
+        df['Quantity'] = df['Quantity'] + df['Quantity Tunning']
+
+        # first_row_index = df.head(1).index
+        # df.loc[first_row_index, 'Quantity'] = df.loc[first_row_index, 'Quantity'] + order_diff
+    elif current_order_total > sel_order_size:
+        order_diff = sel_order_size - current_order_total
+
+        df.loc[:, 'Score Weight Tunning'] = df.loc[:, 'Average_Score_Euros'] / total_score
+        df.loc[:, 'Weighted Order Tunning'] = df.loc[:, 'Score Weight Tunning'] * order_diff
+        df.loc[:, 'Quantity Tunning'] = df.loc[:, 'Weighted Order Tunning'].round()
+        df['Quantity'] = df['Quantity'] - df['Quantity Tunning']
+
+        # last_row_index = df[df['Quantity'] > 0].tail(1).index
+        # order_diff = current_order_total - sel_order_size
+        # df.loc[last_row_index, 'Quantity'] = df.loc[last_row_index, 'Quantity'] - order_diff
+
+    return df
 
 
 def get_suggestions_dict(options_file_in, client_lvl_cols_in):
