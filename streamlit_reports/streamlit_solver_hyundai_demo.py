@@ -12,6 +12,7 @@ from streamlit.ScriptRequestQueue import RerunData
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
+import modules.level_1_b_data_processing as level_1_b_data_processing
 import modules.level_1_e_deployment as level_1_e_deployment
 from modules.level_0_performance_report import log_record, error_upload
 import level_2_order_optimization_hyundai_options as options_file
@@ -33,7 +34,7 @@ FROM [BI_MLG].[dbo].[VHE_Fact_BI_OrderOptimization_Solver_Optimization_DTR]
 WHERE PT_PDB_Model_Desc = '{}'  '''
 
 """
-# Sugestão de Encomenda - Importador
+# Sugestão de Encomenda - Importador - Versão de Teste
 Sugestão de Configurações para a encomenda mensal de viaturas Hyundai/Honda
 """
 
@@ -87,32 +88,33 @@ def main():
         session_state.client_lvl_5 = sel_client_lvl_5
         session_state.client_lvl_6 = sel_client_lvl_6
         session_state.client_lvl_7 = sel_client_lvl_7
+
         session_state.model = sel_model
         session_state.overwrite_button_pressed, session_state.save_button_pressed_flag, session_state.order_suggestion_button_pressed_flag = 0, 0, 0
 
     client_lvl_values = [sel_client_lvl_1, sel_client_lvl_2, sel_client_lvl_3, sel_client_lvl_4, sel_client_lvl_5, sel_client_lvl_6, sel_client_lvl_7]
 
     if '-' not in [sel_model] and '-' not in [sel_brand]:
+        print('1 - ', data.shape)
         data_filtered = filter_data(data, [sel_range, sel_model, sel_min_sold_cars] + client_lvl_values, ['Gama_Viva_Flag', 'PT_PDB_Model_Desc', 'Quantity_Sold'] + client_lvl_cols)
+        print('2 - ', data_filtered.shape)
 
         if not data_filtered.shape[0]:
             st.write('Não foram encontrados registos para as presentes escolhas - Por favor altere o modelo/cliente/valor mínimo de viaturas por configuração.')
             return
         st.write('Número de Configurações:', data_filtered['ML_VehicleData_Code'].nunique())
 
-        sel_parameters = st.multiselect('Escolha os parâmetros da configuração que pretende configurar:', [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'], format_func=options_file.column_translate_dict.get)
+        for parameter in [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc']:
+            sel_parameter_values = st.sidebar.multiselect('Escolha os valores para {}:'.format(options_file.column_translate_dict[parameter]), [x for x in data_filtered[parameter].unique()])
+            parameters_values.append(sel_parameter_values)
 
-        for parameter in sel_parameters:
-            if parameter != '-':
-                sel_parameter_max_number = data_filtered[parameter].nunique()
-                try:
-                    sel_parameter_value = st.sidebar.number_input('Por favor escolha o número mínimo de diferentes {} a escolher (valor mínimo é {} e o valor máximo é {})'.format(options_file.column_translate_dict[parameter], 1, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number - 1)
-                    parameters_values.append(sel_parameter_value)
-                except (ValueError, st.errors.StreamlitAPIException):
-                    st.sidebar.text('Existe apenas uma escolha de {}.'.format(options_file.column_translate_dict[parameter]))
+        # for parameter, parameter_value in zip([x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'], parameters_values):
+        #     if parameter != '-':
+        print('3 - ', data_filtered.shape)
+        data_filtered = filter_data(data_filtered, parameters_values, [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'])
+        print('4 - ', data_filtered.shape)
 
-        for parameter, parameter_value in zip(sel_parameters, parameters_values):
-            parameter_restriction_vectors.append(get_parameter_positions(data_filtered.copy(), parameter, parameter_value))
+        # parameter_restriction_vectors.append(get_parameter_positions(data_filtered.copy(), parameter, parameter_value))
 
         if st.button('Criar Sugestão') or session_state.order_suggestion_button_pressed_flag == 1:
             if any(x != '-' for x in client_lvl_values):
@@ -130,7 +132,7 @@ def main():
                 sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size, proposals_col, stock_col, sel_min_number_of_configuration)
                 if sel_configurations.shape[0]:
                     sel_configurations.rename(index=str, columns={'Quantity': 'Sug.Encomenda'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
-                    st.write('Sugestão Encomenda:', sel_configurations[['Sug.Encomenda'] + [proposals_col] + [stock_col] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
+                    st.write('Sugestão Encomenda:', sel_configurations[['VehicleData_Code'] + ['Sug.Encomenda'] + [proposals_col] + [stock_col] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
                              .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
                              .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}', 'Propostas Entregues': '{:.0f}', 'Em Stock': '{:.0f}'})
                              )
@@ -143,21 +145,21 @@ def main():
                 else:
                     return
 
-                if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
-                    session_state.save_button_pressed_flag = 1
-
-                    if tuple(client_lvl_values) in saved_suggestions_dict.keys() and sel_model in saved_suggestions_dict[tuple(client_lvl_values)] or session_state.overwrite_button_pressed == 1:
-                        st.write('Já existe Sugestão de Encomenda para o Modelo {}'.format(sel_model) + ' '.join([' e {} - {}'.format(x, y) for x, y in zip(client_lvl_cols_renamed, client_lvl_values) if y != '-']) + '.')
-                        st.write('Pretende substituir pela atual sugestão?')
-                        session_state.overwrite_button_pressed = 1
-                        if st.button('Sim'):
-                            solution_saving(sel_configurations, sel_model, client_lvl_cols, client_lvl_values)
-                            session_state.save_button_pressed_flag = 0
-                            session_state.overwrite_button_pressed = 0
-                    else:
-                        solution_saving(sel_configurations, sel_model, client_lvl_cols, client_lvl_values)
-                        session_state.save_button_pressed_flag = 0
-                        session_state.overwrite_button_pressed = 0
+                # if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
+                #     session_state.save_button_pressed_flag = 1
+                #
+                #     if tuple(client_lvl_values) in saved_suggestions_dict.keys() and sel_model in saved_suggestions_dict[tuple(client_lvl_values)] or session_state.overwrite_button_pressed == 1:
+                #         st.write('Já existe Sugestão de Encomenda para o Modelo {}'.format(sel_model) + ' '.join([' e {} - {}'.format(x, y) for x, y in zip(client_lvl_cols_renamed, client_lvl_values) if y != '-']) + '.')
+                #         st.write('Pretende substituir pela atual sugestão?')
+                #         session_state.overwrite_button_pressed = 1
+                #         if st.button('Sim'):
+                #             solution_saving(sel_configurations, sel_model, client_lvl_cols, client_lvl_values)
+                #             session_state.save_button_pressed_flag = 0
+                #             session_state.overwrite_button_pressed = 0
+                #     else:
+                #         solution_saving(sel_configurations, sel_model, client_lvl_cols, client_lvl_values)
+                #         session_state.save_button_pressed_flag = 0
+                #         session_state.overwrite_button_pressed = 0
 
             elif status == 'infeasible':
                 st.write('Não foi possível gerar uma sugestão de encomenda.')
@@ -261,21 +263,24 @@ def filter_data(dataset, value_filters_list, col_filters_list):
     data_filtered = dataset.copy()
 
     for col_filter, filter_value in zip(col_filters_list, value_filters_list):
-        if col_filter == 'Quantity_Sold':
-            data_filtered = data_filtered.loc[data_filtered[col_filter].ge(filter_value), :]
-        elif col_filter == 'Gama_Viva_Flag' and filter_value == 'Não':
-            continue
-        elif filter_value != '-':
-            data_filtered = data_filtered.loc[data_filtered[col_filter] == filter_value, :]
+        if filter_value != '-' and type(filter_value) == list and len(filter_value) > 0:
+            data_filtered = data_filtered.loc[data_filtered[col_filter].isin(filter_value), :]
 
-    st.write('Número de viaturas vendidas:', data_filtered['Registration_Number'].nunique())
+        if filter_value != '-' and type(filter_value) != list:
+            if col_filter == 'Quantity_Sold':
+                data_filtered = data_filtered.loc[data_filtered[col_filter].ge(filter_value), :]
+            elif col_filter == 'Gama_Viva_Flag' and filter_value == 'Não':
+                continue
+            elif filter_value != '-':
+                data_filtered = data_filtered.loc[data_filtered[col_filter] == filter_value, :]
+
+    # st.write('Número de viaturas vendidas:', data_filtered['Registration_Number'].nunique())
     data_filtered.drop_duplicates(subset='ML_VehicleData_Code', inplace=True)
     data_filtered.sort_values(by='Average_Score_Euros', ascending=False, inplace=True)
     return data_filtered
 
 
 def solver(dataset, parameter_restriction_vectors, sel_order_size):
-    start_solver = time.time()
     parameter_restriction = []
 
     unique_ids_count = dataset['ML_VehicleData_Code'].nunique()
@@ -284,8 +289,8 @@ def solver(dataset, parameter_restriction_vectors, sel_order_size):
     scores_values = [dataset[dataset['ML_VehicleData_Code'] == x]['Average_Score_Euros'].head(1).values[0] for x in unique_ids]  # uniques() command doesn't work as intended because there are configurations (Configuration IDs) with repeated average score
 
     selection = cp.Variable(unique_ids_count, integer=True)
-    for parameter_vector in parameter_restriction_vectors:
-        parameter_restriction.append(selection == parameter_vector)
+    # for parameter_vector in parameter_restriction_vectors:
+    #     parameter_restriction.append(selection == parameter_vector)
 
     order_size_restriction = cp.sum(selection) <= sel_order_size
     total_value = selection * scores_values
@@ -350,7 +355,7 @@ def quantity_processing(df, sel_order_size, proposal_col, stock_col, sel_min_num
         df.loc[:, 'Score Weight Tunning'] = df.loc[:, 'Average_Score_Euros'] / total_score
         df.loc[:, 'Weighted Order Tunning'] = df.loc[:, 'Score Weight Tunning'] * order_diff
         df.loc[:, 'Quantity Tunning'] = df.loc[:, 'Weighted Order Tunning'].round()
-        df['Quantity'] = df['Quantity'] + df['Quantity Tunning']
+        df.loc[:, 'Quantity'] = df.loc[:, 'Quantity'] + df.loc[:, 'Quantity Tunning']
 
         # first_row_index = df.head(1).index
         # df.loc[first_row_index, 'Quantity'] = df.loc[first_row_index, 'Quantity'] + order_diff
@@ -360,7 +365,7 @@ def quantity_processing(df, sel_order_size, proposal_col, stock_col, sel_min_num
         df.loc[:, 'Score Weight Tunning'] = df.loc[:, 'Average_Score_Euros'] / total_score
         df.loc[:, 'Weighted Order Tunning'] = df.loc[:, 'Score Weight Tunning'] * order_diff
         df.loc[:, 'Quantity Tunning'] = df.loc[:, 'Weighted Order Tunning'].round()
-        df['Quantity'] = df['Quantity'] - df['Quantity Tunning']
+        df.loc[:, 'Quantity'] = df.loc[:, 'Quantity'] - df.loc[:, 'Quantity Tunning']
 
         # last_row_index = df[df['Quantity'] > 0].tail(1).index
         # order_diff = current_order_total - sel_order_size
@@ -411,7 +416,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
