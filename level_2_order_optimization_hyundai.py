@@ -26,7 +26,7 @@ def main():
     df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_pdb_dim, options_file.configuration_parameters, options_file.range_dates, options_file.target)
     # best_models, running_times = data_modelling(datasets, datasets_non_ohe, models)
     # model_choice_message, best_model_name = model_evaluation(models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
-    deployment(df_sales, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
+    deployment(df_sales, options_file.sql_info['database_source'], options_file.sql_info['final_table'])
 
     performance_info(options_file.project_id, options_file, model_choice_message='N/A')
 
@@ -277,7 +277,7 @@ def deployment(df, db, view):
         sel_df['PDB_Start_Order_Date'] = sel_df['PDB_Start_Order_Date'].astype(object).where(sel_df['PDB_Start_Order_Date'].notnull(), None)
         sel_df['PDB_End_Order_Date'] = sel_df['PDB_End_Order_Date'].astype(object).where(sel_df['PDB_End_Order_Date'].notnull(), None)
 
-        sql_inject(sel_df, options_file.DSN_MLG, db, view, options_file, list(sel_df), truncate=1, check_date=1)
+        sql_inject(sel_df, options_file.DSN, db, view, options_file, list(sel_df), truncate=1, check_date=1)
 
     log_record('Fim Secção E.', options_file.project_id)
     performance_info_append(time.time(), 'Section_E_End')

@@ -26,11 +26,11 @@ from level_2_order_optimization_hyundai_options import configuration_parameters,
 min_number_of_configuration = 5
 
 saved_solutions_pairs_query = ' SELECT DISTINCT PT_PDB_Model_Desc, ' + ', '.join(client_lvl_cols) + ', [Date] ' \
-                                'FROM [BI_MLG].[dbo].[VHE_Fact_BI_OrderOptimization_Solver_Optimization_DTR] ' \
+                                'FROM [BI_DTR].[dbo].[VHE_Fact_MLG_OrderOptimization_Solver_Optimization_DTR] ' \
                                 'GROUP BY PT_PDB_Model_Desc, ' + ', '.join(client_lvl_cols) + ', [Date]'
 
 truncate_query = ''' DELETE 
-FROM [BI_MLG].[dbo].[VHE_Fact_BI_OrderOptimization_Solver_Optimization_DTR]
+FROM [BI_DTR].[dbo].[VHE_Fact_MLG_OrderOptimization_Solver_Optimization_DTR]
 WHERE PT_PDB_Model_Desc = '{}'  '''
 
 """
@@ -132,7 +132,7 @@ def main():
                 sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size, proposals_col, stock_col, sel_min_number_of_configuration)
                 if sel_configurations.shape[0]:
                     sel_configurations.rename(index=str, columns={'Quantity': 'Sug.Encomenda'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
-                    st.write('Sugestão Encomenda:', sel_configurations[['VehicleData_Code'] + ['Sug.Encomenda'] + [proposals_col] + [stock_col] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
+                    st.write('Sugestão Encomenda:', sel_configurations[['Sug.Encomenda'] + [proposals_col] + [stock_col] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
                              .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
                              .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}', 'Propostas Entregues': '{:.0f}', 'Em Stock': '{:.0f}'})
                              )
@@ -171,7 +171,7 @@ def main():
 @st.cache
 def get_data(options_file_in):
     df_cols = ['NLR_Code', 'Chassis_Number', 'Registration_Number', 'PDB_Start_Order_Date', 'PDB_End_Order_Date', 'VehicleData_Code', 'DaysInStock_Distributor', 'DaysInStock_Global', 'Measure_9', 'Fixed_Margin_II', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc', 'NDB_Dealer_Code', 'Quantity_Sold', 'Average_DaysInStock_Global', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code']
-    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table_test'], options_file_in, columns=df_cols, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['final_table'], options_file_in, columns=df_cols, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
 
     df_pdb_cols = ['VehicleData_Code', 'PT_PDB_Model_Desc', 'PT_PDB_Serie_Desc', 'PT_PDB_Bodywork_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'PT_PDB_Painting_Type_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Fuel_Type_Desc', 'PT_PDB_Vehicle_Type_Desc', 'PT_PDB_Commercial_Version_Desc', 'PDB_Start_Order_Date', 'PDB_End_Order_Date', 'PT_PDB_Version_Desc_New', 'PT_PDB_Engine_Desc_New', 'PT_PDB_Commercial_Version_Desc_New']
     df_pdb = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['product_db'], options_file_in, columns=df_pdb_cols)
@@ -377,7 +377,7 @@ def quantity_processing(df, sel_order_size, proposal_col, stock_col, sel_min_num
 def get_suggestions_dict(options_file_in, client_lvl_cols_in):
     saved_suggestions_dict = {}
 
-    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in, query=saved_solutions_pairs_query)
+    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in, query=saved_solutions_pairs_query)
 
     saved_suggestions_df_grouped = saved_suggestions_df[['PT_PDB_Model_Desc'] + client_lvl_cols_in].groupby(client_lvl_cols_in)
     for key, group in saved_suggestions_df_grouped:
@@ -391,9 +391,9 @@ def solution_saving(df, sel_model, client_lvl_cols_in, client_lvl_sels):
 
     df = client_replacement(df, client_lvl_cols_in, client_lvl_sels)  # Replaces the values of Client's Levels by the actual values selected for this solution
 
-    level_1_e_deployment.sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(sel_model) + truncate_query_part_2)
+    level_1_e_deployment.sql_truncate(options_file.DSN, options_file, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(sel_model) + truncate_query_part_2)
 
-    level_1_e_deployment.sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], options_file,
+    level_1_e_deployment.sql_inject(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], options_file,
                                     configuration_parameters + client_lvl_cols_in + ['Quantity', 'Average_Score_Euros', 'ML_VehicleData_Code'], check_date=1)
 
     st.write('Sugestão gravada com sucesso.')
@@ -416,7 +416,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
