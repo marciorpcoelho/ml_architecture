@@ -100,19 +100,15 @@ def main():
             return
         st.write('Número de Configurações:', data_filtered['ML_VehicleData_Code'].nunique())
 
-        sel_parameters = st.multiselect('Escolha os parâmetros da configuração que pretende configurar:', [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'], format_func=options_file.column_translate_dict.get)
+        for parameter in [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc']:
+            sel_parameter_values = st.sidebar.multiselect('Escolha os valores para {}:'.format(options_file.column_translate_dict[parameter]), [x for x in data_filtered[parameter].unique()])
+            parameters_values.append(sel_parameter_values)
 
-        for parameter in sel_parameters:
-            if parameter != '-':
-                sel_parameter_max_number = data_filtered[parameter].nunique()
-                try:
-                    sel_parameter_value = st.sidebar.number_input('Por favor escolha o número mínimo de diferentes {} a escolher (valor mínimo é {} e o valor máximo é {})'.format(options_file.column_translate_dict[parameter], 1, sel_parameter_max_number), 1, sel_parameter_max_number, value=sel_parameter_max_number - 1)
-                    parameters_values.append(sel_parameter_value)
-                except (ValueError, st.errors.StreamlitAPIException):
-                    st.sidebar.text('Existe apenas uma escolha de {}.'.format(options_file.column_translate_dict[parameter]))
+        # for parameter, parameter_value in zip([x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'], parameters_values):
+        #     if parameter != '-':
+        data_filtered = filter_data(data_filtered, parameters_values, [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'])
 
-        for parameter, parameter_value in zip(sel_parameters, parameters_values):
-            parameter_restriction_vectors.append(get_parameter_positions(data_filtered.copy(), parameter, parameter_value))
+        # parameter_restriction_vectors.append(get_parameter_positions(data_filtered.copy(), parameter, parameter_value))
 
         if st.button('Criar Sugestão') or session_state.order_suggestion_button_pressed_flag == 1:
             if any(x != '-' for x in client_lvl_values):
@@ -261,21 +257,24 @@ def filter_data(dataset, value_filters_list, col_filters_list):
     data_filtered = dataset.copy()
 
     for col_filter, filter_value in zip(col_filters_list, value_filters_list):
-        if col_filter == 'Quantity_Sold':
-            data_filtered = data_filtered.loc[data_filtered[col_filter].ge(filter_value), :]
-        elif col_filter == 'Gama_Viva_Flag' and filter_value == 'Não':
-            continue
-        elif filter_value != '-':
-            data_filtered = data_filtered.loc[data_filtered[col_filter] == filter_value, :]
+        if filter_value != '-' and type(filter_value) == list and len(filter_value) > 0:
+            data_filtered = data_filtered.loc[data_filtered[col_filter].isin(filter_value), :]
 
-    st.write('Número de viaturas vendidas:', data_filtered['Registration_Number'].nunique())
+        if filter_value != '-' and type(filter_value) != list:
+            if col_filter == 'Quantity_Sold':
+                data_filtered = data_filtered.loc[data_filtered[col_filter].ge(filter_value), :]
+            elif col_filter == 'Gama_Viva_Flag' and filter_value == 'Não':
+                continue
+            elif filter_value != '-':
+                data_filtered = data_filtered.loc[data_filtered[col_filter] == filter_value, :]
+
+    # st.write('Número de viaturas vendidas:', data_filtered['Registration_Number'].nunique())
     data_filtered.drop_duplicates(subset='ML_VehicleData_Code', inplace=True)
     data_filtered.sort_values(by='Average_Score_Euros', ascending=False, inplace=True)
     return data_filtered
 
 
 def solver(dataset, parameter_restriction_vectors, sel_order_size):
-    start_solver = time.time()
     parameter_restriction = []
 
     unique_ids_count = dataset['ML_VehicleData_Code'].nunique()
@@ -284,8 +283,6 @@ def solver(dataset, parameter_restriction_vectors, sel_order_size):
     scores_values = [dataset[dataset['ML_VehicleData_Code'] == x]['Average_Score_Euros'].head(1).values[0] for x in unique_ids]  # uniques() command doesn't work as intended because there are configurations (Configuration IDs) with repeated average score
 
     selection = cp.Variable(unique_ids_count, integer=True)
-    for parameter_vector in parameter_restriction_vectors:
-        parameter_restriction.append(selection == parameter_vector)
 
     order_size_restriction = cp.sum(selection) <= sel_order_size
     total_value = selection * scores_values
@@ -350,7 +347,7 @@ def quantity_processing(df, sel_order_size, proposal_col, stock_col, sel_min_num
         df.loc[:, 'Score Weight Tunning'] = df.loc[:, 'Average_Score_Euros'] / total_score
         df.loc[:, 'Weighted Order Tunning'] = df.loc[:, 'Score Weight Tunning'] * order_diff
         df.loc[:, 'Quantity Tunning'] = df.loc[:, 'Weighted Order Tunning'].round()
-        df['Quantity'] = df['Quantity'] + df['Quantity Tunning']
+        df.loc[:, 'Quantity'] = df.loc[:, 'Quantity'] + df.loc[:, 'Quantity Tunning']
 
         # first_row_index = df.head(1).index
         # df.loc[first_row_index, 'Quantity'] = df.loc[first_row_index, 'Quantity'] + order_diff
@@ -360,7 +357,7 @@ def quantity_processing(df, sel_order_size, proposal_col, stock_col, sel_min_num
         df.loc[:, 'Score Weight Tunning'] = df.loc[:, 'Average_Score_Euros'] / total_score
         df.loc[:, 'Weighted Order Tunning'] = df.loc[:, 'Score Weight Tunning'] * order_diff
         df.loc[:, 'Quantity Tunning'] = df.loc[:, 'Weighted Order Tunning'].round()
-        df['Quantity'] = df['Quantity'] - df['Quantity Tunning']
+        df.loc[:, 'Quantity'] = df.loc[:, 'Quantity'] - df.loc[:, 'Quantity Tunning']
 
         # last_row_index = df[df['Quantity'] > 0].tail(1).index
         # order_diff = current_order_total - sel_order_size
