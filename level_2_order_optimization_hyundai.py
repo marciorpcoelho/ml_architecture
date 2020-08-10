@@ -276,6 +276,7 @@ def deployment(df, db, view):
         sel_df['Registration_Date'] = sel_df['Registration_Date'].astype(object).where(sel_df['Registration_Date'].notnull(), None)
         sel_df['PDB_Start_Order_Date'] = sel_df['PDB_Start_Order_Date'].astype(object).where(sel_df['PDB_Start_Order_Date'].notnull(), None)
         sel_df['PDB_End_Order_Date'] = sel_df['PDB_End_Order_Date'].astype(object).where(sel_df['PDB_End_Order_Date'].notnull(), None)
+        sel_df.rename(columns={'prev_sales_check': 'Previous_Sales_Flag', 'number_prev_sales': 'Previous_Sales_Count'}, inplace=True)
 
         sql_inject(sel_df, options_file.DSN, db, view, options_file, list(sel_df), truncate=1, check_date=1)
 
