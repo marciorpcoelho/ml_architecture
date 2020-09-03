@@ -4,8 +4,8 @@ import os
 import sys
 import time
 from traceback import format_exc
-from streamlit.ScriptRunner import RerunException
-from streamlit.ScriptRequestQueue import RerunData
+from streamlit.script_runner import RerunException
+from streamlit.script_request_queue import RerunData
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
@@ -16,6 +16,8 @@ import modules.SessionState as SessionState
 import modules.level_1_e_deployment as level_1_e_deployment
 from modules.level_0_performance_report import log_record, error_upload
 from plotly import graph_objs as go
+
+st.beta_set_page_config(page_title='Correspondência de Gamas - Importador')
 
 hide_menu_style = """
         <style>
@@ -128,7 +130,7 @@ def main():
                                     session_state.validate_button_pressed = 0
                                     session_state.run_id += 1
                                     time.sleep(0.1)
-                                    raise RerunException(RerunData(widget_state=None))
+                                    raise RerunException(RerunData())
 
     elif sel_goal == 'Gamas Correspondidas':
         session_state.validate_button_pressed = 0
@@ -185,7 +187,7 @@ def main():
                             else:
                                 st.write('Para escolher uma nova correspondência, escolha entre as seguintes:')
 
-                            session_state.df_sim = calculate_cosine_similarity(sel_gama, -1, matched_data_filtered)
+                            session_state.df_sim = calculate_cosine_similarity(sel_gama, -1, session_state.gama_viva_per_model, [])
 
                             suggestions = session_state.df_sim[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
                             st.write('Sugestões:')
@@ -203,7 +205,7 @@ def main():
                                     session_state.validate_button_pressed = 0
                                     session_state.run_id += 1
                                     time.sleep(0.1)
-                                    raise RerunException(RerunData(widget_state=None))
+                                    raise RerunException(RerunData())
 
 
 def save_function(gama_morta, gama_viva, sel_brand, sel_model):
@@ -328,4 +330,4 @@ if __name__ == '__main__':
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
-        raise RerunException(RerunData(widget_state=None))
+        raise RerunException(RerunData())

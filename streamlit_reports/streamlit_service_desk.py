@@ -1,18 +1,22 @@
 import streamlit as st
-from streamlit.ScriptRunner import RerunException
-from streamlit.ScriptRequestQueue import RerunData
+from streamlit.script_runner import RerunException
+from streamlit.script_request_queue import RerunData
 import os
 import sys
 import pyodbc
 import time
+from traceback import format_exc
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import level_2_pa_servicedesk_2244_options as options_file
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment
+from modules.level_0_performance_report import log_record, error_upload
 import modules.SessionState as SessionState
 from plotly import graph_objs as go
+
+st.beta_set_page_config(page_title='Classificação de Pedidos - Service Desk Rigor')
 
 session_state = SessionState.get(run_id=0, save_button_pressed_flag=0, overwrite_button_pressed_flag=0, update_final_table_button_pressed_flag=0, first_run=1)
 
@@ -115,14 +119,14 @@ def main():
                         session_state.overwrite_button_pressed_flag, session_state.save_button_pressed_flag = 0, 0
                         session_state.run_id += 1
                         time.sleep(0.1)
-                        raise RerunException(RerunData(widget_state=None))
+                        raise RerunException(RerunData())
 
                 else:
                     solution_saving(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
                     session_state.overwrite_button_pressed_flag, session_state.save_button_pressed_flag = 0, 0
                     session_state.run_id += 1
                     time.sleep(0.1)
-                    raise RerunException(RerunData(widget_state=None))
+                    raise RerunException(RerunData())
 
         elif len(sel_label) > 1:
             st.error('Por favor escolha apenas uma classe.')
@@ -164,5 +168,14 @@ def update_dw(update_query_in, options_file_in, dsn, db):
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as exception:
+        project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
+        log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        session_state.run_id += 1
+        st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
+        time.sleep(10)
+        raise RerunException(RerunData())
 

@@ -4,7 +4,7 @@ import numpy as np
 import cvxpy as cp
 import sys
 import os
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '')) + '\\'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_b_data_processing as level_1_b_data_processing
@@ -13,7 +13,7 @@ import level_2_optionals_baviera_options as options_file
 import modules.SessionState as sessionstate
 
 """
-# Sugestão de Encomenda Baviera (Fase II)
+# Sugestão de Encomenda Baviera - DEMO
 Sugestão de Configurações para a encomenda mensal de viaturas BMW
 """
 
@@ -22,7 +22,7 @@ configuration_parameters_full_rename = ['Motorização', 'Alarme', 'AC Auto', 'T
 extra_parameters = ['Average_Score_Euros_Local_Fase2_Level_1', 'Number_Cars_Sold', 'Number_Cars_Sold_Local_Fase2_Level_1', 'Sales_Place_Fase2_Level_1']
 extra_parameters_rename = ['Score (€)', '#Vendas Global', '#Vendas Local', 'Concessão']
 boolean_columns = ['Alarme', 'AC Auto', 'Teto Abrir', 'Caixa Auto.', 'Faróis LED', 'Faróis Xénon', 'Navegação', 'Sens. Diant.', 'Barras Tej.']
-min_number_of_configuration = 5
+# min_number_of_configuration = 5
 saved_solutions_pairs_query = ''' SELECT DISTINCT Sales_Place_Fase2_Level_1, Model_Code, [Date]
   FROM [BI_MLG].[dbo].[VHE_Fact_BI_OrderOptimization_Solver_Optimization]
   GROUP BY Sales_Place_Fase2_Level_1, Model_Code, [Date]'''
@@ -56,7 +56,7 @@ def main():
     max_number_of_cars_sold = max(data[column_translate['Number_Cars_Sold_Local_Fase2_Level_1']])
 
     sel_local = st.sidebar.selectbox('Concessão:', ['-'] + list(data[column_translate['Sales_Place_Fase2_Level_1']].unique()), index=0)
-    sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(data[column_translate['Model_Code']].unique()), index=0)
+    sel_model = st.sidebar.selectbox('Modelo:', ['-'] + [x for x in data[column_translate['Model_Code']].unique() if x not in ['S2 Gran Coupe (F44C0)', 'S3 Touring (G21TO)', 'X1 (F48GF)', 'S3 Berlina (G20LI)']], index=0)
 
     if sel_local != session_state.local or sel_model != session_state.model:
         session_state.local = sel_local
@@ -68,9 +68,11 @@ def main():
             max_number_of_cars_sold = max(data[(data[column_translate['Sales_Place_Fase2_Level_1']] == sel_local) & (data[column_translate['Model_Code']] == sel_model)][column_translate['Number_Cars_Sold_Local_Fase2_Level_1']])
         else:
             st.write('Não foram encontrados registos para a Concessão e modelo selecionados.')
+            st.write(sel_model)
             return
 
     sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas localmente por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, max_number_of_cars_sold, value=1)
+    sel_number_of_configuration = st.sidebar.number_input('Por favor escolha o número de configurações a apresentar:', value=5)
     sel_values_filters = [sel_local, sel_min_sold_cars, sel_model]
     sel_values_col_filters = [column_translate['Sales_Place_Fase2_Level_1'], column_translate['Number_Cars_Sold_Local_Fase2_Level_1'], column_translate['Model_Code']]
 
@@ -83,7 +85,7 @@ def main():
 
             sel_order_size = st.sidebar.number_input('Por favor escolha o número de viaturas a encomendar:', 1, 1000, value=50)
 
-            parameters = st.multiselect('Escolha os parâmetros da configuração que pretende configurar:', [x for x in configuration_parameters_full_rename if x not in [column_translate['Model_Code']]], [column_translate['Colour_Ext'], column_translate['Motor_Desc']])
+            parameters = st.multiselect('Escolha os parâmetros da configuração que pretende configurar:', [x for x in configuration_parameters_full_rename if x not in [column_translate['Model_Code']]])
 
             for parameter in parameters:
                 try:
@@ -111,8 +113,8 @@ def main():
                     data_filtered.sort_values(by=column_translate['Average_Score_Euros_Local_Fase2_Level_1'], inplace=True, ascending=False)
 
                     current_solution_size = len([x for x in selection if x > 0])
-                    if current_solution_size < min_number_of_configuration:  # Checks if the optimization results is a single configuration or too few (< min_number_of_configuration)
-                        complementary_configurations, complementary_configurations_index = complementary_configurations_function(data_filtered.copy(), current_solution_size)
+                    if current_solution_size < sel_number_of_configuration:  # Checks if the optimization results is a single configuration or too few (< min_number_of_configuration)
+                        complementary_configurations, complementary_configurations_index = complementary_configurations_function(data_filtered.copy(), current_solution_size, sel_number_of_configuration)
                         data_filtered.loc[data_filtered.index.isin(complementary_configurations_index), 'Quantity'] = 1
 
                     if saved_suggestions_df.shape[0]:
@@ -149,19 +151,19 @@ def main():
 
 
 def solution_saving(df, sel_local, sel_model):
-    df = level_1_b_data_processing.boolean_replacement(df, boolean_columns)
-    df = level_1_b_data_processing.column_rename(df, configuration_parameters_full_rename + extra_parameters_rename, configuration_parameters_full + extra_parameters)
-
-    level_1_e_deployment.sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(sel_local, sel_model))
-
-    level_1_e_deployment.sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], options_file,
-                                    configuration_parameters_full + ['Quantity', 'Average_Score_Euros_Local_Fase2_Level_1', 'Sales_Place_Fase2_Level_1'], check_date=1)
+    # df = level_1_b_data_processing.boolean_replacement(df, boolean_columns)
+    # df = level_1_b_data_processing.column_rename(df, configuration_parameters_full_rename + extra_parameters_rename, configuration_parameters_full + extra_parameters)
+    #
+    # level_1_e_deployment.sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(sel_local, sel_model))
+    #
+    # level_1_e_deployment.sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], options_file,
+    #                                 configuration_parameters_full + ['Quantity', 'Average_Score_Euros_Local_Fase2_Level_1', 'Sales_Place_Fase2_Level_1'], check_date=1)
 
     st.write('Sugestão gravada com sucesso - {} & {}'.format(sel_local, sel_model))
     return
 
 
-def complementary_configurations_function(df, current_solution_size):
+def complementary_configurations_function(df, current_solution_size, min_number_of_configuration):
     df = df.loc[df['Quantity'] == 0, :]
     missing_number_of_configuration = min_number_of_configuration - current_solution_size
     sel_complementary_configurations = df.head(missing_number_of_configuration)

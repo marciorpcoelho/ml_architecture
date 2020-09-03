@@ -7,8 +7,8 @@ import os
 import sys
 import time
 from traceback import format_exc
-from streamlit.ScriptRunner import RerunException
-from streamlit.ScriptRequestQueue import RerunData
+from streamlit.script_runner import RerunException
+from streamlit.script_request_queue import RerunData
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
@@ -18,9 +18,7 @@ import level_2_order_optimization_hyundai_options as options_file
 import modules.SessionState as SessionState
 from level_2_order_optimization_hyundai_options import configuration_parameters, client_lvl_cols, client_lvl_cols_renamed
 
-# logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
-# logging.Logger('errors')
-# logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
+st.beta_set_page_config(page_title='Sugestão de Encomenda - Importador')
 
 min_number_of_configuration = 5
 
@@ -412,5 +410,5 @@ if __name__ == '__main__':
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
-        raise RerunException(RerunData(widget_state=None))
+        raise RerunException(RerunData())
 

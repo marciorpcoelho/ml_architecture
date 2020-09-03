@@ -14,6 +14,9 @@ elif 'posix' in os.name:
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
 
+project_id = 2610
+update_frequency_days = 0
+
 
 sql_info = {
     'database_BI_AFR': 'BI_RCG',
@@ -22,13 +25,106 @@ sql_info = {
     'database_BI_CA': 'BI_CA',
     'database_BI_GSC': 'BI_GSC',
     'database_final': 'BI_MLG',
+    'parts_classification_table': 'PSE_Fact_PA_Parts_Classification',
+    'parts_classification_rules': 'PSE_Fact_PA_Parts_Classification_Rules',
 }
 
+column_translate_dict = {
+    'Part_Ref': 'Referência',
+    'Part_Description': 'Descrição',
+    'Part_Cost': 'Preço de Custo',
+    'Part_PVP': 'Preço de Venda',
+    'Product_Group_DW': 'Família Original',
+    'Product_Group_DW_desc': 'Família Original',
+    'Classification': 'Família Classificada',
+    'Classification_desc': 'Família Classificada',
+    'Classification_Prob': 'Grau Confiança',
+    'Percentage_Predicted': '% Conf.',
+}
 
-current_stock_query = '''SELECT DISTINCT Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW
-FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month WITH (NOLOCK)
-WHERE Part_Ref <> '' and Part_Desc is not Null and Part_Desc <> '' and Stock_Month = '{}'
-GROUP BY Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW'''
+others_families_dict = {
+    147: 'O. Acessórios',
+    148: 'O. Acessórios',
+    149: 'O. Acessórios',
+    150: 'O. Acessórios',
+    152: 'O. Acessórios',
+    42: 'O. Colisão',
+    37: 'O. Colisão',
+    48: 'O. Consumíveis',
+    119: 'O. Manutenção',
+    16: 'O. Merchandising',
+    78: 'O. Manutenção',
+    144: 'O. Mota',
+    143: 'O. Mota',
+    170: 'O. Reparação',
+    29: 'O. Reparação',
+    172: 'O. Reparação',
+    173: 'O. Reparação',
+    54: 'O. Diversos',
+    '75/77': 'Lazer/Marroquinaria',
+}
+
+warning_message_app_dict = {
+    'starts': '{} - Não existem peças cuja descrição começa com: {}, nas condições de custo/preço definidas',
+    'contains': '{} - Não existem peças cuja descrição começa com: {}, nas condições de custo/preço definidas',
+}
+
+classified_app_query = '''
+    SELECT *
+      FROM [BI_MLG].[dbo].[PSE_Fact_PA_Parts_Classification]
+      where Product_Group_DW <> '1'
+  '''
+
+non_classified_app_query = '''
+    SELECT  TOP (100) *
+      FROM [BI_MLG].[dbo].[PSE_Fact_PA_Parts_Classification]
+      where Product_Group_DW = '1'
+      and Current_Month_Flag = '0'
+  '''
+
+product_group_app_query = '''
+    SELECT [Product_Group_Code]
+          ,[Product_Group_Level_1_Code]
+          ,[Product_Group_Level_2_Code]
+          ,[PT_Product_Group_Level_1_Desc]
+          ,[PT_Product_Group_Level_2_Desc]
+          ,[PT_Product_Group_Desc]
+      FROM [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC]
+      where Product_Group_Code not in (1, 2, 44, 45)
+    '''
+
+update_product_group_dw_app_query = '''
+             UPDATE {}
+             SET Classification_Flag = 1,
+             Product_Group_DW = \'{}\'
+             WHERE Part_Ref in ({})
+         '''
+
+add_rule_app_query = '''
+'''
+
+
+# current_stock_query = '''SELECT DISTINCT Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account
+# FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month WITH (NOLOCK)
+# WHERE Part_Ref <> '' and Part_Desc is not Null and Part_Desc <> '' and Stock_Month = '{}'
+# GROUP BY Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account'''
+
+current_stock_query = '''
+    WITH max_date as (
+        SELECT 
+            Part_Ref, MAX(ISNULL(Last_Sell_Date,'1')) as max_date_value
+        FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month WITH (NOLOCK)
+        WHERE Stock_Month = '{}'
+        GROUP BY Part_Ref
+    )
+    SELECT
+        a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+    FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month as a WITH (NOLOCK)
+    inner join max_date as b on a.Part_Ref = b.Part_Ref and ISNULL(a.Last_Sell_Date, '1') = b.max_date_value
+    LEFT JOIN [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC] as Parts_DIM on Parts_DIM.Product_Group_Code = a.Product_Group_DW
+    WHERE Stock_Month = '{}'
+    GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+'''
 
 dms_franchises = '''SELECT *
 FROM {}.dbo.PSE_MapDMS_Franchises'''
@@ -335,3 +431,16 @@ regex_dict = {
     'right_bar': r'/',
     'middle_strip': r'\s+',
 }
+
+stop_words_list = [
+    'de', 'a', 'o', 'que', 'e', 'é', 'do', 'da', 'em', 'um', 'para', 'com', 'não', 'uma', 'os', 'no', 'se', 'na', 'por', 'mais', 'as', 'dos', 'como', 'mas', 'ao', 'ele', 'das', 'à', 'seu', 'sua', 'ou',
+    'quando', 'muito', 'nos', 'já', 'eu', 'também', 'só', 'pelo', 'pela', 'até', 'isso', 'ela', 'entre', 'depois', 'sem', 'mesmo', 'aos', 'seus', 'quem', 'nas', 'me', 'esse', 'eles', 'você', 'essa', 'num',
+    'nem', 'suas', 'meu', 'às', 'minha', 'numa', 'pelos', 'elas', 'qual', 'nós', 'lhe', 'deles', 'essas', 'esses', 'pelas', 'este', 'dele', 'tu', 'te', 'vocês', 'vos', 'lhes', 'meus', 'minhas', 'teu', 'tua',
+    'teus', 'tuas', 'nosso', 'nossa', 'nossos', 'nossas', 'dela', 'delas', 'esta', 'estes', 'estas', 'aquele', 'aquela', 'aqueles', 'aquelas', 'isto', 'aquilo', 'estou', 'está', 'estamos', 'estão', 'estive',
+    'esteve', 'estivemos', 'estiveram', 'estava', 'estávamos', 'estavam', 'estivera', 'estivéramos', 'esteja', 'estejamos', 'estejam', 'estivesse', 'estivéssemos', 'estivessem', 'estiver', 'estivermos',
+    'estiverem', 'hei', 'há', 'havemos', 'hão', 'houve', 'houvemos', 'houveram', 'houvera', 'houvéramos', 'haja', 'hajamos', 'hajam', 'houvesse', 'houvéssemos', 'houvessem', 'houver', 'houvermos',
+    'houverem', 'houverei', 'houverá', 'houveremos', 'houverão', 'houveria', 'houveríamos', 'houveriam', 'sou', 'somos', 'são', 'era', 'éramos', 'eram', 'fui', 'foi', 'fomos', 'foram', 'fora', 'fôramos',
+    'seja', 'sejamos', 'sejam', 'fosse', 'fôssemos', 'fossem', 'for', 'formos', 'forem', 'serei', 'será', 'seremos', 'serão', 'seria', 'seríamos', 'seriam', 'tenho', 'tem', 'temos', 'tém', 'tinha',
+    'tínhamos', 'tinham', 'tive', 'teve', 'tivemos', 'tiveram', 'tivera', 'tivéramos', 'tenha', 'tenhamos', 'tenham', 'tivesse', 'tivéssemos', 'tivessem', 'tiver', 'tivermos', 'tiverem', 'terei', 'terá',
+    'teremos', 'terão', 'teria', 'teríamos', 'teriam', '2012', 'del', 'con', 'esquerdo', 'direito', 'frente', 'tras', 'kit', 'jogo'
+]

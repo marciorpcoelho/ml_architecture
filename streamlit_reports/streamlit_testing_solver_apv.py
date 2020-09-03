@@ -8,8 +8,8 @@ import base64
 import sys
 import datetime
 from traceback import format_exc
-from streamlit.ScriptRunner import RerunException
-from streamlit.ScriptRequestQueue import RerunData
+from streamlit.script_runner import RerunException
+from streamlit.script_request_queue import RerunData
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
@@ -18,6 +18,8 @@ from modules.level_0_performance_report import log_record, error_upload
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment
 import modules.SessionState as SessionState
+
+st.beta_set_page_config(page_title='Sugestão Encomenda de Peças - Baviera - APV')
 
 saved_solutions_pairs_query = ''' SELECT DISTINCT Part_Ref_Group_Desc, [Date]
       FROM [BI_MLG].[dbo].[{}]
@@ -46,6 +48,9 @@ st.markdown(url_hyperlink, unsafe_allow_html=True)
 
 session_state = SessionState.get(run_id=0, overwrite_button_pressed=0, save_button_pressed_flag=0, part_ref_group='', total_value_optimized=0, df_solution=pd.DataFrame(),
                                  dtss_goal=0, max_part_number=9999, minimum_cost_or_pvp=0, sel_group='', sel_local='')
+
+sel_parameters = [session_state.sel_local, session_state.sel_group, session_state.dtss_goal, session_state.max_part_number, session_state.minimum_cost_or_pvp]
+sel_parameters_desc = ['sel_local', 'sel_group', 'dtss_goal', 'max_part_number', 'minimum_cost_or_pvp']
 
 column_translate_dict = {
     'Part_Ref': 'Referência',
@@ -102,7 +107,6 @@ def main():
     solve_data = solve_data[solve_data['Part_Ref_Group_Desc'] != 'MINI_Bonus_Group_2']
     sel_local_original = st.sidebar.selectbox('Por favor escolha uma Concessão:', ['-'] + list(options_file.pse_code_desc_mapping.values()), index=0, key=session_state.run_id)
     sel_group_original = st.sidebar.selectbox('Por favor escolha um grupo de peças:', ['-'] + options_file.part_groups_desc, index=0, key=session_state.run_id)
-
     try:
         sel_group = [x for x in options_file.part_groups_desc_mapping.keys() if options_file.part_groups_desc_mapping[x] == sel_group_original][0]
         sel_local = [x for x in options_file.pse_code_desc_mapping.keys() if options_file.pse_code_desc_mapping[x] == sel_local_original][0]
@@ -325,4 +329,4 @@ if __name__ == '__main__':
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
-        raise RerunException(RerunData(widget_state=None))
+        raise RerunException(RerunData())
