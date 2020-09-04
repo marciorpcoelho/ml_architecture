@@ -16,6 +16,7 @@ PWD = os.getenv('PWD')
 
 project_id = 2610
 update_frequency_days = 0
+documentation_url_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/EZBq5HGuxpxPkt6R2VrX0loBOLtKr_UKYPUmH0UTPlbibw?e=VeWKhZ'
 
 
 sql_info = {

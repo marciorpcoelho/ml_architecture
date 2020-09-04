@@ -70,6 +70,7 @@ app_dict = {2244: 'Classificação Pedidos Service Desk',
             2162: 'Sugestão de Encomenda Baviera (Fase II)',
             2259: 'Sugestão de Encomenda de Peças - Após-Venda Baviera',
             2406: 'Sugestão de Encomenda - Importador',
+            2610: 'Apoio Classificação Peças - DGO'
             }
 
 project_sql_dict = {2244: 'Project_SD',

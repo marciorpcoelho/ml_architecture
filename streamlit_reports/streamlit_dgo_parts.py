@@ -25,6 +25,11 @@ st.beta_set_page_config(page_title='Classificação de Peças - DGO')
 ## Aplicação de Apoio à Classificação de Famílias de Peças - DGO
 '''
 
+url_hyperlink = '''
+    <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
+'''.format(options_file.documentation_url_app)
+st.markdown(url_hyperlink, unsafe_allow_html=True)
+
 hide_menu_style = """
         <style>
         #MainMenu {visibility: hidden;}
