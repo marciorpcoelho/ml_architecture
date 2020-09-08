@@ -50,7 +50,7 @@ def main():
 
     family_dict_sorted = family_dict_sorting(cm_family_dict_lvl_1, cm_family_dict_lvl_2)
 
-    sel_page = st.sidebar.radio('Tarefa:', ['Análise de Classificações', 'Correções às Famílias Atuais'], index=0)
+    sel_page = st.sidebar.radio('Tarefa:', ['Análise de Classificações', 'Correções às Famílias Atuais'], index=1)
 
     if sel_page == 'Correções às Famílias Atuais':
         data_original = get_dataset_sql(options_file.others_families_dict, options_file, options_file.classified_app_query)
@@ -471,7 +471,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
