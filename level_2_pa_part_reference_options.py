@@ -17,7 +17,7 @@ PWD = os.getenv('PWD')
 project_id = 2610
 update_frequency_days = 0
 documentation_url_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/EZBq5HGuxpxPkt6R2VrX0loBOLtKr_UKYPUmH0UTPlbibw?e=VeWKhZ'
-
+sel_cols = ['Part_Ref', 'Part_Desc', 'Product_Group_DW', 'Client_ID', 'Average_Cost', 'PVP_1', 'PLR_Account', 'Part_Desc_PT']
 
 sql_info = {
     'database_BI_AFR': 'BI_RCG',
@@ -26,8 +26,11 @@ sql_info = {
     'database_BI_CA': 'BI_CA',
     'database_BI_GSC': 'BI_GSC',
     'database_final': 'BI_MLG',
+    'final_table': 'PSE_Fact_PA_Parts_Stock_Master_File_Matched',
     'parts_classification_table': 'PSE_Fact_PA_Parts_Classification',
     'parts_classification_rules': 'PSE_Fact_PA_Parts_Classification_Rules',
+    'matrix_lvl_1': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_1',
+    'matrix_lvl_2': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2',
 }
 
 column_translate_dict = {

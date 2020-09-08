@@ -43,9 +43,8 @@ session_state = SessionState.get(sel_family_desc='-', run_id=0, sel_model_class=
 
 def main():
     df_product_group = get_data_product_group_sql(options_file.others_families_dict, options_file)
-
-    cm_family_lvl_1 = get_data(base_path + '/dbs/cm_lvl1.csv', encoding='utf-8', delimiter=';', skiprows=1, index_col=0)
-    cm_family_lvl_2 = get_data(base_path + '/dbs/cm_lvl2.csv', encoding='utf-8', delimiter=';', skiprows=1, index_col=0)
+    cm_family_lvl_1 = get_data_sql(options_file, options_file.sql_info['database_final'], options_file.sql_info['matrix_lvl_1'])
+    cm_family_lvl_2 = get_data_sql(options_file, options_file.sql_info['database_final'], options_file.sql_info['matrix_lvl_2'])
     cm_family_dict_lvl_1 = cm_replacements(cm_family_lvl_1)
     cm_family_dict_lvl_2 = cm_replacements(cm_family_lvl_2)
 
@@ -371,13 +370,11 @@ def get_data_product_group_sql(others_dict, options_file_in):
     return df
 
 
-# @st.cache(show_spinner=False)
-def get_data(input_file, **kwargs):
-    start = time.time()
+def get_data_sql(options_file_in, db, view):
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, db, view, options_file_in)
 
-    df = pd.read_csv(input_file, **kwargs)
+    df = df.set_index('Actual')
 
-    print('Load Data - Elapsed Time: {:.02}'.format(time.time() - start))
     return df
 
 
@@ -402,10 +399,7 @@ def filter_data(dataset, value_filters_list, col_filters_list, operations_list):
 
 @st.cache(show_spinner=False)
 def cm_replacements(df):
-    unnamed_cols = [x for x in list(df) if x.startswith('Unnamed')]
-    df.rename(columns={unnamed_cols[0]: 'Totals'}, inplace=True)
     family_names = [x for x in list(df) if not x.startswith('Totals')]
-    df = df.astype('int64')
     df['Family_%'] = [df.iloc[value, value] / df.iloc[value, df.shape[1]-1] for value in range(df.shape[0])]
 
     df_copy = df.copy(deep=True)

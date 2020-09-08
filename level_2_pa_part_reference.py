@@ -18,7 +18,7 @@ import level_2_pa_part_reference_options as options_file
 from level_2_pa_part_reference_options import regex_dict
 from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df_specified_query
 from modules.level_1_b_data_processing import lowercase_column_conversion, literal_removal, string_punctuation_removal, master_file_processing, regex_string_replacement, brand_code_removal, string_volkswagen_preparation, value_substitution, lemmatisation, stemming, unidecode_function, string_digit_removal, word_frequency, words_dataframe_creation
-from modules.level_1_e_deployment import save_csv, time_tags
+from modules.level_1_e_deployment import save_csv, time_tags, sql_inject
 from collections import Counter
 from scipy.sparse import coo_matrix
 import matplotlib.pyplot as plt
@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 local_flag = 1
 master_file_processing_flag = 0
 current_platforms = ['BI_AFR', 'BI_CRP', 'BI_IBE', 'BI_CA']
-sel_month = '202002'
+sel_month = '202008'
 part_desc_col = 'Part_Desc_PT'
 # 'Part_Desc' - Part Description from DW
 # 'Part_Desc_PT' - Part Description from Master Files when available, and from DW when not available
@@ -42,11 +42,22 @@ def main():
         master_file_processing(options_file.master_files_to_convert)
 
     platforms_stock, dim_product_group, dim_clients = data_acquisition(current_platforms, 'dbs/dim_product_group_section_A.csv', 'dbs/dim_clients_section_A.csv')
-    platforms_stock = master_file_reference_match(platforms_stock, time_tag_date, dim_clients)
+    platforms_stock, current_stock_master_file = master_file_reference_match(platforms_stock, time_tag_date, dim_clients)
+    deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
     sys.exit()
     data_processing(platforms_stock, dim_product_group, dim_clients)
     data_modelling(keywords_per_parts_family_dict)
+
+
+def deployment(df, db, view):
+    df.rename(columns={'Client_Id': 'Client_ID'}, inplace=True)
+
+    df['PLR_Account'] = df['PLR_Account'].fillna("")
+    df['Part_Desc_PT'] = df['Part_Desc_PT'].fillna("")
+    df['Part_Desc'] = df['Part_Desc'].fillna("")
+    if df is not None:
+        sql_inject(df, options_file.DSN_MLG, db, view, options_file, options_file.sel_cols, truncate=1, check_date=1)
 
 
 def data_modelling(keyword_dictionary):
@@ -616,10 +627,10 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
 
         current_stock_master_file['Part_Desc_Merged'] = current_stock_master_file['Part_Desc'].fillna('') + ' ' + current_stock_master_file['Part_Desc_PT'].fillna('')  # I'll start by merging both descriptions
         # current_stock_master_file = value_substitution(current_stock_master_file, non_null_column='Part_Desc', null_column='Part_Desc_PT')  # For references which didn't match in the Master Files, use the DW Description;
-        current_stock_master_file.to_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(time_tag_date), index=False)
+        current_stock_master_file.to_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(time_tag_date_in), index=False)
 
     platform_ids = [dim_clients[dim_clients['BI_Database'] == x]['Client_Id'].values[0] for x in current_platforms]
-    return [current_stock_master_file[current_stock_master_file['Client_Id'] == platform_id] for platform_id in platform_ids]
+    return [current_stock_master_file[current_stock_master_file['Client_Id'] == platform_id] for platform_id in platform_ids], current_stock_master_file
 
 
 def particular_case_references(string_to_process, brand):
