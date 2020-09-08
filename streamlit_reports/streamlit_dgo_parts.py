@@ -38,7 +38,7 @@ hide_menu_style = """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 
-session_state = SessionState.get(sel_family_desc='-', run_id=0, sel_model_class='-', data_filtered_sel=pd.DataFrame(), data_filtered_sim=pd.DataFrame(), sel_text='', sel_text_option='', data_text_filtered_sel=pd.DataFrame(), data_text_filtered_sim=pd.DataFrame(), data=pd.DataFrame(columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Product_Group_DW_desc', 'Classification_desc', 'Classification_Prob']))
+session_state = SessionState.get(sel_all_refs_flag=True, sel_family_desc='-', run_id=0, sel_model_class='-', data_filtered_sel=pd.DataFrame(), data_filtered_sim=pd.DataFrame(), sel_text='', sel_text_option='', data_text_filtered_sel=pd.DataFrame(), data_text_filtered_sim=pd.DataFrame(), data=pd.DataFrame(columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Product_Group_DW_desc', 'Classification_desc', 'Classification_Prob']))
 
 
 def main():
@@ -169,27 +169,48 @@ def main():
         data_original = get_dataset_sql(options_file.others_families_dict, options_file, options_file.non_classified_app_query)
         data = product_group_description(data_original, df_product_group)
 
-        sample_data = data.head(50)
-        fig = go.Figure(data=[go.Table(
-            columnwidth=[],
-            header=dict(
-                values=[options_file.column_translate_dict['Part_Ref'], options_file.column_translate_dict['Part_Description'], options_file.column_translate_dict['Part_Cost'], options_file.column_translate_dict['Part_PVP'], options_file.column_translate_dict['Product_Group_DW_desc'], options_file.column_translate_dict['Classification_desc'], options_file.column_translate_dict['Classification_Prob']],
-                align=['center', 'center', 'center', 'center'],
-            ),
-            cells=dict(
-                # values=[session_state.data['Part_Ref'].head(50), session_state.data['Part_Description'].head(50), session_state.data['Part_Cost'].round(2).head(50), session_state.data['Part_PVP'].round(2).head(50), session_state.data['Product_Group_DW_desc'].head(50), session_state.data['Classification_desc'].head(50), session_state.data['Classification_Prob'].round(2).head(50)],
-                values=[sample_data['Part_Ref'], sample_data['Part_Description'], sample_data['Part_Cost'].round(2), sample_data['Part_PVP'].round(2), sample_data['Product_Group_DW_desc'], sample_data['Classification_desc'], sample_data['Classification_Prob'].round(2)],
-                align=['center', 'left', 'center', 'center'],
-            ),
-        )]
-        )
-        fig.update_layout(width=1500, height=500, title='Amostra de classificações:')
-        st.write(fig)
+        sel_text = st.text_input('Pesquisar pela(s) palavra(s):', '', key=session_state.run_id)
+        sel_text_option = st.radio('Escolha a forma de pesquisa:', ('contains', 'starts'), format_func=radio_button_options)
+        sel_all_refs_flag = st.sidebar.checkbox('Selecionar todas as referências.', value=True)
 
-        sel_part_ref = st.multiselect('Por favor escolha a referência a alterar:', [x for x in data['Part_Ref'].unique()])
+        if sel_text != '':
+            # if sel_text_option == 'starts' and sel_text_option != session_state.sel_text_option or sel_text_option == 'starts' and sel_text != session_state.sel_text or sel_text_option == 'starts' and sel_all_refs_flag != session_state.sel_all_refs_flag:
+            if sel_text_option == 'starts':
+                data_df = data.loc[data['Part_Description'].str.startswith(sel_text), :]
+            # elif sel_text_option == 'contains' and sel_text_option != session_state.sel_text_option or sel_text_option == 'contains' and sel_text != session_state.sel_text or sel_text_option == 'contains' and sel_all_refs_flag != session_state.sel_all_refs_flag:
+            elif sel_text_option == 'contains':
+                sel_text_regex = sel_text_regex_conversion(sel_text)
 
-        # sel_text = st.text_input('Pesquisar pela(s) palavra(s):', '')
-        # sel_text_option = st.radio('Escolha a forma de pesquisa:', ('contains', 'starts'), format_func=radio_button_options)
+                data_df = data.loc[data['Part_Description'].str.contains(sel_text_regex, case=False, regex=True), :]
+            table_title = 'Peças que {} - {}'.format(radio_button_options('table_' + sel_text_option), sel_text)
+        else:
+            data_df = data.head(50)
+            table_title = 'Amostra de classificações'
+
+        table_title += ' ({} referências):'.format(data_df.shape[0])
+        if data_df.shape[0] > 0:
+            fig = go.Figure(data=[go.Table(
+                columnwidth=[],
+                header=dict(
+                    values=[options_file.column_translate_dict['Part_Ref'], options_file.column_translate_dict['Part_Description'], options_file.column_translate_dict['Part_Cost'], options_file.column_translate_dict['Part_PVP'], options_file.column_translate_dict['Product_Group_DW_desc'], options_file.column_translate_dict['Classification_desc'], options_file.column_translate_dict['Classification_Prob']],
+                    align=['center', 'center', 'center', 'center'],
+                ),
+                cells=dict(
+                    # values=[session_state.data['Part_Ref'].head(50), session_state.data['Part_Description'].head(50), session_state.data['Part_Cost'].round(2).head(50), session_state.data['Part_PVP'].round(2).head(50), session_state.data['Product_Group_DW_desc'].head(50), session_state.data['Classification_desc'].head(50), session_state.data['Classification_Prob'].round(2).head(50)],
+                    values=[data_df['Part_Ref'], data_df['Part_Description'], data_df['Part_Cost'].round(2), data_df['Part_PVP'].round(2), data_df['Product_Group_DW_desc'], data_df['Classification_desc'], data_df['Classification_Prob'].round(2)],
+                    align=['center', 'left', 'center', 'center'],
+                ),
+            )]
+            )
+            fig.update_layout(width=1500, height=500, title=table_title)
+            st.write(fig)
+        else:
+            st.error('Não existem peças nas condições referidas. Por favor altere o(s) valor(es) do(s) filtro(s).')
+
+        sel_part_ref = ''
+        if not sel_all_refs_flag:
+            sel_part_ref = st.multiselect('Por favor escolha a(s) referência(s) a alterar:', [x for x in data_df['Part_Ref'].unique()], key=session_state.run_id)
+            data_df = filter_data(data_df, [sel_part_ref], ['Part_Ref'], ['in'])
 
         # data_cost_min, data_cost_max = session_state.data['Part_Cost'].min().item(), session_state.data['Part_Cost'].max().item()
         # data_pvp_min, data_pvp_max = session_state.data['Part_PVP'].min().item(), session_state.data['Part_PVP'].max().item()
@@ -200,24 +221,20 @@ def main():
         # if sel_text != '':
         # session_state.data = filter_data(data, [sel_costs[1], sel_costs[0], sel_pvps[1], sel_pvps[0]], ['Part_Cost', 'Part_Cost', 'Part_PVP', 'Part_PVP'], ['le', 'ge', 'le', 'ge'])
 
-        # if sel_text_option == 'starts' and sel_text_option != session_state.sel_text_option or sel_text_option == 'starts' and sel_text != session_state.sel_text:
-        #     session_state.sel_text = sel_text
-        #     session_state.sel_text_option = sel_text_option
-        #     data = data.loc[data['Part_Description'].str.startswith(sel_text), :]
-        #
-        # elif sel_text_option == 'contains' and sel_text_option != session_state.sel_text_option or sel_text_option == 'contains' and sel_text != session_state.sel_text:
-        #     sel_text_regex = sel_text_regex_conversion(sel_text)
-        #     session_state.sel_text = sel_text
-        #     session_state.sel_text_option = sel_text_option
-        #     data = data.loc[data['Part_Description'].str.contains(sel_text_regex, case=False, regex=True), :]
-
         # if sel_part_ref != '-':
-        sel_family_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + sorted([x for x in df_product_group['PT_Product_Group_Desc'].unique()]), key=1)
-        if st.button('Alterar', key=0):
-            if sel_family_overwrite == '-':
+        sel_family_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + sorted([x for x in df_product_group['PT_Product_Group_Desc'].unique()]), key=session_state.run_id)
+        if st.button('Alterar'):
+            if not data_df.shape[0]:
+                st.error('Por favor escolha as referências a alterar.')
+                return
+
+            if sel_family_overwrite != '-':
+                update_family(data_df, sel_family_overwrite, df_product_group)
+                session_state.run_id += 1
+                time.sleep(0.1)
+                raise RerunException(RerunData())
+            elif sel_family_overwrite == '-':
                 st.error('Por favor escolha uma família de peças.')
-            else:
-                update_family(data[data['Part_Ref'].isin(sel_part_ref)], sel_family_overwrite, df_product_group)
 
 
 def update_family(df, new_family_classification, df_product_group):
@@ -227,6 +244,8 @@ def update_family(df, new_family_classification, df_product_group):
     sel_refs_query = '\'' + "', '".join(sel_refs) + '\''
 
     query = options_file.update_product_group_dw_app_query.format(options_file.sql_info['parts_classification_table'], new_family_classification_code, sel_refs_query)
+
+    st.write('Famílias das referências selecionadas alteradas com sucesso.')
     level_1_e_deployment.sql_query(query, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file)
 
     return
@@ -245,7 +264,7 @@ def save_classification_rule(df_product_group, text, text_option, sel_family_sel
     family_code = family_code_convertion(sel_family_sel_overwrite, df_product_group)
     time_tag, _ = level_1_e_deployment.time_tags(format_date="%Y%m%d")
 
-    st.write(text, text_option, family_code, sel_cost_max, max_cost, sel_cost_min, min_cost, sel_pvp_max, max_pvp, sel_pvp_min, min_pvp, time_tag)
+    # st.write(text, text_option, family_code, sel_cost_max, max_cost, sel_cost_min, min_cost, sel_pvp_max, max_pvp, sel_pvp_min, min_pvp, time_tag)
 
     df_rules = pd.DataFrame()
     df_rules['Matching_Rule'] = [text_option]
@@ -386,6 +405,8 @@ def filter_data(dataset, value_filters_list, col_filters_list, operations_list):
             data_filtered = data_filtered.loc[data_filtered[col_filter] < filter_value, :]
         elif operation_value == 'le':
             data_filtered = data_filtered.loc[data_filtered[col_filter] <= filter_value, :]
+        elif operation_value == 'in':
+            data_filtered = data_filtered.loc[data_filtered[col_filter].isin(filter_value), :]
 
     return data_filtered
 
@@ -451,8 +472,10 @@ def family_dict_sorting(family_dict_lvl_1, family_dict_lvl_2):
 def radio_button_options(option):
 
     radio_options_dict = {
-        'contains': 'Descrição contém palavra escolhida',
-        'starts': 'Descrição começa com a palavra escolhida'
+        'contains': 'Descrição contém palavra(s) escolhida(s)',
+        'starts': 'Descrição começa pela palavra escolhida',
+        'table_contains': 'contêm a(s) palavra(s)',
+        'table_starts': 'começam pela palavra',
     }
 
     return radio_options_dict[option]
