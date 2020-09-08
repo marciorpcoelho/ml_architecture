@@ -186,8 +186,6 @@ def main():
         fig.update_layout(width=1500, height=500, title='Amostra de classificações:')
         st.write(fig)
 
-        # st.dataframe(data[['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Product_Group_DW_desc', 'Classification_desc', 'Classification_Prob']].head(50))
-
         sel_part_ref = st.multiselect('Por favor escolha a referência a alterar:', [x for x in data['Part_Ref'].unique()])
 
         # sel_text = st.text_input('Pesquisar pela(s) palavra(s):', '')
@@ -220,7 +218,6 @@ def main():
                 st.error('Por favor escolha uma família de peças.')
             else:
                 update_family(data[data['Part_Ref'].isin(sel_part_ref)], sel_family_overwrite, df_product_group)
-                # save_classification_rule(df_product_group, session_state.sel_text, sel_text_option, sel_family_overwrite, sel_costs[1], data_cost_max, sel_costs[0], data_cost_min, sel_pvps[1], data_pvp_max, sel_pvps[0], data_pvp_min)
 
 
 def update_family(df, new_family_classification, df_product_group):
@@ -228,12 +225,8 @@ def update_family(df, new_family_classification, df_product_group):
 
     sel_refs = [part_ref for part_ref in df['Part_Ref']]
     sel_refs_query = '\'' + "', '".join(sel_refs) + '\''
-    # sel_product_group_dw = [product_group_dw for product_group_dw in df['Product_Group_DW']]
-
-    # case_query = ' '.join(["WHEN Part_Ref = \'{}\' THEN \'{}\'".format(part_ref, product_group_dw) for part_ref, product_group_dw in sel_refs])
 
     query = options_file.update_product_group_dw_app_query.format(options_file.sql_info['parts_classification_table'], new_family_classification_code, sel_refs_query)
-    # st.write(query)
     level_1_e_deployment.sql_query(query, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file)
 
     return
@@ -471,7 +464,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
