@@ -126,7 +126,7 @@ def main():
                     fig.update_layout(width=1500, height=500, title='Família Escolhida: {} - Nº de Peças encontradas: {}'.format(sel_family_desc, session_state.data_text_filtered_sel.shape[0]))
                     st.write(fig)
 
-                    sel_family_sel_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + sorted([x for x in df_product_group['PT_Product_Group_Desc'].unique()]), key=session_state.run_id+1)
+                    sel_family_sel_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + [x for x in df_product_group['PT_Product_Group_Desc'].unique()], key=session_state.run_id+1, format_func=lambda x: df_product_group.loc[df_product_group['PT_Product_Group_Desc'] == x, 'Product_Group_Merge'].values[0] if x != '-' else '-')
                     if st.button('Validar alteração', key=0):
                         if sel_family_sel_overwrite == '-':
                             st.error('Por favor selecione uma família de peças.')
@@ -152,7 +152,7 @@ def main():
                     fig.update_layout(width=1500, height=500, title='Família Semelhante: {} - Nº de Peças encontradas: {}'.format(sim_family_desc, session_state.data_text_filtered_sim.shape[0]))
                     st.write(fig)
 
-                    sel_family_sim_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + sorted([x for x in df_product_group['PT_Product_Group_Desc'].unique()]), key=session_state.run_id)
+                    sel_family_sim_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + [x for x in df_product_group['PT_Product_Group_Desc'].unique()], key=session_state.run_id, format_func=lambda x: df_product_group.loc[df_product_group['PT_Product_Group_Desc'] == x, 'Product_Group_Merge'].values[0] if x != '-' else '-')
                     if st.button('Validar alteração', key=1):
                         if sel_family_sim_overwrite == '-':
                             st.error('Por favor selecione uma família de peças.')
@@ -222,7 +222,7 @@ def main():
         # session_state.data = filter_data(data, [sel_costs[1], sel_costs[0], sel_pvps[1], sel_pvps[0]], ['Part_Cost', 'Part_Cost', 'Part_PVP', 'Part_PVP'], ['le', 'ge', 'le', 'ge'])
 
         # if sel_part_ref != '-':
-        sel_family_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + sorted([x for x in df_product_group['PT_Product_Group_Desc'].unique()]), key=session_state.run_id)
+        sel_family_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + [x for x in df_product_group['PT_Product_Group_Desc'].unique()], key=session_state.run_id, format_func=lambda x: df_product_group.loc[df_product_group['PT_Product_Group_Desc'] == x, 'Product_Group_Merge'].values[0] if x != '-' else '-')
         if st.button('Alterar'):
             if not data_df.shape[0]:
                 st.error('Por favor escolha as referências a alterar.')
@@ -377,6 +377,8 @@ def get_data_product_group_sql(others_dict, options_file_in):
     for key in others_dict.keys():
         df.loc[df['Product_Group_Code'] == str(key), 'PT_Product_Group_Desc'] = others_dict[key]
 
+    df['Product_Group_Merge'] = df['PT_Product_Group_Level_1_Desc'] + ', ' + df['PT_Product_Group_Level_2_Desc'] + ', ' + df['PT_Product_Group_Desc']
+    df.sort_values(by='Product_Group_Merge', inplace=True)
     # df['PT_Product_Group_Desc'] = df['PT_Product_Group_Desc'].map(others_dict).fillna(df['PT_Product_Group_Desc'])
 
     return df
