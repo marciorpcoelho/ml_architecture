@@ -51,6 +51,7 @@ def main():
 
 
 def deployment(df, db, view):
+    print('Uploading dataframe into {} and table {}...'.format(db, view))
     df.rename(columns={'Client_Id': 'Client_ID'}, inplace=True)
 
     df['PLR_Account'] = df['PLR_Account'].fillna("")
@@ -693,7 +694,10 @@ def data_acquisition(platforms, dim_product_group_file, dim_clients_file):
     except FileNotFoundError:
         for platform in platforms:
             print('Retrieving from DW for platform {}...'.format(platform))
-            df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query.format(platform, sel_month, platform, sel_month))
+            if platform == 'BI_AFR':
+                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query_afr.format(platform, sel_month, platform, sel_month))
+            else:
+                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query.format(platform, sel_month, platform, sel_month))
             platforms_stock.append(df_current_stock)
 
         dim_product_group = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_BI_AFR'], options_file, options_file.dim_product_group_query)

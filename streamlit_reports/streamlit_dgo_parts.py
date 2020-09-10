@@ -131,7 +131,7 @@ def main():
                         if sel_family_sel_overwrite == '-':
                             st.error('Por favor selecione uma família de peças.')
                         else:
-                            update_family(session_state.data_text_filtered_sel, sel_family_sel_overwrite, df_product_group)
+                            update_family(session_state.data_text_filtered_sel.copy(), sel_family_sel_overwrite, df_product_group)
                             save_classification_rule(df_product_group, session_state.sel_text, sel_text_option, sel_family_sel_overwrite, sel_costs[1], max_cost, sel_costs[0], min_cost, sel_pvps[1], max_pvp, sel_pvps[0], min_pvp)
                 else:
                     st.write(options_file.warning_message_app_dict[sel_text_option].format(sel_family_desc, session_state.sel_text))
@@ -157,7 +157,7 @@ def main():
                         if sel_family_sim_overwrite == '-':
                             st.error('Por favor selecione uma família de peças.')
                         else:
-                            update_family(session_state.data_text_filtered_sim, sel_family_sim_overwrite, df_product_group)
+                            update_family(session_state.data_text_filtered_sim.copy(), sel_family_sim_overwrite, df_product_group)
                             save_classification_rule(df_product_group, session_state.sel_text, sel_text_option, sel_family_sim_overwrite, sel_costs[1], max_cost, sel_costs[0], min_cost, sel_pvps[1], max_pvp, sel_pvps[0], min_pvp)
                 else:
                     st.write(options_file.warning_message_app_dict[sel_text_option].format(sim_family_desc, session_state.sel_text))
@@ -229,7 +229,7 @@ def main():
                 return
 
             if sel_family_overwrite != '-':
-                update_family(data_df, sel_family_overwrite, df_product_group)
+                update_family(data_df.copy(), sel_family_overwrite, df_product_group)
                 session_state.run_id += 1
                 time.sleep(0.1)
                 raise RerunException(RerunData())
@@ -240,13 +240,11 @@ def main():
 def update_family(df, new_family_classification, df_product_group):
     new_family_classification_code = family_code_convertion(new_family_classification, df_product_group)
 
-    sel_refs = [part_ref for part_ref in df['Part_Ref']]
-    sel_refs_query = '\'' + "', '".join(sel_refs) + '\''
-
-    query = options_file.update_product_group_dw_app_query.format(options_file.sql_info['parts_classification_table'], new_family_classification_code, sel_refs_query)
+    df['New_Product_Group_DW'] = new_family_classification_code
+    df.rename(columns={'Product_Group_DW': 'Old_Product_Group_DW'}, inplace=True)
+    level_1_e_deployment.sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_refs'], options_file, ['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Old_Product_Group_DW', 'New_Product_Group_DW', 'Classification', 'Classification_Prob'], check_date=1)
 
     st.write('Famílias das referências selecionadas alteradas com sucesso.')
-    level_1_e_deployment.sql_query(query, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file)
 
     return
 

@@ -29,6 +29,7 @@ sql_info = {
     'final_table': 'PSE_Fact_PA_Parts_Stock_Master_File_Matched',
     'parts_classification_table': 'PSE_Fact_PA_Parts_Classification',
     'parts_classification_rules': 'PSE_Fact_PA_Parts_Classification_Rules',
+    'parts_classification_refs': 'PSE_Fact_PA_Parts_Classification_Refs',
     'matrix_lvl_1': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_1',
     'matrix_lvl_2': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2',
 }
@@ -97,17 +98,6 @@ product_group_app_query = '''
       where Product_Group_Code not in (1, 2, 44, 45)
     '''
 
-update_product_group_dw_app_query = '''
-             UPDATE {}
-             SET Classification_Flag = 1,
-             Product_Group_DW = \'{}\'
-             WHERE Part_Ref in ({})
-         '''
-
-add_rule_app_query = '''
-'''
-
-
 # current_stock_query = '''SELECT DISTINCT Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account
 # FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month WITH (NOLOCK)
 # WHERE Part_Ref <> '' and Part_Desc is not Null and Part_Desc <> '' and Stock_Month = '{}'
@@ -129,6 +119,26 @@ current_stock_query = '''
     WHERE Stock_Month = '{}'
     GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
 '''
+
+current_stock_query_afr = '''
+    WITH max_date as (
+        SELECT 
+            Part_Ref, MAX(ISNULL(Last_Sell_Date,'1')) as max_date_value
+        FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month WITH (NOLOCK)
+        WHERE Stock_Month = '{}'
+        GROUP BY Part_Ref
+    )
+    SELECT
+        a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, a.Average_Cost / Currency_Rate.Fixed_Rate as Average_Cost, a.PVP_1 / Currency_Rate.Fixed_Rate as PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+    FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month as a WITH (NOLOCK)
+    inner join max_date as b on a.Part_Ref = b.Part_Ref and ISNULL(a.Last_Sell_Date, '1') = b.max_date_value
+    LEFT JOIN [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC] as Parts_DIM on Parts_DIM.Product_Group_Code = a.Product_Group_DW
+    LEFT JOIN [BI_AFR].[dbo].[GBL_Currencies_FixedRate] as Currency_Rate on a.Client_Id = Currency_Rate.Client_Id and a.Environment = Currency_Rate.Environment and YEAR(GETDATE()) = Currency_Rate.Currency_Year
+    WHERE Stock_Month = '{}'
+    GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, a.Average_Cost / Currency_Rate.Fixed_Rate, a.PVP_1 / Currency_Rate.Fixed_Rate, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+'''
+
+'''    LEFT JOIN [BI_AFR].[dbo].[GBL_Currencies_FixedRate] as Currency_Rate on a.Client_Id = Currency_Rate.Client_Id and a.Environment = Currency_Rate.Environment and COALESCE(YEAR(a.Last_Sell_Date), YEAR(GETDATE())) = Currency_Rate.Currency_Year'''
 
 dms_franchises = '''SELECT *
 FROM {}.dbo.PSE_MapDMS_Franchises'''
