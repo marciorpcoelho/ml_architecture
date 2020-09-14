@@ -101,13 +101,23 @@ def main():
                             # print(matched_data_filtered[matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1])
                             # print(session_state.unmatched_data_filtered[session_state.unmatched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1])
 
-                            suggestions = session_state.df_sim[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
+                            if session_state.df_sim.shape[0]:
+                                suggestions = session_state.df_sim[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
+                            else:
+                                suggestions = pd.DataFrame()
+
                             if sel_gama_flag == -1:
-                                st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama Viva', 'similarity_cosine': 'Grau de Semelhança'}))
+                                if session_state.df_sim.shape[0]:
+                                    st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama Viva', 'similarity_cosine': 'Grau de Semelhança'}))
+                                else:
+                                    st.write('Sem Sugestões de Correspondência.')
                                 sel_gama_match = st.selectbox('Por favor escolha a correspondente Gama:', ['-', 's/ correspondência'] + list([x for x in session_state.gama_viva_per_model if x not in [' ', '']]), index=0, key=session_state.run_id)
 
                             elif sel_gama_flag == 1:
-                                st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama Morta', 'similarity_cosine': 'Grau de Semelhança'}))
+                                if session_state.df_sim.shape[0]:
+                                    st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama Morta', 'similarity_cosine': 'Grau de Semelhança'}))
+                                else:
+                                    st.write('Sem Sugestões de Correspondência.')
                                 sel_gama_match = st.selectbox('Por favor escolha a correspondente Gama:', ['-', 's/ correspondência'] + list([x for x in session_state.gama_morta_per_model if x not in [' ', '']]), index=0, key=session_state.run_id)
 
                             if sel_gama_match != '-':
