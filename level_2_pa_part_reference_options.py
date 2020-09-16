@@ -112,12 +112,13 @@ current_stock_query = '''
         GROUP BY Part_Ref
     )
     SELECT
-        a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+        distinct a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, AVG(Average_Cost) as Average_Cost, AVG(PVP_1) as PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
     FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month as a WITH (NOLOCK)
     inner join max_date as b on a.Part_Ref = b.Part_Ref and ISNULL(a.Last_Sell_Date, '1') = b.max_date_value
     LEFT JOIN [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC] as Parts_DIM on Parts_DIM.Product_Group_Code = a.Product_Group_DW
     WHERE Stock_Month = '{}'
-    GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+    and Warehouse_Code = -1
+    GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
 '''
 
 current_stock_query_afr = '''
@@ -129,13 +130,14 @@ current_stock_query_afr = '''
         GROUP BY Part_Ref
     )
     SELECT
-        a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, a.Average_Cost / Currency_Rate.Fixed_Rate as Average_Cost, a.PVP_1 / Currency_Rate.Fixed_Rate as PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+        distinct a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, AVG(a.Average_Cost / Currency_Rate.Fixed_Rate) as Average_Cost, AVG(a.PVP_1 / Currency_Rate.Fixed_Rate) as PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
     FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month as a WITH (NOLOCK)
     inner join max_date as b on a.Part_Ref = b.Part_Ref and ISNULL(a.Last_Sell_Date, '1') = b.max_date_value
     LEFT JOIN [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC] as Parts_DIM on Parts_DIM.Product_Group_Code = a.Product_Group_DW
     LEFT JOIN [BI_AFR].[dbo].[GBL_Currencies_FixedRate] as Currency_Rate on a.Client_Id = Currency_Rate.Client_Id and a.Environment = Currency_Rate.Environment and YEAR(GETDATE()) = Currency_Rate.Currency_Year
     WHERE Stock_Month = '{}'
-    GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, a.Average_Cost / Currency_Rate.Fixed_Rate, a.PVP_1 / Currency_Rate.Fixed_Rate, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+    and Warehouse_Code = -1
+    GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
 '''
 
 '''    LEFT JOIN [BI_AFR].[dbo].[GBL_Currencies_FixedRate] as Currency_Rate on a.Client_Id = Currency_Rate.Client_Id and a.Environment = Currency_Rate.Environment and COALESCE(YEAR(a.Last_Sell_Date), YEAR(GETDATE())) = Currency_Rate.Currency_Year'''

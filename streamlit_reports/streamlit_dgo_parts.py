@@ -3,6 +3,7 @@ import time
 import streamlit as st
 import os
 import sys
+import base64
 import itertools
 from collections import Counter
 from plotly import graph_objs as go
@@ -50,7 +51,7 @@ def main():
 
     family_dict_sorted = family_dict_sorting(cm_family_dict_lvl_1, cm_family_dict_lvl_2)
 
-    sel_page = st.sidebar.radio('Tarefa:', ['Análise de Classificações', 'Correções às Famílias Atuais'], index=1)
+    sel_page = st.sidebar.radio('Tarefa:', ['Análise de Classificações', 'Correções às Famílias Atuais', 'Exportação de Classificações'], index=1)
 
     if sel_page == 'Correções às Famílias Atuais':
         data_original = get_dataset_sql(options_file.others_families_dict, options_file, options_file.classified_app_query)
@@ -235,6 +236,33 @@ def main():
                 raise RerunException(RerunData())
             elif sel_family_overwrite == '-':
                 st.error('Por favor escolha uma família de peças.')
+
+    elif sel_page == 'Exportação de Classificações':
+        st.write('Nesta página é possível exportar uma família completa de peças, de acordo com a classificação mais recente do modelo de machine learning.')
+        data = get_dataset_sql(options_file.others_families_dict, options_file, options_file.classified_app_query)
+        current_date, _ = level_1_e_deployment.time_tags(format_date='%Y%m%d')
+
+        available_families = df_product_group['Product_Group_Code'].unique()
+
+        sel_family_desc = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + [x for x in available_families], key=session_state.run_id + 1, format_func=lambda x: df_product_group.loc[df_product_group['Product_Group_Code'] == x, 'Product_Group_Merge'].values[0] if x != '-' else '-')
+        if sel_family_desc != '-' and int(sel_family_desc) in options_file.others_families_dict.keys():
+            sel_family_desc = options_file.others_families_dict[int(sel_family_desc)]
+
+        if sel_family_desc != '-':
+            data_filter = filter_data(data, [sel_family_desc], ['Classification'], [None])
+            if data_filter.shape[0]:
+                st.write('Classificações:', data_filter[['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Product_Group_DW', 'Classification', 'Classification_Prob']].rename(columns=options_file.column_translate_dict).head(50))
+                file_export(data_filter[['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Product_Group_DW', 'Classification', 'Classification_Prob']].rename(columns=options_file.column_translate_dict), 'Classificações_família_{}_{}'.format(sel_family_desc, current_date))
+            else:
+                st.error('Não existem atualmente peças classificadas para a família escolhida.')
+
+
+def file_export(df, file_name):
+
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode('latin-1')).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}">Gravar Classificações</a> (carregar botão direito e Guardar Link como: {file_name}.csv)'
+    st.markdown(href, unsafe_allow_html=True)
 
 
 def update_family(df, new_family_classification, df_product_group):
@@ -487,7 +515,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
