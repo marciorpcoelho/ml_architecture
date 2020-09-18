@@ -260,7 +260,7 @@ def main():
 def file_export(df, file_name):
 
     csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode('latin-1')).decode()  # some strings <-> bytes conversions necessary here
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
     href = f'<a href="data:file/csv;base64,{b64}">Gravar Classificações</a> (carregar botão direito e Guardar Link como: {file_name}.csv)'
     st.markdown(href, unsafe_allow_html=True)
 
