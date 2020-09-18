@@ -251,7 +251,7 @@ def main():
         if sel_family_desc != '-':
             data_filter = filter_data(data, [sel_family_desc], ['Classification'], [None])
             if data_filter.shape[0]:
-                st.write('Classificações:', data_filter[['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Product_Group_DW', 'Classification', 'Classification_Prob']].rename(columns=options_file.column_translate_dict).head(50))
+                st.write('Classificações ({} referências):'.format(data_filter.shape[0]), data_filter[['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Product_Group_DW', 'Classification', 'Classification_Prob']].rename(columns=options_file.column_translate_dict).head(50))
                 file_export(data_filter[['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Product_Group_DW', 'Classification', 'Classification_Prob']].rename(columns=options_file.column_translate_dict), 'Classificações_família_{}_{}'.format(sel_family_desc, current_date))
             else:
                 st.error('Não existem atualmente peças classificadas para a família escolhida.')
@@ -377,13 +377,7 @@ def common_keywords_calculation(sel_family):
 def get_dataset_sql(others_dict, options_file_in, query):
     df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in, query)
     df['Part_Description'] = df['Part_Description'].astype('str')
-
-    # for key in others_dict.keys():
-    #     df.loc[df['Product_Group_DW'] == str(key), 'Product_Group_DW'] = others_dict[key]
-    #     df.loc[df['Classification'] == str(key), 'Classification'] = others_dict[key]
-
-    # df = df.replace({'Product_Group_DW': others_dict})
-    # df = df.replace({'Classification': others_dict})
+    df.drop('Date', axis=1, inplace=True)
 
     df['Product_Group_DW'] = df['Product_Group_DW'].map(others_dict).fillna(df['Product_Group_DW'])
     df['Classification'] = df['Classification'].map(others_dict).fillna(df['Classification'])
@@ -441,6 +435,7 @@ def filter_data(dataset, value_filters_list, col_filters_list, operations_list):
 
 @st.cache(show_spinner=False)
 def cm_replacements(df):
+    df.drop('Date', axis=1, inplace=True)
     family_names = [x for x in list(df) if not x.startswith('Totals')]
     df['Family_%'] = [df.iloc[value, value] / df.iloc[value, df.shape[1]-1] for value in range(df.shape[0])]
 
@@ -515,7 +510,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
