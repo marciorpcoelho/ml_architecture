@@ -83,7 +83,6 @@ classified_app_query = '''
 non_classified_app_query = '''
     SELECT *
       FROM [BI_MLG].[dbo].[PSE_Fact_PA_Parts_Classification]
-      where Product_Group_DW = '1'
   '''
 
 product_group_app_query = '''

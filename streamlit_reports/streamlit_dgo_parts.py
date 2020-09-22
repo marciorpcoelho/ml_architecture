@@ -312,8 +312,12 @@ def save_classification_rule(df_product_group, text, text_option, sel_family_sel
 
 def sel_text_regex_conversion(sel_text):
     sel_text_list = sel_text.split()  # Splits selected works by space (default split value)
-    all_sel_text_list_combinations = list(itertools.permutations(sel_text_list, len(sel_text_list)))  # Creates all combinations with the selected words, taking order into account
-    sel_text_regex = '|'.join(['.*'.join(x) for x in all_sel_text_list_combinations])  # merges different combinations with .* and then merges them with | between them
+
+    if len(sel_text_list) > 1:
+        all_sel_text_list_combinations = list(itertools.permutations(sel_text_list, len(sel_text_list)))  # Creates all combinations with the selected words, taking order into account
+        sel_text_regex = '|'.join(['\\b.*\\b'.join(x) for x in all_sel_text_list_combinations])  # merges different combinations with .* and then merges them with | between them
+    elif len(sel_text_list) == 1:
+        sel_text_regex = '\\b' + sel_text_list[0] + '\\b'
 
     return sel_text_regex
 
