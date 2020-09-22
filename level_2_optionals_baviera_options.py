@@ -18,7 +18,7 @@ stock_days_threshold = 45
 update_frequency_days = 0
 metric, metric_threshold = 'ROC_Curve', 0.70  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 10, 'recall'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
-selected_configuration_parameters = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+selected_configuration_parameters = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 # Full: ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 if 'nt' in os.name:
@@ -29,7 +29,7 @@ elif 'posix' in os.name:
     DSN_MLG = os.getenv('DSN_MLG_Linux')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
-configuration_parameters_full = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+configuration_parameters_full = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 # Dictionaries:
 sql_info = {
@@ -252,7 +252,6 @@ column_sql_renaming = {
         'Barras_Tej': 'Roof_Bars',
         'Teto_Abrir': 'Open_Roof',
         'Farois_LED': 'LED_Lights',
-        'Farois_Xenon': 'Xenon_Lights',
         # 'Prot.Solar': 'Solar_Protection',
         'Tipo_Interior': 'Interior_Type',
         'Versao': 'Version',
@@ -291,7 +290,7 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Sales_Place_v2', 'Model_Code', 'Margin', 'Margin_Percentage',
                    'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
                    'Score_Class_Pred', 'Sell_Date', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
-                   'Xenon_Lights', 'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
+                   'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
                    'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
                    'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
                    'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Average_Score_Class_GT_Local', 'Average_Score_Class_GT_Local_v2',
@@ -303,7 +302,7 @@ columns_for_sql_temp = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Siz
                         'Sales_Place_v2', 'Model_Code', 'Margin', 'Margin_Percentage',
                         'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value',
                         'Sell_Date', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
-                        'Xenon_Lights', 'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
+                        'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
                         'Average_Stock_Days', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
                         'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
                         'Average_Stock_Days_Local', 'Average_Stock_Days_Local_v2', 'Registration_Number', 'VHE_Number',
@@ -340,7 +339,6 @@ column_checkpoint_sql_renaming = {
     'Barras_Tej': 'Roof_Bars',
     'Teto_Abrir': 'Open_Roof',
     'Farois_LED': 'LED_Lights',
-    'Farois_Xenon': 'Xenon_Lights',
     # 'Prot.Solar': 'Solar_Protection',
     'Tipo_Interior': 'Interior_Type',
     'Versao': 'Version',
