@@ -93,14 +93,14 @@ jantes_dict = {
 
 sales_place_dict = {
     'centro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
-    'norte': ['DCC - Feira', 'DCG - Gaia', 'DCP-Porto', 'DCP-Porto Mini', 'DCG - Gaia Mini', 'DCP-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCP-Maia'],
+    'norte': ['DCC - Feira', 'DCG - Gaia', 'DCP-Porto', 'DCP-Porto Mini', 'DCG - Gaia Mini', 'DCP-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCP-Maia', 'DCP-Maia Usados'],
     'sul': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
     'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
     'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
 }
 
 sales_place_dict_v2 = {
-    'porto': ['DCP-Porto', 'DCP-Porto Mini', 'DCP-Porto Usados',  'DCP-Maia'],
+    'porto': ['DCP-Porto', 'DCP-Porto Mini', 'DCP-Porto Usados',  'DCP-Maia', 'DCP-Maia Usados'],
     'gaia': ['DCC - Feira', 'DCG - Gaia', 'DCG - Gaia Mini', 'DCG - Gaia Usados', 'DCC - Feira Usados'],
     'aveiro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
     'lisboa': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
