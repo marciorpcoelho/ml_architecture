@@ -311,11 +311,11 @@ def options_scraping(df, model_training_check, model_mapping, options_file):
     df.loc[df[criteria_model_s4 & criteria_jantes_0].index, 'Jantes'] = '17'
     df.loc[df[criteria_model_s4 & criteria_buy_year_ge_2016].index, 'Sensores'] = 1
     df.loc[df[criteria_model_s4 & criteria_buy_year_ge_2017].index, 'Farois_LED'] = 1
-    df.loc[df[criteria_model_s4 & criteria_buy_year_lt_2017 & criteria_farois_led_0].index, 'Farois_Xenon'] = 1
+    # df.loc[df[criteria_model_s4 & criteria_buy_year_lt_2017 & criteria_farois_led_0].index, 'Farois_Xenon'] = 1
     df.loc[df[criteria_model_s5 & criteria_jantes_0].index, 'Jantes'] = '17'
     df.loc[df[criteria_model_s5 & criteria_buy_year_ge_2017].index, 'Farois_LED'] = 1
     df.loc[df[criteria_model_s5 & criteria_buy_year_ge_2017].index, 'Alarme'] = 1
-    df.loc[df[criteria_model_s5 & criteria_buy_year_lt_2017 & criteria_farois_led_0].index, 'Farois_Xenon'] = 1
+    # df.loc[df[criteria_model_s5 & criteria_buy_year_lt_2017 & criteria_farois_led_0].index, 'Farois_Xenon'] = 1
     df.loc[df[criteria_model_s5].index, 'Sensores'] = 1
     df.loc[df[criteria_model_s5].index, 'Navegação'] = 1
     df.loc[df[criteria_model_s5].index, 'Caixa Auto'] = 1
@@ -433,9 +433,9 @@ def options_scraping_per_group(args):
 
         # Faróis
         start = local_time()
-        if "xénon" in tokenized_options or 'bixénon' in tokenized_options:
-            group['Farois_Xenon'] = 1
-        elif "luzes" in tokenized_options and "led" in tokenized_options and 'nevoeiro' not in tokenized_options or 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
+        # if "xénon" in tokenized_options or 'bixénon' in tokenized_options:
+        #     group['Farois_Xenon'] = 1
+        if "luzes" in tokenized_options and "led" in tokenized_options and 'nevoeiro' not in tokenized_options or 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
             group['Farois_LED'] = 1
         duration = local_time() - start
         duration_farois += duration
