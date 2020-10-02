@@ -304,7 +304,7 @@ def filter_data(dataset, value_filters_list, col_filters_list):
     return data_filtered
 
 
-@st.cache
+@st.cache(show_spinner=False, ttl=60*60*12)
 def get_data(options_file_in):
     # gamas_match = pd.read_excel(input_file)
     gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in)

@@ -230,7 +230,7 @@ def solver(dataset, parameter_restriction_vectors, sel_order_size):
     return problem.status, result, selection.value
 
 
-@st.cache(show_spinner=False)
+@st.cache(show_spinner=False, ttl=60*60*24*12)
 def get_data(options_file_in):
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
     df = level_1_b_data_processing.column_rename(df, configuration_parameters_full + extra_parameters, configuration_parameters_full_rename + extra_parameters_rename)
@@ -256,7 +256,7 @@ def get_suggestions_dict(options_file_in):
     return saved_suggestions_dict, saved_suggestions_df
 
 
-@st.cache(show_spinner=False, allow_output_mutation=True)
+@st.cache(show_spinner=False, allow_output_mutation=True, ttl=60*60*24*12)
 def filter_data(dataset, value_filters_list, col_filters_list, operations_list):
     data_filtered = dataset.copy()
 
@@ -277,7 +277,7 @@ def filter_data(dataset, value_filters_list, col_filters_list, operations_list):
     return data_filtered
 
 
-@st.cache(show_spinner=False)
+@st.cache(show_spinner=False, ttl=60*60*24*12)
 def configuration_id_preparation(df):
     df['Configuration_ID'] = df.groupby(configuration_parameters_full_rename + extra_parameters_rename).ngroup()
     df.drop_duplicates(subset='Configuration_ID', inplace=True)

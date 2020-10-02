@@ -56,7 +56,8 @@ sql_info = {
     'commercial_version_matching': 'VHE_MapDMS_Vehicle_Commercial_Versions_DTR',
     'proposals_table': 'VHE_Fact_DW_HPK_Proposals_DTR',
     'proposals_view': 'View_VHE_HPK_Proposals_DTR',
-    'stock_view': 'View_VHE_Stock_DTR'
+    'stock_view': 'View_VHE_Stock_DTR',
+    'vhe_number_history': 'VHE_NrVehicles_History',
 }
 
 log_files = {
@@ -588,7 +589,7 @@ ext_color_translation = {
     'Castanho': ['brass (teto preto)', 'iced coffee', 'moon rock', 'golden brown m.', 'cashmere brown', 'tan brown', 'demitasse brown', 'premium agate brown p.'],
     'Cinzento': ['urban titanium m.', 'velvet dune', 'velvet dune (tt)', 'dark knight (tt)', 'wild explorer', 'rain forest', 'magnetic force', 'olivine grey', 'dark knight', 'star dust', 'polished metal m.', 'shining grey m.', 'modern steel m.', 'micron grey', 'galactic grey', 'iron gray', 'galactic grey (tt)', 'sonic grey p.', 'shadow grey', 'stone gray'],
     'Laranja': ['tangerine comet (tt)', 'tangerine comet', 'sunset orange ii'],
-    'Prateado': ['fluidic metal', 'star dust (teto vermelho)', 'sleek silver (teto preto)', 'lunar silver m.', 'platinum silver', 'sleek silver', 'lake silver', 'aurora silver', 'titanium silver', 'platinum silve', 'typhoon silver', 'lake silver (tt)', 'alabaster silver m.', 'tinted silver m.'],
+    'Prateado': ['fluidic metal', 'star dust (teto vermelho)', 'sleek silver (teto preto)', 'lunar silver m.', 'platinum silver', 'sleek silver', 'lake silver', 'aurora silver', 'titanium silver', 'platinum silve', 'typhoon silver', 'lake silver (tt)', 'alabaster silver m.', 'tinted silver m.', 'platinum gray m'],
     'Preto': ['electric shadow', 'phantom black (teto vermelho)', 'midnight burgundy p.', 'crystal black p.', 'ruse black m.', 'phantom black'],
     'Vermelho': ['dragon red', 'dragon red (teto preto)', 'premium crystal red m.', 'ral3000', 'rallye red', 'milano red', 'fiery red', 'passion red', 'tomato red', 'pulse red', 'engine red', 'magma red', 'pulse red (tt)', 'passion red p.'],
     'NÃO_PARAMETRIZADOS': [],

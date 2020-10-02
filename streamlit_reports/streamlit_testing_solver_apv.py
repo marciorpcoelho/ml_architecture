@@ -291,7 +291,7 @@ def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_part
     return df_solution
 
 
-@st.cache
+@st.cache(show_spinner=False, ttl=60*60*12)
 def get_data(options_file_in):
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
     df_goals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['goals_table'], options_file_in)

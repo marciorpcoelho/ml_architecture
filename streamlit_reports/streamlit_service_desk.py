@@ -134,7 +134,7 @@ def main():
         st.error('Por favor escolha um pedido para classificar de cada vez.')
 
 
-@st.cache
+@st.cache(show_spinner=False, ttl=60*60*24)
 def get_data(options_file_in, dsn, db, view, columns, query_filters=0):
     df = level_1_a_data_acquisition.sql_retrieve_df(dsn, db, view, options_file_in, columns, query_filters)
 
