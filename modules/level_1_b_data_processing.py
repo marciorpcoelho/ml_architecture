@@ -56,6 +56,12 @@ def lowercase_column_conversion(df, columns):
     return df
 
 
+def trim_columns(df, columns):
+    df[columns] = df[columns].apply(lambda x: x.str.strip())
+
+    return df
+
+
 def remove_columns(df, columns, project_id):
 
     for column in columns:

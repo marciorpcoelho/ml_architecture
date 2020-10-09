@@ -28,12 +28,14 @@ import matplotlib.pyplot as plt
 local_flag = 1
 master_file_processing_flag = 0
 current_platforms = ['BI_AFR', 'BI_CRP', 'BI_IBE', 'BI_CA']
-sel_month = '202008'
 part_desc_col = 'Part_Desc_PT'
 # 'Part_Desc' - Part Description from DW
 # 'Part_Desc_PT' - Part Description from Master Files when available, and from DW when not available
 # 'Part_Desc_Merge' - Part Description from Master Files merged with Part Description from the DW
-time_tag_date, _ = time_tags(format_date="%m_%Y")
+
+# time_tag_date, _ = time_tags(format_date="%m_%Y")
+# sel_month = '202008'
+
 keywords_per_parts_family_dict = {}
 
 
@@ -41,9 +43,15 @@ def main():
     if master_file_processing_flag:
         master_file_processing(options_file.master_files_to_convert)
 
-    platforms_stock, dim_product_group, dim_clients = data_acquisition(current_platforms, 'dbs/dim_product_group_section_A.csv', 'dbs/dim_clients_section_A.csv')
-    platforms_stock, current_stock_master_file = master_file_reference_match(platforms_stock, time_tag_date, dim_clients)
-    deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
+    # for sel_month in ['202001', '202002', '202003', '202004', '202005', '202006', '202007', '202008']:
+    #     time_tag_date = sel_month
+    #     platforms_stock, dim_product_group, dim_clients = data_acquisition(current_platforms, 'dbs/dim_product_group_section_A.csv', 'dbs/dim_clients_section_A.csv', sel_month)
+    #     platforms_stock, current_stock_master_file = master_file_reference_match(platforms_stock, time_tag_date, dim_clients, sel_month)
+
+    current_stock_master_file = pd.read_csv('dbs/part_ref_master_file_matched.csv', index_col=0)
+    print(current_stock_master_file.head())
+    print(current_stock_master_file.shape)
+    # deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
     sys.exit()
     data_processing(platforms_stock, dim_product_group, dim_clients)
@@ -173,7 +181,7 @@ def request_matches(label, keywords, rank, requests_list, dictionary):
     return dictionary
 
 
-def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
+def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, sel_month):
 
     try:
         current_stock_master_file = read_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(time_tag_date_in))
@@ -235,7 +243,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'nissan':
                         print('### NISSAN - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -278,7 +286,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'seat':
                         print('### SEAT - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -303,7 +311,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'peugeot':
                         print('### PEUGEOT - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -330,7 +338,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'citroen':
                         print('### CITROEN - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -359,7 +367,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'opel':
                         print('### OPEL - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -387,7 +395,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'chevrolet':
                         print('### CHEVROLET - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -413,7 +421,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     # if master_file_brand == 'audi':
                     #     print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -441,7 +449,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                     #     # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                     #     print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                     #     print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                    #     non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                    #     non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'volkswagen' or master_file_brand == 'audi':
                         if current_stock_master_file_filtered.shape[0]:
@@ -498,7 +506,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                             # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                             print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                             print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                            non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                            non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'skoda':
                         print('### SKODA - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -524,7 +532,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'mercedes':
                         print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -563,7 +571,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'bmw':
                         print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -589,7 +597,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                     if master_file_brand == 'ford':
                         print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -615,7 +623,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients):
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}.csv'.format(master_file_brand))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
 
                 else:
                     print('No data found for the Brand Code(s): {}'.format(brand_codes_list))
@@ -680,7 +688,7 @@ def brand_codes_retrieval(platforms, brand):
     return brand_codes
 
 
-def data_acquisition(platforms, dim_product_group_file, dim_clients_file):
+def data_acquisition(platforms, dim_product_group_file, dim_clients_file, sel_month):
     platforms_stock = []
 
     try:
@@ -695,6 +703,7 @@ def data_acquisition(platforms, dim_product_group_file, dim_clients_file):
         for platform in platforms:
             print('Retrieving from DW for platform {}...'.format(platform))
             if platform == 'BI_AFR':
+                print(options_file.current_stock_query.format(platform, sel_month, platform, sel_month))
                 df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query_afr.format(platform, sel_month, platform, sel_month))
             else:
                 df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query.format(platform, sel_month, platform, sel_month))
@@ -707,73 +716,73 @@ def data_acquisition(platforms, dim_product_group_file, dim_clients_file):
     return platforms_stock, dim_product_group, dim_clients
 
 
-def data_processing(df_platforms_stock, dim_product_group, dim_clients):
-    platforms_stock_unique = []
-
-    try:
-        keyword_dictionary_df = read_csv('output/keywords_per_parts_family.csv', index_col=0)
-        print('Keyword Dictionary Found...')
-        for key, row in keyword_dictionary_df.iterrows():
-            keywords_per_parts_family_dict[key] = [x for x in row.values if x is not np.nan]
-
-        return
-
-    except FileNotFoundError:
-
-        for platform, df_platform_stock in zip(current_platforms, df_platforms_stock):
-            print('Platform: {}'.format(platform))
-
-            try:
-                df_current_stock_unique = read_csv('dbs/df_{}_current_stock_unique_{}_section_B_step_2.csv'.format(platform, sel_month), dtype={part_desc_col: str})
-                print('Current Stock already processed...')
-                platforms_stock_unique.append(df_current_stock_unique)
-            except FileNotFoundError:
-                print('Processing stock...')
-
-                # df_platform_stock = df_platform_stock.loc[df_platform_stock['Part_Ref'].isin(['5X0807217F', '1Z5839697D']), :]
-
-                start_a = time.time()
-                df_platform_current_stock = lowercase_column_conversion(df_platform_stock, [part_desc_col])  # Lowercases the strings of these columns
-                df_platform_current_stock = literal_removal(df_platform_current_stock, part_desc_col)  # Removes literals from the selected column
-                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_punctuation_removal)  # Removes punctuation from string
-                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(unidecode_function)  # Removes accents marks from selected description column;
-                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_digit_removal)  # Removes accents marks from selected description column;
-                print('a - elapsed time: {:.3f}'.format(time.time() - start_a))
-
-                start_b = time.time()
-                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(abbreviations_correction, args=(options_file.abbreviations_dict, ))  # Replacement of abbreviations by the respective full word
-                print('b - elapsed time: {:.3f}'.format(time.time() - start_b))
-
-                start_c = time.time()
-                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform] + options_file.stop_words['Parts_Specific_Common_Stop_Words'] + nltk.corpus.stopwords.words('portuguese'),))  # Removal of Stop Words
-                print('c - elapsed time: {:.3f}'.format(time.time() - start_c))
-
-                step_c_1 = time.time()
-                stemmer_pt_2 = RSLPStemmer()
-                df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stemming, args=(stemmer_pt_2,))  # Stems each word using a Portuguese Stemmer
-                print('c_1 - elapsed time: {:.3f}'.format(time.time() - step_c_1))
-
-                start_d = time.time()
-                df_current_stock_unique = description_merge_per_reference(df_platform_current_stock)  # Merges descriptions for the same reference and removes repeated tokens;
-                print('d - elapsed time: {:.3f}'.format(time.time() - start_d))
-
-                start_f = time.time()
-                df_current_stock_unique = removed_zero_length_descriptions(df_current_stock_unique)  # Removed descriptions with no information (length = 0)
-                print('f - elapsed time: {:.3f}'.format(time.time() - start_f))
-
-                print('total time: {:.3f}'.format(time.time() - start_a))
-                save_csv([df_current_stock_unique], ['dbs/df_{}_current_stock_unique_{}_section_B_step_2'.format(platform, sel_month)], index=False)
-            finally:
-                keyword_selection(platform, df_current_stock_unique)
-
-        # print('Keyword Dictionary: \n', keyword_dict_per_parts_family)
-        # print('Keyword Dictionary Number of Keys', len(list(keyword_dict_per_parts_family.keys())))
-        pd.DataFrame.from_dict(keywords_per_parts_family_dict, orient='index').to_csv('output/keywords_per_parts_family.csv')
-
-        # for key in keywords_per_parts_family_dict.keys():
-        #     print('Product Group DW: {}, Number of Words: {}, Words: {}'.format(key, len(keywords_per_parts_family_dict[key]), keywords_per_parts_family_dict[key]))
-
-        return
+# def data_processing(df_platforms_stock, dim_product_group, dim_clients):
+#     platforms_stock_unique = []
+#
+#     try:
+#         keyword_dictionary_df = read_csv('output/keywords_per_parts_family.csv', index_col=0)
+#         print('Keyword Dictionary Found...')
+#         for key, row in keyword_dictionary_df.iterrows():
+#             keywords_per_parts_family_dict[key] = [x for x in row.values if x is not np.nan]
+#
+#         return
+#
+#     except FileNotFoundError:
+#
+#         for platform, df_platform_stock in zip(current_platforms, df_platforms_stock):
+#             print('Platform: {}'.format(platform))
+#
+#             try:
+#                 df_current_stock_unique = read_csv('dbs/df_{}_current_stock_unique_{}_section_B_step_2.csv'.format(platform, sel_month), dtype={part_desc_col: str})
+#                 print('Current Stock already processed...')
+#                 platforms_stock_unique.append(df_current_stock_unique)
+#             except FileNotFoundError:
+#                 print('Processing stock...')
+#
+#                 # df_platform_stock = df_platform_stock.loc[df_platform_stock['Part_Ref'].isin(['5X0807217F', '1Z5839697D']), :]
+#
+#                 start_a = time.time()
+#                 df_platform_current_stock = lowercase_column_conversion(df_platform_stock, [part_desc_col])  # Lowercases the strings of these columns
+#                 df_platform_current_stock = literal_removal(df_platform_current_stock, part_desc_col)  # Removes literals from the selected column
+#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_punctuation_removal)  # Removes punctuation from string
+#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(unidecode_function)  # Removes accents marks from selected description column;
+#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_digit_removal)  # Removes accents marks from selected description column;
+#                 print('a - elapsed time: {:.3f}'.format(time.time() - start_a))
+#
+#                 start_b = time.time()
+#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(abbreviations_correction, args=(options_file.abbreviations_dict, ))  # Replacement of abbreviations by the respective full word
+#                 print('b - elapsed time: {:.3f}'.format(time.time() - start_b))
+#
+#                 start_c = time.time()
+#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform] + options_file.stop_words['Parts_Specific_Common_Stop_Words'] + nltk.corpus.stopwords.words('portuguese'),))  # Removal of Stop Words
+#                 print('c - elapsed time: {:.3f}'.format(time.time() - start_c))
+#
+#                 step_c_1 = time.time()
+#                 stemmer_pt_2 = RSLPStemmer()
+#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stemming, args=(stemmer_pt_2,))  # Stems each word using a Portuguese Stemmer
+#                 print('c_1 - elapsed time: {:.3f}'.format(time.time() - step_c_1))
+#
+#                 start_d = time.time()
+#                 df_current_stock_unique = description_merge_per_reference(df_platform_current_stock)  # Merges descriptions for the same reference and removes repeated tokens;
+#                 print('d - elapsed time: {:.3f}'.format(time.time() - start_d))
+#
+#                 start_f = time.time()
+#                 df_current_stock_unique = removed_zero_length_descriptions(df_current_stock_unique)  # Removed descriptions with no information (length = 0)
+#                 print('f - elapsed time: {:.3f}'.format(time.time() - start_f))
+#
+#                 print('total time: {:.3f}'.format(time.time() - start_a))
+#                 save_csv([df_current_stock_unique], ['dbs/df_{}_current_stock_unique_{}_section_B_step_2'.format(platform, sel_month)], index=False)
+#             finally:
+#                 keyword_selection(platform, df_current_stock_unique)
+#
+#         # print('Keyword Dictionary: \n', keyword_dict_per_parts_family)
+#         # print('Keyword Dictionary Number of Keys', len(list(keyword_dict_per_parts_family.keys())))
+#         pd.DataFrame.from_dict(keywords_per_parts_family_dict, orient='index').to_csv('output/keywords_per_parts_family.csv')
+#
+#         # for key in keywords_per_parts_family_dict.keys():
+#         #     print('Product Group DW: {}, Number of Words: {}, Words: {}'.format(key, len(keywords_per_parts_family_dict[key]), keywords_per_parts_family_dict[key]))
+#
+#         return
 
 
 def keyword_selection(platform, df):
@@ -1009,3 +1018,4 @@ def unique_list_creation(old_list):
 
 if __name__ == '__main__':
     main()
+
