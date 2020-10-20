@@ -3,6 +3,7 @@ import logging
 import os
 import time
 import pyodbc
+import sys
 from multiprocessing import cpu_count
 from py_dotenv import read_dotenv
 pd.set_option('display.expand_frame_repr', False)
@@ -26,7 +27,7 @@ times_global = []
 names_global = []
 warnings_global = []
 pool_workers_count = cpu_count()
-database_mail_version = '2.1'
+database_mail_version = '2.2'
 
 # Universal Information
 performance_id = 0000
@@ -165,9 +166,9 @@ def performance_info(project_id, options_file, model_choice_message, unit_count=
     email_notification(project_id, warning_flag=warning_flag, warning_desc=warnings_global, error_full='', error_desc='', model_choice_message=model_choice_message)
 
 
-def email_notification(project_id, warning_flag, warning_desc, error_full, error_desc, error_flag=0, model_choice_message=0, solution_type='DEVOP'):
+def email_notification(project_id, warning_flag, warning_desc, error_full, error_desc, error_flag=0, model_choice_message=0, solution_type='DEVOP', sel_parameters=''):
 
-    mail_subject, mail_body_part1, mail_body_part2, project_id = mail_message_creation(warning_desc, warning_flag, error_full, error_desc, error_flag, project_id, model_choice_message, solution_type)
+    mail_subject, mail_body_part1, mail_body_part2, project_id = mail_message_creation(warning_desc, warning_flag, error_full, error_desc, error_flag, project_id, model_choice_message, solution_type, sel_parameters)
 
     try:
         sp_query = sp_query_creation(performance_sql_info['sp_send_dbmail'], performance_sql_info['sp_send_dbmail_input_parameters_name'], [mail_subject, mail_body_part1, mail_body_part2, project_id])
@@ -176,7 +177,7 @@ def email_notification(project_id, warning_flag, warning_desc, error_full, error
         log_record('Erro ao executar SP {} - {}'.format(performance_sql_info['sp_send_dbmail'], error), project_id, flag=2)
 
 
-def mail_message_creation(warning_desc, warning_flag, error_full, error_desc, error_flag, project_id, model_choice_message, solution_type):
+def mail_message_creation(warning_desc, warning_flag, error_full, error_desc, error_flag, project_id, model_choice_message, solution_type, sel_parameters):
 
     if solution_type == 'DEVOP':
         run_conclusion, warning_conclusion, conclusion_message = None, None, None
@@ -201,11 +202,13 @@ def mail_message_creation(warning_desc, warning_flag, error_full, error_desc, er
                               \nCumprimentos, \nDatabase Mail, v{}'''.format(project_dict[project_id], run_conclusion, warning_conclusion, conclusion_message, link, database_mail_version)
 
     elif solution_type == 'OPR':
+        sel_parameters_dict = print_exc_plus(sel_parameters)
         mail_subject = '#PRJ-{}: ERRO - Streamlit App {}'.format(project_id, app_dict[project_id])
 
         mail_body_part1 = '''AVISO - '''
         mail_body_part2 = '''\n \n A aplicação streamlit {} referente ao projeto {} encontrou um erro. A descrição desse erro é: \n\n{}
-                              \nCumprimentos, \nDatabase Mail, v{}'''.format(app_dict[project_id], project_dict[project_id], error_full, database_mail_version)
+        Os valores das variáveis escolhidas foram: \n\n{}
+        \nCumprimentos, \nDatabase Mail, v{}'''.format(app_dict[project_id], project_dict[project_id], error_full, '\n'.join(['{}: {}'.format(x, y) for x, y in zip(sel_parameters_dict.keys(), sel_parameters_dict.values())]), database_mail_version)
 
     else:
         raise RuntimeError('Tipo de Solução desconhecido: {}'.format(solution_type))
@@ -236,7 +239,7 @@ def sp_query_creation(sp_name, sp_input_parameters_name_list, sp_output_paramete
     return sp_query
 
 
-def error_upload(options_file, project_id, error_full, error_only, error_flag=0, solution_type='DEVOP'):
+def error_upload(options_file, project_id, error_full, error_only, error_flag=0, solution_type='DEVOP', sel_parameters=''):
     df_error = pd.DataFrame(columns={'Error_Full', 'Error_Only', 'Error_Flag', 'Project_Id', 'Date'})
     # error_only = None
     current_date = time.strftime("%Y-%m-%d")
@@ -256,7 +259,7 @@ def error_upload(options_file, project_id, error_full, error_only, error_flag=0,
             warning_flag = 1
             warning_desc = warnings_global
 
-        email_notification(project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_full=error_full, error_desc=error_only, error_flag=1, model_choice_message=0, solution_type=solution_type)
+        email_notification(project_id, warning_flag=warning_flag, warning_desc=warning_desc, error_full=error_full, error_desc=error_only, error_flag=1, model_choice_message=0, solution_type=solution_type, sel_parameters=sel_parameters)
     elif not error_flag:
         df_error.loc[0, ['Error_Full', 'Error_Only', 'Error_Flag', 'Solution', 'Project_Id', 'Date']] = [None, None, 0, solution_type, project_id, current_date]
 
@@ -332,3 +335,40 @@ def performance_report_sql_inject_single_line(line, flag, performance_sql_info_i
     except (pyodbc.ProgrammingError, pyodbc.OperationalError, pyodbc.Error):
         logging.warning('Erro ao gravar registo.')
         return
+
+
+def print_exc_plus(sel_keys):
+    parameters_dict = {}
+    """
+    Print the usual traceback information, followed by a listing of all the
+    local variables in each frame.
+    """
+    tb = sys.exc_info()[2]
+    while 1:
+        if not tb.tb_next:
+            break
+        tb = tb.tb_next
+    stack = []
+    f = tb.tb_frame
+    while f:
+        stack.append(f)
+        f = f.f_back
+    stack.reverse()
+
+    # for frame in stack:
+    #     print()
+    #     print("Frame %s in %s at line %s" % (frame.f_code.co_name,
+    #                                          frame.f_code.co_filename,
+    #                                          frame.f_lineno))
+
+    main_stack = [frame.f_locals for frame in stack if frame.f_code.co_name == 'main'][0]
+
+    for key, value in main_stack.items():
+        if key in sel_keys:
+            try:
+                parameters_dict[key] = value
+            except:
+                parameters_dict[key] = 'N/A'
+
+    return parameters_dict
+

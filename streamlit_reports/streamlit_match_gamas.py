@@ -148,7 +148,6 @@ def main():
 
         if sel_brand != '-':
             matched_data = matched_data.loc[matched_data['PT_PDB_Franchise_Desc'] == sel_brand.upper(), :]
-            print('2 - ', matched_data.shape)
 
             unique_models = [x for x in list(matched_data['PT_PDB_Model_Desc'].unique()) if x not in ['H-1', 'H-1 3 lugares', 'H-1 6 lugares', 'H350', 'i20 Coupe', 'i20 VAN']]
 
@@ -239,20 +238,14 @@ def save_function(gama_morta, gama_viva, sel_brand, sel_model):
 
 
 def calculate_cosine_similarity(gama, gama_flag, gama_viva, gama_morta, unmatched_gamas=None):
-    # start = time.time()
-    print('gama', gama)
-    print('gama_flag', gama_flag)
-    # print('df \n', df)
-    print('unmatched_gamas', unmatched_gamas)
-
     if unmatched_gamas is None:
         unmatched_gamas = []
 
     if gama_flag == -1:  # Gama Morta
         unique_designacao_comercial_morta_original = [gama]
         unique_designacao_comercial_viva_original = [x for x in gama_viva if x not in ['', ' ']]
-        print('unique_designacao_comercial_morta_original', unique_designacao_comercial_morta_original)
-        print('unique_designacao_comercial_viva_original', unique_designacao_comercial_viva_original)
+        # print('unique_designacao_comercial_morta_original', unique_designacao_comercial_morta_original)
+        # print('unique_designacao_comercial_viva_original', unique_designacao_comercial_viva_original)
 
         df_end = pd.DataFrame()
         for designacao_comercial_viva_original in unique_designacao_comercial_viva_original:
@@ -309,10 +302,8 @@ def filter_data(dataset, value_filters_list, col_filters_list):
 
 @st.cache(show_spinner=False, ttl=60*60*12)
 def get_data(options_file_in):
-    # gamas_match = pd.read_excel(input_file)
     gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in)
 
-    # print('1 - ', gamas.shape)
     gamas['PT_PDB_Model_Desc'] = gamas['PT_PDB_Model_Desc'].str.lower()
     gamas.dropna(subset=['PT_PDB_Commercial_Version_Desc_Old'], inplace=True)
     gamas.drop_duplicates(subset=['PT_PDB_Model_Desc', 'PT_PDB_Commercial_Version_Desc_Old', 'PT_PDB_Commercial_Version_Desc_New'], inplace=True)  # This removes duplicates matching rows, even the ones without corresponding Gama Viva. There is however a case where the same Gama Morta has two matches: null and a corresponding Gama Viva - 1.4 TGDi DCT Style MY19'5 + TA for model i30 SW
@@ -324,7 +315,6 @@ def get_data(options_file_in):
 def get_data_non_cached(options_file_in, classification_flag):
     gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in, query_filters={'Classification_Flag': classification_flag})
 
-    # print('3 - ', gamas.shape)
     gamas['PT_PDB_Model_Desc'] = gamas['PT_PDB_Model_Desc'].str.lower()
     gamas.dropna(subset=['PT_PDB_Commercial_Version_Desc_Old'], inplace=True)
     gamas.drop_duplicates(subset=['PT_PDB_Model_Desc', 'PT_PDB_Commercial_Version_Desc_Old', 'PT_PDB_Commercial_Version_Desc_New'], inplace=True)  # This removes duplicates matching rows, even the ones without corresponding Gama Viva. There is however a case where the same Gama Morta has two matches: null and a corresponding Gama Viva - 1.4 TGDi DCT Style MY19'5 + TA for model i30 SW
@@ -339,7 +329,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR', sel_parameters=['sel_goal', 'sel_brand', 'sel_gama', 'sel_gama_match', 'unique_designacao_comercial_viva_original', 'unique_designacao_comercial_morta_original'])
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
