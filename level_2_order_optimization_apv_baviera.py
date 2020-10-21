@@ -36,7 +36,11 @@ def main():
             log_record('Começou PSE = {}'.format(pse_code), options_file.project_id)
 
             df_sales_cleaned = data_processing(df_sales, pse_code, options_file)
-            df_solver, df_part_ref_ta = data_modelling(pse_code, df_sales_cleaned, df_history, last_processed_date, current_date, preprocessed_data_exists_flag, options_file.project_id)
+            try:
+                df_solver, df_part_ref_ta = data_modelling(pse_code, df_sales_cleaned, df_history, last_processed_date, current_date, preprocessed_data_exists_flag, options_file.project_id)
+            except ValueError:
+                log_record('Não foram encontradas peças para o PSE_Code {}.'.format(pse_code), options_file.project_id, flag=1)
+                continue
             deployment(df_solver, df_part_ref_ta, pse_code)
 
             log_record('Terminou PSE = {}'.format(pse_code), options_file.project_id)
@@ -83,15 +87,18 @@ def data_modelling(pse_code, df_sales, df_history, min_date, max_date, preproces
     start = time.time()
 
     selected_parts = part_ref_selection(df_sales, min_date, max_date, options_file.project_id)
-    results = apv_photo_stock_treatment(df_sales, df_history, selected_parts, preprocessed_data_exists_flag, min_date, max_date, pse_code, project_id)
-    part_ref_matchup_df = part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping], options_file.regex_dict, options_file.bmw_original_oil_words, options_file.project_id)  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
-    df_solver = solver_dataset_preparation(results, part_ref_matchup_df, options_file.group_goals['dtss_goal'], pse_code, max_date)
+    if len(selected_parts) == 0:
+        raise ValueError
+    else:
+        results = apv_photo_stock_treatment(df_sales, df_history, selected_parts, preprocessed_data_exists_flag, min_date, max_date, pse_code, project_id)
+        part_ref_matchup_df = part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, [options_file.bmw_ta_mapping, options_file.mini_ta_mapping], options_file.regex_dict, options_file.bmw_original_oil_words, options_file.project_id)  # This function deliberately uses the full amount of data, while i don't have a reliable source of TA - the more information, the less likely it is for the TA to be wrong
+        df_solver = solver_dataset_preparation(results, part_ref_matchup_df, options_file.group_goals['dtss_goal'], pse_code, max_date)
 
-    print('Elapsed time: {:.2f}'.format(time.time() - start))
+        print('Elapsed time: {:.2f}'.format(time.time() - start))
 
-    log_record('Fim Secção C', options_file.project_id)
-    performance_info_append(time.time(), 'Section_C_End')
-    return df_solver, part_ref_matchup_df
+        log_record('Fim Secção C', options_file.project_id)
+        performance_info_append(time.time(), 'Section_C_End')
+        return df_solver, part_ref_matchup_df
 
 
 def deployment(df_solver, df_part_ref_ta, pse_code):
@@ -132,7 +139,6 @@ def delete_temp_files(pse_groups, second_last_processed_date):
             os.remove('output/results_merge_{}_{}.csv'.format(pse, second_last_processed_date))
 
     return
-
 
 
 if __name__ == '__main__':
