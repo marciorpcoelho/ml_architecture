@@ -4,13 +4,19 @@ import pandas as pd
 import sklearn as sk
 import time
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import auc, precision_score, confusion_matrix
+from sklearn.metrics import auc, precision_score, confusion_matrix, make_scorer
+from modules.level_1_c_data_modelling import classification_model_training
 # Text Features
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.linear_model import LogisticRegression
 
 from collections import defaultdict, Counter
+
+gridsearch_parameters = {
+    'lr': [LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear', 'lbfgs', 'newton-cg'], 'max_iter': [1000], 'multi_class': ['ovr', 'multinomial']}]],
+    # 'lr': [LogisticRegression, [{'max_iter': [500]}]],
+}
 
 pd.set_option('display.width', 3000)
 pd.set_option('display.max_rows', 200)
@@ -25,33 +31,50 @@ def main():
 
 def model_training(ml_dataset, clf=None):
     train, test, train_X, test_X, train_Y, test_Y, target_map, inv_target_map = dataset_preparation(ml_dataset)
+    cm_flag = 0
+    df_cm_train, df_cm_test = pd.DataFrame(), pd.DataFrame()
 
     if not clf:
         print('Classification Model not found. Training a new one...')
-        clf = LogisticRegression(penalty="l2", random_state=1337, max_iter=500)
+        # clf = LogisticRegression(penalty="l2", random_state=1337, max_iter=500)
+        # start_time = time.time()
+        # clf.fit(train_X, train_Y)
+        # print("Fitting: --- %s seconds ---" % (time.time() - start_time))
 
-        start_time = time.time()
-        clf.fit(train_X, train_Y)
-
-        print("Fitting: --- %s seconds ---" % (time.time() - start_time))
+        scorer = make_scorer(precision_score, average='weighted')
+        classes, best_models, running_times = classification_model_training(['lr'], train_X, train_Y, gridsearch_parameters, 10, scorer, 2610)
+        clf = best_models['lr']
+        cm_flag = 1
 
     predictions_test, probabilities_test, text_x_scored = model_prediction(clf, test_X, test, target_map, inv_target_map)
-    print(test_Y, predictions_test)
+    predictions_test_converted_classes = predictions_test
+    predictions_test = predictions_test.map(inv_target_map)
+
+    # print(test_Y, predictions_test)
     # print(confusion_matrix(test_Y.astype(str), predictions_test.astype(str), labels=[inv_target_map[x] for x in clf.classes_]))
-    print(confusion_matrix([inv_target_map[x] for x in test_Y], predictions_test.values, labels=[inv_target_map[x] for x in clf.classes_]))
-    # test_y_ser = pd.Series(test_Y)
-    # print('Precision Score:', precision_score(test_y_ser, predictions, average='weighted'))
-    # print('Precision Score:', precision_score(test_y_ser, predictions, average='micro'))
-    # print('Precision Score:', precision_score(test_y_ser, predictions, average='macro'))
+    if cm_flag:
+        cm = confusion_matrix([inv_target_map[x] for x in test_Y], predictions_test.values, labels=[inv_target_map[x] for x in clf.classes_])
+        labels = [inv_target_map[x] for x in clf.classes_]
+        df_cm_test = pd.DataFrame(cm, columns=labels, index=labels)
+        test_y_ser = pd.Series(test_Y)
+        print('\n### Precision Score:', precision_score(test_y_ser, predictions_test_converted_classes, average='weighted'))
+        print('### Precision Score:', precision_score(test_y_ser, predictions_test_converted_classes, average='micro'))
+        print('### Precision Score:\n', precision_score(test_y_ser, predictions_test_converted_classes, average='macro'))
 
     predictions_train, probabilities_train, train_x_scored = model_prediction(clf, train_X, train, target_map, inv_target_map)
-    print(train_Y, predictions_train)
-    print(confusion_matrix([inv_target_map[x] for x in train_Y], predictions_train.values, labels=[inv_target_map[x] for x in clf.classes_]))
+    predictions_train_converted_classes = predictions_train
+    predictions_train = predictions_train.map(inv_target_map)
+
+    # print(train_Y, predictions_train)
+    if cm_flag:
+        labels = [inv_target_map[x] for x in clf.classes_]
+        cm = confusion_matrix([inv_target_map[x] for x in train_Y], predictions_train.values, labels=[inv_target_map[x] for x in clf.classes_])
+        df_cm_train = pd.DataFrame(cm, columns=labels, index=labels)
     # print(confusion_matrix(train_Y.astype(str), predictions_train.astype(str), labels=[inv_target_map[x] for x in clf.classes_]))
     # train_y_ser = pd.Series(train_Y)
-    # print('Precision Score:', precision_score(train_y_ser, predictions, average='weighted'))
-    # print('Precision Score:', precision_score(train_y_ser, predictions, average='micro'))
-    # print('Precision Score:', precision_score(train_y_ser, predictions, average='macro'))
+    # print('Precision Score:', precision_score(train_y_ser, predictions_train_converted_classes, average='weighted'))
+    # print('Precision Score:', precision_score(train_y_ser, predictions_train_converted_classes, average='micro'))
+    # print('Precision Score:', precision_score(train_y_ser, predictions_train_converted_classes, average='macro'))
 
     predictions = pd.concat([predictions_train, predictions_test])
     probabilities = pd.concat([probabilities_train, probabilities_test])
@@ -62,12 +85,11 @@ def model_training(ml_dataset, clf=None):
     # ml_dataset_scored['Product_Group_DW'] = ml_dataset_scored['__target__'].replace(inv_target_map)
     # ml_dataset_scored.drop('__target__', axis=1, inplace=True)
 
-    return ml_dataset_scored, clf
+    return ml_dataset_scored, clf, df_cm_train, df_cm_test
 
 
 def dataset_preparation(ml_dataset):
-    print('Base data has %i rows and %i columns' % (ml_dataset.shape[0], ml_dataset.shape[1]))
-    # Five first records",
+    # print('Base data has %i rows and %i columns' % (ml_dataset.shape[0], ml_dataset.shape[1]))
     ml_dataset = ml_dataset[[u'PLR_Account_first', u'Product_Group_DW', u'PVP_1_avg', u'Part_Desc_PT_concat', u'Client_Id', u'Part_Desc_concat', u'Part_Ref', u'Average_Cost_avg']]
 
     categorical_features = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
@@ -92,8 +114,8 @@ def dataset_preparation(ml_dataset):
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
     train, test = train_test_split(ml_dataset, test_size=0.2, stratify=ml_dataset['__target__'])
 
-    print('Train data has %i rows and %i columns' % (train.shape[0], train.shape[1]))
-    print('Test data has %i rows and %i columns' % (test.shape[0], test.shape[1]))
+    # print('Train data has %i rows and %i columns' % (train.shape[0], train.shape[1]))
+    # print('Test data has %i rows and %i columns' % (test.shape[0], test.shape[1]))
 
     drop_rows_when_missing = [u'Part_Ref']
     impute_when_missing = [{'impute_with': u'MEAN', 'feature': u'PVP_1_avg'}, {'impute_with': u'MEAN', 'feature': u'Average_Cost_avg'}]
@@ -102,7 +124,7 @@ def dataset_preparation(ml_dataset):
     for feature in drop_rows_when_missing:
         train = train[train[feature].notnull()]
         test = test[test[feature].notnull()]
-        print('Dropped missing records in %s' % feature)
+        # print('Dropped missing records in %s' % feature)
 
     # Features for which we impute missing values"
     for feature in impute_when_missing:
@@ -118,7 +140,7 @@ def dataset_preparation(ml_dataset):
             v = feature['value']
         train[feature['feature']] = train[feature['feature']].fillna(v)
         test[feature['feature']] = test[feature['feature']].fillna(v)
-        print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
+        # print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
     categorical_to_dummy_encode = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
     dummy_values = select_dummy_values(train, categorical_to_dummy_encode, limit_dummies=100)
@@ -138,9 +160,9 @@ def dataset_preparation(ml_dataset):
         if scale == 0.:
             del train[feature_name]
             del test[feature_name]
-            print('Feature %s was dropped because it has no variance' % feature_name)
+            # print('Feature %s was dropped because it has no variance' % feature_name)
         else:
-            print('Rescaled %s' % feature_name)
+            # print('Rescaled %s' % feature_name)
             train[feature_name] = (train[feature_name] - shift).astype(np.float64) / scale
             test[feature_name] = (test[feature_name] - shift).astype(np.float64) / scale
 
@@ -168,140 +190,6 @@ def dataset_preparation(ml_dataset):
     test_y = np.array(test['__target__'])
 
     return train, test, train_x, test_x, train_y, test_y, target_map, inv_target_map
-
-
-def other_families_model_training(ml_dataset):
-    print('Base data has %i rows and %i columns' % (ml_dataset.shape[0], ml_dataset.shape[1]))
-    # Five first records",
-    ml_dataset.head(5)
-    ml_dataset = ml_dataset[[u'PLR_Account_first', u'Product_Group_DW', u'PVP_1_avg', u'Part_Desc_PT_concat', u'Client_Id', u'Part_Desc_concat', u'Part_Ref', u'Average_Cost_avg']]
-
-    categorical_features = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
-    numerical_features = [u'PVP_1_avg', u'Average_Cost_avg']
-    text_features = [u'Part_Desc_PT_concat', u'Part_Desc_concat']
-    for feature in categorical_features:
-        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
-    for feature in text_features:
-        ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
-    for feature in numerical_features:
-        # if ml_dataset[feature].dtype == np.dtype('M8[ns]'):
-        #     ml_dataset[feature] = datetime_to_epoch(ml_dataset[feature])
-        # else:
-        ml_dataset[feature] = ml_dataset[feature].astype('double')
-
-    target_map = target_map_creation(ml_dataset)
-    inv_target_map = {target_map[label]: label for label in target_map}
-
-    ml_dataset['__target__'] = ml_dataset['Product_Group_DW'].map(str).map(target_map)
-    del ml_dataset['Product_Group_DW']
-
-    ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
-    train, test = train_test_split(ml_dataset, test_size=0.2, stratify=ml_dataset['__target__'])
-
-    print('Train data has %i rows and %i columns' % (train.shape[0], train.shape[1]))
-    print('Test data has %i rows and %i columns' % (test.shape[0], test.shape[1]))
-
-    drop_rows_when_missing = [u'Part_Ref']
-    impute_when_missing = [{'impute_with': u'MEAN', 'feature': u'PVP_1_avg'}, {'impute_with': u'MEAN', 'feature': u'Average_Cost_avg'}]
-
-    # Features for which we drop rows with missing values"
-    for feature in drop_rows_when_missing:
-        train = train[train[feature].notnull()]
-        test = test[test[feature].notnull()]
-        print('Dropped missing records in %s' % feature)
-
-    # Features for which we impute missing values"
-    for feature in impute_when_missing:
-        if feature['impute_with'] == 'MEAN':
-            v = train[feature['feature']].mean()
-        elif feature['impute_with'] == 'MEDIAN':
-            v = train[feature['feature']].median()
-        elif feature['impute_with'] == 'CREATE_CATEGORY':
-            v = 'NULL_CATEGORY'
-        elif feature['impute_with'] == 'MODE':
-            v = train[feature['feature']].value_counts().index[0]
-        elif feature['impute_with'] == 'CONSTANT':
-            v = feature['value']
-        train[feature['feature']] = train[feature['feature']].fillna(v)
-        test[feature['feature']] = test[feature['feature']].fillna(v)
-        print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
-
-    categorical_to_dummy_encode = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
-    dummy_values = select_dummy_values(train, categorical_to_dummy_encode, limit_dummies=100)
-    dummy_encode_dataframe(train, dummy_values)
-    dummy_encode_dataframe(test, dummy_values)
-
-    rescale_features = {u'Average_Cost_avg': u'AVGSTD', u'PVP_1_avg': u'AVGSTD'}
-    for (feature_name, rescale_method) in rescale_features.items():
-        if rescale_method == 'MINMAX':
-            _min = train[feature_name].min()
-            _max = train[feature_name].max()
-            scale = _max - _min
-            shift = _min
-        else:
-            shift = train[feature_name].mean()
-            scale = train[feature_name].std()
-        if scale == 0.:
-            del train[feature_name]
-            del test[feature_name]
-            print('Feature %s was dropped because it has no variance' % feature_name)
-        else:
-            print('Rescaled %s' % feature_name)
-            train[feature_name] = (train[feature_name] - shift).astype(np.float64) / scale
-            test[feature_name] = (test[feature_name] - shift).astype(np.float64) / scale
-
-    text_svds = {}
-    for text_feature in text_features:
-        n_components = 50
-        text_svds[text_feature] = TruncatedSVD(n_components=n_components)
-        s = HashingVectorizer(n_features=100000).transform(train[text_feature])
-        text_svds[text_feature].fit(s)
-        train_transformed = text_svds[text_feature].transform(s)
-
-        test_transformed = text_svds[text_feature].transform(HashingVectorizer(n_features=100000).transform(test[text_feature]))
-
-        for i in range(0, n_components):
-            train[text_feature + ":text:" + str(i)] = train_transformed[:, i]
-
-            test[text_feature + ":text:" + str(i)] = test_transformed[:, i]
-
-        train.drop(text_feature, axis=1, inplace=True)
-
-        test.drop(text_feature, axis=1, inplace=True)
-
-    train_X = train.drop('__target__', axis=1)
-    test_X = test.drop('__target__', axis=1)
-    train_Y = np.array(train['__target__'])
-    test_Y = np.array(test['__target__'])
-
-    clf = LogisticRegression(penalty="l2", random_state=1337, max_iter=500)
-
-    start_time = time.time()
-    clf.fit(train_X, train_Y)
-    print("Fitting: --- %s seconds ---" % (time.time() - start_time))
-
-    return clf
-    # predictions_test, probabilities_test, text_x_scored = model_prediction(clf, test_X, test, target_map, inv_target_map)
-    # # test_y_ser = pd.Series(test_Y)
-    # # print('Precision Score:', precision_score(test_y_ser, predictions, average='weighted'))
-    # # print('Precision Score:', precision_score(test_y_ser, predictions, average='micro'))
-    # # print('Precision Score:', precision_score(test_y_ser, predictions, average='macro'))
-    #
-    # predictions_train, probabilities_train, train_x_scored = model_prediction(clf, train_X, train, target_map, inv_target_map)
-    # # train_y_ser = pd.Series(train_Y)
-    # # print('Precision Score:', precision_score(train_y_ser, predictions, average='weighted'))
-    # # print('Precision Score:', precision_score(train_y_ser, predictions, average='micro'))
-    # # print('Precision Score:', precision_score(train_y_ser, predictions, average='macro'))
-    #
-    # predictions = pd.concat([predictions_train, predictions_test])
-    # probabilities = pd.concat([probabilities_train, probabilities_test])
-    #
-    # ml_dataset_scored = ml_dataset.join(predictions, how='left')
-    # ml_dataset_scored = ml_dataset_scored.join(probabilities, how='left')
-    # ml_dataset_scored['Product_Group_DW'] = ml_dataset_scored['__target__'].replace(inv_target_map)
-    #
-    # ml_dataset_scored.drop('__target__', axis=1, inplace=True)
-    # print(ml_dataset_scored.head())
 
 
 def model_prediction(model, df_to_predict, full_df, target_map, inv_target_map):
@@ -340,8 +228,6 @@ def model_prediction(model, df_to_predict, full_df, target_map, inv_target_map):
     df_scored = df_scored.join(full_df['__target__'], how='left')
     df_scored = df_scored.rename(columns={'__target__': 'Product_Group_DW'})
 
-    predictions = predictions.map(inv_target_map)
-
     return predictions, probabilities, df_scored
 
 
@@ -351,7 +237,7 @@ def dummy_encode_dataframe(df, dummy_values):
             dummy_name = u'%s_value_%s' % (feature, coerce_to_unicode(dummy_value))
             df[dummy_name] = (df[feature] == dummy_value).astype(float)
         del df[feature]
-        print('Dummy-encoded feature %s' % feature)
+        # print('Dummy-encoded feature %s' % feature)
 
 
 # Only keep the top 100 values

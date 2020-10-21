@@ -116,11 +116,17 @@ def classification_model_training(models, train_x, train_y, classification_model
             start = time.time()
             clf = ClassificationTraining(clf=classification_models[model][0])
             clf.grid_search(parameters=classification_models[model][1], k=k, score=gridsearch_score)
-            clf.clf_grid_fit(x=train_x, y=train_y.values.ravel())
+            try:
+                clf.clf_grid_fit(x=train_x, y=train_y.values.ravel())
+            except AttributeError:
+                clf.clf_grid_fit(x=train_x, y=train_y)
             clf_best = clf.grid.best_estimator_
 
             best_models_pre_fit[model] = clf_best
-            clf_best.fit(train_x, train_y.values.ravel())
+            try:
+                clf_best.fit(train_x, train_y.values.ravel())
+            except AttributeError:
+                clf_best.fit(train_x, train_y)
             best_models_pos_fit[model] = clf_best
 
         running_times[model] = time.time() - start
