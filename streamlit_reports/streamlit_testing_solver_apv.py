@@ -165,14 +165,14 @@ def main():
                                    df_solution_filtered[goal_type].max())
                     )
 
-                    df_display = df_solution_filtered[['Part_Ref', 'Quantity', goal_type, 'Days_To_Sell']]
+                    df_display = df_solution_filtered[['Part_Ref', 'Part_Desc', 'Quantity', goal_type, 'Days_To_Sell']]
                     st.write(df_display.rename(columns=column_translate_dict).style.format({'Quantidade': '{:.1f}', 'PVP': '{:.2f}', 'Dias de Venda': '{:.2f}'}))
 
                     # if st.button('Gravar Sugestão') or session_state.save_button_pressed_flag == 1:
                     #     session_state.save_button_pressed_flag = 1
 
                     # file_export(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), file_name='Otimização_{}_{}'.format(sel_group_original, current_date), file_extension='.xlsx')
-                    file_export_2(df_display[['Part_Ref', 'Quantity']].rename(columns=column_translate_dict), 'Otimização_{}_{}'.format(sel_group_original, current_date))
+                    file_export_2(df_display[['Part_Ref', 'Part_Desc', 'Quantity']].rename(columns=column_translate_dict), 'Otimização_{}_{}'.format(sel_group_original, current_date))
 
                     # if sel_group in saved_suggestions_dict.keys() or session_state.overwrite_button_pressed == 1:
                     #     st.write('Já existe Sugestão de Encomenda para o Grupo de Peças {}. Pretende substituir pela atual sugestão?'.format(sel_group_original))
@@ -225,6 +225,7 @@ def solver(df_solve, sel_local, group, goal_value, goal_type, non_goal_type, dts
         df_solve = df_solve[df_solve[goal_type] >= minimum_cost_or_pvp]
 
     unique_parts = df_solve['Part_Ref'].unique()
+    descriptions = [x for x in df_solve['Part_Desc']]
     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
 
     n_size = df_solve['Part_Ref'].nunique()  # Number of different parts
@@ -254,7 +255,7 @@ def solver(df_solve, sel_local, group, goal_value, goal_type, non_goal_type, dts
         else:
             above_goal_flag = 0
 
-        df_solution = solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group, sel_local)
+        df_solution = solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, descriptions, values, other_values, dtss, above_goal_flag, group, sel_local)
 
     return result, df_solution
 
@@ -275,10 +276,11 @@ def solution_saving(df_solution, group_name, group_name_original):
     return
 
 
-def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, values, other_values, dtss, above_goal_flag, group_name, sel_local):
-    df_solution = pd.DataFrame(columns={'Part_Ref', 'Quantity', goal_type, 'Days_To_Sell', 'DtS_Per_Qty'})
+def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, descriptions, values, other_values, dtss, above_goal_flag, group_name, sel_local):
+    df_solution = pd.DataFrame(columns={'Part_Ref', 'Quantity', 'Part_Desc', goal_type, 'Days_To_Sell', 'DtS_Per_Qty'})
 
     df_solution['Part_Ref'] = [part for part in unique_parts]
+    df_solution['Part_Desc'] = [desc for desc in descriptions]
     df_solution['Quantity'] = [qty for qty in selection.value]
     df_solution[goal_type] = [value for value in values]
     df_solution[non_goal_type] = [value for value in other_values]

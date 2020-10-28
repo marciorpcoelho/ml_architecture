@@ -158,17 +158,35 @@ part_groups_desc_mapping = {
     'MINI_Bonus_Group_3': 'MINI - Acessórios + Jantes + Lifestyle',  # Acessórios + Jantes + Lifestyle
     'MINI_Bonus_Group_4': 'MINI - Pneus',   # Pneus
 }
+# pse_code_desc_mapping = {
+#     '0B': 'V.N. Gaia',
+#     '0I': 'P. Nações',
+#     '0C': 'S.M. Feira',
+#     '0H': 'Cascais',
+#     '0E': 'M.P. Azevedo',
+#     '0F': 'Maia',
+#     '0G': 'B. Roma',
+#     '0K': 'Faro',
+#     '0L': 'Portimão',
+#     '0N': 'Aveiro',
+#     # '0Q': 'Motorrad - Entrecampos',
+#     # '0J': 'Setúbal',
+#     # '0M': 'Coimbra',
+#     # '0O': 'Viseu',
+#     # '0P': 'Viseu - Colisão',
+# }
+
 pse_code_desc_mapping = {
-    '0B': 'V.N. Gaia',
-    '0I': 'P. Nações',
-    '0C': 'S.M. Feira',
-    '0H': 'Cascais',
-    '0E': 'M.P. Azevedo',
-    '0F': 'Maia',
-    '0G': 'B. Roma',
-    '0K': 'Faro',
-    '0L': 'Portimão',
-    '0N': 'Aveiro',
+    '15': 'V.N. Gaia',
+    '44': 'P. Nações',
+    '38': 'S.M. Feira',
+    '47': 'Cascais',
+    '53': 'M.P. Azevedo',
+    '67': 'Maia',
+    '45': 'B. Roma',
+    '48': 'Faro',
+    '49': 'Portimão',
+    '39': 'Aveiro',
     # '0Q': 'Motorrad - Entrecampos',
     # '0J': 'Setúbal',
     # '0M': 'Coimbra',
@@ -176,7 +194,8 @@ pse_code_desc_mapping = {
     # '0P': 'Viseu - Colisão',
 }
 
-pse_codes_groups = [['0B', '0H', '0C', '0N', '0G'], ['0I', '0E', '0K', '0L', '0F']]
+# pse_codes_groups = [['0B', '0H', '0C', '0N', '0G'], ['0I', '0E', '0K', '0L', '0F']]
+pse_code_groups = [['15', '47', '38', '39', '45'], ['44', '53', '48', '49', '67']]
 
 
 # 'BMW - Peças + Óleos'
@@ -334,7 +353,7 @@ stock_history_query = '''
         Sales_Price, 
         [Date]
     FROM [DMS_MLG_01].[dbo].[DMS_CRP_01_SM_Parts_Stock]
-      where  SO_Code in ({})
+      where  SO_Code in ({}) and NL_Company = '14' 
       and [Date] >= '{}' '''
 
 regex_dict = {
