@@ -33,7 +33,7 @@ class ClassificationTraining(object):
             self.clf = clf()
 
     def grid_search(self, parameters, k, score):
-        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, iid=True, n_jobs=-1, error_score=np.nan)
+        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, iid=True, n_jobs=level_0_performance_report.cpu_count(), error_score=np.nan)
 
     def clf_grid_fit(self, x, y):
         self.grid.fit(x, y)
@@ -475,7 +475,7 @@ def apv_last_stock_calculation(min_date_str, current_date, pse_code, project_id)
     second_to_last_processed_date = results_files[0]
 
     try:
-        max_file_date = np.max([results_files[1]])
+        max_file_date = np.max([results_files[-1]])
         if min_date_datetime < max_file_date:
             if max_file_date == max_date_datetime:
                 raise Exception('All data has been processed already up to date {}.'.format(max_file_date))

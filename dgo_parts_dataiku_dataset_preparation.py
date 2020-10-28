@@ -5,6 +5,9 @@ from modules.level_1_b_data_processing import lowercase_column_conversion, trim_
 from modules.level_1_b_data_processing import null_analysis
 import level_2_pa_part_reference_options as options_file
 from dgo_parts_models_training import model_training
+import warnings
+import sklearn.exceptions
+warnings.filterwarnings("ignore", category=sklearn.exceptions.UndefinedMetricWarning)
 
 pd.set_option('display.width', 3000)
 pd.set_option('display.max_rows', 200)
@@ -169,19 +172,18 @@ def main():
     master_file = pd.read_csv(master_file_loc, usecols=['Part_Ref', 'Part_Desc', 'Product_Group_DW', 'Client_Id', 'Average_Cost', 'PVP_1', 'PLR_Account', 'PT_Product_Group_Level_2_Desc', 'Product_Group_Level_2_Code', 'Product_Group_Level_1_Code', 'PT_Product_Group_Level_1_Desc', 'Part_Desc_PT'],
                               dtype={'Product_Group_DW': 'str'})
 
-    # step_1(master_file)
-    # print('1 - master_file shape', master_file.shape)
-    # master_file = flow_step_2(master_file)
-    # print('2 - master_file shape', master_file.shape)
-    # master_file = flow_step_3(master_file)
-    # print('3 - master_file shape', master_file.shape)
-    # master_file = flow_step_4(master_file)
-    # print('4 - master_file shape', master_file.shape)
+    step_1(master_file)
+    print('1 - master_file shape', master_file.shape)
+    master_file = flow_step_2(master_file)
+    print('2 - master_file shape', master_file.shape)
+    master_file = flow_step_3(master_file)
+    print('3 - master_file shape', master_file.shape)
+    master_file = flow_step_4(master_file)
+    print('4 - master_file shape', master_file.shape)
 
-    master_file = pd.read_csv('dbs/df_after_flow_step_4.csv', index_col=0)
+    # master_file = pd.read_csv('dbs/df_after_flow_step_4.csv', index_col=0)
     # master_file_temp_after_step_4.rename(columns={'PVP_1': 'PVP_1_avg', 'Part_Desc': 'Part_Desc_concat', 'Average_Cost': 'Average_Cost_avg', 'Part_Desc_PT': 'Part_Desc_PT_concat', 'PLR_Account': 'PLR_Account_first'}, inplace=True)
 
-    # print(master_file_temp_after_step_4.shape)
     master_file, manual_classifications = flow_step_5(master_file, [dgo_family_10_loc, dgo_family_13_loc])
     print('5 - master_file shape', master_file.shape)
     master_file_non_classified, master_file_other_families, master_file_classified_families = flow_step_6(master_file)
@@ -197,6 +199,7 @@ def main():
     master_file_final = flow_step_10(master_file_final, manual_classifications)
     print('10 - master_file_final shape', master_file_final.shape)
     deployment(master_file_final)
+    master_file_final.to_csv('dbs/master_file_final.csv')
 
 
 # compute_current_stock_all_platforms_master_stock_matched_04_2020_prepared

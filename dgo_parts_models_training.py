@@ -4,17 +4,20 @@ import pandas as pd
 import sklearn as sk
 import time
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import auc, precision_score, confusion_matrix, make_scorer
+from sklearn.metrics import auc, precision_score, confusion_matrix, make_scorer, recall_score
 from modules.level_1_c_data_modelling import classification_model_training
 # Text Features
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.decomposition import TruncatedSVD
 from sklearn.linear_model import LogisticRegression
+import warnings
+import sklearn.exceptions
+warnings.filterwarnings("ignore", category=sklearn.exceptions.UndefinedMetricWarning)
 
 from collections import defaultdict, Counter
 
 gridsearch_parameters = {
-    'lr': [LogisticRegression, [{'C': np.logspace(-2, 2, 20), 'solver': ['liblinear', 'lbfgs', 'newton-cg'], 'max_iter': [1000], 'multi_class': ['ovr', 'multinomial']}]],
+    'lr': [LogisticRegression, [{'C': [0.01, 0.1, 1, 10, 100], 'solver': ['lbfgs', 'newton-cg'], 'max_iter': [2000], 'multi_class': ['ovr', 'multinomial']}]],
     # 'lr': [LogisticRegression, [{'max_iter': [500]}]],
 }
 
@@ -41,8 +44,8 @@ def model_training(ml_dataset, clf=None):
         # clf.fit(train_X, train_Y)
         # print("Fitting: --- %s seconds ---" % (time.time() - start_time))
 
-        scorer = make_scorer(precision_score, average='weighted')
-        classes, best_models, running_times = classification_model_training(['lr'], train_X, train_Y, gridsearch_parameters, 10, scorer, 2610)
+        scorer = make_scorer(recall_score, average='weighted')
+        classes, best_models, running_times = classification_model_training(['lr'], train_X, train_Y, gridsearch_parameters, 3, scorer, 2610)
         clf = best_models['lr']
         cm_flag = 1
 
@@ -57,9 +60,12 @@ def model_training(ml_dataset, clf=None):
         labels = [inv_target_map[x] for x in clf.classes_]
         df_cm_test = pd.DataFrame(cm, columns=labels, index=labels)
         test_y_ser = pd.Series(test_Y)
-        print('\n### Precision Score:', precision_score(test_y_ser, predictions_test_converted_classes, average='weighted'))
-        print('### Precision Score:', precision_score(test_y_ser, predictions_test_converted_classes, average='micro'))
-        print('### Precision Score:\n', precision_score(test_y_ser, predictions_test_converted_classes, average='macro'))
+        print('\n### Precision Score:', precision_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes)))
+        print('### Precision Score:', precision_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes)))
+        print('### Precision Score:\n', precision_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes)))
+        print('\n### Recall Score:', recall_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes)))
+        print('### Recall Score:', recall_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes)))
+        print('### Recall Score:\n', recall_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes)))
 
     predictions_train, probabilities_train, train_x_scored = model_prediction(clf, train_X, train, target_map, inv_target_map)
     predictions_train_converted_classes = predictions_train

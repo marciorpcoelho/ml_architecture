@@ -158,23 +158,6 @@ part_groups_desc_mapping = {
     'MINI_Bonus_Group_3': 'MINI - Acessórios + Jantes + Lifestyle',  # Acessórios + Jantes + Lifestyle
     'MINI_Bonus_Group_4': 'MINI - Pneus',   # Pneus
 }
-# pse_code_desc_mapping = {
-#     '0B': 'V.N. Gaia',
-#     '0I': 'P. Nações',
-#     '0C': 'S.M. Feira',
-#     '0H': 'Cascais',
-#     '0E': 'M.P. Azevedo',
-#     '0F': 'Maia',
-#     '0G': 'B. Roma',
-#     '0K': 'Faro',
-#     '0L': 'Portimão',
-#     '0N': 'Aveiro',
-#     # '0Q': 'Motorrad - Entrecampos',
-#     # '0J': 'Setúbal',
-#     # '0M': 'Coimbra',
-#     # '0O': 'Viseu',
-#     # '0P': 'Viseu - Colisão',
-# }
 
 pse_code_desc_mapping = {
     '15': 'V.N. Gaia',
@@ -194,7 +177,6 @@ pse_code_desc_mapping = {
     # '0P': 'Viseu - Colisão',
 }
 
-# pse_codes_groups = [['0B', '0H', '0C', '0N', '0G'], ['0I', '0E', '0K', '0L', '0F']]
 pse_code_groups = [['15', '47', '38', '39', '45'], ['44', '53', '48', '49', '67']]
 
 
@@ -292,28 +274,6 @@ purchases_query = '''
     FROM [BI_DW_History].[dbo].[PSE_parts_purchase] WITH (NOLOCK)  
     WHERE NLR_Code = '701' AND Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM') '''
 
-stock_query = '''
-    SELECT LTRIM(RTRIM(Part_Ref)) as Part_Ref, 
-        Part_Desc, 
-        Product_Group_DW, 
-        Quantity, 
-        PSE_Code, 
-        Record_Date, 
-        Stock_Age_Days as Last_Enter,  
-        Stock_Age2_Days as Last_Exit  
-    FROM [BI_CRP].[dbo].[PSE_Fact_BI_Parts_Stock_Month] WITH (NOLOCK)  
-    WHERE NLR_Code = '701' and Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  and Warehouse_Code <> -1  
-    union all  
-    SELECT LTRIM(RTRIM(Part_Ref)) as Part_Ref, 
-        Part_Desc, 
-        Product_Group_DW, Quantity, 
-        PSE_Code, 
-        Record_Date, 
-        Stock_Age_Days as Last_Enter, 
-        Stock_Age2_Days as Last_Exit  
-    FROM [BI_DW_History].[dbo].[PSE_Fact_BI_Parts_Stock_Month] WITH (NOLOCK)  
-    WHERE NLR_Code = '701' and Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  and Warehouse_Code <> -1 '''
-
 reg_query = '''
     SELECT Movement_Date,  
         Cost_Value,  
@@ -352,7 +312,7 @@ stock_history_query = '''
         PVP_1, 
         Sales_Price, 
         [Date]
-    FROM [DMS_MLG_01].[dbo].[DMS_CRP_01_SM_Parts_Stock]
+    FROM [DMS_MLG_01].[dbo].[DMS_CRP_04_SM_Parts_Stock]
       where  SO_Code in ({}) and NL_Company = '14' 
       and [Date] >= '{}' '''
 
