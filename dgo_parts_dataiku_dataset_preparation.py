@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import time
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
-from modules.level_1_b_data_processing import null_analysis
+from modules.level_1_e_deployment import sql_inject
 import level_2_pa_part_reference_options as options_file
 from dgo_parts_models_training import model_training
 import warnings
@@ -192,14 +192,14 @@ def main():
     print('7 - master_file_classified_families_filtered shape', master_file_classified_families_filtered.shape)
     master_file_other_families_filtered = flow_step_7(master_file_other_families)
     print('7 - master_file_other_families_filtered shape', master_file_other_families_filtered.shape)
-    master_file_final = flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified)
+    master_file_final, main_families_cm, other_families_cm = flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified)
     print('8 - master_file_final shape', master_file_final.shape)
     master_file_final = flow_step_9(master_file_final)
     print('9 - master_file_final shape', master_file_final.shape)
     master_file_final = flow_step_10(master_file_final, manual_classifications)
     print('10 - master_file_final shape', master_file_final.shape)
-    deployment(master_file_final)
     master_file_final.to_csv('dbs/master_file_final.csv')
+    deployment(master_file_final, main_families_cm, other_families_cm)
 
 
 # compute_current_stock_all_platforms_master_stock_matched_04_2020_prepared
@@ -348,7 +348,7 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])
     print(master_file_final.shape)
 
-    return master_file_final
+    return master_file_final, main_families_cm_test, other_families_cm_test
 
 
 def flow_step_9(df):
@@ -529,7 +529,29 @@ def probabilities_correction(df):
     return df
 
 
-def deployment(df):
+def deployment(df, main_families_cm, other_families_cm):
+    sql_upload(main_families_cm, 'BI_MLG', 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_1_Python')
+    sql_upload(other_families_cm, 'BI_MLG', 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2_Python')
+
+    df.rename(columns={'Client_Id': 'Client_ID', 'Part_Desc_concat': 'Part_Description', 'Average_Cost_avg': 'Part_Cost', 'PVP_1_avg': 'Part_PVP', 'prediction': 'Classification', 'Max_Prob': 'Classification_Prob'}, inplace=True)
+    df['Classification_Flag'] = 0
+    df['Classification_Prob'] = df['Classification_Prob'].round(2)
+    df['Part_Cost'] = df['Part_Cost'].round(2)
+    df['Part_PVP'] = df['Part_PVP'].round(2)
+    df = df.astype({'Client_ID': 'str', 'Part_Cost': 'str', 'Part_PVP': 'str', 'Classification_Prob': 'str'})
+    df['Part_Description'] = df['Part_Description'].fillna("")
+    df.dropna(subset=['Classification'], axis=0, inplace=True)
+    sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], 'PSE_Fact_PA_Parts_Classification_Python', options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
+
+    return
+
+
+def sql_upload(df, db, view):
+    df['Totals'] = df.sum(axis=1)
+    df.index.rename('Actual', inplace=True)
+    df.reset_index(inplace=True)
+
+    sql_inject(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
 
     return
 
