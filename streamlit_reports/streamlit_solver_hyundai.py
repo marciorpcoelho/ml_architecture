@@ -318,7 +318,7 @@ def quantity_processing(df, sel_order_size, proposal_col, stock_col, sel_min_num
     stock_total = df[stock_col].sum()
 
     if proposals_total >= sel_order_size:
-        st.error('Aviso: Existem mais ou igual número de propostas ({}) do que viaturas a encomendar ({}). Por favor alterar alguma dos parâmetros como nº mínimo de configurações a mostrar, valor mínimo de viaturas vendidas ou cliente.'.format(int(proposals_total), int(sel_order_size)))
+        st.error('Aviso: Existem mais ou igual número de propostas ({}) do que viaturas a encomendar ({}). Por favor alterar algum dos parâmetros como nº mínimo de configurações a mostrar, valor mínimo de viaturas vendidas ou cliente.'.format(int(proposals_total), int(sel_order_size)))
         return pd.DataFrame()
 
     sel_order_size = sel_order_size - proposals_total

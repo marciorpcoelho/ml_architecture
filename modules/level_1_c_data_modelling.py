@@ -33,7 +33,7 @@ class ClassificationTraining(object):
             self.clf = clf()
 
     def grid_search(self, parameters, k, score):
-        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, iid=True, n_jobs=level_0_performance_report.cpu_count(), error_score=np.nan)
+        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, iid=True, n_jobs=8, error_score=np.nan)
 
     def clf_grid_fit(self, x, y):
         self.grid.fit(x, y)
