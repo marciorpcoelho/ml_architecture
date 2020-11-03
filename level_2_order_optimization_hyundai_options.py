@@ -25,6 +25,7 @@ PWD = os.getenv('PWD')
 
 project_id = 2406
 update_frequency_days = 0
+api_backend_loc = 'optimizations/vhe_hyundai_honda/'
 # stock_days_threshold = 150  # DaysInStock_Global
 stock_days_threshold = [90, 120, 150, 180, 270, 365]
 margin_threshold = "nan"  # Currently there is no threshold;

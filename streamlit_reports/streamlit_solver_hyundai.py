@@ -1,4 +1,6 @@
 import streamlit as st
+import requests
+import json
 import logging
 import pandas as pd
 import numpy as np
@@ -14,6 +16,7 @@ sys.path.insert(1, base_path)
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment
 from modules.level_0_performance_report import log_record, error_upload
+from modules.level_0_api_endpoint import api_endpoint_ip
 import level_2_order_optimization_hyundai_options as options_file
 import modules.SessionState as SessionState
 from level_2_order_optimization_hyundai_options import configuration_parameters, client_lvl_cols, client_lvl_cols_renamed
@@ -21,6 +24,7 @@ from level_2_order_optimization_hyundai_options import configuration_parameters,
 st.beta_set_page_config(page_title='Sugestão de Encomenda - Importador')
 
 min_number_of_configuration = 5
+api_backend = api_endpoint_ip + options_file.api_backend_loc
 
 saved_solutions_pairs_query = ' SELECT DISTINCT PT_PDB_Model_Desc, ' + ', '.join(client_lvl_cols) + ', [Date] ' \
                                 'FROM [BI_DTR].[dbo].[VHE_Fact_MLG_OrderOptimization_Solver_Optimization_DTR] ' \
@@ -52,6 +56,8 @@ session_state = SessionState.get(run_id=0, overwrite_button_pressed_flag=0, save
 
 def main():
     data = get_data(options_file)
+
+    st.write(api_backend)
 
     saved_suggestions_dict, saved_suggestions_df = get_suggestions_dict(options_file, client_lvl_cols)
     parameters_values, parameter_restriction_vectors = [], []
@@ -117,6 +123,7 @@ def main():
                 stock_col = 'Stock_Count_VDC'
 
             session_state.order_suggestion_button_pressed_flag = 1
+            # status, total_value_optimized, selection, selection_configuration_ids = solver(data_filtered, parameter_restriction_vectors, sel_order_size)
             status, total_value_optimized, selection, selection_configuration_ids = solver(data_filtered, parameter_restriction_vectors, sel_order_size)
             data_filtered['Quantity'] = selection
 
@@ -272,26 +279,41 @@ def filter_data(dataset, value_filters_list, col_filters_list):
     return data_filtered
 
 
+# def solver(dataset, parameter_restriction_vectors, sel_order_size):
+#     parameter_restriction = []
+#
+#     unique_ids_count = dataset['ML_VehicleData_Code'].nunique()
+#     unique_ids = dataset['ML_VehicleData_Code'].unique()
+#
+#     scores_values = [dataset[dataset['ML_VehicleData_Code'] == x]['Average_Score_Euros'].head(1).values[0] for x in unique_ids]  # uniques() command doesn't work as intended because there are configurations (Configuration IDs) with repeated average score
+#
+#     selection = cp.Variable(unique_ids_count, integer=True)
+#
+#     order_size_restriction = cp.sum(selection) <= sel_order_size
+#     total_value = selection * scores_values
+#
+#     problem = cp.Problem(cp.Maximize(total_value), [selection >= 0, selection <= 100,
+#                                                     order_size_restriction,
+#                                                     ] + parameter_restriction)
+#
+#     result = problem.solve(solver=cp.GLPK_MI, verbose=False, qcp=True)
+#
+#     return problem.status, result, selection.value, unique_ids
+
+
 def solver(dataset, parameter_restriction_vectors, sel_order_size):
-    parameter_restriction = []
 
-    unique_ids_count = dataset['ML_VehicleData_Code'].nunique()
-    unique_ids = dataset['ML_VehicleData_Code'].unique()
+    data = {
+        'df_solve': dataset.to_json(orient='records'),
+        'parameter_restriction_vectors': parameter_restriction_vectors,
+        'sel_order_size': sel_order_size
+    }
 
-    scores_values = [dataset[dataset['ML_VehicleData_Code'] == x]['Average_Score_Euros'].head(1).values[0] for x in unique_ids]  # uniques() command doesn't work as intended because there are configurations (Configuration IDs) with repeated average score
+    result = requests.get(api_backend, data=json.dumps(data))
 
-    selection = cp.Variable(unique_ids_count, integer=True)
+    result_dict = json.loads(result.text)
 
-    order_size_restriction = cp.sum(selection) <= sel_order_size
-    total_value = selection * scores_values
-
-    problem = cp.Problem(cp.Maximize(total_value), [selection >= 0, selection <= 100,
-                                                    order_size_restriction,
-                                                    ] + parameter_restriction)
-
-    result = problem.solve(solver=cp.GLPK_MI, verbose=False, qcp=True)
-
-    return problem.status, result, selection.value, unique_ids
+    return result_dict['status'], result_dict['optimization_total_sum'], result_dict['selection'], result_dict['unique_ids']
 
 
 def get_parameter_positions(df, parameter_name, parameter_values_limit):
@@ -406,7 +428,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)

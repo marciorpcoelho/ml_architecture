@@ -5,6 +5,7 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 read_dotenv(base_path + dotenv_path)
 
 update_frequency_days = 0
+api_backend_loc = 'optimizations/apv_parts_baviera/'
 
 if 'nt' in os.name:
     DSN = os.getenv('DSN_Prd')

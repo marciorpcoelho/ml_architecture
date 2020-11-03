@@ -3,11 +3,13 @@ import pandas as pd
 import numpy as np
 import cvxpy as cp
 import os
+import json
 import time
 import base64
 import sys
 import datetime
 from traceback import format_exc
+import requests
 from streamlit.script_runner import RerunException
 from streamlit.script_request_queue import RerunData
 
@@ -15,6 +17,7 @@ base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
 sys.path.insert(1, base_path)
 import level_2_order_optimization_apv_baviera_options as options_file
 from modules.level_0_performance_report import log_record, error_upload
+from modules.level_0_api_endpoint import api_endpoint_ip
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment
 import modules.SessionState as SessionState
@@ -40,6 +43,8 @@ hide_menu_style = """
         </style>
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+api_backend = api_endpoint_ip + options_file.api_backend_loc
 
 url_hyperlink = '''
     <a href= "{}" > <p style="text-align:right"> Documentação </p></a>
@@ -140,6 +145,7 @@ def main():
 
         if session_state.dtss_goal != dtss_goal or session_state.max_part_number != max_part_number or session_state.minimum_cost_or_pvp != minimum_cost_or_pvp or session_state.sel_group != sel_group or session_state.sel_local != sel_local:
             try:
+                # session_state.total_value_optimized, session_state.df_solution = solver(data_filtered, sel_local, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
                 session_state.total_value_optimized, session_state.df_solution = solver(data_filtered, sel_local, sel_group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric)
                 session_state.dtss_goal, session_state.max_part_number, session_state.minimum_cost_or_pvp, session_state.sel_group, session_state.sel_local = dtss_goal, max_part_number, minimum_cost_or_pvp, sel_group, sel_local
 
@@ -218,46 +224,71 @@ def file_export_2(df, file_name):
 
 
 def solver(df_solve, sel_local, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
-    df_solution = pd.DataFrame()
-    df_solve = df_solve[df_solve[sel_metric] <= dtss_goal]
 
-    if minimum_cost_or_pvp:
-        df_solve = df_solve[df_solve[goal_type] >= minimum_cost_or_pvp]
+    data = {
+        'name': 'apv_optimization_test',
+        'df_solve': df_solve.to_json(orient='records'),
+        'sel_local': sel_local,
+        'group': group,
+        'goal_value': goal_value,
+        'goal_type': goal_type,
+        'non_goal_type': non_goal_type,
+        'dtss_goal': dtss_goal,
+        'max_part_number': max_part_number,
+        'minimum_cost_or_pvp': minimum_cost_or_pvp,
+        'sel_metric': sel_metric,
+    }
 
-    unique_parts = df_solve['Part_Ref'].unique()
-    descriptions = [x for x in df_solve['Part_Desc']]
-    df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
+    result = requests.get(api_backend, data=json.dumps(data))
 
-    n_size = df_solve['Part_Ref'].nunique()  # Number of different parts
-    if not n_size:
-        return None
+    result_dict = json.loads(result.text)
 
-    values = np.array(df_solve[goal_type].values.tolist())  # Costs/Sale prices for each reference, info#1
-    other_values = df_solve[non_goal_type].values.tolist()
-    dtss = np.array(df_solve[sel_metric].values.tolist())  # Days to Sell of each reference, info#2
+    df_solution = solution_dataframe_creation(data['goal_type'], data['non_goal_type'], result_dict['selection'], result_dict['unique_parts'], result_dict['descriptions'], result_dict['values'], result_dict['other_values'], result_dict['dtss'], result_dict['above_goal_flag'], data['group'], data['sel_local'])
 
-    selection = cp.Variable(n_size, integer=True)
+    return result_dict['optimization_total_sum'], df_solution
 
-    dtss_constraint = cp.multiply(selection.T, dtss)
 
-    total_value = selection * values
-
-    if max_part_number:
-        problem_testing_2 = cp.Problem(cp.Maximize(total_value), [dtss_constraint <= dtss_goal, selection >= 0, selection <= 100, cp.sum(selection) <= max_part_number])
-    else:
-        problem_testing_2 = cp.Problem(cp.Maximize(total_value), [dtss_constraint <= dtss_goal, selection >= 0, selection <= 100])
-
-    result = problem_testing_2.solve(solver=cp.GLPK_MI, verbose=False, parallel=True)
-
-    if selection.value is not None:
-        if result >= goal_value:
-            above_goal_flag = 1
-        else:
-            above_goal_flag = 0
-
-        df_solution = solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, descriptions, values, other_values, dtss, above_goal_flag, group, sel_local)
-
-    return result, df_solution
+# def solver(df_solve, sel_local, group, goal_value, goal_type, non_goal_type, dtss_goal, max_part_number, minimum_cost_or_pvp, sel_metric):
+#     df_solution = pd.DataFrame()
+#     df_solve = df_solve[df_solve[sel_metric] <= dtss_goal]
+#
+#     if minimum_cost_or_pvp:
+#         df_solve = df_solve[df_solve[goal_type] >= minimum_cost_or_pvp]
+#
+#     unique_parts = df_solve['Part_Ref'].unique()
+#     descriptions = [x for x in df_solve['Part_Desc']]
+#     df_solve = df_solve[df_solve['Part_Ref'].isin(unique_parts)]
+#
+#     n_size = df_solve['Part_Ref'].nunique()  # Number of different parts
+#     if not n_size:
+#         return None
+#
+#     values = np.array(df_solve[goal_type].values.tolist())  # Costs/Sale prices for each reference, info#1
+#     other_values = df_solve[non_goal_type].values.tolist()
+#     dtss = np.array(df_solve[sel_metric].values.tolist())  # Days to Sell of each reference, info#2
+#
+#     selection = cp.Variable(n_size, integer=True)
+#
+#     dtss_constraint = cp.multiply(selection.T, dtss)
+#
+#     total_value = selection * values
+#
+#     if max_part_number:
+#         problem_testing_2 = cp.Problem(cp.Maximize(total_value), [dtss_constraint <= dtss_goal, selection >= 0, selection <= 100, cp.sum(selection) <= max_part_number])
+#     else:
+#         problem_testing_2 = cp.Problem(cp.Maximize(total_value), [dtss_constraint <= dtss_goal, selection >= 0, selection <= 100])
+#
+#     result = problem_testing_2.solve(solver=cp.GLPK_MI, verbose=False, parallel=True)
+#
+#     if selection.value is not None:
+#         if result >= goal_value:
+#             above_goal_flag = 1
+#         else:
+#             above_goal_flag = 0
+#
+#         df_solution = solution_dataframe_creation(goal_type, non_goal_type, selection, unique_parts, descriptions, values, other_values, dtss, above_goal_flag, group, sel_local)
+#
+#     return result, df_solution
 
 
 def solution_saving(df_solution, group_name, group_name_original):
@@ -281,11 +312,11 @@ def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_part
 
     df_solution['Part_Ref'] = [part for part in unique_parts]
     df_solution['Part_Desc'] = [desc for desc in descriptions]
-    df_solution['Quantity'] = [qty for qty in selection.value]
+    df_solution['Quantity'] = [qty for qty in selection]
     df_solution[goal_type] = [value for value in values]
     df_solution[non_goal_type] = [value for value in other_values]
     df_solution['Days_To_Sell'] = [dts for dts in dtss]
-    df_solution['DtS_Per_Qty'] = [qty * dts for qty, dts in zip(selection.value, dtss)]
+    df_solution['DtS_Per_Qty'] = [qty * dts for qty, dts in zip(selection, dtss)]
     df_solution['Above_Goal_Flag'] = [above_goal_flag] * len(unique_parts)
     df_solution['Part_Ref_Group_Desc'] = [group_name] * len(unique_parts)
     df_solution['PSE_Code'] = sel_local
@@ -327,7 +358,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
