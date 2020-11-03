@@ -22,7 +22,7 @@ import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_e_deployment as level_1_e_deployment
 import modules.SessionState as SessionState
 
-st.beta_set_page_config(page_title='Sugestão Encomenda de Peças - Baviera - APV')
+st.set_page_config(page_title='Sugestão Encomenda de Peças - Baviera - APV')
 
 saved_solutions_pairs_query = ''' SELECT DISTINCT Part_Ref_Group_Desc, [Date]
       FROM [BI_MLG].[dbo].[{}]

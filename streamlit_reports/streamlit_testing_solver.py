@@ -13,7 +13,7 @@ import modules.level_1_e_deployment as level_1_e_deployment
 import level_2_optionals_baviera_options as options_file
 import modules.SessionState as sessionstate
 
-st.beta_set_page_config(page_title='Sugestão de Encomenda - Baviera')
+st.set_page_config(page_title='Sugestão de Encomenda - Baviera')
 
 """
 # Sugestão de Encomenda Baviera - DEMO

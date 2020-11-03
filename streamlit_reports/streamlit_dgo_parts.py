@@ -20,7 +20,7 @@ import modules.level_1_e_deployment as level_1_e_deployment
 from modules.level_0_performance_report import log_record, error_upload
 import modules.SessionState as SessionState
 
-st.beta_set_page_config(page_title='Classificação de Peças - DGO')
+st.set_page_config(page_title='Classificação de Peças - DGO')
 
 '''
 ## Aplicação de Apoio à Classificação de Famílias de Peças - DGO

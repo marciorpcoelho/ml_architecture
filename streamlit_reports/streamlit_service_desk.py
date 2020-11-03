@@ -16,7 +16,7 @@ from modules.level_0_performance_report import log_record, error_upload
 import modules.SessionState as SessionState
 from plotly import graph_objs as go
 
-st.beta_set_page_config(page_title='Classificação de Pedidos - Service Desk Rigor')
+st.set_page_config(page_title='Classificação de Pedidos - Service Desk Rigor')
 
 session_state = SessionState.get(run_id=0, save_button_pressed_flag=0, overwrite_button_pressed_flag=0, update_final_table_button_pressed_flag=0, first_run=1)
 

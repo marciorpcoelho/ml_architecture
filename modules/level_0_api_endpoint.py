@@ -11,7 +11,7 @@ app = FastAPI(
     version='0.1'
 )
 
-api_endpoint_ip = 'http://10.10.10.70:8000/'
+api_endpoint_ip = 'http://10.10.10.170:8000/'
 
 
 class OptimizationDataIn(BaseModel):
@@ -38,7 +38,6 @@ class OptimizationDataHyundaiHondaIn(BaseModel):
 
 
 class OptimizationDataHyundaiHondaOut(BaseModel):
-    # problem.status, result, selection.value, unique_ids
     selection: list
     status: str
     unique_ids: list
@@ -116,23 +115,19 @@ def solver(item: OptimizationDataHyundaiHondaIn):
 
     unique_ids_count = dataset['ML_VehicleData_Code'].nunique()
     unique_ids = dataset['ML_VehicleData_Code'].unique()
-    print([ref for ref in unique_ids])
-    print(type([ref for ref in unique_ids]))
 
     scores_values = [dataset[dataset['ML_VehicleData_Code'] == x]['Average_Score_Euros'].head(1).values[0] for x in unique_ids]  # uniques() command doesn't work as intended because there are configurations (Configuration IDs) with repeated average score
 
     selection = cp.Variable(unique_ids_count, integer=True)
 
     order_size_restriction = cp.sum(selection) <= item.sel_order_size
-    total_value = selection @ scores_values
+    total_value = selection @ scores_values  # Changed in CVXPY 1.1
 
     problem = cp.Problem(cp.Maximize(total_value), [selection >= 0, selection <= 100,
                                                     order_size_restriction,
                                                     ] + parameter_restriction)
 
     result = problem.solve(solver=cp.GLPK_MI, verbose=False, qcp=True)
-
-    print(type(result))
 
     response = {
         'selection': [qty for qty in selection.value],

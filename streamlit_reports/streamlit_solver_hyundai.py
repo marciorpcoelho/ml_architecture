@@ -21,7 +21,7 @@ import level_2_order_optimization_hyundai_options as options_file
 import modules.SessionState as SessionState
 from level_2_order_optimization_hyundai_options import configuration_parameters, client_lvl_cols, client_lvl_cols_renamed
 
-st.beta_set_page_config(page_title='Sugestão de Encomenda - Importador')
+st.set_page_config(page_title='Sugestão de Encomenda - Importador')
 
 min_number_of_configuration = 5
 api_backend = api_endpoint_ip + options_file.api_backend_loc
@@ -56,8 +56,6 @@ session_state = SessionState.get(run_id=0, overwrite_button_pressed_flag=0, save
 
 def main():
     data = get_data(options_file)
-
-    st.write(api_backend)
 
     saved_suggestions_dict, saved_suggestions_df = get_suggestions_dict(options_file, client_lvl_cols)
     parameters_values, parameter_restriction_vectors = [], []

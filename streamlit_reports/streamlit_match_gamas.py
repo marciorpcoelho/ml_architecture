@@ -17,7 +17,7 @@ import modules.level_1_e_deployment as level_1_e_deployment
 from modules.level_0_performance_report import log_record, error_upload
 from plotly import graph_objs as go
 
-st.beta_set_page_config(page_title='Correspondência de Gamas - Importador')
+st.set_page_config(page_title='Correspondência de Gamas - Importador')
 
 hide_menu_style = """
         <style>
