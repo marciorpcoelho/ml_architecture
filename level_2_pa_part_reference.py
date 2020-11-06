@@ -1,13 +1,22 @@
 import re
+import sys
 import time
+import logging
 import numpy as np
 import pandas as pd
+from traceback import format_exc
 from datetime import datetime, timedelta
 import level_2_pa_part_reference_options as options_file
 from level_2_pa_part_reference_options import regex_dict
 from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df_specified_query, project_units_count_checkup, sql_retrieve_df
-from modules.level_1_b_data_processing import lowercase_column_conversion, literal_removal, string_punctuation_removal, master_file_processing, regex_string_replacement, brand_code_removal, string_volkswagen_preparation, value_substitution, lemmatisation, stemming, unidecode_function, string_digit_removal, word_frequency, words_dataframe_creation
+from modules.level_1_b_data_processing import master_file_processing, regex_string_replacement, brand_code_removal, string_volkswagen_preparation
 from modules.level_1_e_deployment import save_csv, time_tags, sql_inject
+from modules.level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=options_file.log_files['full_log'], filemode='a')
+logging.Logger('errors')
+# logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))  # Allows the stdout to be seen in the console
+logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))  # Allows the stderr to be seen in the console
 
 local_flag = 1
 master_file_processing_flag = 0
@@ -19,6 +28,8 @@ part_desc_col = 'Part_Desc_PT'
 
 
 def main():
+    log_record('Projeto: Classificação de Peças - DGO', options_file.project_id)
+
     if master_file_processing_flag:
         master_file_processing(options_file.master_files_to_convert)
 
@@ -28,6 +39,8 @@ def main():
     platforms_stock, dim_product_group, dim_clients = data_acquisition(current_platforms, 'dbs/dim_product_group_section_A.csv', 'dbs/dim_clients_section_A.csv', previous_day, sel_month)
     current_stock_master_file = master_file_reference_match(platforms_stock, previous_day, dim_clients)
     deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
+
+    log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
 def deployment(df, db, view):
@@ -499,7 +512,7 @@ def master_file_reference_match(platforms_stock, previous_day, dim_clients):
         # current_stock_master_file = value_substitution(current_stock_master_file, non_null_column='Part_Desc', null_column='Part_Desc_PT')  # For references which didn't match in the Master Files, use the DW Description;
         current_stock_master_file.to_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(previous_day), index=False)
 
-    previous_master_file = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming={'Client_Id': 'Client_ID'})
+    previous_master_file = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
 
     df_merged = pd.concat([current_stock_master_file, previous_master_file]).drop('Last_Sell_Date', axis=1)
     df_merged = df_merged.drop_duplicates()
@@ -585,5 +598,11 @@ def data_acquisition(platforms, dim_product_group_file, dim_clients_file, previo
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as exception:
+        project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
+        log_record(exception_desc, project_identifier, flag=2)
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
+        log_record('Falhou - Projeto: {}.'.format(project_dict[project_identifier]), project_identifier)
 

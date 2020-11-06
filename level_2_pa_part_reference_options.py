@@ -481,3 +481,7 @@ stop_words_list = [
     'tínhamos', 'tinham', 'tive', 'teve', 'tivemos', 'tiveram', 'tivera', 'tivéramos', 'tenha', 'tenhamos', 'tenham', 'tivesse', 'tivéssemos', 'tivessem', 'tiver', 'tivermos', 'tiverem', 'terei', 'terá',
     'teremos', 'terão', 'teria', 'teríamos', 'teriam', '2012', 'del', 'con', 'esquerdo', 'direito', 'frente', 'tras', 'kit', 'jogo'
 ]
+
+log_files = {
+    'full_log': 'logs/dgo_parts.txt'
+}

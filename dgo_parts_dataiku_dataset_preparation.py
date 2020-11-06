@@ -169,7 +169,7 @@ def main():
     dgo_family_10_loc = 'dbs/dgo_familia_10_prepared.csv'
     dgo_family_13_loc = 'dbs/dgo_familia_13_prepared.csv'
 
-    master_file = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming={'Client_Id': 'Client_ID'})
+    master_file = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
     master_file['Product_Group_DW'] = master_file['Product_Group_DW'].astype(str)
 
     master_file = flow_step_2(master_file)
@@ -178,10 +178,6 @@ def main():
     print('3 - master_file shape', master_file.shape)
     master_file = flow_step_4(master_file)
     print('4 - master_file shape', master_file.shape)
-
-    # master_file = pd.read_csv('dbs/df_after_flow_step_4.csv', index_col=0)
-    # master_file_temp_after_step_4.rename(columns={'PVP_1': 'PVP_1_avg', 'Part_Desc': 'Part_Desc_concat', 'Average_Cost': 'Average_Cost_avg', 'Part_Desc_PT': 'Part_Desc_PT_concat', 'PLR_Account': 'PLR_Account_first'}, inplace=True)
-
     master_file, manual_classifications = flow_step_5(master_file, [dgo_family_10_loc, dgo_family_13_loc])
     print('5 - master_file shape', master_file.shape)
     master_file_non_classified, master_file_other_families, master_file_classified_families = flow_step_6(master_file)
@@ -438,9 +434,7 @@ def get_dgo_manual_classifications(files_loc):
 
 
 def get_fact_pa_classifications():
-    # ToDo: get this data from the SQL Table
-
-    pse_fact_pa_parts_classification_refs = pd.read_csv('dbs/pse_fact_pa_parts_classification_refs_20201007.csv', usecols=['Part_Ref', 'Old_Product_Group_DW', 'New_Product_Group_DW'], delimiter=';')
+    pse_fact_pa_parts_classification_refs = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_refs'], options_file, columns=['Part_Ref', 'Old_Product_Group_DW', 'New_Product_Group_DW'])
 
     return pse_fact_pa_parts_classification_refs
 
