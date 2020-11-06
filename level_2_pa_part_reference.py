@@ -6,6 +6,7 @@ import logging
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from datetime import datetime, timedelta
 from traceback import format_exc
 from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.stem.porter import PorterStemmer
@@ -43,19 +44,12 @@ def main():
     if master_file_processing_flag:
         master_file_processing(options_file.master_files_to_convert)
 
-    # for sel_month in ['202001', '202002', '202003', '202004', '202005', '202006', '202007', '202008']:
-    #     time_tag_date = sel_month
-    #     platforms_stock, dim_product_group, dim_clients = data_acquisition(current_platforms, 'dbs/dim_product_group_section_A.csv', 'dbs/dim_clients_section_A.csv', sel_month)
-    #     platforms_stock, current_stock_master_file = master_file_reference_match(platforms_stock, time_tag_date, dim_clients, sel_month)
+    sel_month, _ = time_tags(format_date='%Y%m')
+    previous_day = (datetime.today() - timedelta(days=1)).strftime('%Y%m%d')
 
-    current_stock_master_file = pd.read_csv('dbs/part_ref_master_file_matched.csv', index_col=0)
-    print(current_stock_master_file.head())
-    print(current_stock_master_file.shape)
-    # deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
-
-    sys.exit()
-    data_processing(platforms_stock, dim_product_group, dim_clients)
-    data_modelling(keywords_per_parts_family_dict)
+    platforms_stock, dim_product_group, dim_clients = data_acquisition(current_platforms, 'dbs/dim_product_group_section_A.csv', 'dbs/dim_clients_section_A.csv', previous_day, sel_month)
+    current_stock_master_file = master_file_reference_match(platforms_stock, previous_day, dim_clients)
+    deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
 
 def deployment(df, db, view):
@@ -69,122 +63,11 @@ def deployment(df, db, view):
         sql_inject(df, options_file.DSN_MLG, db, view, options_file, options_file.sel_cols, truncate=1, check_date=1)
 
 
-def data_modelling(keyword_dictionary):
-    train_dataset = pd.concat([pd.read_csv('output/{}_train_dataset.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
-    test_dataset = pd.concat([pd.read_csv('output/{}_test_dataset.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
-
-    matched_keywords_per_reference_dict = {}
-    non_matched_keywords = []
+def master_file_reference_match(platforms_stock, previous_day, dim_clients):
 
     try:
-        test_dataset_words_eval = pd.read_csv('output/test_dataset_top_words_parts_reference_project.csv', index_col='Part_Ref')
-        print('Test Datasets Keywords Found...')
-    except FileNotFoundError:
-        print('Evaluation Test Dataset Keywords...')
+        current_stock_master_file = read_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(previous_day))
 
-        _, top_words_ticket_frequency = word_frequency(train_dataset, unit_col='Part_Ref', description_col=part_desc_col)
-        test_dataset_words_eval, _ = words_dataframe_creation(test_dataset, top_words_ticket_frequency, unit_col='Part_Ref', description_col=part_desc_col)
-        test_dataset_words_eval['New_Product_Group_DW'] = 'Não Definido'
-
-        # print('top_words_ticket_frequency \n', top_words_ticket_frequency)
-        # print('top_words_ticket_frequency number of words \n', len(top_words_ticket_frequency.keys()))
-        # print('df_top_words \n', df_top_words)
-        # print('df_top_words shape \n', df_top_words.shape)
-
-        test_dataset_words_eval.to_csv('output/test_dataset_top_words_parts_reference_project.csv')
-
-    # test_dataset_words_eval = test_dataset_words_eval.loc[test_dataset_words_eval.index == 'OP13432674', :]
-
-    for product_dw_label in keyword_dictionary.keys():
-        rank = 0
-        for keywords in keyword_dictionary[product_dw_label]:
-
-            try:
-                rank += 1
-                n_gram_level = keywords.count(' ')
-                if n_gram_level:
-                    tokenized_ngram = nltk.word_tokenize(keywords)
-                    if n_gram_level == 2:  # n-grams with n == 3
-                        df_mask = (test_dataset_words_eval[tokenized_ngram[0]] == 1) & (test_dataset_words_eval[tokenized_ngram[1]] == 1) & (test_dataset_words_eval[tokenized_ngram[2]] == 1)
-                    elif n_gram_level == 1:   # n-grams with n == 2
-                        df_mask = (test_dataset_words_eval[tokenized_ngram[0]] == 1) & (test_dataset_words_eval[tokenized_ngram[1]] == 1)
-                else:  # n-grams with n == 1
-                    df_mask = test_dataset_words_eval[keywords] == 1
-
-                # test_dataset_words_eval.loc[df_mask, 'New_Product_Group_DW'] = product_dw_label
-                matched_keywords_per_reference_dict = request_matches(product_dw_label, keywords, rank, list(test_dataset_words_eval.loc[df_mask, 'New_Product_Group_DW'].index), matched_keywords_per_reference_dict)
-            except KeyError:
-                non_matched_keywords.append(keywords)
-                # print('Palavra chave não encontrada: {}'.format(keywords))
-                continue
-
-    # print(matched_keywords_per_reference_dict)
-    # print(len(matched_keywords_per_reference_dict.keys()))
-    test_dataset_words_eval = label_assignment(test_dataset_words_eval, matched_keywords_per_reference_dict)
-    # print('test_dataset_words_eval value counts \n', test_dataset_words_eval['New_Product_Group_DW'].value_counts())
-    # print(test_dataset_words_eval.loc[test_dataset_words_eval['New_Product_Group_DW'] == 'Não Definido', :].index)
-
-    test_dataset.sort_values(by='Part_Ref', inplace=True)
-    test_dataset_words_eval.sort_index(inplace=True)
-
-    results = [1 if x == y else 0 for (x, y) in zip(test_dataset['Product_Group_DW'].values, test_dataset_words_eval['New_Product_Group_DW'].values)]
-
-    correctly_classified = np.sum(results)
-    total_classifications = len(results)
-    print('Non Matched Keywords: \n{}'.format(non_matched_keywords))
-
-    print('Correctly Labeled: {}'.format(correctly_classified))
-    print('Incorrectly Labeled: {}'.format(total_classifications - correctly_classified))
-    print('% Correctly Labeled: {:.2f}'.format(correctly_classified / total_classifications * 100))
-
-    return
-
-
-def label_assignment(df, keywords_matched_per_reference_dict):
-
-    for reference, values in zip(keywords_matched_per_reference_dict.keys(), keywords_matched_per_reference_dict.values()):
-        product_groups = [x[0] for x in values]
-        product_groups_rank = [x[1] for x in values]
-
-        occurrence_count = Counter(product_groups)
-
-        # Approach 1 - Frequency > Ranking
-        if len(occurrence_count) > 1:  # More than one Product_Group_DW matched
-            if occurrence_count.most_common(2)[0][1] == occurrence_count.most_common(2)[1][1]:  # When the top 2 Product_Group_DW are tied in terms frequency
-                tied_frequency = occurrence_count.most_common()[0][1]  # Get the frequency for the tied product_group_dw
-                tied_product_groups = [x[0] for x in occurrence_count.most_common() if x[1] == tied_frequency]  # select all product_group_dw with the same frequency, as there might be more than 2
-
-                tied_product_groups_ranks = product_groups_rank[0:len(tied_product_groups)]  # get the ranks of the tied product_groups
-                highest_ranked_product_group_idx = tied_product_groups_ranks.index(min(tied_product_groups_ranks))  # get the index for the highest rank (lowest value)
-                highest_ranked_product_group = tied_product_groups[highest_ranked_product_group_idx]  # get the product_group_dw with the highest rank (lowest value)
-
-                product_group_dw = highest_ranked_product_group
-            else:
-                product_group_dw = occurrence_count.most_common(1)[0][0]
-        else:
-            product_group_dw = occurrence_count.most_common(1)[0][0]
-
-        # print('reference {}, product_group_dw {}, matched {}'.format(reference, product_group_dw, keywords_matched_per_reference_dict[reference]))
-        df.loc[df.index == reference, 'New_Product_Group_DW'] = product_group_dw
-
-    return df
-
-
-def request_matches(label, keywords, rank, requests_list, dictionary):
-
-    for request in requests_list:
-        try:
-            dictionary[request].append((label, rank))
-        except KeyError:
-            dictionary[request] = [(label, rank)]
-
-    return dictionary
-
-
-def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, sel_month):
-
-    try:
-        current_stock_master_file = read_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(time_tag_date_in))
         print('Descriptions already matched from brand master files...')
     except FileNotFoundError:
         # current_stock_master_file = pd.concat([pd.read_csv('dbs/df_{}_current_stock_unique_202002_section_B_step_2.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
@@ -243,7 +126,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'nissan':
                         print('### NISSAN - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -286,7 +169,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'seat':
                         print('### SEAT - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -311,7 +194,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'peugeot':
                         print('### PEUGEOT - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -338,7 +221,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'citroen':
                         print('### CITROEN - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -367,7 +250,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'opel':
                         print('### OPEL - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -395,7 +278,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'chevrolet':
                         print('### CHEVROLET - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -421,7 +304,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     # if master_file_brand == 'audi':
                     #     print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -449,7 +332,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                     #     # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                     #     print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                     #     print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                    #     non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                    #     non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'volkswagen' or master_file_brand == 'audi':
                         if current_stock_master_file_filtered.shape[0]:
@@ -506,7 +389,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                             # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                             print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                             print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                            non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                            non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'skoda':
                         print('### SKODA - {} Refs ###'.format(current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -532,7 +415,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'mercedes':
                         print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -571,7 +454,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'bmw':
                         print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -597,7 +480,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                     if master_file_brand == 'ford':
                         print('### {} - {} Refs ###'.format(master_file_brand, current_stock_master_file_filtered['Part_Ref'].nunique()))
@@ -623,7 +506,7 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
                         # print('Different Descs: {}, Total Matched Desc: {}, Different Desc (%): {:.2f}'.format(matched_df_brand['Part_Desc_Comparison'].sum(), matched_df_brand.shape, matched_df_brand['Part_Desc_Comparison'].sum() / matched_df_brand.shape[0] * 100))
                         print('{} - Matched: {}'.format(master_file_brand, matched_df_brand['Part_Ref'].nunique()))
                         print('{} - Non Matched: {}'.format(master_file_brand, non_matched_dfs['Part_Ref'].nunique()))
-                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, time_tag_date_in))
+                        non_matched_dfs.to_csv('dbs/non_matched_{}_{}.csv'.format(master_file_brand, previous_day))
 
                 else:
                     print('No data found for the Brand Code(s): {}'.format(brand_codes_list))
@@ -636,10 +519,16 @@ def master_file_reference_match(platforms_stock, time_tag_date_in, dim_clients, 
 
         current_stock_master_file['Part_Desc_Merged'] = current_stock_master_file['Part_Desc'].fillna('') + ' ' + current_stock_master_file['Part_Desc_PT'].fillna('')  # I'll start by merging both descriptions
         # current_stock_master_file = value_substitution(current_stock_master_file, non_null_column='Part_Desc', null_column='Part_Desc_PT')  # For references which didn't match in the Master Files, use the DW Description;
-        current_stock_master_file.to_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(time_tag_date_in), index=False)
+        current_stock_master_file.to_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(previous_day), index=False)
+
+    previous_master_file = pd.read_csv('dbs/part_ref_master_file_matched.csv')  # ToDo - This should be taken from the DW table used in deployment;
+    df_merged = pd.concat([current_stock_master_file, previous_master_file]).drop('Last_Sell_Date', axis=1)
+    df_merged = df_merged.drop_duplicates()
+    df_merged.to_csv('dbs/part_ref_master_file_matched.csv', index=False)
 
     platform_ids = [dim_clients[dim_clients['BI_Database'] == x]['Client_Id'].values[0] for x in current_platforms]
-    return [current_stock_master_file[current_stock_master_file['Client_Id'] == platform_id] for platform_id in platform_ids], current_stock_master_file
+    # return [current_stock_master_file[current_stock_master_file['Client_Id'] == platform_id] for platform_id in platform_ids], df_merged
+    return df_merged
 
 
 def particular_case_references(string_to_process, brand):
@@ -688,12 +577,13 @@ def brand_codes_retrieval(platforms, brand):
     return brand_codes
 
 
-def data_acquisition(platforms, dim_product_group_file, dim_clients_file, sel_month):
+def data_acquisition(platforms, dim_product_group_file, dim_clients_file, previous_day, sel_month):
     platforms_stock = []
+    # The way that the table is built, is that it only contains last day data. So, for sel_month = 202011, run on 05/11/2020, the table will only have data for 04/11/2020. That's why in the query i can use the condition Stock_Month = '202011', but when saving the files, I use the day to distinguish between 04/11/2020 and 05/11/2020 and so on.
 
     try:
         for platform in platforms:
-            df_current_stock = read_csv('dbs/df_{}_current_stock_{}_section_A.csv'.format(platform, sel_month), index_col=0, low_memory=False)
+            df_current_stock = read_csv('dbs/df_{}_current_stock_{}_section_A.csv'.format(platform, previous_day), index_col=0, low_memory=False)
             print('File found for platform {}...'.format(platform))
             platforms_stock.append(df_current_stock)
 
@@ -703,317 +593,16 @@ def data_acquisition(platforms, dim_product_group_file, dim_clients_file, sel_mo
         for platform in platforms:
             print('Retrieving from DW for platform {}...'.format(platform))
             if platform == 'BI_AFR':
-                print(options_file.current_stock_query.format(platform, sel_month, platform, sel_month))
-                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query_afr.format(platform, sel_month, platform, sel_month))
+                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query_afr.format(platform, platform, previous_day, platform, sel_month))
             else:
-                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query.format(platform, sel_month, platform, sel_month))
+                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query.format(platform, platform, previous_day, platform, sel_month))
             platforms_stock.append(df_current_stock)
 
         dim_product_group = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_BI_AFR'], options_file, options_file.dim_product_group_query)
         dim_clients = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_BI_GSC'], options_file, options_file.dim_clients_query)
 
-        save_csv(platforms_stock + [dim_product_group, dim_clients], ['dbs/df_{}_current_stock_{}_section_A'.format(platform, sel_month) for platform in platforms] + ['dbs/dim_product_group_section_A', 'dbs/dim_clients_section_A'])
+        save_csv(platforms_stock + [dim_product_group, dim_clients], ['dbs/df_{}_current_stock_{}_section_A'.format(platform, previous_day) for platform in platforms] + ['dbs/dim_product_group_section_A', 'dbs/dim_clients_section_A'])
     return platforms_stock, dim_product_group, dim_clients
-
-
-# def data_processing(df_platforms_stock, dim_product_group, dim_clients):
-#     platforms_stock_unique = []
-#
-#     try:
-#         keyword_dictionary_df = read_csv('output/keywords_per_parts_family.csv', index_col=0)
-#         print('Keyword Dictionary Found...')
-#         for key, row in keyword_dictionary_df.iterrows():
-#             keywords_per_parts_family_dict[key] = [x for x in row.values if x is not np.nan]
-#
-#         return
-#
-#     except FileNotFoundError:
-#
-#         for platform, df_platform_stock in zip(current_platforms, df_platforms_stock):
-#             print('Platform: {}'.format(platform))
-#
-#             try:
-#                 df_current_stock_unique = read_csv('dbs/df_{}_current_stock_unique_{}_section_B_step_2.csv'.format(platform, sel_month), dtype={part_desc_col: str})
-#                 print('Current Stock already processed...')
-#                 platforms_stock_unique.append(df_current_stock_unique)
-#             except FileNotFoundError:
-#                 print('Processing stock...')
-#
-#                 # df_platform_stock = df_platform_stock.loc[df_platform_stock['Part_Ref'].isin(['5X0807217F', '1Z5839697D']), :]
-#
-#                 start_a = time.time()
-#                 df_platform_current_stock = lowercase_column_conversion(df_platform_stock, [part_desc_col])  # Lowercases the strings of these columns
-#                 df_platform_current_stock = literal_removal(df_platform_current_stock, part_desc_col)  # Removes literals from the selected column
-#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_punctuation_removal)  # Removes punctuation from string
-#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(unidecode_function)  # Removes accents marks from selected description column;
-#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(string_digit_removal)  # Removes accents marks from selected description column;
-#                 print('a - elapsed time: {:.3f}'.format(time.time() - start_a))
-#
-#                 start_b = time.time()
-#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(abbreviations_correction, args=(options_file.abbreviations_dict, ))  # Replacement of abbreviations by the respective full word
-#                 print('b - elapsed time: {:.3f}'.format(time.time() - start_b))
-#
-#                 start_c = time.time()
-#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stop_words_removal, args=(options_file.stop_words['Common_Stop_Words'] + options_file.stop_words[platform] + options_file.stop_words['Parts_Specific_Common_Stop_Words'] + nltk.corpus.stopwords.words('portuguese'),))  # Removal of Stop Words
-#                 print('c - elapsed time: {:.3f}'.format(time.time() - start_c))
-#
-#                 step_c_1 = time.time()
-#                 stemmer_pt_2 = RSLPStemmer()
-#                 df_platform_current_stock[part_desc_col] = df_platform_current_stock[part_desc_col].apply(stemming, args=(stemmer_pt_2,))  # Stems each word using a Portuguese Stemmer
-#                 print('c_1 - elapsed time: {:.3f}'.format(time.time() - step_c_1))
-#
-#                 start_d = time.time()
-#                 df_current_stock_unique = description_merge_per_reference(df_platform_current_stock)  # Merges descriptions for the same reference and removes repeated tokens;
-#                 print('d - elapsed time: {:.3f}'.format(time.time() - start_d))
-#
-#                 start_f = time.time()
-#                 df_current_stock_unique = removed_zero_length_descriptions(df_current_stock_unique)  # Removed descriptions with no information (length = 0)
-#                 print('f - elapsed time: {:.3f}'.format(time.time() - start_f))
-#
-#                 print('total time: {:.3f}'.format(time.time() - start_a))
-#                 save_csv([df_current_stock_unique], ['dbs/df_{}_current_stock_unique_{}_section_B_step_2'.format(platform, sel_month)], index=False)
-#             finally:
-#                 keyword_selection(platform, df_current_stock_unique)
-#
-#         # print('Keyword Dictionary: \n', keyword_dict_per_parts_family)
-#         # print('Keyword Dictionary Number of Keys', len(list(keyword_dict_per_parts_family.keys())))
-#         pd.DataFrame.from_dict(keywords_per_parts_family_dict, orient='index').to_csv('output/keywords_per_parts_family.csv')
-#
-#         # for key in keywords_per_parts_family_dict.keys():
-#         #     print('Product Group DW: {}, Number of Words: {}, Words: {}'.format(key, len(keywords_per_parts_family_dict[key]), keywords_per_parts_family_dict[key]))
-#
-#         return
-
-
-def keyword_selection(platform, df):
-    start_k_1 = time.time()
-    train_dataset, test_dataset = pd.DataFrame(), pd.DataFrame()
-
-    df = df.dropna(subset=[part_desc_col])
-
-    df_grouped_product_group_dw = df.loc[df['Product_Group_DW'] != 1, :].groupby('Product_Group_DW')
-    # df_train_grouped = df_train.groupby('Product_Group_DW')
-    for key, group in df_grouped_product_group_dw:
-        top_words, tf_idf_keywords = [], {}
-        unique_parts_count = group['Part_Ref'].nunique()
-        unique_descs_count = group[part_desc_col].nunique()
-        if unique_parts_count > 1:
-            # print('Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
-
-            # group_train = group.sample(frac=0.8, random_state=42)
-            # group_train, group_test = train_test_split(group, train_size=0.8, random_state=42)
-            group_train, group_test = train_test_split(group, train_size=0.8, stratify=group['Product_Group_DW'], random_state=42)
-            train_dataset = train_dataset.append(group_train)
-            test_dataset = test_dataset.append(group_test)
-
-            descriptions = list(group[part_desc_col])
-
-            # top_words = most_common_words(descriptions)
-            # most_common_bigrams(descriptions)
-            # most_common_trigrams(descriptions)
-
-            cv = CountVectorizer(min_df=0.05, max_df=0.8, max_features=10000, ngram_range=(1, 1))
-            try:
-                x = cv.fit_transform(descriptions)
-
-                tfidf_transformer = TfidfTransformer(smooth_idf=True, use_idf=True)
-                tfidf_transformer.fit(x)
-                feature_names = cv.get_feature_names()
-
-                tf_idf_vector = tfidf_transformer.transform(cv.transform(descriptions))
-
-                sorted_items = sort_coo(tf_idf_vector.tocoo())
-                # extract only the top n; n here is 10
-                tf_idf_keywords = extract_topn_from_vector(feature_names, sorted_items, 5)
-                # print('TF-IDF Words: {}'.format(list(tf_idf_keywords.keys())))
-
-                # now print the results
-                # print("\nAbstract:")
-                # print(descriptions)
-                # print("\nTF-IDF Keywords:")
-                # for k in tf_idf_keywords:
-                #     print(k, tf_idf_keywords[k])
-                # common_and_tf_idf_words = list(set(list(tf_idf_keywords.keys()) + top_words))
-                # print('Top Common Words + TF-IDF Words: {}'.format(common_and_tf_idf_words))
-
-            except ValueError:
-                # print('TF-IDF Error - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
-                pass
-
-            keyword_dict_creation(key, list(set(list(tf_idf_keywords.keys()) + top_words)))
-
-        else:
-            # print('Not enough information - Product_Group DW: {}, Number of unique parts: {}, Number of unique descriptions: {}'.format(key, unique_parts_count, unique_descs_count))
-            pass
-
-    train_dataset.to_csv('output/{}_train_dataset.csv'.format(platform))
-    test_dataset.to_csv('output/{}_test_dataset.csv'.format(platform))
-    print('k_1 - elapsed time: {:.3f}'.format(time.time() - start_k_1))
-
-    return
-
-
-def keyword_dict_creation(product_group, keywords):
-    try:
-        keywords_per_parts_family_dict[product_group] = keywords_per_parts_family_dict[product_group] + keywords
-    except KeyError:
-        keywords_per_parts_family_dict[product_group] = keywords
-
-    return
-
-
-def sort_coo(coo_matrix):
-    tuples = zip(coo_matrix.col, coo_matrix.data)
-    return sorted(tuples, key=lambda x: (x[1], x[0]), reverse=True)
-
-
-def extract_topn_from_vector(feature_names, sorted_items, topn=10):
-    """get the feature names and tf-idf score of top n items"""
-
-    # use only topn items from vector
-    sorted_items = sorted_items[:topn]
-
-    score_vals = []
-    feature_vals = []
-
-    # word index and corresponding tf-idf score
-    for idx, score in sorted_items:
-        # keep track of feature name and its corresponding score
-        score_vals.append(round(score, 3))
-        feature_vals.append(feature_names[idx])
-
-    # create a tuples of feature,score
-    # results = zip(feature_vals,score_vals)
-    results = {}
-    for idx in range(len(feature_vals)):
-        results[feature_vals[idx]] = score_vals[idx]
-
-    return results
-
-
-def most_common_words(descriptions):
-    top_words = get_top_n_words(descriptions, n=20)
-    top_words = [x[0] for x in top_words]
-
-    # top_df = pd.DataFrame(top_words)
-    # top_df.columns = ["Word", "Freq"]
-    # print(top_words)
-
-    # sns.set(rc={'figure.figsize': (13, 8)})
-    # g = sns.barplot(x="Word", y="Freq", data=top_df)
-    # g.set_xticklabels(g.get_xticklabels(), rotation=30)
-    # plt.show()
-
-    return top_words
-
-
-def most_common_bigrams(descriptions):
-    top2_words = get_top_n2_words(descriptions, n=20)
-    top2_df = pd.DataFrame(top2_words)
-    top2_df.columns = ["Bi-gram", "Freq"]
-    print(top2_df)
-
-    sns.set(rc={'figure.figsize': (13, 8)})
-    h = sns.barplot(x="Bi-gram", y="Freq", data=top2_df)
-    h.set_xticklabels(h.get_xticklabels(), rotation=45)
-
-    # plt.show()
-
-
-def most_common_trigrams(descriptions):
-    top3_words = get_top_n3_words(descriptions, n=20)
-    top3_df = pd.DataFrame(top3_words)
-    top3_df.columns = ["Tri-gram", "Freq"]
-    print(top3_df)
-
-    sns.set(rc={'figure.figsize': (13, 8)})
-    j = sns.barplot(x="Tri-gram", y="Freq", data=top3_df)
-    j.set_xticklabels(j.get_xticklabels(), rotation=45)
-
-    # plt.show()
-
-
-def get_top_n_words(corpus, n=None):
-    vec = CountVectorizer().fit(corpus)
-    bag_of_words = vec.transform(corpus)
-    sum_words = bag_of_words.sum(axis=0)
-    words_freq = [(word, sum_words[0, idx]) for word, idx in vec.vocabulary_.items()]
-    words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)
-    return words_freq[:n]
-
-
-def get_top_n2_words(corpus, n=None):
-    vec1 = CountVectorizer(ngram_range=(2, 2), max_features=2000).fit(corpus)
-    bag_of_words = vec1.transform(corpus)
-    sum_words = bag_of_words.sum(axis=0)
-    words_freq = [(word, sum_words[0, idx]) for word, idx in vec1.vocabulary_.items()]
-    words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)
-    return words_freq[:n]
-
-
-def get_top_n3_words(corpus, n=None):
-    vec1 = CountVectorizer(ngram_range=(3, 3), max_features=2000).fit(corpus)
-    bag_of_words = vec1.transform(corpus)
-    sum_words = bag_of_words.sum(axis=0)
-    words_freq = [(word, sum_words[0, idx]) for word, idx in vec1.vocabulary_.items()]
-    words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)
-    return words_freq[:n]
-
-
-def stop_words_removal(string_to_process, stop_words_list):
-    # tokenized_string_to_process = nltk.tokenize.word_tokenize(string_to_process)
-
-    new_string = ' '.join([x for x in nltk.tokenize.word_tokenize(string_to_process) if x not in stop_words_list])
-
-    return new_string
-
-
-def abbreviations_correction(string_to_correct, abbreviations_dict):
-    # tokenized_string_to_correct = nltk.tokenize.word_tokenize(string_to_correct)
-
-    string_corrected = ' '.join([abbreviations_dict[x] if x in abbreviations_dict.keys() else x for x in nltk.tokenize.word_tokenize(string_to_correct)])
-
-    return string_corrected
-
-
-def description_merge_per_reference(original_df):
-    duplicated_refs = list(original_df.groupby('Part_Ref')['Part_Ref'].agg('count').where(lambda x: x > 1).dropna().index)
-
-    selected_references_df = original_df.loc[original_df['Part_Ref'].isin(duplicated_refs), :]
-    remaining_references_df = original_df.loc[~original_df['Part_Ref'].isin(duplicated_refs), :]
-
-    selected_references_df = selected_references_df.groupby('Part_Ref').apply(duplicate_references_description_concatenation).drop_duplicates(subset='Part_Ref')
-    remaining_references_df[part_desc_col] = remaining_references_df[part_desc_col].apply(string_repeated_words_removal)
-
-    final_df = remaining_references_df.append(selected_references_df)
-
-    return final_df
-
-
-def removed_zero_length_descriptions(df):
-    df = df[df[part_desc_col].map(len) > 0]  # ToDo this might work for now, but will need to upgrade it. What about '  ' or '    ' ?
-    return df
-
-
-def duplicate_references_description_concatenation(x):
-    concatenated_description = ' '.join(list(x[part_desc_col]))
-    concatenated_description_unique_words = ' '.join(unique_list_creation(concatenated_description.split()))
-
-    x[part_desc_col] = concatenated_description_unique_words
-
-    return x
-
-
-def string_repeated_words_removal(string_to_process):
-    processed_string = ' '.join(set(nltk.tokenize.word_tokenize(string_to_process)))
-
-    return processed_string
-
-
-def unique_list_creation(old_list):
-    new_list = []
-    [new_list.append(x) for x in old_list if x not in new_list]
-    return new_list
 
 
 if __name__ == '__main__':

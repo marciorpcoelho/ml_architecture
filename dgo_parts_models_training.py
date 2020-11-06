@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import pandas as pd
+import lightgbm as lgb
 import sklearn as sk
 import time
 from sklearn.model_selection import train_test_split
@@ -18,7 +19,8 @@ from collections import defaultdict, Counter
 
 gridsearch_parameters = {
     'lr': [LogisticRegression, [{'C': [0.01, 0.1, 1, 10, 100], 'solver': ['lbfgs', 'newton-cg'], 'max_iter': [2000], 'multi_class': ['ovr', 'multinomial']}]],
-    # 'lr': [LogisticRegression, [{'max_iter': [500]}]],
+    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50, 100], 'n_estimators': [50, 100, 200], 'max_depth': ['50', '100'], 'objective': ['multiclass']}]],
+
 }
 
 pd.set_option('display.width', 3000)
@@ -45,8 +47,8 @@ def model_training(ml_dataset, clf=None):
         # print("Fitting: --- %s seconds ---" % (time.time() - start_time))
 
         scorer = make_scorer(recall_score, average='weighted')
-        classes, best_models, running_times = classification_model_training(['lr'], train_X, train_Y, gridsearch_parameters, 3, scorer, 2610)
-        clf = best_models['lr']
+        classes, best_models, running_times = classification_model_training(['lgb'], train_X, train_Y, gridsearch_parameters, 3, scorer, 2610)
+        clf = best_models['lgb']
         cm_flag = 1
 
     predictions_test, probabilities_test, text_x_scored = model_prediction(clf, test_X, test, target_map, inv_target_map)

@@ -123,7 +123,7 @@ current_stock_query = '''
         SELECT 
             Part_Ref, MAX(ISNULL(Last_Sell_Date,'1')) as max_date_value
         FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month WITH (NOLOCK)
-        WHERE Stock_Month = '{}'
+        WHERE 1=1
         GROUP BY Part_Ref
     )
     SELECT
@@ -131,7 +131,8 @@ current_stock_query = '''
     FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month as a WITH (NOLOCK)
     inner join max_date as b on a.Part_Ref = b.Part_Ref and ISNULL(a.Last_Sell_Date, '1') = b.max_date_value
     LEFT JOIN [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC] as Parts_DIM on Parts_DIM.Product_Group_Code = a.Product_Group_DW
-    WHERE Stock_Month = '{}'
+    WHERE 1=1
+    and Last_Sell_Date = '{}'
     and Warehouse_Code = -1
     GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
 '''
@@ -141,7 +142,7 @@ current_stock_query_afr = '''
         SELECT 
             Part_Ref, MAX(ISNULL(Last_Sell_Date,'1')) as max_date_value
         FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month WITH (NOLOCK)
-        WHERE Stock_Month = '{}'
+        WHERE 1=1
         GROUP BY Part_Ref
     )
     SELECT
@@ -150,7 +151,8 @@ current_stock_query_afr = '''
     inner join max_date as b on a.Part_Ref = b.Part_Ref and ISNULL(a.Last_Sell_Date, '1') = b.max_date_value
     LEFT JOIN [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC] as Parts_DIM on Parts_DIM.Product_Group_Code = a.Product_Group_DW
     LEFT JOIN [BI_AFR].[dbo].[GBL_Currencies_FixedRate] as Currency_Rate on a.Client_Id = Currency_Rate.Client_Id and a.Environment = Currency_Rate.Environment and YEAR(GETDATE()) = Currency_Rate.Currency_Year
-    WHERE Stock_Month = '{}'
+    WHERE 1=1 
+    and Last_Sell_Date = '{}'
     and Warehouse_Code = -1
     GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
 '''
