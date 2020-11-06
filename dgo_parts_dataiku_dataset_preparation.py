@@ -172,8 +172,6 @@ def main():
     master_file = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming={'Client_Id': 'Client_ID'})
     master_file['Product_Group_DW'] = master_file['Product_Group_DW'].astype(str)
 
-    step_1(master_file)
-    print('1 - master_file shape', master_file.shape)
     master_file = flow_step_2(master_file)
     print('2 - master_file shape', master_file.shape)
     master_file = flow_step_3(master_file)
@@ -200,12 +198,6 @@ def main():
     print('10 - master_file_final shape', master_file_final.shape)
     master_file_final.to_csv('dbs/master_file_final.csv')
     deployment(master_file_final, main_families_cm, other_families_cm)
-
-
-# compute_current_stock_all_platforms_master_stock_matched_04_2020_prepared
-def step_1(df):
-    # Done on read_cols of master_file
-    return
 
 
 # compute_current_stock_all_platforms_master_stock_matched_04_2020_prepared_distinct
