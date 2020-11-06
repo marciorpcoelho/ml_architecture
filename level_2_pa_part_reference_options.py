@@ -51,6 +51,9 @@ sql_info_python = {
     'matrix_lvl_2': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2_Python',
 }
 
+sql_to_code_renaming = {
+    'Client_ID': 'Client_Id'
+}
 
 column_translate_dict = {
     'Part_Ref': 'Referência',
