@@ -169,7 +169,7 @@ def main():
     dgo_family_10_loc = 'dbs/dgo_familia_10_prepared.csv'
     dgo_family_13_loc = 'dbs/dgo_familia_13_prepared.csv'
 
-    master_file = sql_retrieve_df(options_file.sql_info['DSN_MLG'], options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming={'Client_Id': 'Client_ID'})
+    master_file = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming={'Client_Id': 'Client_ID'})
     master_file['Product_Group_DW'] = master_file['Product_Group_DW'].astype(str)
 
     step_1(master_file)
