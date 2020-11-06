@@ -1,30 +1,13 @@
 import re
-import sys
 import time
-import nltk
-import logging
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from datetime import datetime, timedelta
-from traceback import format_exc
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk.stem.porter import PorterStemmer
-from nltk.stem import RSLPStemmer
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.model_selection import train_test_split
-from nltk.stem.snowball import SnowballStemmer
 import level_2_pa_part_reference_options as options_file
 from level_2_pa_part_reference_options import regex_dict
-from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df_specified_query
+from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df_specified_query, project_units_count_checkup, sql_retrieve_df
 from modules.level_1_b_data_processing import lowercase_column_conversion, literal_removal, string_punctuation_removal, master_file_processing, regex_string_replacement, brand_code_removal, string_volkswagen_preparation, value_substitution, lemmatisation, stemming, unidecode_function, string_digit_removal, word_frequency, words_dataframe_creation
 from modules.level_1_e_deployment import save_csv, time_tags, sql_inject
-from collections import Counter
-from scipy.sparse import coo_matrix
-import matplotlib.pyplot as plt
-# nltk.download('stopwords')
-# nltk.download('rslp')  # RSLP Portuguese stemmer
 
 local_flag = 1
 master_file_processing_flag = 0
@@ -33,11 +16,6 @@ part_desc_col = 'Part_Desc_PT'
 # 'Part_Desc' - Part Description from DW
 # 'Part_Desc_PT' - Part Description from Master Files when available, and from DW when not available
 # 'Part_Desc_Merge' - Part Description from Master Files merged with Part Description from the DW
-
-# time_tag_date, _ = time_tags(format_date="%m_%Y")
-# sel_month = '202008'
-
-keywords_per_parts_family_dict = {}
 
 
 def main():
@@ -521,13 +499,14 @@ def master_file_reference_match(platforms_stock, previous_day, dim_clients):
         # current_stock_master_file = value_substitution(current_stock_master_file, non_null_column='Part_Desc', null_column='Part_Desc_PT')  # For references which didn't match in the Master Files, use the DW Description;
         current_stock_master_file.to_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(previous_day), index=False)
 
-    previous_master_file = pd.read_csv('dbs/part_ref_master_file_matched.csv')  # ToDo - This should be taken from the DW table used in deployment;
+    previous_master_file = sql_retrieve_df(options_file.sql_info['DSN_MLG'], options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming={'Client_Id': 'Client_ID'})
+
     df_merged = pd.concat([current_stock_master_file, previous_master_file]).drop('Last_Sell_Date', axis=1)
     df_merged = df_merged.drop_duplicates()
     df_merged.to_csv('dbs/part_ref_master_file_matched.csv', index=False)
 
-    platform_ids = [dim_clients[dim_clients['BI_Database'] == x]['Client_Id'].values[0] for x in current_platforms]
-    # return [current_stock_master_file[current_stock_master_file['Client_Id'] == platform_id] for platform_id in platform_ids], df_merged
+    project_units_count_checkup(df_merged, 'Part_Ref', options_file, sql_check=1)
+
     return df_merged
 
 

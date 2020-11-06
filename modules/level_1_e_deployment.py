@@ -356,7 +356,7 @@ def key_and_value_generator(dictionary, all_values, all_keys):
     return all_values, all_keys
 
 
-def sql_get_last_vehicle_count(dsn, options_file, database, view, date_column='Date'):
+def sql_get_last_project_unit_count(dsn, options_file, database, view, date_column='Date'):
     cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
     crsr = cnxn.cursor()
 

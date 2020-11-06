@@ -6,7 +6,7 @@ from traceback import format_exc
 import level_2_optionals_baviera_options
 
 from level_2_optionals_baviera_options import project_id, classification_models, k, gridsearch_score
-from modules.level_1_a_data_acquisition import vehicle_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
+from modules.level_1_a_data_acquisition import project_units_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
 from modules.level_1_b_data_processing import constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_conversion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
 from modules.level_1_c_data_modelling import classification_model_training, save_model
 from modules.level_1_d_model_evaluation import performance_evaluation_classification, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
@@ -72,7 +72,7 @@ def data_acquisition(input_file, query_filters, local=0):
             column_rename(df, list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), list(level_2_optionals_baviera_options.sql_to_code_renaming.values()))
     else:
         df = sql_retrieve_df(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), query_filters, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
-        vehicle_count_checkup(df, 'Nº Stock', level_2_optionals_baviera_options, sql_check=0)
+        project_units_count_checkup(df, 'Nº Stock', level_2_optionals_baviera_options, sql_check=0)
 
     log_record('Fim Secção A.', project_id)
     performance_info_append(time.time(), 'Section_A_End')
@@ -118,7 +118,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_rows(df, [df[df.Modelo.isnull()].index], project_id, warning=1)
         df = remove_columns(df, ['Colour_Ext_Code'], project_id)  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;
 
-        vehicle_count_checkup(df, 'Nº Stock', level_2_optionals_baviera_options, sql_check=1)
+        project_units_count_checkup(df, 'Nº Stock', level_2_optionals_baviera_options, sql_check=1)
 
         df = color_replacement(df, project_id)  # Translates all english colors to portuguese
 

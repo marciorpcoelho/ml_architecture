@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import pandas as pd
 from traceback import format_exc
-from modules.level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv, missing_customer_info_treatment, vehicle_count_checkup
+from modules.level_1_a_data_acquisition import sql_retrieve_df_specified_query, read_csv, missing_customer_info_treatment, project_units_count_checkup
 from modules.level_1_b_data_processing import update_new_gamas, robust_scaler_function, skewness_reduction, pandas_object_columns_categorical_conversion_auto, pandas_object_columns_categorical_conversion, ohe, constant_columns_removal, dataset_split, new_features, df_join_function, parameter_processing_hyundai, col_group, lowercase_column_conversion, na_fill_hyundai, remove_columns, measures_calculation_hyundai
 from modules.level_1_c_data_modelling import regression_model_training, save_model
 from modules.level_1_d_model_evaluation import performance_evaluation_regression, model_choice
@@ -177,7 +177,7 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
         df_sales = col_group(df_sales, ['PT_PDB_Transmission_Type_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc'], translation_dictionaries, options_file.project_id)
         df_sales = df_sales[df_sales['PT_PDB_Version_Desc'] != 'NÃO_PARAMETRIZADOS']
         log_record('9 - Remoção de Viaturas sem versão parametrizada - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
-        vehicle_count_checkup(df_sales, 'Chassis_Number', options_file, sql_check=1)
+        project_units_count_checkup(df_sales, 'Chassis_Number', options_file, sql_check=1)
 
         # Parameter Grouping
         print('### NO GROUPING ###')

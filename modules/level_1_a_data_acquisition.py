@@ -25,21 +25,21 @@ def read_csv(*args, **kwargs):
     return df
 
 
-def vehicle_count_checkup(df, vehicle_identifier_col, options_file, sql_check=0):
-    current_vehicle_count = df[vehicle_identifier_col].nunique()
-    last_vehicle_count = level_1_e_deployment.sql_get_last_vehicle_count(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['vhe_number_history'])
+def project_units_count_checkup(df, unit_identifier_col, options_file, sql_check=0):
+    current_vehicle_count = df[unit_identifier_col].nunique()
+    last_vehicle_count = level_1_e_deployment.sql_get_last_project_unit_count(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['unit_count_number_history'])
 
     if not sql_check:
         if current_vehicle_count < 100:
-            raise ValueError('Apenas ' + str(current_vehicle_count) + ' veículos foram encontrados. Por favor verificar na base de dados.')
+            raise ValueError('Apenas ' + str(current_vehicle_count) + ' unidades foram encontrados. Por favor verificar na base de dados.')
     elif sql_check:
         if current_vehicle_count < last_vehicle_count:
-            raise ValueError('Atual contagem de veículos ({}) é inferior à ultima contagem ({}). Por favor verificar na base de dados.'.format(current_vehicle_count, last_vehicle_count))
+            raise ValueError('Atual contagem unitária ({}) é inferior à ultima contagem ({}). Por favor verificar na base de dados.'.format(current_vehicle_count, last_vehicle_count))
         elif current_vehicle_count == last_vehicle_count:
-            level_0_performance_report.log_record('Atual contagem de veículos ({}) sem incrementos desde a última vez que os dados foram processados ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count), options_file.project_id, flag=1)
+            level_0_performance_report.log_record('Atual contagem unitária ({}) sem incrementos desde a última vez que os dados foram processados ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count), options_file.project_id, flag=1)
         else:
-            level_1_e_deployment.sql_inject_single_line(options_file.DSN_MLG, options_file.UID, options_file.PWD, options_file.sql_info['database_final'], options_file.sql_info['vhe_number_history'], [str(current_vehicle_count), str(options_file.project_id)], check_date=1)
-            level_0_performance_report.log_record('A atualizar contagem de viaturas: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
+            level_1_e_deployment.sql_inject_single_line(options_file.DSN_MLG, options_file.UID, options_file.PWD, options_file.sql_info['database_final'], options_file.sql_info['unit_count_number_history'], [str(current_vehicle_count), str(options_file.project_id)], check_date=1)
+            level_0_performance_report.log_record('A atualizar contagem de unidades: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
     return
 
 

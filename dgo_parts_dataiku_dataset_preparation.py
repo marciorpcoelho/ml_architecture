@@ -3,6 +3,7 @@ import numpy as np
 import time
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
 from modules.level_1_e_deployment import sql_inject
+from modules.level_1_a_data_acquisition import sql_retrieve_df
 import level_2_pa_part_reference_options as options_file
 from dgo_parts_models_training import model_training
 import warnings
@@ -165,12 +166,11 @@ others_families_dict_str = {
 
 
 def main():
-    master_file_loc = 'dbs/part_ref_master_file_matched.csv'
     dgo_family_10_loc = 'dbs/dgo_familia_10_prepared.csv'
     dgo_family_13_loc = 'dbs/dgo_familia_13_prepared.csv'
 
-    master_file = pd.read_csv(master_file_loc, usecols=['Part_Ref', 'Part_Desc', 'Product_Group_DW', 'Client_Id', 'Average_Cost', 'PVP_1', 'PLR_Account', 'PT_Product_Group_Level_2_Desc', 'Product_Group_Level_2_Code', 'Product_Group_Level_1_Code', 'PT_Product_Group_Level_1_Desc', 'Part_Desc_PT'],
-                              dtype={'Product_Group_DW': 'str'})
+    master_file = sql_retrieve_df(options_file.sql_info['DSN_MLG'], options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming={'Client_Id': 'Client_ID'})
+    master_file['Product_Group_DW'] = master_file['Product_Group_DW'].astype(str)
 
     step_1(master_file)
     print('1 - master_file shape', master_file.shape)

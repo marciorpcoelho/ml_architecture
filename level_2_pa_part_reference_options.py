@@ -32,6 +32,7 @@ sql_info = {
     'parts_classification_refs': 'PSE_Fact_PA_Parts_Classification_Refs',
     'matrix_lvl_1': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_1',
     'matrix_lvl_2': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2',
+    'unit_count_number_history': 'LOG_Project_Units_Count_History'
 }
 
 

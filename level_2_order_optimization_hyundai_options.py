@@ -58,7 +58,7 @@ sql_info = {
     'proposals_table': 'VHE_Fact_DW_HPK_Proposals_DTR',
     'proposals_view': 'View_VHE_HPK_Proposals_DTR',
     'stock_view': 'View_VHE_Stock_DTR',
-    'vhe_number_history': 'VHE_NrVehicles_History',
+    'unit_count_number_history': 'LOG_Project_Units_Count_History',
 }
 
 log_files = {
