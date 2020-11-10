@@ -586,7 +586,7 @@ version_grouping = {
 ext_color_translation = {
     'Amarelo': ['acid yellow', 'acid yellow (tt)', 'ral1016'],
     'Azul': ['p crystal blue m.', 'slate blue (teto preto)', 'midnight blue beam m.', 'aqua turquoise (teto preto)', 'cosmic blue m.', 'obsidian blue p.', 'stormy sea', 'ocean view', 'aqua sparkling', 'clean slate', 'intense blue', 'brilliant sporty blue m.', 'morpho blue p.', 'stargazing blue', 'champion blue', 'ceramic blue', 'stellar blue', 'blue lagoon', 'performance blue', 'morning blue', 'ara blue', 'marina blue', 'ceramic blue (tt)', 'blue lagoon (tt)', 'skyride blue m.',
-             'twilight blue m.'],
+             'twilight blue m.', 'surf blue', 'taffeta white iii'],
     'Branco': ['polar white (teto vermelho)', 'polar white  (teto preto)', 'taffeta white', 'platinum white p', 'platinum white p.', 'white orchid p.', 'polar white', 'white sand', 'creamy white', 'chalk white', 'pure white', 'white crystal', 'white cream', 'chalk white (tt)', 'championship white', 'psunlight whitepearl'],
     'Castanho': ['brass (teto preto)', 'iced coffee', 'moon rock', 'golden brown m.', 'cashmere brown', 'tan brown', 'demitasse brown', 'premium agate brown p.'],
     'Cinzento': ['shining gray m', 'urban titanium m.', 'velvet dune', 'velvet dune (tt)', 'dark knight (tt)', 'wild explorer', 'rain forest', 'magnetic force', 'olivine grey', 'dark knight', 'star dust', 'polished metal m.', 'shining grey m.', 'modern steel m.', 'micron grey', 'galactic grey', 'iron gray', 'galactic grey (tt)', 'sonic grey p.', 'shadow grey', 'stone gray'],

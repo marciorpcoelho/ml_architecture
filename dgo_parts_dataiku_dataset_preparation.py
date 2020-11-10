@@ -186,7 +186,7 @@ def main():
     print('7 - master_file_classified_families_filtered shape', master_file_classified_families_filtered.shape)
     master_file_other_families_filtered = flow_step_7(master_file_other_families)
     print('7 - master_file_other_families_filtered shape', master_file_other_families_filtered.shape)
-    master_file_final, main_families_cm, other_families_cm = flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified)
+    master_file_final, main_families_cm, main_families_metrics_dict, other_families_cm, other_families_metrics_dict = flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified)
     print('8 - master_file_final shape', master_file_final.shape)
     master_file_final = flow_step_9(master_file_final)
     print('9 - master_file_final shape', master_file_final.shape)
@@ -194,6 +194,8 @@ def main():
     print('10 - master_file_final shape', master_file_final.shape)
     master_file_final.to_csv('dbs/master_file_final.csv')
     deployment(master_file_final, main_families_cm, other_families_cm)
+
+    return main_families_metrics_dict, other_families_metrics_dict
 
 
 # compute_current_stock_all_platforms_master_stock_matched_04_2020_prepared_distinct
@@ -311,8 +313,8 @@ def flow_step_7(df):
 def flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified):
     starting_cols = list(master_file_classified_families_filtered)
 
-    _, main_families_clf, main_families_cm_train, main_families_cm_test = model_training(master_file_classified_families_filtered)  # Modelo conhece 50 familias
-    _, other_families_clf, other_families_cm_train, other_families_cm_test = model_training(master_file_other_families_filtered)  # Modelo conhece 8 familias
+    _, main_families_clf, main_families_cm_train, main_families_cm_test, main_families_metrics_dict = model_training(master_file_classified_families_filtered)  # Modelo conhece 50 familias
+    _, other_families_clf, other_families_cm_train, other_families_cm_test, other_families_metrics_dict = model_training(master_file_other_families_filtered)  # Modelo conhece 8 familias
 
     # print('Main Families CM (Test): \n{}'.format(main_families_cm_test))
     main_families_cm_test.to_csv('dbs/main_families_cm_temp.csv')
@@ -320,7 +322,7 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     other_families_cm_test.to_csv('dbs/other_families_cm_tmp.csv')
 
     # First Classification
-    master_file_scored, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), main_families_clf)
+    master_file_scored, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), main_families_clf)
     master_file_scored = prob_thres_col_creation(master_file_scored)
 
     # First 0.5 CutOff
@@ -330,13 +332,13 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     print('first classification, sub 50 shape:', master_file_scored_sub_50.shape)
 
     # Second Classification
-    master_file_sub_50_scored, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], other_families_clf)
+    master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], other_families_clf)
     master_file_sub_50_scored = prob_thres_col_creation(master_file_sub_50_scored)
 
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])
     print(master_file_final.shape)
 
-    return master_file_final, main_families_cm_test, other_families_cm_test
+    return master_file_final, main_families_cm_test, main_families_metrics_dict, other_families_cm_test, other_families_metrics_dict
 
 
 def flow_step_9(df):

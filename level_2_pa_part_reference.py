@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from traceback import format_exc
 from datetime import datetime, timedelta
+import dgo_parts_dataiku_dataset_preparation
 import level_2_pa_part_reference_options as options_file
 from level_2_pa_part_reference_options import regex_dict
 from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df_specified_query, project_units_count_checkup, sql_retrieve_df
@@ -40,6 +41,11 @@ def main():
     current_stock_master_file = master_file_reference_match(platforms_stock, previous_day, dim_clients)
     deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
 
+    # Part 2
+    main_families_metrics_dict, other_families_metrics_dict = dgo_parts_dataiku_dataset_preparation.main()
+
+    performance_info(options_file.project_id, options_file, 'LightGBM as a Chosen Model. Performance: \nMain Families: \n{} \nOther Families:'.format(''.join([key + ': ' + str(value) + '\n' for key, value in zip(main_families_metrics_dict.keys(), main_families_metrics_dict.values())]), ''.join([key + ': ' + str(value) + '\n' for key, value in zip(other_families_metrics_dict.keys(), other_families_metrics_dict.values())])), current_stock_master_file['Part_Ref'].nunique())
+
     log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
@@ -61,10 +67,8 @@ def master_file_reference_match(platforms_stock, previous_day, dim_clients):
 
         print('Descriptions already matched from brand master files...')
     except FileNotFoundError:
-        # current_stock_master_file = pd.concat([pd.read_csv('dbs/df_{}_current_stock_unique_202002_section_B_step_2.csv'.format(platform), index_col=False, low_memory=False) for platform in current_platforms])
         current_stock_master_file = pd.concat(platforms_stock)
         current_stock_master_file['Part_Desc_PT'] = np.NaN
-        # current_stock_master_file = current_stock_master_file.loc[current_stock_master_file['Part_Ref'] == 'A2118800905']
 
         # print('BEFORE \n', current_stock_master_file.head(10))
         # print('BEFORE Shape: ', current_stock_master_file.shape)

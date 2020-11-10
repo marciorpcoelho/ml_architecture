@@ -38,6 +38,7 @@ def model_training(ml_dataset, clf=None):
     train, test, train_X, test_X, train_Y, test_Y, target_map, inv_target_map = dataset_preparation(ml_dataset)
     cm_flag = 0
     df_cm_train, df_cm_test = pd.DataFrame(), pd.DataFrame()
+    metrics_dict = {}
 
     if not clf:
         print('Classification Model not found. Training a new one...')
@@ -62,12 +63,19 @@ def model_training(ml_dataset, clf=None):
         labels = [inv_target_map[x] for x in clf.classes_]
         df_cm_test = pd.DataFrame(cm, columns=labels, index=labels)
         test_y_ser = pd.Series(test_Y)
-        print('\n### Precision Score:', precision_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes)))
-        print('### Precision Score:', precision_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes)))
-        print('### Precision Score:\n', precision_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes)))
-        print('\n### Recall Score:', recall_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes)))
-        print('### Recall Score:', recall_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes)))
-        print('### Recall Score:\n', recall_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes)))
+        metrics_dict['precision_score_weighted'] = precision_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['precision_score_micro'] = precision_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['precision_score_macro'] = precision_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['recall_score_weighted'] = recall_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['recall_score_micro'] = recall_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['recall_score_macro'] = recall_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes))
+
+        print('\n### Precision Score (Weighted):', metrics_dict['precision_score_weighted'])
+        print('### Precision Score (Micro):', metrics_dict['precision_score_micro'])
+        print('### Precision Score (Macro):\n', metrics_dict['precision_score_macro'])
+        print('\n### Recall Score (Weighted):', metrics_dict['recall_score_weighted'])
+        print('### Recall Score (Micro):', metrics_dict['recall_score_micro'])
+        print('### Recall Score (Macro):\n', metrics_dict['recall_score_macro'])
 
     predictions_train, probabilities_train, train_x_scored = model_prediction(clf, train_X, train, target_map, inv_target_map)
     predictions_train_converted_classes = predictions_train
@@ -93,7 +101,7 @@ def model_training(ml_dataset, clf=None):
     # ml_dataset_scored['Product_Group_DW'] = ml_dataset_scored['__target__'].replace(inv_target_map)
     # ml_dataset_scored.drop('__target__', axis=1, inplace=True)
 
-    return ml_dataset_scored, clf, df_cm_train, df_cm_test
+    return ml_dataset_scored, clf, df_cm_train, df_cm_test, metrics_dict
 
 
 def dataset_preparation(ml_dataset):
@@ -103,15 +111,11 @@ def dataset_preparation(ml_dataset):
     categorical_features = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
     numerical_features = [u'PVP_1_avg', u'Average_Cost_avg']
     text_features = [u'Part_Desc_PT_concat', u'Part_Desc_concat']
-    # from dataiku.doctor.utils import datetime_to_epoch
     for feature in categorical_features:
         ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
     for feature in text_features:
         ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
     for feature in numerical_features:
-        # if ml_dataset[feature].dtype == np.dtype('M8[ns]'):
-        #     ml_dataset[feature] = datetime_to_epoch(ml_dataset[feature])
-        # else:
         ml_dataset[feature] = ml_dataset[feature].astype('double')
 
     target_map = target_map_creation(ml_dataset)
@@ -265,9 +269,6 @@ def coerce_to_unicode(x):
 
 
 def target_map_creation(df):
-    # target_map = {u'O. Mota': 6, u'O. Merchandising': 7, u'O. Colis\xe3o': 1, u'O. Manuten\xe7\xe3o': 2, u'O. Consum\xedveis': 3, u'O. Diversos': 5, u'O. Repara\xe7\xe3o': 0, u'O. Acess\xf3rios': 4}
-    # target_map = {u'75/77': 16, u'61': 40, u'178': 26, u'82': 29, u'139': 33, u'52': 14, u'24': 34, u'81': 46, u'49': 1, u'46': 22, u'47': 42, u'43': 30, u'41': 45, u'3': 15, u'5': 8, u'4': 24, u'7': 4, u'6': 27, u'9': 12, u'8': 7, u'99': 10, u'76': 13, u'38': 25, u'73': 0, u'72': 18, u'102': 41, u'100': 43, u'92': 21, u'95': 37, u'94': 47, u'97': 23, u'11': 17, u'10': 9, u'13': 20, u'12': 6, u'15': 19, u'14': 11, u'17': 39, u'98': 2, u'33': 5, u'32': 38, u'30': 32, u'51': 28, u'35': 35, u'34': 3, u'19': 31, u'74': 44, u'162': 36}
-
     target_map, i = {}, 0
     for value in df['Product_Group_DW'].unique():
         target_map[value] = i
