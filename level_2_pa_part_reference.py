@@ -44,7 +44,7 @@ def main():
     # Part 2
     main_families_metrics_dict, other_families_metrics_dict = dgo_parts_dataiku_dataset_preparation.main()
 
-    performance_info(options_file.project_id, options_file, 'LightGBM as a Chosen Model. Performance: \nMain Families: \n{} \nOther Families:'.format(''.join([key + ': ' + str(value) + '\n' for key, value in zip(main_families_metrics_dict.keys(), main_families_metrics_dict.values())]), ''.join([key + ': ' + str(value) + '\n' for key, value in zip(other_families_metrics_dict.keys(), other_families_metrics_dict.values())])), current_stock_master_file['Part_Ref'].nunique())
+    performance_info(options_file.project_id, options_file, 'LightGBM as a Chosen Model. Performance: \nMain Families: \n{} \nOther Families: \n{}'.format(''.join(['{}: {:.2f}\n'.format(key, value) for key, value in zip(main_families_metrics_dict.keys(), main_families_metrics_dict.values())]), ''.join(['{}: {:.2f}\n'.format(key, value) for key, value in zip(other_families_metrics_dict.keys(), other_families_metrics_dict.values())])), current_stock_master_file['Part_Ref'].nunique())
 
     log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 

@@ -23,9 +23,7 @@ oversample_flag = 0
 def main():
 
     df_sales, df_stock, df_pdb_dim, df_customers, df_dealers = data_acquisition()
-    df_sales, datasets, datasets_non_ohe = data_processing(df_sales, df_pdb_dim, options_file.configuration_parameters, options_file.range_dates, options_file.target)
-    # best_models, running_times = data_modelling(datasets, datasets_non_ohe, models)
-    # model_choice_message, best_model_name = model_evaluation(models, best_models, running_times, datasets, datasets_non_ohe, options_file, configuration_parameters, options_file.project_id)
+    df_sales = data_processing(df_sales, df_pdb_dim, options_file.configuration_parameters, options_file.range_dates, options_file.target)
     deployment(df_sales, options_file.sql_info['database_source'], options_file.sql_info['final_table'])
 
     performance_info(options_file.project_id, options_file, model_choice_message='N/A')
@@ -147,8 +145,8 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
         log_record('6 - Remoção de Viaturas com Dias em Stock Global negativos - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['Registration_Number'] != 'G.FORCE']  # Filters rows where, for some odd reason, the days in stock are negative
         log_record('7 - Remoção de Viaturas com Matrículas Inválidas (G.Force) - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
-        df_sales = df_sales[df_sales['Customer_Group_Code'].notnull()]  # Filters rows where there is no client information;
-        log_record('8 - Remoção de Viaturas sem informação de cliente - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
+        # df_sales = df_sales[df_sales['Customer_Group_Code'].notnull()]  # Filters rows where there is no client information;
+        # log_record('8 - Remoção de Viaturas sem informação de cliente - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['DaysInStock_Distributor'].notnull()]
         log_record('9 - Remoção de Viaturas sem informação de Dias em Stock - Distribuidor - Contagem de Chassis únicos: {} com o seguinte número de linhas: {}'.format(df_sales['Chassis_Number'].nunique(), df_sales.shape[0]), options_file.project_id)
         df_sales = df_sales[df_sales['DaysInStock_Dealer'].notnull()]
@@ -192,47 +190,9 @@ def data_processing(df_sales, df_pdb_dim, configuration_parameters_cols, range_d
         df_sales['ML_VehicleData_Code'] = df_sales.groupby(configuration_parameters_cols).ngroup()
         # df_sales.to_csv('dbs/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
 
-        # Step 3: ML Processing
-        df_sales_ml = df_sales[df_sales['NLR_Code'] == 702]  # Escolha de viaturas apenas Hyundai
-
-        # df_sales_ml.to_csv('output/df_hyundai_dataset_all_info_{}.csv'.format(current_date))
-
-        columns_with_too_much_info = ['Measure_' + str(x) for x in [2, 3, 4, 5, 6, 7, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 40, 41, 42, 43]] + \
-                                     ['Chassis_Number', 'Total_Sales', 'Total_Discount', 'Total_Discount_%', 'Total_Net_Sales', 'Fixed_Margin_I', 'Fixed_Margin_II', 'Fixed_Margin_I_%', 'stock_days_class', 'DaysInStock_Dealer',
-                                      'DaysInStock_Distributor', 'Average_DaysInStock_Global', 'HME_Support', 'Quality_Margin', 'Total_Network_Support', 'Registration_Number', 'NLR_Posting_Date', 'SLR_Document_Date_CHS', 'SLR_Account_CHS_Key', 'SLR_Document_Date_RGN', 'Location_Code',
-                                      'Dispatch_Type_Code', 'SLR_Account_Dealer_Code', 'Ship_Arrival_Date', 'Registration_Request_Date', 'Registration_Date', 'Fixed_Margin_II_%', 'DaysInStock_Global'] + \
-                                     ['Client_Id', 'Record_Type', 'Vehicle_ID', 'SLR_Document', 'SLR_Document_Account', 'VHE_Type_Orig', 'VHE_Type',
-                                      'SLR_Document_Category', 'Chassis_Flag', 'SLR_Document_Period_CHS', 'SLR_Document_Year_CHS', 'SLR_Document_CHS', 'SLR_Document_Type_CHS',
-                                      'SLR_Account_CHS', 'Quantity_CHS', 'Registration_Flag', 'Analysis_Date_RGN', 'Analysis_Period_RGN', 'Analysis_Year_RGN',
-                                      'SLR_Document_RGN', 'SLR_Document_Type_RGN', 'SLR_Account_RGN', 'SLR_Account_RGN_Key', 'Quantity_RGN', 'Sales_Type_Code_DMS', 'VehicleData_Key',
-                                      'Record_Date', 'Currency_Rate', 'Currency_Rate2', 'Currency_Rate3', 'Currency_Rate4', 'Currency_Rate5', 'Currency_Rate6', 'Currency_Rate7', 'Currency_Rate8',
-                                      'Currency_Rate9', 'Currency_Rate10', 'Currency_Rate11', 'Currency_Rate12', 'Currency_Rate13', 'Currency_Rate14', 'Currency_Rate15', 'Stock_Age_Distributor_Code',
-                                      'Stock_Age_Dealer_Code', 'Stock_Age_Global_Code', 'Immobilized_Number', 'Salesman_Dealer_Code', 'Vehicle_Code',
-                                      'PDB_Vehicle_Type_Code_DMS', 'PDB_Fuel_Type_Code_DMS', 'PDB_Transmission_Type_Code_DMS', 'Transmission_Type_Code', 'Customer_Group_Code', 'NDB_Dealer_Code']
-
-        df_non_ohe = remove_columns(df_sales_ml.copy(), [x for x in columns_with_too_much_info if x not in target], options_file.project_id)
-
-        df_non_ohe = constant_columns_removal(df_non_ohe, options_file.project_id)
-
-        df_non_ohe = pandas_object_columns_categorical_conversion_auto(df_non_ohe)
-        df_non_ohe = pandas_object_columns_categorical_conversion(df_non_ohe, ['Product_Code', 'Sales_Type_Dealer_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Fuel_Type_Code'], options_file.project_id)
-
-        df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}_non_scaled.csv'.format(current_date))
-
-        df_non_ohe = skewness_reduction(df_non_ohe, target)
-        df_non_ohe = robust_scaler_function(df_non_ohe, target)
-
-        # df_non_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_{}.csv'.format(current_date))
-
-        df_ohe = ohe(df_non_ohe, configuration_parameters_cols + ['Product_Code', 'Fuel_Type_Code', 'Sales_Type_Code', 'Vehicle_Type_Code', 'Sales_Type_Dealer_Code', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc'], options_file.project_id)
-        # df_ohe.to_csv('dbs/df_hyundai_dataset_ml_version_ohe_{}.csv'.format(current_date))
-
-    datasets_non_ohe = dataset_split(df_non_ohe, [target], oversample_flag, objective='regression')
-    datasets = dataset_split(df_ohe, [target], oversample_flag, objective='regression')
-
     log_record('Fim Secção B.', options_file.project_id)
     performance_info_append(time.time(), 'Section_B_End')
-    return df_sales, datasets, datasets_non_ohe
+    return df_sales
 
 
 def data_modelling(datasets, datasets_non_ohe, models):
@@ -277,6 +237,8 @@ def deployment(df, db, view):
         sel_df['Registration_Date'] = sel_df['Registration_Date'].astype(object).where(sel_df['Registration_Date'].notnull(), None)
         sel_df['PDB_Start_Order_Date'] = sel_df['PDB_Start_Order_Date'].astype(object).where(sel_df['PDB_Start_Order_Date'].notnull(), None)
         sel_df['PDB_End_Order_Date'] = sel_df['PDB_End_Order_Date'].astype(object).where(sel_df['PDB_End_Order_Date'].notnull(), None)
+        sel_df['Fixed_Margin_II'] = sel_df['Fixed_Margin_II'].round(2)
+        sel_df = sel_df.where(sel_df.notnull(), None)
         sel_df.rename(columns={'prev_sales_check': 'Previous_Sales_Flag', 'number_prev_sales': 'Previous_Sales_Count'}, inplace=True)
 
         sql_inject(sel_df, options_file.DSN, db, view, options_file, list(sel_df), truncate=1, check_date=1)
