@@ -160,7 +160,7 @@ def main():
                     # session_state.sel_model = sel_model
 
                     matched_data_filtered = filter_data(data, [sel_model, sel_brand], ['PT_PDB_Model_Desc', 'PT_PDB_Franchise_Desc'])
-                    session_state.gama_viva_per_model = matched_data_filtered['PT_PDB_Commercial_Version_Desc_New'].unique()
+                    session_state.gama_viva_per_model = matched_data_filtered.loc[matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1, 'PT_PDB_Commercial_Version_Desc_Old'].unique()
 
                     st.write('Existem as seguintes gamas correspondidas para a marca {} e modelo {}:'.format(sel_brand, sel_model))
 
@@ -168,7 +168,7 @@ def main():
                     row_odd_color = 'white'
 
                     if matched_data_filtered.shape[0]:
-                        matched_data_temp = matched_data_filtered.loc[~matched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'].isin(matched_data_filtered['PT_PDB_Commercial_Version_Desc_New'].unique()), :]
+                        matched_data_temp = matched_data_filtered.loc[(matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1) & (matched_data_filtered['Classification_Flag'] == 1)]
                         st.subheader('Correspondências:')
                         fig = go.Figure(data=[go.Table(
                             columnwidth=[500, 500],
@@ -201,7 +201,7 @@ def main():
                             if session_state.df_sim.shape[0]:
                                 suggestions = session_state.df_sim[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
                                 st.write('Sugestões:')
-                                st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama Morta', 'similarity_cosine': 'Grau de Semelhança'}))
+                                st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama', 'similarity_cosine': 'Grau de Semelhança'}))
                             else:
                                 st.write('Sem Sugestões de Correspondência.')
 
@@ -211,7 +211,7 @@ def main():
                                 if st.button('Validar') or session_state.validate_button_pressed == 1:
                                     session_state.validate_button_pressed = 1
 
-                                    st.write('A gama morta: \n{} corresponde à gama morta \n{}'.format(sel_gama, sel_gama_match))
+                                    st.write('A gama morta: \n{} corresponde à gama \n{}'.format(sel_gama, sel_gama_match))
                                     save_function(sel_gama, sel_gama_match, sel_brand, sel_model)
 
                                     session_state.validate_button_pressed = 0
