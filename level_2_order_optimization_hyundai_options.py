@@ -118,7 +118,42 @@ column_translate_dict = {
     'Proposals_Count': 'Propostas Entregues',
     'Stock_Count': 'Em Stock',
     'Proposals_Count_VDC': 'Propostas Entregues',
-    'Stock_Count_VDC': 'Em Stock'
+    'Stock_Count_VDC': 'Em Stock',
+    'Avg_DaysInStock_Global': 'Médias Dias em Stock',
+    'Avg_DaysInStock_Global_normalized': 'Médias Dias em Stock (score)',
+    'Sum_Qty_CHS_normalized': '#Veículos Vendidos (score)',
+    'Proposals_VDC': '#Propostas',
+    'Proposals_VDC_normalized': '#Propostas (score)',
+    'Margin_HP': 'Margem HP',
+    'TotalGrossMarginPerc': 'Margem Global (%)',
+    'TotalGrossMarginPerc_normalized': 'Margem Global (%) (score)',
+    'MarginRatio': 'Rácio Margem',
+    'MarginRatio_normalized': 'Rácio Margem (score)',
+    'OC': 'Obj. Cobertura',
+    'Stock_VDC': '#Stock',
+    'Stock_OC_Diff': 'O.C. vs Stock',
+    'Stock_OC_Diff_normalized': 'O.C. vs Stock (score)',
+    'NEDC': 'Co2 (NEDC)',
+    'NEDC_normalized': 'Co2 (NEDC) (score)',
+    "PDB_Start_Order_Date": "Início Gama",
+    "PDB_End_Order_Date": "Final Gama",
+    "Chassis_Number": "Chassis",
+    "Registration_Number": "Matrícula",
+    "DaysInStock_Global": "Dias em Stock",
+    "TotalGrossMargin": "Margem Global",
+    "Created_Time": "Dt.Criação",
+    "Dealer_Desc": "Concessão",
+    "Team_Desc": "Equipa de Vendas",
+    "Location_Desc": "Localização",
+    "Production_Date": "Dt.Produção",
+    "Purchase_Date": "Dt.Compra",
+    "Ship_Arrival_Date": "Dt.Chegada Embarcação",
+    "Sales_Plan_Period": "Período Plano de Vendas",
+    "WLTP_CO2": "Co2 (WLTP)",
+    "NEDC_CO2": "Co2 (NEDC)",
+    "Quantity": "Quantidade",
+    'Max_Qty_Per_Sales_Plan_Period': 'Quantidade Máx por Período',
+    'Model_Code': 'Model Code',
 }
 
 nlr_code_desc = {
@@ -733,6 +768,7 @@ stock_validation_query = '''
             AND (LEFT(Dealers.NDB_Dealer_Code, 3) NOT IN ('706', '702'))
         INNER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = FactBI.VehicleData_Code
         WHERE (1 = 1)
+        and FactBI.Stock_Included = 1
         AND PDB.PDB_Start_Order_Date IS NOT NULL -- Critério Gama Válida
         AND (
             PDB.PDB_End_Order_Date IS NULL
@@ -757,6 +793,7 @@ stock_validation_query = '''
                     AND (LEFT(Dealers.NDB_Dealer_Code, 3) NOT IN ('706', '702'))
             INNER JOIN  dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = FactBI.VehicleData_Code
             WHERE (1 = 1)
+            and FactBI.Stock_Included = 1
             AND PDB.PDB_Start_Order_Date IS NOT NULL --critério Gama válida
             AND PDB.PDB_End_Order_Date < GETDATE() -- Critério Gama Morta
             AND PDB.PT_PDB_Engine_Desc_New IS NOT NULL --se for gama morta tem que ter correspondencia nas colunas New
@@ -902,7 +939,6 @@ sales_validation_query = '''
           ,Sales.[Local_Vehicle_Option_Code] as OCN
           ,Sales.[PDB_Start_Order_Date]
           ,Sales.[PDB_End_Order_Date]
-          ,Sales.[NLR_Code]
           ,Sales.[Chassis_Number]
           ,Sales.[Registration_Number]
           --,Sales.[NDB_Dealer_Code] --join with dealers table

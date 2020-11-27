@@ -50,9 +50,9 @@ url_hyperlink = '''
 '''.format(options_file.documentation_url_solver_app)
 # st.markdown(url_hyperlink, unsafe_allow_html=True)
 
-session_state = SessionState.get(run_id=0, overwrite_button_pressed_flag=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, client_lvl_1='', client_lvl_2='', client_lvl_3='', client_lvl_4='', client_lvl_5='', client_lvl_6='', client_lvl_7='', model='', brand='')
+session_state = SessionState.get(first_run_flag=0, run_id=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, model='', brand='', daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'])
 
-temp_cols = ['Avg_DaysInStock_Global', 'Avg_DaysInStock_Global_normalized', '#Veículos Vendidos', 'Sum_Qty_CHS_normalized', 'Proposals_VDC', 'Proposals_VDC_normalized', 'Margin_HP', 'TotalGrossMarginPerc', 'TotalGrossMarginPerc_normalized', 'MarginRatio', 'MarginRatio_normalized', 'Stock_OC_Diff', 'Stock_OC_Diff_normalized', 'NEDC', 'NEDC_normalized']
+temp_cols = ['Avg_DaysInStock_Global', 'Avg_DaysInStock_Global_normalized', '#Veículos Vendidos', 'Sum_Qty_CHS_normalized', 'Proposals_VDC', 'Proposals_VDC_normalized', 'Margin_HP', 'TotalGrossMarginPerc', 'TotalGrossMarginPerc_normalized', 'MarginRatio', 'MarginRatio_normalized', 'OC', 'Stock_VDC', 'Stock_OC_Diff', 'Stock_OC_Diff_normalized', 'NEDC', 'NEDC_normalized']
 total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
@@ -62,19 +62,18 @@ def main():
     sales_plan = get_data_v2(options_file, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     co2_nedc, co2_wltp, total_sales = co2_processing(sales_plan)
 
-    st.write('Situação Atual de Co2 (NEDC): {:.2f}'.format(co2_nedc / total_sales))  # ToDo Make bold
-    st.write('Situação Atual de Co2 (WLTP): {:.2f}'.format(co2_wltp / total_sales))  # ToDo Make bold
-    st.write('Total de Vendas (Plano de Vendas): {}'.format(int(total_sales)))  # ToDo Make bold
+    st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc / total_sales, co2_wltp / total_sales))  # ToDo Make bold
+    st.write('Total de Vendas (Plano de Vendas): {} viaturas'.format(int(total_sales)))  # ToDo Make bold
 
     data_v2 = col_normalization(data_v2, cols_to_normalize, reverse_normalization_cols)
-    data_v2['Score'] = data_v2.apply(score_calculation, axis=1)
+    # data_v2['Score'] = data_v2.apply(score_calculation, args=(session_state.daysinstock_score_weight,), axis=1)
 
     parameters_values, parameter_restriction_vectors = [], []
     max_number_of_cars_sold_v1 = max(data['Quantity_Sold'])
     max_number_of_cars_sold_v2 = max(data_v2['Sum_Qty_CHS'])
     max_number_of_cars_sold = max(int(max_number_of_cars_sold_v1), int(max_number_of_cars_sold_v2))
 
-    sel_brand = st.sidebar.selectbox('Marca:', ['-', 'Hyundai', 'Honda'], index=1, key=session_state.run_id)
+    sel_brand = st.sidebar.selectbox('Marca:', ['-', 'Hyundai'], index=1, key=session_state.run_id)
 
     if '-' not in sel_brand:
         # st.write(list(data.loc[data['NLR_Code'] == options_file.nlr_code_desc[sel_brand], 'PT_PDB_Model_Desc'].unique()))
@@ -84,13 +83,31 @@ def main():
         data_models = data.loc[data['NLR_Code'] == options_file.nlr_code_desc[sel_brand], 'PT_PDB_Model_Desc'].unique()
         data_models_v2 = data_v2.loc[data_v2['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'PT_PDB_Model_Desc'].unique()
         common_models = [x for x in data_models if x in data_models_v2]
-        sel_model = st.sidebar.selectbox('Modelo:', ['i20', '-'] + list(common_models), index=0, key=session_state.run_id)
+        sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(common_models), index=0, key=session_state.run_id)
     else:
         sel_model = ''
 
     sel_order_size = st.sidebar.number_input('Por favor escolha o número de viaturas a encomendar:', 1, 1000, value=150)
     sel_min_number_of_configuration = st.sidebar.number_input('Por favor escolha o número mínimo de configurações (default={}):'.format(min_number_of_configuration), 1, 100, value=min_number_of_configuration)
-    sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, max_number_of_cars_sold, value=1)
+    sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, max_number_of_cars_sold, value=5)
+    sel_daysinstock_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Dias em Stock: (default={:.0f}%)'.format(score_weights['Avg_DaysInStock_Global_normalized'] * 100), 1, 100, value=int(score_weights['Avg_DaysInStock_Global_normalized'] * 100))
+    sel_margin_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Margem: (default={:.0f}%)'.format(score_weights['TotalGrossMarginPerc_normalized'] * 100), 1, 100, value=int(score_weights['TotalGrossMarginPerc_normalized'] * 100))
+    sel_margin_ratio_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Rácio de Margem: (default={:.0f}%)'.format(score_weights['MarginRatio_normalized'] * 100), 1, 100, value=int(score_weights['MarginRatio_normalized'] * 100))
+    sel_qty_sold_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Volume de Vendas: (default={:.0f}%)'.format(score_weights['Sum_Qty_CHS_normalized'] * 100), 1, 100, value=int(score_weights['Sum_Qty_CHS_normalized'] * 100))
+    sel_proposals_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Propostas: (default={:.0f}%)'.format(score_weights['Proposals_VDC_normalized'] * 100), 1, 100, value=int(score_weights['Proposals_VDC_normalized'] * 100))
+    sel_oc_stock_diff_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de O.C. vs Stock: (default={:.0f}%)'.format(score_weights['Stock_OC_Diff_normalized'] * 100), 1, 100, value=int(score_weights['Stock_OC_Diff_normalized'] * 100))
+    sel_co2_nedc_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Co2 (NEDC): (default={:.0f}%)'.format(score_weights['NEDC_normalized'] * 100), 1, 100, value=int(score_weights['NEDC_normalized'] * 100))
+
+    # if st.sidebar.button('Reset Scores'):
+    #     sel_daysinstock_score_weight = score_weights['Avg_DaysInStock_Global_normalized'] * 100
+    #     sel_margin_score_weight = score_weights['TotalGrossMarginPerc_normalized'] * 100
+    #     sel_margin_ratio_score_weight = score_weights['MarginRatio_normalized'] * 100
+    #     sel_qty_sold_score_weight = score_weights['Sum_Qty_CHS_normalized'] * 100
+    #     sel_proposals_score_weight = score_weights['Proposals_VDC_normalized'] * 100
+    #     sel_oc_stock_diff_score_weight = score_weights['Stock_OC_Diff_normalized'] * 100
+    #     sel_co2_nedc_score_weight = score_weights['NEDC_normalized'] * 100
+
+    data_v2['Score'] = data_v2.apply(score_calculation, args=(sel_daysinstock_score_weight / 100, sel_margin_score_weight / 100, sel_margin_ratio_score_weight / 100, sel_qty_sold_score_weight / 100, sel_proposals_score_weight / 100, sel_oc_stock_diff_score_weight / 100, sel_co2_nedc_score_weight / 100), axis=1)
 
     if sel_model != session_state.model:
         session_state.model = sel_model
@@ -169,7 +186,7 @@ def main():
 
                     for df, df_title in zip(validation_dfs, validation_dfs_titles):
                         if df.shape[0]:
-                            st.write(df_title + ':', df)
+                            st.write(df_title + ':', df[[x for x in list(df) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                         else:
                             st.write('Configuração sem {}'.format(df_title))
 
@@ -304,7 +321,7 @@ def get_data_v2(options_file_in, db, table, query_filter=None, model_flag=0):
     return df
 
 
-# @st.cache(show_spinner=False, suppress_st_warning=True)
+@st.cache(show_spinner=False, suppress_st_warning=True)
 def col_normalization(df, cols_to_normalize_in, cols_to_normalize_reverse_in):
 
     for col in cols_to_normalize_in:
@@ -320,16 +337,16 @@ def col_normalization(df, cols_to_normalize_in, cols_to_normalize_reverse_in):
     return df
 
 
-def score_calculation(x):
-
+def score_calculation(x, sel_daysinstock_score_weight, sel_margin_score_weight, sel_margin_ratio_score_weight, sel_qty_sold_score_weight, sel_proposals_score_weight, sel_oc_stock_diff_score_weight, sel_co2_nedc_score_weight):
+    # args = (sel_daysinstock_score_weight / 100, sel_margin_score_weight / 100, sel_margin_ratio_score_weight / 100, sel_qty_sold_score_weight / 100, sel_proposals_score_weight / 100, sel_oc_stock_diff_score_weight / 100, sel_co2_nedc_score_weight / 100)
     y = \
-        x['Avg_DaysInStock_Global_normalized'] * score_weights['Avg_DaysInStock_Global_normalized'] \
-        + x['TotalGrossMarginPerc_normalized'] * score_weights['TotalGrossMarginPerc_normalized'] \
-        + x['MarginRatio_normalized'] * score_weights['MarginRatio_normalized'] \
-        + x['Sum_Qty_CHS_normalized'] * score_weights['Sum_Qty_CHS_normalized'] \
-        + x['Proposals_VDC_normalized'] * score_weights['Proposals_VDC_normalized'] \
-        + x['Stock_OC_Diff_normalized'] * score_weights['Stock_OC_Diff_normalized'] \
-        + x['NEDC_normalized'] * score_weights['NEDC_normalized']
+        x['Avg_DaysInStock_Global_normalized'] * sel_daysinstock_score_weight \
+        + x['TotalGrossMarginPerc_normalized'] * sel_margin_score_weight \
+        + x['MarginRatio_normalized'] * sel_margin_ratio_score_weight \
+        + x['Sum_Qty_CHS_normalized'] * sel_qty_sold_score_weight \
+        + x['Proposals_VDC_normalized'] * sel_proposals_score_weight \
+        + x['Stock_OC_Diff_normalized'] * sel_oc_stock_diff_score_weight \
+        + x['NEDC_normalized'] * sel_co2_nedc_score_weight
 
     return y
 
