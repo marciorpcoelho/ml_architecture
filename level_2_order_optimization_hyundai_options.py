@@ -56,14 +56,42 @@ sql_info = {
     'optimization_solution_table': 'VHE_Fact_MLG_OrderOptimization_Solver_Optimization_DTR',
     'commercial_version_matching': 'VHE_MapDMS_Vehicle_Commercial_Versions_DTR',
     'proposals_table': 'VHE_Fact_DW_HPK_Proposals_DTR',
-    'proposals_view': 'View_VHE_HPK_Proposals_DTR',
-    'stock_view': 'View_VHE_Stock_DTR',
+    'proposals_view': 'View_VHE_Fact_PA_OrderOptimization_HPK_Proposals_Old',
+    'stock_view': 'View_VHE_Fact_PA_OrderOptimization_Stock_Old',
     'unit_count_number_history': 'LOG_Project_Units_Count_History',
+    'new_score_streamlit_view': 'View_VHE_Fact_PA_OrderOptimization_Streamlit',
+    'sales_plan_aux': 'VHE_Setup_Sales_Plan_Aux_DTR'
 }
 
 log_files = {
     'full_log': 'logs/optionals_hyundai.txt'
 }
+
+score_weights = {
+    'Avg_DaysInStock_Global_normalized': 0.18,
+    'TotalGrossMarginPerc_normalized': 0.05,
+    'MarginRatio_normalized': 0.14,
+    'Sum_Qty_CHS_normalized': 0.18,
+    'Proposals_VDC_normalized': 0.11,
+    'Stock_OC_Diff_normalized': 0.17,
+    'NEDC_normalized': 0.11,
+}
+
+cols_to_normalize = [
+    'Avg_DaysInStock_Global',
+    'TotalGrossMarginPerc',
+    'MarginRatio',
+    'Sum_Qty_CHS',
+    'Proposals_VDC',
+    'Stock_OC_Diff',
+    'NEDC'
+]
+
+# Reversed columns normalization (the greater the normalized value, the worst)
+reverse_normalization_cols = [
+    'Avg_DaysInStock_Global',
+    'NEDC'
+]
 
 
 column_translate_dict = {
@@ -612,9 +640,9 @@ int_color_translation = {
     'Bege/Preto': ['beige + black'],
     'Branco': ['ivory'],
     'Castanho': ['brilliant brown'],
-    'Cinzento': ['gray2', 'blue grey', 'lava stone', 'grey', 'pele sintética cinza', 'dark grey', 'grey/blue'],
+    'Cinzento': ['gray2', 'blue grey', 'grey', 'pele sintética cinza', 'dark grey', 'grey/blue'],
     'Laranja': ['orange'],
-    'Preto': ['dark grey', 'black', 'black 2', 'black 3', 'black3', 'neutral black', 'black/darred 4', ' black2'],
+    'Preto': ['black', 'black 2', 'black 3', 'black3', 'neutral black', 'black/darred 4', ' black2'],
     'Preto/Castanho': ['black / brown'],
     'Preto/Cinzento': ['black/charcoal'],
     'Preto/Laranja': ['black/orange'],
@@ -676,3 +704,307 @@ sql_columns_vhe_fact_bi = [
 ]
 
 
+# Validation Queries:
+stock_validation_query = '''
+    WITH CTE_AUX AS
+    (
+        SELECT MAX(Stock_Month) AS Stock_Month
+            ,  MAX(Stock_Day) AS Stock_Day
+        FROM dbo.VHE_Fact_BI_Stock_DTR
+    ),
+    STOCK_CTE AS
+    (
+        SELECT PDB.PT_PDB_Model_Desc
+            ,  PDB.PT_PDB_Engine_Desc
+            ,  PDB.PT_PDB_Transmission_Type_Desc
+            ,  PDB.PT_PDB_Version_Desc
+            ,  PDB.PT_PDB_Exterior_Color_Desc
+            ,  PDB.PT_PDB_Interior_Color_Desc
+            ,  FactBI.Chassis_Number
+            ,  FactBI.Registration_Number
+            ,  FactBI.Location_Desc
+            ,  FactBI.Production_Date
+            ,  FactBI.Purchase_Date
+            ,  FactBI.Ship_Arrival_Date
+        FROM            dbo.VHE_Fact_BI_Stock_DTR AS FactBI
+        INNER JOIN      CTE_Aux AS CTE_Aux_1 ON CTE_Aux_1.Stock_Month = FactBI.Stock_Month
+                AND CTE_Aux_1.Stock_Day = FactBI.Stock_Day
+        LEFT  JOIN dbo.SLR_Dim_Dealers_DTR AS Dealers ON FactBI.SLR_Account_Key = Dealers.SLR_Account_Key
+            AND (LEFT(Dealers.NDB_Dealer_Code, 3) NOT IN ('706', '702'))
+        INNER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = FactBI.VehicleData_Code
+        WHERE (1 = 1)
+        AND PDB.PDB_Start_Order_Date IS NOT NULL -- Critério Gama Válida
+        AND (
+            PDB.PDB_End_Order_Date IS NULL
+            OR PDB.PDB_End_Order_Date >= GETDATE()) -- Critério Gama Viva       
+            UNION ALL
+            SELECT PDB.PT_PDB_Model_Desc
+                ,  PDB.PT_PDB_Engine_Desc_New
+                ,  PDB.PT_PDB_Transmission_Type_Desc
+                ,  PDB.PT_PDB_Version_Desc_New
+                ,  PDB.PT_PDB_Exterior_Color_Desc
+                ,  PDB.PT_PDB_Interior_Color_Desc
+                ,  FactBI.Chassis_Number
+                ,  FactBI.Registration_Number
+                ,  FactBI.Location_Desc
+                ,  FactBI.Production_Date
+                ,  FactBI.Purchase_Date
+                ,  FactBI.Ship_Arrival_Date
+            FROM            dbo.VHE_Fact_BI_Stock_DTR AS FactBI
+            INNER JOIN      CTE_Aux AS CTE_Aux_1 ON CTE_Aux_1.Stock_Month = FactBI.Stock_Month
+                    AND CTE_Aux_1.Stock_Day = FactBI.Stock_Day
+            LEFT OUTER JOIN dbo.SLR_Dim_Dealers_DTR AS Dealers ON FactBI.SLR_Account_Key = Dealers.SLR_Account_Key
+                    AND (LEFT(Dealers.NDB_Dealer_Code, 3) NOT IN ('706', '702'))
+            INNER JOIN  dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = FactBI.VehicleData_Code
+            WHERE (1 = 1)
+            AND PDB.PDB_Start_Order_Date IS NOT NULL --critério Gama válida
+            AND PDB.PDB_End_Order_Date < GETDATE() -- Critério Gama Morta
+            AND PDB.PT_PDB_Engine_Desc_New IS NOT NULL --se for gama morta tem que ter correspondencia nas colunas New
+    )
+    SELECT 
+          Chassis_Number
+        ,  Registration_Number
+        ,  Location_Desc
+        ,  Production_Date
+        ,  Purchase_Date
+        ,  Ship_Arrival_Date
+    FROM      Stock_cte AS Stock_cte
+    LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = Stock_cte.PT_PDB_Transmission_Type_Desc
+    LEFT JOIN VHE_MapDMS_Ext_Color_DTR AS Ext_Color_Map ON Ext_Color_Map.Original_Value = Stock_cte.PT_PDB_Exterior_Color_Desc
+    LEFT JOIN VHE_MapDMS_Int_Color_DTR AS Int_Color_Map ON Int_Color_Map.Original_Value = Stock_cte.PT_PDB_Interior_Color_Desc
+    WHERE 1=1
+      and Stock_cte.PT_PDB_Model_Desc = '{}'
+      and Stock_cte.PT_PDB_Engine_Desc = '{}'
+      and Stock_cte.PT_PDB_Version_Desc = '{}'
+      and Transmission_Map.Mapped_Value = '{}'
+      and Ext_Color_Map.Mapped_Value = '{}'
+      and Int_Color_Map.Mapped_Value = '{}'
+'''
+
+proposals_validation_query = '''
+    with proposals_middle as (
+        SELECT 
+                PDB.PT_PDB_Model_Desc
+            ,  PDB.PT_PDB_Engine_Desc
+            ,  Transmission_Map.Mapped_Value as PT_PDB_Transmission_Type_Desc
+            ,  PDB.PT_PDB_Version_Desc
+            ,  Ext_Color_Map.Mapped_Value as PT_PDB_Exterior_Color_Desc
+            ,  Int_Color_Map.Mapped_Value as PT_PDB_Interior_Color_Desc
+            ,  Proposals.Factory_Model_Code as Model_Code
+            ,  Proposals.Factory_Vehicle_Option_Code as OCN
+            ,  Proposals.Created_Time
+            ,  Proposals.Dealer_Desc
+            ,  Proposals.Team_Desc
+            ,  Proposals.Last_Modified_Date
+        FROM      dbo.VHE_Fact_DW_HPK_Proposals_DTR AS Proposals
+        LEFT JOIN VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = Proposals.VehicleData_Code
+        LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = PDB.PT_PDB_Transmission_Type_Desc
+        LEFT JOIN VHE_MapDMS_Ext_Color_DTR AS Ext_Color_Map ON Ext_Color_Map.Original_Value = PDB.PT_PDB_Exterior_Color_Desc
+        LEFT JOIN VHE_MapDMS_Int_Color_DTR AS Int_Color_Map ON Int_Color_Map.Original_Value = PDB.PT_PDB_Interior_Color_Desc
+        WHERE (1 = 1)
+        AND PDB.PDB_Start_Order_Date IS NOT NULL -- Critério Gama Válida
+        AND (
+            PDB.PDB_End_Order_Date IS NULL
+            OR PDB.PDB_End_Order_Date >= GETDATE()) -- Critério Gama Viva
+        AND (Proposals.VehicleData_Code <> 1)
+        AND (Proposals.Proposal_Stage = 'Entregue')
+        AND ((CONVERT(date, Created_Time, 105)) BETWEEN DATEADD(MONTH, - 3, GETDATE()) AND GETDATE())
+        UNION ALL
+        SELECT 
+                PDB.PT_PDB_Model_Desc
+            ,  PDB.PT_PDB_Engine_Desc
+            ,  Transmission_Map.Mapped_Value as PT_PDB_Transmission_Type_Desc
+            ,  PDB.PT_PDB_Version_Desc
+            ,  Ext_Color_Map.Mapped_Value as PT_PDB_Exterior_Color_Desc
+            ,  Int_Color_Map.Mapped_Value as PT_PDB_Interior_Color_Desc
+            ,  Proposals.Factory_Model_Code as Model_Code
+            ,  Proposals.Factory_Vehicle_Option_Code as OCN
+            ,  Proposals.Created_Time
+            ,  Proposals.Dealer_Desc
+            ,  Proposals.Team_Desc
+            ,  Proposals.Last_Modified_Date
+        FROM      dbo.VHE_Fact_DW_HPK_Proposals_DTR AS Proposals
+        LEFT JOIN VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = Proposals.VehicleData_Code
+        LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = PDB.PT_PDB_Transmission_Type_Desc
+        LEFT JOIN VHE_MapDMS_Ext_Color_DTR AS Ext_Color_Map ON Ext_Color_Map.Original_Value = PDB.PT_PDB_Exterior_Color_Desc
+        LEFT JOIN VHE_MapDMS_Int_Color_DTR AS Int_Color_Map ON Int_Color_Map.Original_Value = PDB.PT_PDB_Interior_Color_Desc
+        WHERE (1 = 1)
+        AND PDB.PDB_Start_Order_Date IS NOT NULL --Critério Gama Válida
+        AND PDB.PDB_End_Order_Date < GETDATE() -- Critério Gama Morta
+        AND PDB.PT_PDB_Engine_Desc_New IS NOT NULL --se for gama morta tem que ter correspondencia nas colunas New
+        AND (Proposals.VehicleData_Code <> 1)
+        AND (Proposals.Proposal_Stage = 'Entregue')
+        AND ((CONVERT(date, Created_Time, 105)) BETWEEN DATEADD(MONTH, - 3, GETDATE()) AND GETDATE())
+    )
+    SELECT 
+           proposals_middle.Model_Code
+        ,  proposals_middle.OCN
+        ,  proposals_middle.Created_Time
+        ,  proposals_middle.Dealer_Desc
+        ,  proposals_middle.Team_Desc
+        ,  proposals_middle.Last_Modified_Date
+    FROM proposals_middle
+    WHERE 1=1
+      and proposals_middle.PT_PDB_Model_Desc = '{}'
+      and proposals_middle.PT_PDB_Engine_Desc = '{}'
+      and proposals_middle.PT_PDB_Version_Desc = '{}'
+      and proposals_middle.PT_PDB_Transmission_Type_Desc = '{}'
+      and proposals_middle.PT_PDB_Exterior_Color_Desc = '{}'
+      and proposals_middle.PT_PDB_Interior_Color_Desc = '{}'
+'''
+
+sales_validation_query = '''
+    WITH DEALERS AS
+    (
+        SELECT SLR_Dim_Dealers_DTR_VHE.Client_Id AS Client_Id
+            ,  SLR_Dim_Dealers_DTR_VHE.Environment AS Environment
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_Dealer_Code AS NDB_Dealer_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.SLR_Account AS SLR_Account
+            ,  SLR_Dim_Dealers_DTR_VHE.Customer_Display AS Customer_Display
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VATGroup_Code AS NDB_VATGroup_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VATGroup_Desc AS NDB_VATGroup_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VAT_Number_Code AS NDB_VAT_Number_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VAT_Number AS NDB_VAT_Number
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_Contract_Dealer_Code AS NDB_Contract_Dealer_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_Contract_Dealer_Desc AS NDB_Contract_Dealer_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VHE_PerformGroup_Code AS NDB_VHE_PerformGroup_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VHE_PerformGroup_Desc AS NDB_VHE_PerformGroup_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_PSE_PerformGroup_Code AS NDB_PSE_PerformGroup_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_PSE_PerformGroup_Desc AS NDB_PSE_PerformGroup_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VHE_AreaManager_Code AS NDB_VHE_AreaManager_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VHE_AreaManager_Desc AS NDB_VHE_AreaManager_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_PSE_AreaManager_Code AS NDB_PSE_AreaManager_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_PSE_AreaManager_Desc AS NDB_PSE_AreaManager_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VHE_Team_Code AS NDB_VHE_Team_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_VHE_Team_Desc AS NDB_VHE_Team_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_PSE_Team_Code AS NDB_PSE_Team_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_PSE_Team_Desc AS NDB_PSE_Team_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_Headquarters AS NDB_Headquarters
+            ,  SLR_Dim_Dealers_DTR_VHE.Record_Date AS Record_Date
+            ,  SLR_Dim_Dealers_DTR_VHE.Last_Modified_Date AS Last_Modified_Date
+            ,  SLR_Dim_Dealers_DTR_VHE.Customer_Group_Code AS Customer_Group_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.VAT_Number_Display AS VAT_Number_Display
+            ,  SLR_Dim_Dealers_DTR_VHE.SLR_Account_Key AS SLR_Account_CHS_Key
+            ,  SLR_Dim_Dealers_DTR_VHE.SLR_AccountGroup_Code AS SLR_AccountGroup_Code
+            ,  SLR_Dim_Dealers_DTR_VHE.NDB_Dealer_Desc AS NDB_Dealer_Desc
+            ,  SLR_Dim_Dealers_DTR_VHE.SLR_Account_Invoice AS SLR_Account_Invoice
+        FROM dbo.SLR_Dim_Dealers_DTR AS SLR_Dim_Dealers_DTR_VHE
+        WHERE SLR_Dim_Dealers_DTR_VHE.Record_Type <> 3
+    ),
+    CUSTOMER_GROUP AS
+    (
+        SELECT SLR_Dim_Customer_Groups_DTR.Customer_Group_Code AS Customer_Group_Code
+            ,  SLR_Dim_Customer_Groups_DTR.EN_Customer_Group_Desc AS Customer_Group_Desc
+            ,  SLR_Dim_Customer_Groups_DTR.Customer_Group_Display_Order AS Customer_Group_Display_Order
+        FROM dbo.SLR_Dim_Customer_Groups_DTR SLR_Dim_Customer_Groups_DTR WITH (NOLOCK)
+    )
+    SELECT Sales.[Factory_Model_Code] as Model_Code
+          ,Sales.[Local_Vehicle_Option_Code] as OCN
+          ,Sales.[PDB_Start_Order_Date]
+          ,Sales.[PDB_End_Order_Date]
+          ,Sales.[NLR_Code]
+          ,Sales.[Chassis_Number]
+          ,Sales.[Registration_Number]
+          --,Sales.[NDB_Dealer_Code] --join with dealers table
+          ,DEALERS.NDB_VATGroup_Desc as NDB_VATGroup_Desc
+          --,Sales.[Customer_Group_Code] -- join with customer table
+          ,CUSTOMER_GROUP.Customer_Group_Desc as Customer_Group_Desc
+          ,Sales.[DaysInStock_Global]
+          ,Sales.[TotalGrossMargin]
+          ,Sales.[TotalGrossMarginPerc]
+    FROM [BI_DTR].[dbo].[View_VHE_Fact_PA_OrderOptimization_Sales] as Sales
+    LEFT JOIN  Dealers ON Dealers.SLR_Account_CHS_Key = Sales.SLR_Account_CHS_Key
+    LEFT JOIN  Customer_Group ON Customer_Group.Customer_Group_Code = Dealers.Customer_Group_Code
+        WHERE 1=1
+      and Sales.PT_PDB_Model_Desc = '{}'
+      and Sales.PT_PDB_Engine_Desc = '{}'
+      and Sales.PT_PDB_Version_Desc = '{}'
+      and Sales.PT_PDB_Transmission_Type_Desc = '{}'
+      and Sales.PT_PDB_Exterior_Color_Desc = '{}'
+      and Sales.PT_PDB_Interior_Color_Desc = '{}'
+      and Quantity_CHS > 0
+  '''
+
+sales_plan_validation_query_step_1 = '''
+    SELECT 
+        Sales_Plan.Factory_Model_Code as Model_Code
+        ,  Sales_Plan.Local_Vehicle_Option_Code as OCN
+        ,  Sales_Plan.Sales_Plan_Period
+        ,  Sales_Plan.WLTP_CO2
+        ,  Sales_Plan.NEDC_CO2
+        ,  Sales_Plan.Quantity
+    FROM  dbo.VHE_Setup_Sales_Plan_DTR AS Sales_Plan
+    LEFT OUTER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.Factory_Model_Code = Sales_Plan.Factory_Model_Code AND PDB.Local_Vehicle_Option_Code = Sales_Plan.Local_Vehicle_Option_Code				
+    LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = PDB.PT_PDB_Transmission_Type_Desc
+    LEFT JOIN VHE_MapDMS_Ext_Color_DTR AS Ext_Color_Map ON Ext_Color_Map.Original_Value = PDB.PT_PDB_Exterior_Color_Desc
+    LEFT JOIN VHE_MapDMS_Int_Color_DTR AS Int_Color_Map ON Int_Color_Map.Original_Value = PDB.PT_PDB_Interior_Color_Desc
+    WHERE (1 = 1)
+    AND (Sales_Plan.Sales_Plan_Period BETWEEN YEAR(GETDATE()) * 100 + MONTH(GETDATE()) AND YEAR(DATEADD(month, 4, GETDATE())) * 100 + MONTH(DATEADD(month, 4, GETDATE())))
+    AND Sales_Plan.Factory_Model_Code <> '1'
+      and PDB.PT_PDB_Model_Desc = '{}'
+      and PDB.PT_PDB_Engine_Desc = '{}'
+      and PDB.PT_PDB_Version_Desc = '{}'
+      and Transmission_Map.Mapped_Value = '{}'
+      and Ext_Color_Map.Mapped_Value = '{}'
+      and Int_Color_Map.Mapped_Value = '{}'
+    ORDER BY Sales_Plan.Factory_Model_Code, Sales_Plan.Local_Vehicle_Option_Code, Sales_Plan_Period
+'''
+
+sales_plan_validation_query_step_2 = '''
+    WITH SALES_PLAN_TEMP AS
+    (
+        SELECT PDB.PT_PDB_Model_Desc
+            ,  PDB.PT_PDB_Engine_Desc
+            ,  PDB.PT_PDB_Transmission_Type_Desc
+            ,  PDB.PT_PDB_Version_Desc
+            ,  PDB.PT_PDB_Exterior_Color_Desc
+            ,  PDB.PT_PDB_Interior_Color_Desc
+            ,  MAX(Sales_Plan.WLTP_CO2) AS WLTP_CO2
+            ,  MAX(Sales_Plan.NEDC_CO2) AS NEDC_CO2
+            ,  SUM(Sales_Plan.Quantity) AS Max_Qty_Per_Sales_Plan_Period
+        FROM            dbo.VHE_Setup_Sales_Plan_DTR AS Sales_Plan
+        LEFT OUTER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.Factory_Model_Code = Sales_Plan.Factory_Model_Code
+                AND PDB.Local_Vehicle_Option_Code = Sales_Plan.Local_Vehicle_Option_Code				
+        WHERE (1 = 1)
+        AND (Sales_Plan.Sales_Plan_Period BETWEEN YEAR(GETDATE()) * 100 + MONTH(GETDATE()) AND YEAR(DATEADD(month, 4, GETDATE())) * 100 + MONTH(DATEADD(month, 4, GETDATE())))
+        AND Sales_Plan.Factory_Model_Code <> '1' --
+        GROUP BY PDB.PT_PDB_Model_Desc
+            , PDB.PT_PDB_Engine_Desc
+            , PDB.PT_PDB_Transmission_Type_Desc
+            , PDB.PT_PDB_Version_Desc
+            , PDB.PT_PDB_Exterior_Color_Desc
+            , PDB.PT_PDB_Interior_Color_Desc
+            , Sales_Plan.Sales_Plan_Period
+    )
+    SELECT 
+          Sales_Plan.WLTP_CO2
+        ,  Sales_Plan.NEDC_CO2
+        ,  Sales_Plan.Max_Qty_Per_Sales_Plan_Period
+    FROM      Sales_Plan_Temp AS Sales_Plan
+    LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = Sales_Plan.PT_PDB_Transmission_Type_Desc
+    LEFT JOIN VHE_MapDMS_Ext_Color_DTR AS Ext_Color_Map ON Ext_Color_Map.Original_Value = Sales_Plan.PT_PDB_Exterior_Color_Desc
+    LEFT JOIN VHE_MapDMS_Int_Color_DTR AS Int_Color_Map ON Int_Color_Map.Original_Value = Sales_Plan.PT_PDB_Interior_Color_Desc
+    WHERE 1=1
+      and Sales_Plan.PT_PDB_Model_Desc = '{}'
+      and Sales_Plan.PT_PDB_Engine_Desc = '{}'
+      and Sales_Plan.PT_PDB_Version_Desc = '{}'
+      and Transmission_Map.Mapped_Value = '{}'
+      and Ext_Color_Map.Mapped_Value = '{}'
+      and Int_Color_Map.Mapped_Value = '{}'
+'''
+
+
+sales_plan_validation_query_step_3 = '''
+    SELECT 
+          [WLTP_CO2]
+          ,[NEDC_CO2]
+          ,[OC]
+      FROM [BI_DTR].[dbo].[View_VHE_Fact_PA_OrderOptimization_Sales_Plan] as PDB
+      WHERE 1=1
+        and PDB.PT_PDB_Model_Desc = '{}'
+      and PDB.PT_PDB_Engine_Desc = '{}'
+      and PDB.PT_PDB_Version_Desc = '{}'
+      and PDB.[PT_PDB_Transmission_Type_Desc] = '{}'
+      and PDB.[PT_PDB_Exterior_Color_Desc] = '{}'
+      and PDB.[PT_PDB_Interior_Color_Desc] = '{}'
+'''

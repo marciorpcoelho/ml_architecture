@@ -212,7 +212,7 @@ def sql_join(df, dsn, database, view, options_file):
     return
 
 
-def sql_query(query, dsn, database, view, options_file):
+def sql_query(query, dsn, database, options_file):
     start = time.time()
 
     cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
