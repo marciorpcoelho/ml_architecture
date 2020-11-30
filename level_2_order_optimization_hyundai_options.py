@@ -154,6 +154,8 @@ column_translate_dict = {
     "Quantity": "Quantidade",
     'Max_Qty_Per_Sales_Plan_Period': 'Quantidade Máx por Período',
     'Model_Code': 'Model Code',
+    'PT_Stock_Status_Level_1_Desc': 'Estado (1º Nível)',
+    'PT_Stock_Status_Desc': 'Estado (2º Nível)'
 }
 
 nlr_code_desc = {
@@ -741,20 +743,50 @@ sql_columns_vhe_fact_bi = [
 
 # Validation Queries:
 stock_validation_query = '''
-    WITH CTE_AUX AS
+WITH CTE_AUX AS
     (
         SELECT MAX(Stock_Month) AS Stock_Month
             ,  MAX(Stock_Day) AS Stock_Day
         FROM dbo.VHE_Fact_BI_Stock_DTR
     ),
-    STOCK_CTE AS
-    (
-        SELECT PDB.PT_PDB_Model_Desc
-            ,  PDB.PT_PDB_Engine_Desc
+STOCK_CTE AS
+(
+    SELECT PDB.PT_PDB_Model_Desc
+        ,  PDB.PT_PDB_Engine_Desc
+        ,  PDB.PT_PDB_Transmission_Type_Desc
+        ,  PDB.PT_PDB_Version_Desc
+        ,  PDB.PT_PDB_Exterior_Color_Desc
+        ,  PDB.PT_PDB_Interior_Color_Desc
+        ,  SStatus.PT_Stock_Status_Level_1_Desc
+        ,  SStatus.PT_Stock_Status_Desc
+        ,  FactBI.Chassis_Number
+        ,  FactBI.Registration_Number
+        ,  FactBI.Location_Desc
+        ,  FactBI.Production_Date
+        ,  FactBI.Purchase_Date
+        ,  FactBI.Ship_Arrival_Date
+    FROM            dbo.VHE_Fact_BI_Stock_DTR AS FactBI
+    INNER JOIN      CTE_Aux AS CTE_Aux_1 ON CTE_Aux_1.Stock_Month = FactBI.Stock_Month
+            AND CTE_Aux_1.Stock_Day = FactBI.Stock_Day
+    LEFT  JOIN dbo.SLR_Dim_Dealers_DTR AS Dealers ON FactBI.SLR_Account_Key = Dealers.SLR_Account_Key
+        AND (LEFT(Dealers.NDB_Dealer_Code, 3) NOT IN ('706', '702'))
+    INNER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = FactBI.VehicleData_Code
+    LEFT JOIN dbo.VHE_Dim_Stock_Status_DTR AS SStatus ON SStatus.Stock_Status_Code = FactBI.Stock_Status_Code
+    WHERE (1 = 1)
+        AND FactBI.Stock_Included = 1
+    AND PDB.PDB_Start_Order_Date IS NOT NULL -- Critério Gama Válida
+    AND (
+        PDB.PDB_End_Order_Date IS NULL
+        OR PDB.PDB_End_Order_Date >= GETDATE()) -- Critério Gama Viva      
+    UNION ALL
+    SELECT PDB.PT_PDB_Model_Desc
+            ,  PDB.PT_PDB_Engine_Desc_New
             ,  PDB.PT_PDB_Transmission_Type_Desc
-            ,  PDB.PT_PDB_Version_Desc
+            ,  PDB.PT_PDB_Version_Desc_New
             ,  PDB.PT_PDB_Exterior_Color_Desc
             ,  PDB.PT_PDB_Interior_Color_Desc
+            ,  SStatus.PT_Stock_Status_Level_1_Desc
+            ,  SStatus.PT_Stock_Status_Desc
             ,  FactBI.Chassis_Number
             ,  FactBI.Registration_Number
             ,  FactBI.Location_Desc
@@ -764,58 +796,37 @@ stock_validation_query = '''
         FROM            dbo.VHE_Fact_BI_Stock_DTR AS FactBI
         INNER JOIN      CTE_Aux AS CTE_Aux_1 ON CTE_Aux_1.Stock_Month = FactBI.Stock_Month
                 AND CTE_Aux_1.Stock_Day = FactBI.Stock_Day
-        LEFT  JOIN dbo.SLR_Dim_Dealers_DTR AS Dealers ON FactBI.SLR_Account_Key = Dealers.SLR_Account_Key
-            AND (LEFT(Dealers.NDB_Dealer_Code, 3) NOT IN ('706', '702'))
-        INNER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = FactBI.VehicleData_Code
+        LEFT OUTER JOIN dbo.SLR_Dim_Dealers_DTR AS Dealers ON FactBI.SLR_Account_Key = Dealers.SLR_Account_Key
+                AND (LEFT(Dealers.NDB_Dealer_Code, 3) NOT IN ('706', '702'))
+        INNER JOIN  dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = FactBI.VehicleData_Code
+        LEFT JOIN dbo.VHE_Dim_Stock_Status_DTR AS SStatus ON SStatus.Stock_Status_Code = FactBI.Stock_Status_Code
         WHERE (1 = 1)
-        and FactBI.Stock_Included = 1
-        AND PDB.PDB_Start_Order_Date IS NOT NULL -- Critério Gama Válida
-        AND (
-            PDB.PDB_End_Order_Date IS NULL
-            OR PDB.PDB_End_Order_Date >= GETDATE()) -- Critério Gama Viva       
-            UNION ALL
-            SELECT PDB.PT_PDB_Model_Desc
-                ,  PDB.PT_PDB_Engine_Desc_New
-                ,  PDB.PT_PDB_Transmission_Type_Desc
-                ,  PDB.PT_PDB_Version_Desc_New
-                ,  PDB.PT_PDB_Exterior_Color_Desc
-                ,  PDB.PT_PDB_Interior_Color_Desc
-                ,  FactBI.Chassis_Number
-                ,  FactBI.Registration_Number
-                ,  FactBI.Location_Desc
-                ,  FactBI.Production_Date
-                ,  FactBI.Purchase_Date
-                ,  FactBI.Ship_Arrival_Date
-            FROM            dbo.VHE_Fact_BI_Stock_DTR AS FactBI
-            INNER JOIN      CTE_Aux AS CTE_Aux_1 ON CTE_Aux_1.Stock_Month = FactBI.Stock_Month
-                    AND CTE_Aux_1.Stock_Day = FactBI.Stock_Day
-            LEFT OUTER JOIN dbo.SLR_Dim_Dealers_DTR AS Dealers ON FactBI.SLR_Account_Key = Dealers.SLR_Account_Key
-                    AND (LEFT(Dealers.NDB_Dealer_Code, 3) NOT IN ('706', '702'))
-            INNER JOIN  dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = FactBI.VehicleData_Code
-            WHERE (1 = 1)
-            and FactBI.Stock_Included = 1
-            AND PDB.PDB_Start_Order_Date IS NOT NULL --critério Gama válida
-            AND PDB.PDB_End_Order_Date < GETDATE() -- Critério Gama Morta
-            AND PDB.PT_PDB_Engine_Desc_New IS NOT NULL --se for gama morta tem que ter correspondencia nas colunas New
-    )
-    SELECT 
-          Chassis_Number
-        ,  Registration_Number
-        ,  Location_Desc
-        ,  Production_Date
-        ,  Purchase_Date
-        ,  Ship_Arrival_Date
-    FROM      Stock_cte AS Stock_cte
+        AND FactBI.Stock_Included = 1
+        AND PDB.PDB_Start_Order_Date IS NOT NULL --critério Gama válida
+        AND PDB.PDB_End_Order_Date < GETDATE() -- Critério Gama Morta
+        AND PDB.PT_PDB_Engine_Desc_New IS NOT NULL --se for gama morta tem que ter correspondencia nas colunas New
+)
+SELECT
+    PT_Stock_Status_Level_1_Desc
+    ,  PT_Stock_Status_Desc
+    ,  Chassis_Number
+    ,  Registration_Number
+    ,  Location_Desc
+    ,  Production_Date
+    ,  Purchase_Date
+    ,  Ship_Arrival_Date
+FROM      Stock_cte AS Stock_cte
     LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = Stock_cte.PT_PDB_Transmission_Type_Desc
     LEFT JOIN VHE_MapDMS_Ext_Color_DTR AS Ext_Color_Map ON Ext_Color_Map.Original_Value = Stock_cte.PT_PDB_Exterior_Color_Desc
     LEFT JOIN VHE_MapDMS_Int_Color_DTR AS Int_Color_Map ON Int_Color_Map.Original_Value = Stock_cte.PT_PDB_Interior_Color_Desc
-    WHERE 1=1
-      and Stock_cte.PT_PDB_Model_Desc = '{}'
-      and Stock_cte.PT_PDB_Engine_Desc = '{}'
-      and Stock_cte.PT_PDB_Version_Desc = '{}'
-      and Transmission_Map.Mapped_Value = '{}'
-      and Ext_Color_Map.Mapped_Value = '{}'
-      and Int_Color_Map.Mapped_Value = '{}'
+WHERE 1=1        
+        and Stock_cte.PT_PDB_Model_Desc = '{}'
+        and Stock_cte.PT_PDB_Engine_Desc = '{}'
+        and Stock_cte.PT_PDB_Version_Desc = '{}'
+        and Transmission_Map.Mapped_Value = '{}'
+        and Ext_Color_Map.Mapped_Value = '{}'
+        and Int_Color_Map.Mapped_Value = '{}'
+        ORDER BY PT_Stock_Status_Level_1_Desc,  PT_Stock_Status_Desc
 '''
 
 proposals_validation_query = '''

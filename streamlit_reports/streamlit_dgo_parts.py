@@ -44,8 +44,8 @@ session_state = SessionState.get(sel_all_refs_flag=True, sel_family_desc='-', ru
 
 def main():
     df_product_group = get_data_product_group_sql(options_file.others_families_dict, options_file)
-    cm_family_lvl_1 = get_data_sql(options_file, options_file.sql_info['database_final'], options_file.sql_info['matrix_lvl_1'])
-    cm_family_lvl_2 = get_data_sql(options_file, options_file.sql_info['database_final'], options_file.sql_info['matrix_lvl_2'])
+    cm_family_lvl_1 = get_data_sql(options_file, options_file.sql_info_python['database_final'], options_file.sql_info_python['matrix_lvl_1'])
+    cm_family_lvl_2 = get_data_sql(options_file, options_file.sql_info_python['database_final'], options_file.sql_info_python['matrix_lvl_2'])
     cm_family_dict_lvl_1 = cm_replacements(cm_family_lvl_1)
     cm_family_dict_lvl_2 = cm_replacements(cm_family_lvl_2)
 
@@ -270,7 +270,7 @@ def update_family(df, new_family_classification, df_product_group):
 
     df['New_Product_Group_DW'] = new_family_classification_code
     df.rename(columns={'Product_Group_DW': 'Old_Product_Group_DW'}, inplace=True)
-    level_1_e_deployment.sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_refs'], options_file, ['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Old_Product_Group_DW', 'New_Product_Group_DW', 'Classification', 'Classification_Prob'], check_date=1)
+    level_1_e_deployment.sql_inject(df, options_file.DSN_MLG, options_file.sql_info_python['database_final'], options_file.sql_info_python['parts_classification_refs'], options_file, ['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Old_Product_Group_DW', 'New_Product_Group_DW', 'Classification', 'Classification_Prob'], check_date=1)
 
     st.write('Famílias das referências selecionadas alteradas com sucesso.')
 
@@ -306,7 +306,7 @@ def save_classification_rule(df_product_group, text, text_option, sel_family_sel
     df_rules['Min_PVP'] = min_pvp
     df_rules['Date'] = time_tag
 
-    level_1_e_deployment.sql_inject(df_rules, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_rules'], options_file, columns=list(df_rules))
+    level_1_e_deployment.sql_inject(df_rules, options_file.DSN_MLG, options_file.sql_info_python['database_final'], options_file.sql_info_python['parts_classification_rules'], options_file, columns=list(df_rules))
     return
 
 
@@ -379,7 +379,7 @@ def common_keywords_calculation(sel_family):
 
 @st.cache(show_spinner=False)
 def get_dataset_sql(others_dict, options_file_in, query):
-    df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in, query)
+    df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info_python['database_final'], options_file_in, query)
     df['Part_Description'] = df['Part_Description'].astype('str')
     df.drop('Date', axis=1, inplace=True)
 
@@ -391,7 +391,7 @@ def get_dataset_sql(others_dict, options_file_in, query):
 
 @st.cache(show_spinner=False)
 def get_data_product_group_sql(others_dict, options_file_in):
-    df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN, options_file_in.sql_info['database_BI_AFR'], options_file_in, options_file_in.product_group_app_query)
+    df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN, options_file_in.sql_info_python['database_BI_AFR'], options_file_in, options_file_in.product_group_app_query)
     df['Product_Group_Code'] = df['Product_Group_Code'].astype('str')
 
     df = df[df['Product_Group_Code'] != '77']
@@ -440,8 +440,8 @@ def filter_data(dataset, value_filters_list, col_filters_list, operations_list):
 @st.cache(show_spinner=False)
 def cm_replacements(df):
     df.drop('Date', axis=1, inplace=True)
-    family_names = [x for x in list(df) if not x.startswith('Totals')]
-    df['Family_%'] = [df.iloc[value, value] / df.iloc[value, df.shape[1]-1] for value in range(df.shape[0])]
+    family_names = df.index
+    df['Family_%'] = [df.loc[str(family), str(family)] / df.loc[family, 'Totals'] for family in family_names]
 
     df_copy = df.copy(deep=True)
     family_confusion_dict = {}
