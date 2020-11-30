@@ -24,7 +24,7 @@ import modules.SessionState as SessionState
 from modules.level_1_b_data_processing import null_analysis
 from level_2_order_optimization_hyundai_options import configuration_parameters, client_lvl_cols, client_lvl_cols_renamed, score_weights, cols_to_normalize, reverse_normalization_cols
 
-st.set_page_config(page_title='Sugestão de Encomenda - Importador')
+st.set_page_config(page_title='Sugestão de Encomenda - Importador', layout="wide")
 
 min_number_of_configuration = 10
 api_backend = api_endpoint_ip + options_file.api_backend_loc
@@ -33,10 +33,10 @@ truncate_query = ''' DELETE
 FROM [BI_DTR].[dbo].[VHE_Fact_MLG_OrderOptimization_Solver_Optimization_DTR]
 WHERE PT_PDB_Model_Desc = '{}'  '''
 
-"""
-# Sugestão de Encomenda - Importador - Demo
-Sugestão de Configurações para a encomenda mensal de viaturas Hyundai
-"""
+# st.markdown("<h1 style='text-align: center; color: red;'>Sugestão de Encomenda - Importador - Demo</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda - Importador - Demo</h1>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Hyundai</h2>", unsafe_allow_html=True)
+
 
 hide_menu_style = """
         <style>
@@ -50,7 +50,7 @@ url_hyperlink = '''
 '''.format(options_file.documentation_url_solver_app)
 # st.markdown(url_hyperlink, unsafe_allow_html=True)
 
-session_state = SessionState.get(first_run_flag=0, run_id=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, model='', brand='', daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'])
+session_state = SessionState.get(first_run_flag=0, run_id=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, model='', brand='', daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'], sel_margin_score_weight = score_weights['TotalGrossMarginPerc_normalized'], sel_margin_ratio_score_weight = score_weights['MarginRatio_normalized'], sel_qty_sold_score_weight = score_weights['Sum_Qty_CHS_normalized'], sel_proposals_score_weight = score_weights['Proposals_VDC_normalized'], sel_oc_stock_diff_score_weight = score_weights['Stock_OC_Diff_normalized'], sel_co2_nedc_score_weight = score_weights['NEDC_normalized'])
 
 temp_cols = ['Avg_DaysInStock_Global', 'Avg_DaysInStock_Global_normalized', '#Veículos Vendidos', 'Sum_Qty_CHS_normalized', 'Proposals_VDC', 'Proposals_VDC_normalized', 'Margin_HP', 'TotalGrossMarginPerc', 'TotalGrossMarginPerc_normalized', 'MarginRatio', 'MarginRatio_normalized', 'OC', 'Stock_VDC', 'Stock_OC_Diff', 'Stock_OC_Diff_normalized', 'NEDC', 'NEDC_normalized']
 total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -83,31 +83,40 @@ def main():
         data_models = data.loc[data['NLR_Code'] == options_file.nlr_code_desc[sel_brand], 'PT_PDB_Model_Desc'].unique()
         data_models_v2 = data_v2.loc[data_v2['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'PT_PDB_Model_Desc'].unique()
         common_models = [x for x in data_models if x in data_models_v2]
-        sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(common_models), index=0, key=session_state.run_id)
+        sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(common_models), index=0)
     else:
         sel_model = ''
 
+    st.sidebar.title('Opções:')
     sel_order_size = st.sidebar.number_input('Por favor escolha o número de viaturas a encomendar:', 1, 1000, value=150)
     sel_min_number_of_configuration = st.sidebar.number_input('Por favor escolha o número mínimo de configurações (default={}):'.format(min_number_of_configuration), 1, 100, value=min_number_of_configuration)
     sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, max_number_of_cars_sold, value=5)
-    sel_daysinstock_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Dias em Stock: (default={:.0f}%)'.format(score_weights['Avg_DaysInStock_Global_normalized'] * 100), 1, 100, value=int(score_weights['Avg_DaysInStock_Global_normalized'] * 100))
-    sel_margin_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Margem: (default={:.0f}%)'.format(score_weights['TotalGrossMarginPerc_normalized'] * 100), 1, 100, value=int(score_weights['TotalGrossMarginPerc_normalized'] * 100))
-    sel_margin_ratio_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Rácio de Margem: (default={:.0f}%)'.format(score_weights['MarginRatio_normalized'] * 100), 1, 100, value=int(score_weights['MarginRatio_normalized'] * 100))
-    sel_qty_sold_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Volume de Vendas: (default={:.0f}%)'.format(score_weights['Sum_Qty_CHS_normalized'] * 100), 1, 100, value=int(score_weights['Sum_Qty_CHS_normalized'] * 100))
-    sel_proposals_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Propostas: (default={:.0f}%)'.format(score_weights['Proposals_VDC_normalized'] * 100), 1, 100, value=int(score_weights['Proposals_VDC_normalized'] * 100))
-    sel_oc_stock_diff_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de O.C. vs Stock: (default={:.0f}%)'.format(score_weights['Stock_OC_Diff_normalized'] * 100), 1, 100, value=int(score_weights['Stock_OC_Diff_normalized'] * 100))
-    sel_co2_nedc_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Co2 (NEDC): (default={:.0f}%)'.format(score_weights['NEDC_normalized'] * 100), 1, 100, value=int(score_weights['NEDC_normalized'] * 100))
+    st.sidebar.title('Pesos:')
+    session_state.sel_daysinstock_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Dias em Stock: (default={:.0f}%)'.format(score_weights['Avg_DaysInStock_Global_normalized'] * 100), 1, 100, value=int(score_weights['Avg_DaysInStock_Global_normalized'] * 100), key=session_state.run_id)
+    session_state.sel_margin_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Margem: (default={:.0f}%)'.format(score_weights['TotalGrossMarginPerc_normalized'] * 100), 1, 100, value=int(score_weights['TotalGrossMarginPerc_normalized'] * 100), key=session_state.run_id)
+    session_state.sel_margin_ratio_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Rácio de Margem: (default={:.0f}%)'.format(score_weights['MarginRatio_normalized'] * 100), 1, 100, value=int(score_weights['MarginRatio_normalized'] * 100), key=session_state.run_id)
+    session_state.sel_qty_sold_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Volume de Vendas: (default={:.0f}%)'.format(score_weights['Sum_Qty_CHS_normalized'] * 100), 1, 100, value=int(score_weights['Sum_Qty_CHS_normalized'] * 100), key=session_state.run_id)
+    session_state.sel_proposals_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Propostas: (default={:.0f}%)'.format(score_weights['Proposals_VDC_normalized'] * 100), 1, 100, value=int(score_weights['Proposals_VDC_normalized'] * 100), key=session_state.run_id)
+    session_state.sel_oc_stock_diff_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de O.C. vs Stock: (default={:.0f}%)'.format(score_weights['Stock_OC_Diff_normalized'] * 100), 1, 100, value=int(score_weights['Stock_OC_Diff_normalized'] * 100), key=session_state.run_id)
+    session_state.sel_co2_nedc_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Co2 (NEDC): (default={:.0f}%)'.format(score_weights['NEDC_normalized'] * 100), 1, 100, value=int(score_weights['NEDC_normalized'] * 100), key=session_state.run_id)
 
-    # if st.sidebar.button('Reset Scores'):
-    #     sel_daysinstock_score_weight = score_weights['Avg_DaysInStock_Global_normalized'] * 100
-    #     sel_margin_score_weight = score_weights['TotalGrossMarginPerc_normalized'] * 100
-    #     sel_margin_ratio_score_weight = score_weights['MarginRatio_normalized'] * 100
-    #     sel_qty_sold_score_weight = score_weights['Sum_Qty_CHS_normalized'] * 100
-    #     sel_proposals_score_weight = score_weights['Proposals_VDC_normalized'] * 100
-    #     sel_oc_stock_diff_score_weight = score_weights['Stock_OC_Diff_normalized'] * 100
-    #     sel_co2_nedc_score_weight = score_weights['NEDC_normalized'] * 100
+    weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight
+    if weights_sum != 100:
+        st.sidebar.error('Alerta: a soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
 
-    data_v2['Score'] = data_v2.apply(score_calculation, args=(sel_daysinstock_score_weight / 100, sel_margin_score_weight / 100, sel_margin_ratio_score_weight / 100, sel_qty_sold_score_weight / 100, sel_proposals_score_weight / 100, sel_oc_stock_diff_score_weight / 100, sel_co2_nedc_score_weight / 100), axis=1)
+    if st.sidebar.button('Reset Scores'):
+        session_state.sel_daysinstock_score_weight = score_weights['Avg_DaysInStock_Global_normalized'] * 100
+        session_state.sel_margin_score_weight = score_weights['TotalGrossMarginPerc_normalized'] * 100
+        session_state.sel_margin_ratio_score_weight = score_weights['MarginRatio_normalized'] * 100
+        session_state.sel_qty_sold_score_weight = score_weights['Sum_Qty_CHS_normalized'] * 100
+        session_state.sel_proposals_score_weight = score_weights['Proposals_VDC_normalized'] * 100
+        session_state.sel_oc_stock_diff_score_weight = score_weights['Stock_OC_Diff_normalized'] * 100
+        session_state.sel_co2_nedc_score_weight = score_weights['NEDC_normalized'] * 100
+
+        session_state.run_id += 1
+        raise RerunException(RerunData())
+
+    data_v2['Score'] = data_v2.apply(score_calculation, args=(session_state.sel_daysinstock_score_weight / 100, session_state.sel_margin_score_weight / 100, session_state.sel_margin_ratio_score_weight / 100, session_state.sel_qty_sold_score_weight / 100, session_state.sel_proposals_score_weight / 100, session_state.sel_oc_stock_diff_score_weight / 100, session_state.sel_co2_nedc_score_weight / 100), axis=1)
 
     if sel_model != session_state.model:
         session_state.model = sel_model
@@ -121,15 +130,6 @@ def main():
             st.write('Não foram encontrados registos para as presentes escolhas - Por favor altere o modelo/cliente/valor mínimo de viaturas por configuração.')
             return
         # st.write('Número de Configurações:', data_filtered['ML_VehicleData_Code'].nunique())
-
-        # for parameter in [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc']:
-            # sel_parameter_values = st.sidebar.multiselect('Escolha os valores para {}:'.format(options_file.column_translate_dict[parameter]), [x for x in data_filtered[parameter].unique()])
-            # parameters_values.append(sel_parameter_values)
-
-        # for parameter, parameter_value in zip([x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'], parameters_values):
-        #     if parameter != '-':
-        # data_filtered = filter_data(data_filtered, parameters_values, [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'])
-        # data_filtered_v2 = filter_data_v2(data_filtered_v2, parameters_values, [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'])
 
         proposals_col = 'Proposals_Count_VDC'
         stock_col = 'Stock_Count_VDC'
@@ -172,10 +172,8 @@ def main():
                 sel_configurations_v2.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
 
                 total_sales_after_order = total_sales + sel_configurations_v2['Quantity'].sum()
-                # st.write('Total Sales after order:', total_sales_after_order)
                 sel_configurations_v2['nedc_after_order'] = sel_configurations_v2['Quantity'] * sel_configurations_v2['NEDC']
                 nedc_co2_after_order = co2_nedc + sel_configurations_v2['nedc_after_order'].sum()
-                # st.write('NEDC Co2 after order', nedc_co2_after_order)
                 st.write('Situação Co2 após esta encomenda: {:.2f}'.format(nedc_co2_after_order / total_sales_after_order))
 
                 sel_configurations_v2['Configuration_Concat'] = sel_configurations_v2['PT_PDB_Model_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Engine_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Transmission_Type_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Version_Desc'] + ', ' +  sel_configurations_v2['PT_PDB_Exterior_Color_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Interior_Color_Desc']
@@ -184,11 +182,24 @@ def main():
                     validation_dfs = get_validation_info(sel_configurations_v2, sel_config)
                     validation_dfs_titles = ['Vendas', 'Propostas', 'Stock', 'Plano de Vendas, passo 1', 'Plano de Vendas, passo 2', 'Plano de Vendas, passo 3']
 
-                    for df, df_title in zip(validation_dfs, validation_dfs_titles):
-                        if df.shape[0]:
-                            st.write(df_title + ':', df[[x for x in list(df) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                        else:
-                            st.write('Configuração sem {}'.format(df_title))
+                    # for df, df_title in zip(validation_dfs, validation_dfs_titles):
+                    #     if df.shape[0]:
+                    #         st.write(df_title + ':', df[[x for x in list(df) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    #     else:
+                    #         st.write('Configuração sem {}'.format(df_title))
+
+                    st.write(validation_dfs_titles[0] + ' ({}):'.format(validation_dfs[0].shape[0]), validation_dfs[0][[x for x in list(validation_dfs[0]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    left_table, right_table = st.beta_columns(2)
+                    with left_table:
+                        st.write(validation_dfs_titles[1] + ' ({}):'.format(validation_dfs[1].shape[0]), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                        st.write(validation_dfs_titles[3] + ':', validation_dfs[3][[x for x in list(validation_dfs[3]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                        st.write(validation_dfs_titles[4] + ':', validation_dfs[4][[x for x in list(validation_dfs[4]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                        st.write(validation_dfs_titles[5] + ':', validation_dfs[5][[x for x in list(validation_dfs[5]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    with right_table:
+                        st.write(validation_dfs_titles[2] + ' ({}):'.format(validation_dfs[2].shape[0]), validation_dfs[2][[x for x in list(validation_dfs[2]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+
+
+
 
             else:
                 return
@@ -612,7 +623,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)

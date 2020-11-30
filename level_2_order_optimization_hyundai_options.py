@@ -59,8 +59,8 @@ sql_info = {
     'proposals_view': 'View_VHE_Fact_PA_OrderOptimization_HPK_Proposals_Old',
     'stock_view': 'View_VHE_Fact_PA_OrderOptimization_Stock_Old',
     'unit_count_number_history': 'LOG_Project_Units_Count_History',
-    'new_score_streamlit_view': 'View_VHE_Fact_PA_OrderOptimization_Streamlit',
-    'sales_plan_aux': 'VHE_Setup_Sales_Plan_Aux_DTR'
+    'new_score_streamlit_view': 'VHE_Fact_PA_OrderOptimization_Streamlit',
+    'sales_plan_aux': 'VHE_Setup_Sales_Plan_Aux_DTR',
 }
 
 log_files = {
@@ -842,8 +842,7 @@ proposals_validation_query = '''
             ,  Proposals.Factory_Vehicle_Option_Code as OCN
             ,  Proposals.Created_Time
             ,  Proposals.Dealer_Desc
-            ,  Proposals.Team_Desc
-            ,  Proposals.Last_Modified_Date
+            ,  Proposals.Record_Date
         FROM      dbo.VHE_Fact_DW_HPK_Proposals_DTR AS Proposals
         LEFT JOIN VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = Proposals.VehicleData_Code
         LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = PDB.PT_PDB_Transmission_Type_Desc
@@ -869,8 +868,7 @@ proposals_validation_query = '''
             ,  Proposals.Factory_Vehicle_Option_Code as OCN
             ,  Proposals.Created_Time
             ,  Proposals.Dealer_Desc
-            ,  Proposals.Team_Desc
-            ,  Proposals.Last_Modified_Date
+            ,  Proposals.Record_Date
         FROM      dbo.VHE_Fact_DW_HPK_Proposals_DTR AS Proposals
         LEFT JOIN VHE_Dim_VehicleData_DTR AS PDB ON PDB.VehicleData_Code = Proposals.VehicleData_Code
         LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = PDB.PT_PDB_Transmission_Type_Desc
@@ -889,8 +887,7 @@ proposals_validation_query = '''
         ,  proposals_middle.OCN
         ,  proposals_middle.Created_Time
         ,  proposals_middle.Dealer_Desc
-        ,  proposals_middle.Team_Desc
-        ,  proposals_middle.Last_Modified_Date
+        ,  proposals_middle.Record_Date
     FROM proposals_middle
     WHERE 1=1
       and proposals_middle.PT_PDB_Model_Desc = '{}'
