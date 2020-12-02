@@ -50,6 +50,8 @@ url_hyperlink = '''
 '''.format(options_file.documentation_url_solver_app)
 # st.markdown(url_hyperlink, unsafe_allow_html=True)
 
+placeholder_date = st.empty()
+
 session_state = SessionState.get(first_run_flag=0, run_id=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, model='', brand='', daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'], sel_margin_score_weight = score_weights['TotalGrossMarginPerc_normalized'], sel_margin_ratio_score_weight = score_weights['MarginRatio_normalized'], sel_qty_sold_score_weight = score_weights['Sum_Qty_CHS_normalized'], sel_proposals_score_weight = score_weights['Proposals_VDC_normalized'], sel_oc_stock_diff_score_weight = score_weights['Stock_OC_Diff_normalized'], sel_co2_nedc_score_weight = score_weights['NEDC_normalized'])
 
 temp_cols = ['Avg_DaysInStock_Global', 'Avg_DaysInStock_Global_normalized', '#Veículos Vendidos', 'Sum_Qty_CHS_normalized', 'Proposals_VDC', 'Proposals_VDC_normalized', 'Margin_HP', 'TotalGrossMarginPerc', 'TotalGrossMarginPerc_normalized', 'MarginRatio', 'MarginRatio_normalized', 'OC', 'Stock_VDC', 'Stock_OC_Diff', 'Stock_OC_Diff_normalized', 'NEDC', 'NEDC_normalized']
@@ -61,8 +63,12 @@ def main():
     data_v2 = get_data_v2(options_file, options_file.sql_info['database_source'], options_file.sql_info['new_score_streamlit_view'], query_filter={'CommercialVersion_Flag': 1}, model_flag=1)
     sales_plan = get_data_v2(options_file, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     co2_nedc, co2_wltp, total_sales = co2_processing(sales_plan)
+    last_updated_date = data_v2['Record_Date'].max()
+    placeholder_date.markdown("<p style='text-align: right;'>Última Atualização - {}</p>".format(last_updated_date), unsafe_allow_html=True)
 
-    st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc / total_sales, co2_wltp / total_sales))  # ToDo Make bold
+    co2_nedc_before_order = co2_nedc / total_sales
+    co2_wltp_before_order = co2_wltp / total_sales
+    st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc_before_order, co2_wltp_before_order))  # ToDo Make bold
     st.write('Total de Vendas (Plano de Vendas): {} viaturas'.format(int(total_sales)))  # ToDo Make bold
 
     data_v2 = col_normalization(data_v2, cols_to_normalize, reverse_normalization_cols)
@@ -174,7 +180,13 @@ def main():
                 total_sales_after_order = total_sales + sel_configurations_v2['Quantity'].sum()
                 sel_configurations_v2['nedc_after_order'] = sel_configurations_v2['Quantity'] * sel_configurations_v2['NEDC']
                 nedc_co2_after_order = co2_nedc + sel_configurations_v2['nedc_after_order'].sum()
-                st.write('Situação Co2 após esta encomenda: {:.2f}'.format(nedc_co2_after_order / total_sales_after_order))
+                co2_nedc_after_order = nedc_co2_after_order / total_sales_after_order
+
+                co2_evolution = co2_nedc_after_order - co2_nedc_before_order
+                if co2_nedc_after_order > co2_nedc_before_order:
+                    st.markdown("Situação Co2 após esta encomenda: {:.2f}(<span style='color:red'>+{:.2f}</span>) gCo2/km".format(co2_nedc_after_order, co2_evolution), unsafe_allow_html=True)
+                else:
+                    st.markdown("Situação Co2 após esta encomenda: {:.2f}(-<span style='color:green'>{:.2f}</span>) gCo2/km".format(co2_nedc_after_order, co2_evolution), unsafe_allow_html=True)
 
                 sel_configurations_v2['Configuration_Concat'] = sel_configurations_v2['PT_PDB_Model_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Engine_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Transmission_Type_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Version_Desc'] + ', ' +  sel_configurations_v2['PT_PDB_Exterior_Color_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Interior_Color_Desc']
                 sel_config = st.selectbox('Configuração a explorar:', ['-'] + [x for x in sel_configurations_v2['Configuration_Concat'].unique()], index=0)
@@ -182,24 +194,15 @@ def main():
                     validation_dfs = get_validation_info(sel_configurations_v2, sel_config)
                     validation_dfs_titles = ['Vendas', 'Propostas', 'Stock', 'Plano de Vendas, passo 1', 'Plano de Vendas, passo 2', 'Plano de Vendas, passo 3']
 
-                    # for df, df_title in zip(validation_dfs, validation_dfs_titles):
-                    #     if df.shape[0]:
-                    #         st.write(df_title + ':', df[[x for x in list(df) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    #     else:
-                    #         st.write('Configuração sem {}'.format(df_title))
-
                     st.write(validation_dfs_titles[0] + ' ({}):'.format(validation_dfs[0].shape[0]), validation_dfs[0][[x for x in list(validation_dfs[0]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                     left_table, right_table = st.beta_columns(2)
                     with left_table:
-                        st.write(validation_dfs_titles[1] + ' ({}):'.format(validation_dfs[1].shape[0]), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                        st.write(validation_dfs_titles[3] + ':', validation_dfs[3][[x for x in list(validation_dfs[3]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                        st.write(validation_dfs_titles[1] + ' ({}), atualizado a {}:'.format(validation_dfs[1].shape[0], validation_dfs[1]['Record_Date'].max()), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                        st.write(validation_dfs_titles[3] + ', atualizado a {}:'.format(validation_dfs[3]['Record_Date'].max()), validation_dfs[3][[x for x in list(validation_dfs[3]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                         st.write(validation_dfs_titles[4] + ':', validation_dfs[4][[x for x in list(validation_dfs[4]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                         st.write(validation_dfs_titles[5] + ':', validation_dfs[5][[x for x in list(validation_dfs[5]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                     with right_table:
                         st.write(validation_dfs_titles[2] + ' ({}):'.format(validation_dfs[2].shape[0]), validation_dfs[2][[x for x in list(validation_dfs[2]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-
-
-
 
             else:
                 return
@@ -222,14 +225,12 @@ def get_validation_info(sel_configurations_v2, sel_config):
     sel_config_ext_color = sel_configurations_v2.loc[sel_configurations_v2['Configuration_Concat'] == sel_config, 'PT_PDB_Exterior_Color_Desc'].values[0]
     sel_config_int_color = sel_configurations_v2.loc[sel_configurations_v2['Configuration_Concat'] == sel_config, 'PT_PDB_Interior_Color_Desc'].values[0]
 
-    # st.write('sel_config_model', sel_config_model)
-    # st.write('sel_config_engine', sel_config_engine)
-    # st.write('sel_config_transmission', sel_config_transmission)
-    # st.write('sel_config_version', sel_config_version)
-    # st.write('sel_config_ext_color', sel_config_ext_color)
-    # st.write('sel_config_int_color', sel_config_int_color)
-
-    validation_queries = [options_file.sales_validation_query, options_file.proposals_validation_query, options_file.stock_validation_query, options_file.sales_plan_validation_query_step_1, options_file.sales_plan_validation_query_step_2, options_file.sales_plan_validation_query_step_3]
+    validation_queries = [options_file.sales_validation_query,
+                          options_file.proposals_validation_query,
+                          options_file.stock_validation_query,
+                          options_file.sales_plan_validation_query_step_1,
+                          options_file.sales_plan_validation_query_step_2,
+                          options_file.sales_plan_validation_query_step_3]
 
     for query in validation_queries:
         validation_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_source'], options_file, query.format(sel_config_model, sel_config_engine, sel_config_version, sel_config_transmission, sel_config_ext_color, sel_config_int_color))
@@ -289,9 +290,9 @@ def get_data(options_file_in):
     df['Average_Score_Euros'] = df_grouped['Score_Euros'].transform('mean')
     df['Gama_Viva_Flag'] = np.where(gama_viva_mask, "Sim", "Não")
 
-    df['NDB_Dealer_Code_alt'] = df['NDB_Dealer_Code'].str.replace(r'[A-Z]$', '')
+    # df['NDB_Dealer_Code_alt'] = df['NDB_Dealer_Code'].str.replace(r'[A-Z]$', '')
     df = pd.merge(df, proposals_grouped, left_on=['VehicleData_Code'], right_on=['VehicleData_Code'], how='left').fillna(0)
-    df = pd.merge(df, df_proposals, left_on=['VehicleData_Code', 'NDB_Dealer_Code_alt'], right_on=['VehicleData_Code', 'NDB_Installation_Code'], how='left').fillna(0)
+    # df = pd.merge(df, df_proposals, left_on=['VehicleData_Code', 'NDB_Dealer_Code_alt'], right_on=['VehicleData_Code', 'NDB_Installation_Code'], how='left').fillna(0)
     df = pd.merge(df, stock_grouped, left_on=['VehicleData_Code'], right_on=['VehicleData_Code'], how='left').fillna(0)
     df = pd.merge(df, df_stock, left_on=['VehicleData_Code', 'NDB_Dealer_Code'], right_on=['VehicleData_Code', 'NDB_Dealer_Code'], how='left').fillna(0)
 
@@ -623,7 +624,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR', sel_parameters=['sel_brand', 'sel_model', 'sel_order_size', 'sel_min_number_of_configuration', 'sel_min_sold_cars', 'sel_daysinstock_score_weight', 'sel_margin_score_weight', 'sel_margin_ratio_score_weight', 'sel_qty_sold_score_weight', 'sel_proposals_score_weight', 'sel_oc_stock_diff_score_weight', 'sel_co2_nedc_score_weight'])
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)

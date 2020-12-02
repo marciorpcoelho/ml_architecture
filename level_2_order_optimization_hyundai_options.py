@@ -53,7 +53,7 @@ sql_info = {
     'final_table_test': 'VHE_Fact_BI_Sales_DTR_test',
     'final_table': 'VHE_Fact_MLG_Sales_DTR',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
-    'optimization_solution_table': 'VHE_Fact_MLG_OrderOptimization_Solver_Optimization_DTR',
+    'optimization_solution_table': 'VHE_Fact_PA_OrderOptimization_Solver_Optimization',
     'commercial_version_matching': 'VHE_MapDMS_Vehicle_Commercial_Versions_DTR',
     'proposals_table': 'VHE_Fact_DW_HPK_Proposals_DTR',
     'proposals_view': 'View_VHE_Fact_PA_OrderOptimization_HPK_Proposals_Old',
@@ -977,6 +977,7 @@ sales_plan_validation_query_step_1 = '''
         ,  Sales_Plan.WLTP_CO2
         ,  Sales_Plan.NEDC_CO2
         ,  Sales_Plan.Quantity
+        ,  Sales_Plan.Record_Date
     FROM  dbo.VHE_Setup_Sales_Plan_DTR AS Sales_Plan
     LEFT OUTER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.Factory_Model_Code = Sales_Plan.Factory_Model_Code AND PDB.Local_Vehicle_Option_Code = Sales_Plan.Local_Vehicle_Option_Code				
     LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = PDB.PT_PDB_Transmission_Type_Desc

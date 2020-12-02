@@ -20,11 +20,8 @@ import modules.level_1_e_deployment as level_1_e_deployment
 from modules.level_0_performance_report import log_record, error_upload
 import modules.SessionState as SessionState
 
-st.set_page_config(page_title='Classificação de Peças - DGO')
-
-'''
-## Aplicação de Apoio à Classificação de Famílias de Peças - DGO
-'''
+st.set_page_config(page_title='Classificação de Peças - DGO', layout="wide")
+st.markdown("<h1 style='text-align: center;'>Aplicação de Apoio à Classificação de Famílias de Peças - DGO</h1>", unsafe_allow_html=True)
 
 url_hyperlink = '''
     <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
@@ -50,15 +47,15 @@ def main():
     cm_family_dict_lvl_2 = cm_replacements(cm_family_lvl_2)
 
     family_dict_sorted = family_dict_sorting(cm_family_dict_lvl_1, cm_family_dict_lvl_2)
-
-    sel_page = st.sidebar.radio('Tarefa:', ['Análise de Classificações', 'Correções às Famílias Atuais', 'Exportação de Classificações'], index=1)
+    st.sidebar.title('Tarefa:')
+    sel_page = st.sidebar.radio('', ['Análise de Classificações', 'Correções às Famílias Atuais', 'Exportação de Classificações'], index=1)
 
     if sel_page == 'Correções às Famílias Atuais':
         data_original = get_dataset_sql(options_file.others_families_dict, options_file, options_file.classified_app_query)
         data = product_group_description(data_original, df_product_group)
 
         lower_performance_families = family_dict_sorted.keys()
-        lower_performance_families_values = [x[0] for x in family_dict_sorted.values()]
+        lower_performance_families_values = [x[0] * 100 for x in family_dict_sorted.values()]
 
         df_current_cm = pd.DataFrame()
         df_current_cm['Product_Group_DW'] = lower_performance_families
@@ -67,7 +64,8 @@ def main():
         df_current_cm = df_current_cm.merge(df_product_group[['Product_Group_Code', 'PT_Product_Group_Desc']], left_on='Product_Group_DW', right_on='Product_Group_Code', how='left').drop('Product_Group_Code', axis=1).rename(columns={'PT_Product_Group_Desc': 'Product_Group_DW_desc'})
         df_current_cm.loc[df_current_cm['Product_Group_DW_desc'].isnull(), 'Product_Group_DW_desc'] = df_current_cm.loc[df_current_cm['Product_Group_DW_desc'].isnull(), 'Product_Group_DW']
 
-        st.sidebar.table(df_current_cm[['Product_Group_DW_desc', 'Percentage_Predicted']].rename(columns=options_file.column_translate_dict).head(15))
+        st.sidebar.title('Famílias com pior performance:')
+        st.sidebar.table(df_current_cm[['Product_Group_DW_desc', 'Percentage_Predicted']].rename(columns=options_file.column_translate_dict).head(15).style.format({'% Conf.': '{:.2f}'}))
         sel_family_desc = st.sidebar.selectbox('Por favor escolha a família de peças para alterar:', ['-'] + [x for x in df_current_cm['Product_Group_DW_desc'].unique()])  # ToDo: Maybe give more options?
 
         if sel_family_desc != '-':
@@ -80,14 +78,14 @@ def main():
             else:
                 sel_family_code = sel_family_desc
 
-            sim_family_code = family_dict_sorted[sel_family_code][1][0]
+            sim_family_code = family_dict_sorted[sel_family_code][1][1]
 
             if sim_family_code not in options_file.others_families_dict.values():
                 sim_family_desc = df_product_group.loc[df_product_group['Product_Group_Code'] == sim_family_code, 'PT_Product_Group_Desc'].values[0]
             else:
                 sim_family_desc = sim_family_code
 
-            st.write('A Família escolhida - {} - foi confundida com a família {}, em cerca de {:.2f}% das suas classificações.'.format(sel_family_desc, sim_family_desc, family_dict_sorted[sel_family_code][2][0] * 100))
+            st.write('A Família escolhida - {} - foi confundida com a família {}, em cerca de {:.2f}% das suas classificações. Estas são as palavras mais confundidas entre as duas famílias:'.format(sel_family_desc, sim_family_desc, family_dict_sorted[sel_family_code][2][0] * 100))
 
             session_state.data_filtered_sel = filter_data(data, [sel_family_desc], ['Product_Group_DW_desc'], [None])
             session_state.data_filtered_sim = filter_data(data, [sim_family_desc], ['Product_Group_DW_desc'], [None])
@@ -95,11 +93,14 @@ def main():
             min_cost, max_cost, min_pvp, max_pvp = cost_and_pvp_limits()
 
             df_common_keywords = common_keywords_calculation(sel_family_desc)
-            st.write(df_common_keywords.head(50))
+            left_table, middle_table, right_table = st.beta_columns(3)
+            with middle_table:
+                st.write(df_common_keywords.head(50))
 
             sel_text = st.text_input('Pesquisar pela(s) palavra(s):', '', key=session_state.run_id)
             sel_text_option = st.radio('Escolha a forma de pesquisa:', ('contains', 'starts'), format_func=radio_button_options, key=session_state.run_id)
 
+            st.sidebar.title('Filtros:')
             sel_costs = st.sidebar.slider('Por favor escolha os valores limite de custo:', min_cost, max_cost, (min_cost, max_cost), 10.0)
             sel_pvps = st.sidebar.slider('Por favor escolha os valores limite de venda:', min_pvp, max_pvp, (min_pvp, max_pvp), 10.0)
             # sel_original_class = st.selectbox('Por favor escolha a família original a filtrar:', ['-'] + filtered_original_classes, index=0)
@@ -450,26 +451,12 @@ def cm_replacements(df):
         sel_family = df.index[value]
         sel_family_performance = df.iloc[value, df.shape[1]-1]
 
-        if sel_family_performance < 0.8:
+        if sel_family_performance < 0.9:
             df_copy.iloc[value, value] = -1
-            # st.write('1 - ', sel_family)
-
-            # top_conf_family = df_copy[family_names].idxmax(axis='columns').values[value]
-            # st.write('2 - ', top_conf_family)
-
             top_conf_family_test = df_copy[family_names].apply(lambda s: s.abs().nlargest(2).index.tolist(), axis=1).iloc[value]
-            # st.write('2a - ', top_conf_family_test)
-
-            # top_conf_family_performance = df_copy[family_names].max(axis='columns').values[value] / df_copy['Totals'].values[value]
-            # st.write('3 - ', top_conf_family_performance)
 
             top_conf_family_performance_test = [df_copy.loc[df_copy.index[value], x] / df_copy['Totals'].values[value] for x in top_conf_family_test]
-            # st.write('3a - ', top_conf_family_performance_test)
 
-            # st.write(sel_family, sel_family_performance)
-            # st.write(df_copy['Totals'].values[value])
-
-            # family_confusion_dict[sel_family] = [sel_family_performance, top_conf_family, top_conf_family_performance]
             family_confusion_dict[sel_family] = [sel_family_performance, top_conf_family_test, top_conf_family_performance_test]
 
     return family_confusion_dict
