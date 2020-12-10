@@ -35,22 +35,6 @@ sql_info = {
     'unit_count_number_history': 'LOG_Project_Units_Count_History'
 }
 
-
-sql_info_python = {
-    'database_BI_AFR': 'BI_RCG',
-    'database_BI_CRP': 'BI_CRP',
-    'database_BI_IBE': 'BI_IBE',
-    'database_BI_CA': 'BI_CA',
-    'database_BI_GSC': 'BI_GSC',
-    'database_final': 'BI_MLG',
-    'final_table': 'PSE_Fact_PA_Parts_Stock_Master_File_Matched',
-    'parts_classification_table': 'PSE_Fact_PA_Parts_Classification_Python',
-    'parts_classification_rules': 'PSE_Fact_PA_Parts_Classification_Rules',
-    'parts_classification_refs': 'PSE_Fact_PA_Parts_Classification_Refs',
-    'matrix_lvl_1': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_1_Python',
-    'matrix_lvl_2': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2_Python',
-}
-
 sql_to_code_renaming = {
     'Client_ID': 'Client_Id'
 }

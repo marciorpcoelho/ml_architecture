@@ -518,8 +518,8 @@ def probabilities_correction(df):
 
 
 def deployment(df, main_families_cm, other_families_cm):
-    sql_upload(main_families_cm, 'BI_MLG', 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_1_Python')
-    sql_upload(other_families_cm, 'BI_MLG', 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2_Python')
+    sql_upload(main_families_cm, options_file.sql_info['database_final'], options_file.sql_info['matrix_lvl_1'])
+    sql_upload(other_families_cm, options_file.sql_info['database_final'], options_file.sql_info['matrix_lvl_2'])
 
     df.rename(columns={'Client_Id': 'Client_ID', 'Part_Desc_concat': 'Part_Description', 'Average_Cost_avg': 'Part_Cost', 'PVP_1_avg': 'Part_PVP', 'prediction': 'Classification', 'Max_Prob': 'Classification_Prob'}, inplace=True)
     df['Classification_Flag'] = 0
@@ -529,7 +529,7 @@ def deployment(df, main_families_cm, other_families_cm):
     df = df.astype({'Client_ID': 'str', 'Part_Cost': 'str', 'Part_PVP': 'str', 'Classification_Prob': 'str'})
     df['Part_Description'] = df['Part_Description'].fillna("")
     df.dropna(subset=['Classification'], axis=0, inplace=True)
-    sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], 'PSE_Fact_PA_Parts_Classification_Python', options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
+    sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
 
     return
 
