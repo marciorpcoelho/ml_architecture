@@ -149,14 +149,14 @@ def main():
             filtered_data = model_classified_data_joined
 
         fig = go.Figure(data=[go.Table(
-            columnwidth=[120, 600, 120, 120],
+            columnwidth=[120, 600, 120, 120, 100],
             header=dict(
-                values=[['Nº Pedido'], ['Descrição'], ['Data Abertura'], ['Classificação']],
-                align=['center', 'center', 'center', 'center'],
+                values=[['Nº Pedido'], ['Descrição'], ['Data Abertura'], ['Classificação'], ['% Confiança']],
+                align=['center', 'center', 'center', 'center', 'center'],
             ),
             cells=dict(
-                values=[filtered_data['Request_Num'], filtered_data['Description'], filtered_data['Open_Date'], filtered_data['prediction']],
-                align=['center', 'right', 'center', 'center'],
+                values=[filtered_data['Request_Num'], filtered_data['Description'], filtered_data['Open_Date'], filtered_data['prediction'], filtered_data['Max_Prob'].round(2)],
+                align=['center', 'right', 'center', 'center', 'center'],
             )
         )
         ])
