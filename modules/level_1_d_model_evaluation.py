@@ -286,7 +286,7 @@ def feature_contribution(df, configuration_parameters, col_to_group_by, options_
 
         df_feature_contribution_total = pd.concat([df_feature_contribution_total, df_feature_contribution])
 
-    level_1_e_deployment.sql_inject(df_feature_contribution_total, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['feature_contribution'], options_file, list(df_feature_contribution_total), truncate=1)
+    level_1_e_deployment.sql_inject(df_feature_contribution_total, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['feature_contribution'], options_file, list(df_feature_contribution_total), truncate=1)
 
 
 def add_new_columns_to_df(df, probabilities, predictions, datasets, configuration_parameters, oversample_check, project_id):
@@ -435,7 +435,7 @@ def model_choice_upload(flag, name, value, options_file):
         df_model_result['Metric'] = [options_file.metric]
         df_model_result['Value'] = [value]
     df_model_result['Message'] = [message]
-    level_1_e_deployment.sql_inject(df_model_result, options_file.DSN_MLG, level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['model_choices'], options_file, list(df_model_result), check_date=1)
+    level_1_e_deployment.sql_inject(df_model_result, options_file.DSN_MLG_PRD, level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['model_choices'], options_file, list(df_model_result), check_date=1)
 
     return message
 

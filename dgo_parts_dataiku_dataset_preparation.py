@@ -169,7 +169,7 @@ def main():
     dgo_family_10_loc = 'dbs/dgo_familia_10_prepared.csv'
     dgo_family_13_loc = 'dbs/dgo_familia_13_prepared.csv'
 
-    master_file = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
+    master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
     master_file['Product_Group_DW'] = master_file['Product_Group_DW'].astype(str)
 
     master_file = flow_step_2(master_file)
@@ -436,7 +436,7 @@ def get_dgo_manual_classifications(files_loc):
 
 
 def get_fact_pa_classifications():
-    pse_fact_pa_parts_classification_refs = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_refs'], options_file, columns=['Part_Ref', 'Old_Product_Group_DW', 'New_Product_Group_DW'])
+    pse_fact_pa_parts_classification_refs = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_refs'], options_file, columns=['Part_Ref', 'Old_Product_Group_DW', 'New_Product_Group_DW'])
 
     return pse_fact_pa_parts_classification_refs
 
@@ -529,7 +529,7 @@ def deployment(df, main_families_cm, other_families_cm):
     df = df.astype({'Client_ID': 'str', 'Part_Cost': 'str', 'Part_PVP': 'str', 'Classification_Prob': 'str'})
     df['Part_Description'] = df['Part_Description'].fillna("")
     df.dropna(subset=['Classification'], axis=0, inplace=True)
-    sql_inject(df, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
+    sql_inject(df, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
 
     return
 
@@ -539,7 +539,7 @@ def sql_upload(df, db, view):
     df.index.rename('Actual', inplace=True)
     df.reset_index(inplace=True)
 
-    sql_inject(df, options_file.DSN_MLG, db, view, options_file, list(df), truncate=1, check_date=1)
+    sql_inject(df, options_file.DSN_MLG_PRD, db, view, options_file, list(df), truncate=1, check_date=1)
 
     return
 

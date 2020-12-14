@@ -57,7 +57,7 @@ def deployment(df, db, view):
     df['Part_Desc_PT'] = df['Part_Desc_PT'].fillna("")
     df['Part_Desc'] = df['Part_Desc'].fillna("")
     if df is not None:
-        sql_inject(df, options_file.DSN_MLG, db, view, options_file, options_file.sel_cols, truncate=1, check_date=1)
+        sql_inject(df, options_file.DSN_MLG_PRD, db, view, options_file, options_file.sel_cols, truncate=1, check_date=1)
 
 
 def master_file_reference_match(platforms_stock, previous_day, dim_clients):
@@ -516,7 +516,7 @@ def master_file_reference_match(platforms_stock, previous_day, dim_clients):
         # current_stock_master_file = value_substitution(current_stock_master_file, non_null_column='Part_Desc', null_column='Part_Desc_PT')  # For references which didn't match in the Master Files, use the DW Description;
         current_stock_master_file.to_csv('dbs/current_stock_all_platforms_master_stock_matched_{}.csv'.format(previous_day), index=False)
 
-    previous_master_file = sql_retrieve_df(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
+    previous_master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
 
     df_merged = pd.concat([current_stock_master_file, previous_master_file]).drop('Last_Sell_Date', axis=1)
     df_merged = df_merged.drop_duplicates()
@@ -567,7 +567,7 @@ def references_merge(df, master_file, description_string, left_key, right_key, v
 
 def brand_codes_retrieval(platforms, brand):
     query = ' UNION ALL '.join([options_file.brand_codes_per_franchise.format(x, y) for x, y in zip(platforms, [brand] * len(platforms))])
-    df = sql_retrieve_df_specified_query(options_file.DSN, 'BI_AFR', options_file, query)
+    df = sql_retrieve_df_specified_query(options_file.DSN_SRV3_PRD, 'BI_AFR', options_file, query)
     brand_codes = list(np.unique(df['Original_Value'].values))
 
     return brand_codes
@@ -589,13 +589,13 @@ def data_acquisition(platforms, dim_product_group_file, dim_clients_file, previo
         for platform in platforms:
             print('Retrieving from DW for platform {}...'.format(platform))
             if platform == 'BI_AFR':
-                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query_afr.format(platform, platform, previous_day, platform, sel_month))
+                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query_afr.format(platform, platform, previous_day, platform, sel_month))
             else:
-                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query.format(platform, platform, previous_day, platform, sel_month))
+                df_current_stock = sql_retrieve_df_specified_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_{}'.format(platform)], options_file, options_file.current_stock_query.format(platform, platform, previous_day, platform, sel_month))
             platforms_stock.append(df_current_stock)
 
-        dim_product_group = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_BI_AFR'], options_file, options_file.dim_product_group_query)
-        dim_clients = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_BI_GSC'], options_file, options_file.dim_clients_query)
+        dim_product_group = sql_retrieve_df_specified_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_BI_AFR'], options_file, options_file.dim_product_group_query)
+        dim_clients = sql_retrieve_df_specified_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_BI_GSC'], options_file, options_file.dim_clients_query)
 
         save_csv(platforms_stock + [dim_product_group, dim_clients], ['dbs/df_{}_current_stock_{}_section_A'.format(platform, previous_day) for platform in platforms] + ['dbs/dim_product_group_section_A', 'dbs/dim_clients_section_A'])
     return platforms_stock, dim_product_group, dim_clients

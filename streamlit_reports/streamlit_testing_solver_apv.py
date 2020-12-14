@@ -293,10 +293,10 @@ def solver(df_solve, sel_local, group, goal_value, goal_type, non_goal_type, dts
 
 def solution_saving(df_solution, group_name, group_name_original):
 
-    level_1_e_deployment.sql_truncate(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(options_file.sql_info['optimization_solution_table'], group_name))
+    level_1_e_deployment.sql_truncate(options_file.DSN_MLG_PRD, options_file, options_file.sql_info['database_final'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(options_file.sql_info['optimization_solution_table'], group_name))
 
     level_1_e_deployment.sql_inject(df_solution,
-                                    options_file.DSN_MLG,
+                                    options_file.DSN_MLG_PRD,
                                     options_file.sql_info['database_final'],
                                     options_file.sql_info['optimization_solution_table'],
                                     options_file,
@@ -326,15 +326,15 @@ def solution_dataframe_creation(goal_type, non_goal_type, selection, unique_part
 
 @st.cache(show_spinner=False, ttl=60*60*12)
 def get_data(options_file_in):
-    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
-    df_goals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['goals_table'], options_file_in)
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG_PRD, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
+    df_goals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG_PRD, options_file_in.sql_info['database_final'], options_file_in.sql_info['goals_table'], options_file_in)
 
     return df, df_goals
 
 
 def get_suggestions_dict(options_file_in):
     saved_suggestions_dict = {}
-    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in, query=saved_solutions_pairs_query)
+    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG_PRD, options_file_in.sql_info['database_final'], options_file_in, query=saved_solutions_pairs_query)
 
     saved_suggestions_df_grouped = saved_suggestions_df.groupby('Part_Ref_Group_Desc')
     for key, group in saved_suggestions_df_grouped:

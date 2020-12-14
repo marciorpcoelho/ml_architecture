@@ -232,7 +232,7 @@ def solver(dataset, parameter_restriction_vectors, sel_order_size):
 
 @st.cache(show_spinner=False, ttl=60*60*24*12)
 def get_data(options_file_in):
-    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG_PRD, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
     df = level_1_b_data_processing.column_rename(df, configuration_parameters_full + extra_parameters, configuration_parameters_full_rename + extra_parameters_rename)
     df = df.loc[df[column_translate['Model_Code']] != '', :]
 
@@ -246,7 +246,7 @@ def get_data(options_file_in):
 
 def get_suggestions_dict(options_file_in):
     saved_suggestions_dict = {}
-    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG, options_file_in.sql_info['database_final'], options_file_in, query=saved_solutions_pairs_query)
+    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_MLG_PRD, options_file_in.sql_info['database_final'], options_file_in, query=saved_solutions_pairs_query)
     saved_suggestions_df = level_1_b_data_processing.column_rename(saved_suggestions_df, ['Model_Code', 'Sales_Place_Fase2_Level_1'], [column_translate['Model_Code'], column_translate['Sales_Place_Fase2_Level_1']])
 
     saved_suggestions_df_grouped = saved_suggestions_df[[column_translate['Sales_Place_Fase2_Level_1'], column_translate['Model_Code']]].groupby(column_translate['Sales_Place_Fase2_Level_1'])

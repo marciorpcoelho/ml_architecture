@@ -27,7 +27,7 @@ def read_csv(*args, **kwargs):
 
 def project_units_count_checkup(df, unit_identifier_col, options_file, sql_check=0):
     current_vehicle_count = df[unit_identifier_col].nunique()
-    last_vehicle_count = level_1_e_deployment.sql_get_last_project_unit_count(options_file.DSN_MLG, options_file, options_file.sql_info['database_final'], options_file.sql_info['unit_count_number_history'])
+    last_vehicle_count = level_1_e_deployment.sql_get_last_project_unit_count(options_file.DSN_MLG_PRD, options_file, options_file.sql_info['database_final'], options_file.sql_info['unit_count_number_history'])
 
     if not sql_check:
         if current_vehicle_count < 100:
@@ -38,7 +38,7 @@ def project_units_count_checkup(df, unit_identifier_col, options_file, sql_check
         elif current_vehicle_count == last_vehicle_count:
             level_0_performance_report.log_record('Atual contagem unitária ({}) sem incrementos desde a última vez que os dados foram processados ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count), options_file.project_id, flag=1)
         else:
-            level_1_e_deployment.sql_inject_single_line(options_file.DSN_MLG, options_file.UID, options_file.PWD, options_file.sql_info['database_final'], options_file.sql_info['unit_count_number_history'], [str(current_vehicle_count), str(options_file.project_id)], check_date=1)
+            level_1_e_deployment.sql_inject_single_line(options_file.DSN_MLG_PRD, options_file.UID, options_file.PWD, options_file.sql_info['database_final'], options_file.sql_info['unit_count_number_history'], [str(current_vehicle_count), str(options_file.project_id)], check_date=1)
             level_0_performance_report.log_record('A atualizar contagem de unidades: {}.'.format(current_vehicle_count), options_file.project_id, flag=0)
     return
 
@@ -161,7 +161,7 @@ def dw_data_retrieval(pse_group, current_date, options_info, last_processed_date
             df = read_csv(file_name + '.csv', index_col=0)
         except FileNotFoundError:
             print('{} file not found. Retrieving data from SQL...'.format(file_name))
-            df = sql_retrieve_df_specified_query(options_info.DSN, options_info.sql_info['database'], options_info, dimension[1])
+            df = sql_retrieve_df_specified_query(options_info.DSN_SRV3_PRD, options_info.sql_info['database'], options_info, dimension[1])
             df.to_csv(file_name + '.csv')
 
         dfs.append(df)
@@ -172,7 +172,7 @@ def dw_data_retrieval(pse_group, current_date, options_info, last_processed_date
         df_history = read_csv(df_history_file_name + '.csv', index_col=0)
     except FileNotFoundError:
         print('{} file not found. Retrieving data from SQL...'.format(df_history_file_name))
-        df_history = sql_retrieve_df_specified_query(options_info.DSN_MLG, options_info.sql_info['database_final'], options_info, stock_history[1])
+        df_history = sql_retrieve_df_specified_query(options_info.DSN_MLG_PRD, options_info.sql_info['database_final'], options_info, stock_history[1])
         df_history.to_csv(df_history_file_name + '.csv')
 
     dfs.append(df_history)

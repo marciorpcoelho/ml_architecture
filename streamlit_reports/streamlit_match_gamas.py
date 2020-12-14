@@ -233,7 +233,7 @@ def save_function(gama_morta, gama_viva, sel_brand, sel_model):
     and PT_PDB_Franchise_Desc = '{}'
     and PT_PDB_Model_Desc = '{}' '''.format(gama_viva_sql, gama_morta.replace('\'', '\'\''), sel_brand, sel_model)
 
-    level_1_e_deployment.sql_query(query, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['commercial_version_matching'], options_file)
+    level_1_e_deployment.sql_query(query, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['commercial_version_matching'], options_file)
     return
 
 
@@ -302,7 +302,7 @@ def filter_data(dataset, value_filters_list, col_filters_list):
 
 @st.cache(show_spinner=False, ttl=60*60*12)
 def get_data(options_file_in):
-    gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in)
+    gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_SRV3_PRD, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in)
 
     gamas['PT_PDB_Model_Desc'] = gamas['PT_PDB_Model_Desc'].str.lower()
     gamas.dropna(subset=['PT_PDB_Commercial_Version_Desc_Old'], inplace=True)
@@ -313,7 +313,7 @@ def get_data(options_file_in):
 
 
 def get_data_non_cached(options_file_in, classification_flag):
-    gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in, query_filters={'Classification_Flag': classification_flag})
+    gamas = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_SRV3_PRD, options_file_in.sql_info['database_source'], options_file_in.sql_info['commercial_version_matching'], options_file_in, query_filters={'Classification_Flag': classification_flag})
 
     gamas['PT_PDB_Model_Desc'] = gamas['PT_PDB_Model_Desc'].str.lower()
     gamas.dropna(subset=['PT_PDB_Commercial_Version_Desc_Old'], inplace=True)

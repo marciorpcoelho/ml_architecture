@@ -224,7 +224,7 @@ def save_model(clfs, model_name, project_id):
 
 
 def new_request_type(df, df_top_words, df_manual_classification, options_file):
-    keyword_dict, ranking_dict = level_1_a_data_acquisition.sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'], 'Keyword_Group', options_file, multiple_columns=1)
+    keyword_dict, ranking_dict = level_1_a_data_acquisition.sql_mapping_retrieval(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'], 'Keyword_Group', options_file, multiple_columns=1)
     keyword_dict = keyword_dict[0]
 
     stemmer_pt = SnowballStemmer('porter')

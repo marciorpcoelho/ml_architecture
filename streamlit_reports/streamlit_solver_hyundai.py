@@ -168,12 +168,12 @@ def main():
 @st.cache(show_spinner=False, ttl=60*60*24*12)
 def get_data(options_file_in):
     df_cols = ['NLR_Code', 'Chassis_Number', 'Registration_Number', 'PDB_Start_Order_Date', 'PDB_End_Order_Date', 'VehicleData_Code', 'DaysInStock_Distributor', 'DaysInStock_Global', 'Measure_9', 'Fixed_Margin_II', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc', 'NDB_Dealer_Code', 'Quantity_Sold', 'Average_DaysInStock_Global', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code']
-    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['final_table'], options_file_in, columns=df_cols, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_SRV3_PRD, options_file_in.sql_info['database_source'], options_file_in.sql_info['final_table'], options_file_in, columns=df_cols, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
 
     df_pdb_cols = ['VehicleData_Code', 'PT_PDB_Model_Desc', 'PT_PDB_Serie_Desc', 'PT_PDB_Bodywork_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'PT_PDB_Painting_Type_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Fuel_Type_Desc', 'PT_PDB_Vehicle_Type_Desc', 'PT_PDB_Commercial_Version_Desc', 'PDB_Start_Order_Date', 'PDB_End_Order_Date', 'PT_PDB_Version_Desc_New', 'PT_PDB_Engine_Desc_New', 'PT_PDB_Commercial_Version_Desc_New']
-    df_pdb = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['product_db'], options_file_in, columns=df_pdb_cols)
-    df_proposals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['proposals_view'], options_file_in)
-    df_stock = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['stock_view'], options_file_in)
+    df_pdb = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_SRV3_PRD, options_file_in.sql_info['database_source'], options_file_in.sql_info['product_db'], options_file_in, columns=df_pdb_cols)
+    df_proposals = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_SRV3_PRD, options_file_in.sql_info['database_source'], options_file_in.sql_info['proposals_view'], options_file_in)
+    df_stock = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_SRV3_PRD, options_file_in.sql_info['database_source'], options_file_in.sql_info['stock_view'], options_file_in)
 
     proposals_grouped = df_proposals[['VehicleData_Code', 'Proposals_Count']].copy(deep=True)
     proposals_grouped['Proposals_Count_VDC'] = proposals_grouped.groupby('VehicleData_Code')['Proposals_Count'].transform('sum')
@@ -387,7 +387,7 @@ def quantity_processing(df, sel_order_size, proposal_col, stock_col, sel_min_num
 def get_suggestions_dict(options_file_in, client_lvl_cols_in):
     saved_suggestions_dict = {}
 
-    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in, query=saved_solutions_pairs_query)
+    saved_suggestions_df = level_1_a_data_acquisition.sql_retrieve_df_specified_query(options_file_in.DSN_SRV3_PRD, options_file_in.sql_info['database_source'], options_file_in, query=saved_solutions_pairs_query)
 
     saved_suggestions_df_grouped = saved_suggestions_df[['PT_PDB_Model_Desc'] + client_lvl_cols_in].groupby(client_lvl_cols_in)
     for key, group in saved_suggestions_df_grouped:
@@ -401,9 +401,9 @@ def solution_saving(df, sel_model, client_lvl_cols_in, client_lvl_sels):
 
     df = client_replacement(df, client_lvl_cols_in, client_lvl_sels)  # Replaces the values of Client's Levels by the actual values selected for this solution
 
-    level_1_e_deployment.sql_truncate(options_file.DSN, options_file, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(sel_model) + truncate_query_part_2)
+    level_1_e_deployment.sql_truncate(options_file.DSN_SRV3_PRD, options_file, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(sel_model) + truncate_query_part_2)
 
-    level_1_e_deployment.sql_inject(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], options_file,
+    level_1_e_deployment.sql_inject(df, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], options_file,
                                     configuration_parameters + client_lvl_cols_in + ['Quantity', 'Average_Score_Euros', 'ML_VehicleData_Code'], check_date=1)
 
     st.write('Sugestão gravada com sucesso.')

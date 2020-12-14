@@ -105,11 +105,11 @@ def data_acquisition(input_files, query_filters, local=0):
         df_pbi_categories = read_csv(input_files[3], index_col=0)
         df_manual_classifications = read_csv(input_files[4], index_col=0)
     elif not local:
-        df_facts = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'],  options_file.sql_info['initial_table_facts'], options_file,  options_file.sql_fact_columns, query_filters=query_filters[0], parse_dates=options_file.date_columns)
-        df_facts_duration = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts_durations'], options_file, options_file.sql_facts_durations_columns, query_filters=query_filters[1])
-        df_clients = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_clients'], options_file, options_file.sql_dim_contacts_columns)
-        df_pbi_categories = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_pbi_categories'], options_file, options_file.sql_pbi_categories_columns, query_filters=query_filters[1])
-        df_manual_classifications = sql_retrieve_df(options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], options_file)
+        df_facts = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'],  options_file.sql_info['initial_table_facts'], options_file,  options_file.sql_fact_columns, query_filters=query_filters[0], parse_dates=options_file.date_columns)
+        df_facts_duration = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts_durations'], options_file, options_file.sql_facts_durations_columns, query_filters=query_filters[1])
+        df_clients = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['initial_table_clients'], options_file, options_file.sql_dim_contacts_columns)
+        df_pbi_categories = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['initial_table_pbi_categories'], options_file, options_file.sql_pbi_categories_columns, query_filters=query_filters[1])
+        df_manual_classifications = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], options_file)
 
         save_csv([df_facts, df_facts_duration, df_clients, df_pbi_categories], ['dbs/db_facts_initial', 'dbs/db_facts_duration', 'dbs/db_clients_initial', 'dbs/db_pbi_categories_initial'])
 
@@ -475,9 +475,9 @@ def deployment(df):
     log_record('Início Secção E...', options_file.project_id)
     df = df.astype(object).where(pd.notnull(df), None)
 
-    sql_inject(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['final_table'], options_file, ['Request_Num', 'StemmedDescription', 'Description', 'Language', 'Open_Date', 'Label'], truncate=1)
+    sql_inject(df, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['final_table'], options_file, ['Request_Num', 'StemmedDescription', 'Description', 'Language', 'Open_Date', 'Label'], truncate=1)
 
-    # sql_join(df, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts'], options_file)
+    # sql_join(df, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts'], options_file)
 
     log_record('Fim Secção E.', options_file.project_id)
     performance_info_append(time.time(), 'Section_E_End')

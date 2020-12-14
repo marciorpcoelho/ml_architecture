@@ -38,7 +38,7 @@ def data_acquisition():
     dfs = []
 
     for query in [options_file.sales_query, options_file.stock_query, options_file.product_db_query, options_file.customer_group_query, options_file.dealers_query]:
-        df = sql_retrieve_df_specified_query(options_file.DSN, options_file.sql_info['database_source'], options_file, query)
+        df = sql_retrieve_df_specified_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, query)
         # df.to_csv(file_name + '.csv')
         dfs.append(df)
 
@@ -215,7 +215,7 @@ def model_evaluation(models, best_models, running_times, datasets, datasets_non_
 
     # df_model_dict = multiprocess_model_evaluation(df_sales, models, datasets, best_models, predictions, configuration_parameters, oversample_flag, project_id)
 
-    model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)
+    model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG_PRD, options_file, results_test)
 
     log_record('Fim Secção D.', options_file.project_id)
     performance_info_append(time.time(), 'Section_D_End')
@@ -241,7 +241,7 @@ def deployment(df, db, view):
         sel_df = sel_df.where(sel_df.notnull(), None)
         sel_df.rename(columns={'prev_sales_check': 'Previous_Sales_Flag', 'number_prev_sales': 'Previous_Sales_Count'}, inplace=True)
 
-        sql_inject(sel_df, options_file.DSN, db, view, options_file, list(sel_df), truncate=1, check_date=1)
+        sql_inject(sel_df, options_file.DSN_SRV3_PRD, db, view, options_file, list(sel_df), truncate=1, check_date=1)
 
     log_record('Fim Secção E.', options_file.project_id)
     performance_info_append(time.time(), 'Section_E_End')

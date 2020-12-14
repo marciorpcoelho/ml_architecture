@@ -26,7 +26,7 @@ model_training_check = 0  # Check that disables the model training. This was pla
 
 if dict_sql_upload_flag:
     dictionaries = [level_2_optionals_baviera_options.jantes_dict, level_2_optionals_baviera_options.sales_place_dict, level_2_optionals_baviera_options.sales_place_dict_v2, level_2_optionals_baviera_options.model_dict, level_2_optionals_baviera_options.versao_dict, level_2_optionals_baviera_options.tipo_int_dict, level_2_optionals_baviera_options.color_ext_dict, level_2_optionals_baviera_options.color_int_dict, level_2_optionals_baviera_options.motor_dict_v2]
-    sql_mapping_upload(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, dictionaries)
+    sql_mapping_upload(level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options, dictionaries)
 
 
 def main():
@@ -71,7 +71,7 @@ def data_acquisition(input_file, query_filters, local=0):
             df = read_csv(input_file, encoding='latin-1', parse_dates=['Purchase_Date', 'Sell_Date'], usecols=level_2_optionals_baviera_options.sql_to_code_renaming.keys(), infer_datetime_format=True, decimal='.')
             column_rename(df, list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), list(level_2_optionals_baviera_options.sql_to_code_renaming.values()))
     else:
-        df = sql_retrieve_df(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), query_filters, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
+        df = sql_retrieve_df(level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['initial_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.sql_to_code_renaming.keys()), query_filters, column_renaming=1, parse_dates=['Purchase_Date', 'Sell_Date'])
         project_units_count_checkup(df, 'Nº Stock', level_2_optionals_baviera_options, sql_check=0)
 
     log_record('Fim Secção A.', project_id)
@@ -85,7 +85,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     log_record('Início Secção B...', project_id)
     model_mapping = {}
 
-    if sql_date_comparison(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], 'Date', level_2_optionals_baviera_options.update_frequency_days):
+    if sql_date_comparison(level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], 'Date', level_2_optionals_baviera_options.update_frequency_days):
         log_record('Checkpoint não encontrado ou demasiado antigo. A processar dados...', project_id)
 
         df = lowercase_column_conversion(df, ['Opcional', 'Cor', 'Interior', 'Versão'])  # Lowercases the strings of these columns
@@ -111,7 +111,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         df = remove_rows(df, [df[(df.Colour_Ext_Code == ' ') & (df.Cor == ' ')].index], project_id, warning=1)
 
         if not model_training_check:
-            model_mapping, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['model_mapping'], 'Mapped_Value', level_2_optionals_baviera_options)
+            model_mapping, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['model_mapping'], 'Mapped_Value', level_2_optionals_baviera_options)
             model_mapping = model_mapping[0]
 
         df = options_scraping(df, model_training_check, model_mapping, level_2_optionals_baviera_options)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
@@ -136,10 +136,10 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         if model_training_check:
             cols_to_group_layer_2 = ['Jantes', 'Local da Venda', 'Local da Venda_v2', 'Modelo', 'Versao', 'Tipo_Interior', 'Cor_Exterior', 'Cor_Interior', 'Motor']
-            mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings'], 'Mapped_Value', level_2_optionals_baviera_options)
+            mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings'], 'Mapped_Value', level_2_optionals_baviera_options)
         else:
             cols_to_group_layer_2 = ['Local da Venda', 'Local da Venda_v2', 'Local da Venda_Fase2']
-            mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings_temp'], 'Mapped_Value', level_2_optionals_baviera_options)
+            mapping_dictionaries, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['mappings_temp'], 'Mapped_Value', level_2_optionals_baviera_options)
             df = sell_place_parametrization(df, 'Local da Venda', 'Local da Venda_Fase2', mapping_dictionaries[2], level_2_optionals_baviera_options.project_id)
 
         df = col_group(df, cols_to_group_layer_2[0:2], mapping_dictionaries[0:2], project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective groups are shown in level_2_optionals_baviera_options
@@ -151,13 +151,13 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
         log_record('Checkpoint B.1...', project_id)
         # performance_info_append(time.time(), 'checkpoint_b1')
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
-        sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), truncate=1, check_date=1)
+        sql_inject(df, level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), truncate=1, check_date=1)
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))
         df = remove_columns(df, ['Date'], project_id)
 
     else:
         log_record('Checkpoint Found. Retrieving data...', project_id)
-        df = sql_retrieve_df(level_2_optionals_baviera_options.DSN_MLG, level_2_optionals_baviera_options.sql_info['database'],  level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
+        df = sql_retrieve_df(level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['checkpoint_b_table'], level_2_optionals_baviera_options, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()))
         df = column_rename(df, list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.values()), list(level_2_optionals_baviera_options.column_checkpoint_sql_renaming.keys()))
 
     ohe_cols = configuration_parameters + ['Local da Venda', 'buy_day', 'buy_month', 'buy_year']
@@ -206,7 +206,7 @@ def model_evaluation(df, models, best_models, running_times, classes, datasets, 
     plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features))
 
     df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, oversample_check, proj_id)
-    model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG, options_file, results_test)
+    model_choice_message, best_model_name, _, section_e_upload_flag = model_choice(options_file.DSN_MLG_PRD, options_file, results_test)
 
     if not section_e_upload_flag:
         best_model = None
@@ -227,9 +227,9 @@ def deployment(df, db, view):
     if df is not None:
         df = column_rename(df, list(level_2_optionals_baviera_options.column_sql_renaming.keys()), list(level_2_optionals_baviera_options.column_sql_renaming.values()))
         if model_training_check:
-            sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql, truncate=1, check_date=1)
+            sql_inject(df, level_2_optionals_baviera_options.DSN_MLG_PRD, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql, truncate=1, check_date=1)
         else:
-            sql_inject(df, level_2_optionals_baviera_options.DSN_MLG, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql_temp, truncate=1, check_date=1)
+            sql_inject(df, level_2_optionals_baviera_options.DSN_MLG_PRD, db, view, level_2_optionals_baviera_options, level_2_optionals_baviera_options.columns_for_sql_temp, truncate=1, check_date=1)
 
     log_record('Fim Secção E.', project_id)
     performance_info_append(time.time(), 'Section_E_End')

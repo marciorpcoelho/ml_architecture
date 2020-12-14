@@ -13,10 +13,10 @@ read_dotenv(dotenv_path)
 
 if 'nt' in os.name:
     OS_PLATFORM = 'WINDOWS'
-    DSN_MLG = os.getenv('DSN_MLG')
+    DSN_MLG_PRD = os.getenv('DSN_MLG_Prd')
 elif 'posix' in os.name:
     OS_PLATFORM = 'LINUX'
-    DSN_MLG = os.getenv('DSN_MLG_Linux')
+    DSN_MLG_PRD = os.getenv('DSN_MLG_Prd_Linux')
 else:
     raise RuntimeError("Unsupported operating system: {}".format(os.name))
 
@@ -160,8 +160,8 @@ def performance_info(project_id, options_file, model_choice_message, unit_count=
 
     df_performance['Date'] = current_date
     df_performance['Project_Id'] = project_id
-    performance_report_sql_inject(df_performance, DSN_MLG, performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance))
-    performance_report_sql_inject(df_warnings, DSN_MLG, performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings))
+    performance_report_sql_inject(df_performance, DSN_MLG_PRD, performance_sql_info['DB'], performance_sql_info['performance_running_time'], options_file, list(df_performance))
+    performance_report_sql_inject(df_warnings, DSN_MLG_PRD, performance_sql_info['DB'], performance_sql_info['warning_log'], options_file, list(df_warnings))
 
     email_notification(project_id, warning_flag=warning_flag, warning_desc=warnings_global, error_full='', error_desc='', model_choice_message=model_choice_message)
 
@@ -218,7 +218,7 @@ def mail_message_creation(warning_desc, warning_flag, error_full, error_desc, er
 
 def generic_query_execution(query):
 
-    cnxn = odbc_connection_creation(DSN_MLG, UID, PWD, performance_sql_info['DB'])
+    cnxn = odbc_connection_creation(DSN_MLG_PRD, UID, PWD, performance_sql_info['DB'])
     cursor = cnxn.cursor()
 
     cursor.execute(query)
@@ -263,7 +263,7 @@ def error_upload(options_file, project_id, error_full, error_only, error_flag=0,
     elif not error_flag:
         df_error.loc[0, ['Error_Full', 'Error_Only', 'Error_Flag', 'Solution', 'Project_Id', 'Date']] = [None, None, 0, solution_type, project_id, current_date]
 
-    performance_report_sql_inject(df_error, DSN_MLG, performance_sql_info['DB'], performance_sql_info['error_log'], options_file, list(df_error))
+    performance_report_sql_inject(df_error, DSN_MLG_PRD, performance_sql_info['DB'], performance_sql_info['error_log'], options_file, list(df_error))
 
     if error_flag:
         return error_flag, error_only[0]
@@ -324,7 +324,7 @@ def performance_report_sql_inject_single_line(line, flag, performance_sql_info_i
     values_string = '\'%s\'' % '\', \''.join(values)
 
     try:
-        cnxn = odbc_connection_creation(DSN_MLG, UID, PWD, performance_sql_info_in['DB'])
+        cnxn = odbc_connection_creation(DSN_MLG_PRD, UID, PWD, performance_sql_info_in['DB'])
         cursor = cnxn.cursor()
 
         cursor.execute('INSERT INTO [{}].dbo.[{}] VALUES ({})'.format(performance_sql_info_in['DB'], performance_sql_info_in['log_view'], values_string))
