@@ -82,7 +82,7 @@ def main():
             auto_classified_requests_df = auto_classified_requests_df.loc[~auto_classified_requests_df['Request_Num'].isin(manual_classified_reqs), :]
 
         fig = go.Figure(data=[go.Table(
-            columnwidth=[120, 600, 120],
+            columnwidth=[120, 1000, 120],
             header=dict(
                 values=[['Nº Pedido'], ['Descrição'], ['Data Abertura']],
                 align=['center', 'center', 'center'],
@@ -93,7 +93,7 @@ def main():
                 )
             )
             ])
-        fig.update_layout(width=800)
+        fig.update_layout(width=1500)
         st.write(fig)
 
         st.write('Nº Pedidos com classe Não Definido: {}'.format(auto_classified_requests_df['Request_Num'].nunique()))
