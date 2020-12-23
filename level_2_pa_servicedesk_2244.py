@@ -29,33 +29,18 @@ def main():
     query_filters = [{'Cost_Centre': '6825', 'Record_Type': ['1', '2']}, {'Cost_Centre': '6825'}]
 
     df_facts, df_facts_duration, df_clients, df_pbi_categories, df_manual_classifications, keywords_df, keyword_dict, ranking_dict = data_acquisition([input_file_facts, input_file_durations, input_file_clients, input_file_pbi_categories, input_file_manual_classification, input_keywords_df], query_filters, local=0)
-    # df_facts = df_facts.loc[df_facts['Request_Num'].isin(['RE-133774', 'RE-135972']), :]
-    # df_facts = df_facts.head(250)
-
     df, df_top_words = data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories, keywords_df)
-
     df = data_modelling(df, df_top_words, df_manual_classifications, keyword_dict, ranking_dict)
-    # print(df.head())
-    # non_labeled_reqs = df[df['Label'] == 'Não Definido']['Request_Num'].unique()
-    # for non_labeled_req in non_labeled_reqs:
-    #     print(non_labeled_req, df.loc[df['Request_Num'] == non_labeled_req, 'Description'].values[0])
-    #     print(non_labeled_req, df.loc[df['Request_Num'] == non_labeled_req, 'StemmedDescription'].values[0])
 
-    # print(df.loc[df['Request_Num'] == 'RE-133774', ['Request_Num', 'Description', 'StemmedDescription', 'Label']])
-    # print('133774', df.loc[df['Request_Num'] == 'RE-133774', 'Label'].values[0])
-    # print('135972', df.loc[df['Request_Num'] == 'RE-135972', 'Label'].values[0])
-    # print(df.loc[df['Request_Num'] == 'RE-135972', ['Request_Num', 'Description', 'StemmedDescription', 'Label']])
-
-    df.to_csv('dbs/df_service_desk_testing_replacements.csv')
     deployment(df)
-    # performance_info(options_file.project_id, options_file, model_choice_message='N/A')
+    performance_info(options_file.project_id, options_file, model_choice_message='N/A')
 
     log_record('Conclusão com sucesso - Projeto: {}'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
 def data_acquisition(input_files, query_filters, local=0):
     performance_info_append(time.time(), 'Section_A_Start')
-    df_facts, df_facts_duration, df_clients, df_pbi_categories, df_manual_classifications = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+    df_facts, df_facts_duration, df_clients, df_pbi_categories, df_manual_classifications, keywords_df = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
     log_record('Início Secção A...', options_file.project_id)
 
     if local:
@@ -139,34 +124,20 @@ def data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories, 
     df_facts = string_replacer(df_facts, {('Language', 'ca'): 'es', ('Category_Id', 'pcat:'): ''})
 
     df_facts = summary_description_null_checkup(df_facts)  # Cleans requests which have the Summary and Description null
-    # if similar_process_flag:
-    #     print('7-', df_facts.loc[df_facts['Request_Num'] == sel_request_num, 'Description'].values[0])
-    # print('7-', df_facts.loc[df_facts['Request_Num'] == 'RE-135972', 'Description'].values[0])
 
     stop_words_list = options_file.words_to_remove_from_description + unique_clients_names_decoded + unique_clients_login_decoded + unique_assignee_names_decoded + unique_assignee_login_decoded
     df_facts['Description'] = df_facts['Description'].apply(stop_words_removal, args=(stop_words_list,))
 
     if similar_process_flag:
         df_facts = similar_words_handling(df_facts, keywords_df, options_file.testing_dict)
-        # print('8-', df_facts.loc[df_facts['Request_Num'] == sel_request_num, 'Description'].values[0])
-    # print('8-', df_facts.loc[df_facts['Request_Num'] == 'RE-135972', 'Description'].values[0])
 
     df_facts = text_preprocess(df_facts, unique_clients_names_decoded + unique_clients_login_decoded + unique_assignee_names_decoded + unique_assignee_login_decoded, options_file)
 
     df_facts = value_replacement(df_facts, options_file.language_replacements)
 
-    # df_facts.to_csv('output/df_facts.csv')
-    save_csv([df_facts], ['output/df_facts'])
-
     # Checkpoint B.1 - Key Words data frame creation
-    # df_cleaned = clustering_preprocessing(df_facts)
 
     df_facts, df_top_words = top_words_processing(df_facts, description_col='StemmedDescription')
-    # if similar_process_flag:
-    #     print('11-', df_facts.loc[df_facts['Request_Num'] == sel_request_num, 'Description'].values[0])
-    #     print('11-', df_facts.loc[df_facts['Request_Num'] == sel_request_num, 'StemmedDescription'].values[0])
-    # print('11-', df_facts.loc[df_facts['Request_Num'] == 'RE-135972', 'Description'].values[0])
-    # print('11-', df_facts.loc[df_facts['Request_Num'] == 'RE-135972', 'StemmedDescription'].values[0])
 
     log_record('Após o processamento a contagem de pedidos é de: {}'.format(df_facts['Request_Num'].nunique()), options_file.project_id)
     log_record('Fim Secção B.', options_file.project_id)
@@ -206,6 +177,6 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record(exception_desc, project_identifier, flag=2)
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
         log_record('Falhou - Projeto: ' + str(project_dict[project_identifier]) + '.', project_identifier)
 

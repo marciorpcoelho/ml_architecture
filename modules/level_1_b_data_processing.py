@@ -1174,14 +1174,9 @@ def text_preprocess(df, unique_clients_decoded, options_file):
                         stemmed_words.append(stemmed_word)
                     else:
                         continue
-                # else:
-                #     if language == 'pt':
-                #         stemmed_word.append(stemmer_pt.stem(word))
-                #     elif language == 'es':
-                #         stemmed_word.append(stemmer_pt.stem(word))
+
         except TypeError:
             pass
-        # df.at[key, 'StemmedDescription'] = ' '.join([x for x in stemmed_words if x not in options_file.words_to_remove_from_description])
         df.at[key, 'StemmedDescription'] = ' '.join([x for x in stemmed_words])
     return df
 
