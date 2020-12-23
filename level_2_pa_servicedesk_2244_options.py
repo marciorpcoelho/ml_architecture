@@ -31,6 +31,7 @@ sql_info = {
     'final_table': 'BI_SDK_Fact_DW_Requests_Classification',
     'aux_table': 'BI_SDK_Fact_DW_Requests_Manual_Classification',
     'keywords_table': ['SDK_Setup_Keywords'],  # This is a mapping table, uses the sql_mapping_retrieval function, and therefore should be a list, not a string;
+    'keywords_table_str': 'SDK_Setup_Keywords'
 }
 
 log_files = {
@@ -125,4 +126,39 @@ words_to_remove_from_description = ['felisbel', 'felisbela', 'susana', 'paul', '
                                     'estar', 'entr', 'le', 'seja', 'foi', 'hay', 'es', 'ma', 'saludo', 'del', 'al', 'tengo', 'tenho', 'ja', 'cmpt', 'n', 's', 'r', 'c', 'obg', 'favor',
                                     'ou', 'poi', 'agradecia', 'est', 'obrigada', 'bueno', 'bom', 'con', 'ter', 'bon', 'boa', 'esta', 'pelo', 'tenemos', 'como', 'sao', 'fazer', 'ver', 'estamo',
                                     'azevedo', 'oliveira', '-', '\'', 'tpsilva', 'mb', '12ts23', '12ts26', '10ua27', 'joliveira', 'salvador', 'piedra', 'diego', 'rodriguez', 'estebaranz']
+
+
+testing_dict = {'aceder': ['acedem', 'acceder', 'acede'],
+                'acesso': ['aceso', 'accesso', 'acessos'],
+                'actualizar': ['actualiza', 'atualizar', 'atualiza'],
+                'agendamento': ['agendamentos'],
+                'balanco': ['balancço', 'balance', 'balanço'],
+                'cognos': ['kognos', 'cogno', 'cognos=', 'cognos7', 'cognos-', 'cognus'],
+                'colaborador': ['colabolador', 'colaborados', 'colaboradora'],
+                'copia': ['copias', 'copiar', 'cópia'],
+                'cubo': ['cbo', '-cubo', 'cudo', 'cuno', 'cubos'],
+                'curso': ['curso-'],
+                'desbalanceamento': ['desbalanceamentos', 'balancemento'],
+                'eficiencia': ['eficiençia', 'eficiência'],
+                'financeira': ['financira', 'financeiras', 'financeiro'],
+                'marcado': ['marcada', 'marcados'],
+                'nao': ["'nao", 'dao', 'não'],
+                'oficina': ['oficinal', 'oficinas'],
+                'orcamento': ['orçamento'],
+                'parametrizacao': ['parametrizaçao', 'parametriza', 'parametrizaão', 'parametrizado', 'parametrizadas', 'parametrizada', 'parametrização'],
+                'parametrizacoes': ['parametrizes', 'parametriza-los', 'parametrizações'],
+                'pasta': ['pastas'],
+                'pecas': ['peças'],
+                'portal': ['porta'],
+                'produtivo': ['protutivo', 'produtivos'],
+                'recurso': ['resurso', 'recursos'],
+                'relatorio': ['relatorios', 'relatório'],
+                'stock': ['stock…', 'stocks'],
+                'utilizador': ['utilizador…', 'utlizador', 'utilizadora', 'ultilizador', 'utilizados', 'utilizado'],
+                'vdvs': ['vd/vs'],
+                'venda': ['vendo', 'venta', 'vends', 'vende', 'vendas'],
+                'vendas': ['vendos', 'vendas-', 'vends', 'ventas', 'venda'],
+                'versao': ['verso', 'versão'],
+                'viatura': ['viaturas']
+                }
 
