@@ -54,9 +54,9 @@ st.markdown(hide_menu_style, unsafe_allow_html=True)
 
 
 def main():
-    manual_classified_requests_df = get_data_non_cached(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], columns='*')
-    auto_classified_requests_df = get_data(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['final_table'], columns='*', query_filters={'Label': 'Não Definido'})
-    current_classes = get_data(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'][0], columns=['Keyword_Group'])
+    manual_classified_requests_df = get_data_non_cached(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], columns='*')
+    auto_classified_requests_df = get_data(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['final_table'], columns='*', query_filters={'Label': 'Não Definido'})
+    current_classes = get_data(options_file, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'][0], columns=['Keyword_Group'])
     auto_classified_requests_df = auto_classified_requests_df.sort_values(by='Open_Date', ascending=False)
 
     sel_page = st.sidebar.radio('', ['Classificações Manuais', 'Classificações via Modelo'], index=0)
@@ -74,7 +74,7 @@ def main():
                 st.sidebar.text('classificados manualmente.')
                 session_state.update_final_table_button_pressed_flag = 0
             else:
-                update_dw(update_query, options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'])
+                update_dw(update_query, options_file, options_file.DSN, options_file.sql_info['database_source'])
                 session_state.update_final_table_button_pressed_flag = 0
 
         if manual_classified_requests_df.shape[0]:
@@ -116,14 +116,14 @@ def main():
                         st.write('O pedido {} já foi previamente classificado como {}'.format(sel_req[0], previous_label[0]))  # ToDO: add markdown configuration like bold or italic
                         st.write('Pretende substituir pela classe atual?')
                         if st.button('Sim'):
-                            solution_saving(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
+                            solution_saving(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
                             session_state.overwrite_button_pressed_flag, session_state.save_button_pressed_flag = 0, 0
                             session_state.run_id += 1
                             time.sleep(0.1)
                             raise RerunException(RerunData())
 
                     else:
-                        solution_saving(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
+                        solution_saving(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
                         session_state.overwrite_button_pressed_flag, session_state.save_button_pressed_flag = 0, 0
                         session_state.run_id += 1
                         time.sleep(0.1)
@@ -135,18 +135,21 @@ def main():
             st.error('Por favor escolha um pedido para classificar de cada vez.')
 
     elif sel_page == 'Classificações via Modelo':
-        model_classified_data = pd.read_csv(base_path + '/dbs/service_desk_dataset_non_classified_scored_max_prob_prepared.csv')
+        model_classified_data = pd.read_csv(base_path + '/dbs/service_desk_dataset_non_classified_scored_max_prob_prepared (1).csv')
         model_classified_data_joined = model_classified_data.join(auto_classified_requests_df[['Request_Num', 'Description', 'Open_Date']].set_index('Request_Num'), on='Request_Num', how='left')
 
         st.write('Nº Pedidos classificados via modelo: {}'.format(model_classified_data_joined['Request_Num'].nunique()))
 
         st.sidebar.title('Filtros:')
         sel_prediction = st.sidebar.selectbox('Escolher Classificação via modelo:', ['-'] + [x for x in model_classified_data['prediction'].unique()])
+        sel_confidence_threshold = st.sidebar.number_input('Escolha o limite mínimo de confiança:', min_value=0.0, max_value=100.0, value=0., step=1.0)
 
         if sel_prediction != '-':
             filtered_data = filter_data(model_classified_data_joined, [sel_prediction], ['prediction'], [None])
         else:
             filtered_data = model_classified_data_joined
+
+        filtered_data = filter_data(filtered_data, [sel_confidence_threshold], ['Max_Prob'], ['ge'])
 
         fig = go.Figure(data=[go.Table(
             columnwidth=[120, 600, 120, 120, 100],
@@ -180,7 +183,7 @@ def main():
         #         if st.button('Gravar Classificação') or session_state.save_button_pressed_flag == 1:
         #             session_state.save_button_pressed_flag = 1
         #
-        #             solution_saving(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
+        #             solution_saving(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['aux_table'], sel_req[0], sel_label[0])
         #             session_state.overwrite_button_pressed_flag, session_state.save_button_pressed_flag = 0, 0
         #             session_state.run_id += 1
         #             time.sleep(0.1)

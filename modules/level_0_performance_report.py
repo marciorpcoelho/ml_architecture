@@ -310,7 +310,7 @@ def log_record(message, project_id, flag=0, solution_type='DEVOP'):
     elif flag == 2:
         logging.exception('#')
 
-    performance_report_sql_inject_single_line(message, flag, performance_sql_info, project_id, solution_type)
+    # performance_report_sql_inject_single_line(message, flag, performance_sql_info, project_id, solution_type)
 
 
 def performance_report_sql_inject_single_line(line, flag, performance_sql_info_in, project_id, solution_type):

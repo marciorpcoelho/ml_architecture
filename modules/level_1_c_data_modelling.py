@@ -223,9 +223,9 @@ def save_model(clfs, model_name, project_id):
         file_handler.close()
 
 
-def new_request_type(df, df_top_words, df_manual_classification, options_file):
-    keyword_dict, ranking_dict = level_1_a_data_acquisition.sql_mapping_retrieval(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'], 'Keyword_Group', options_file, multiple_columns=1)
-    keyword_dict = keyword_dict[0]
+def new_request_type(df, df_top_words, df_manual_classification, keyword_dict, ranking_dict, options_file):
+    # keyword_dict, ranking_dict = level_1_a_data_acquisition.sql_mapping_retrieval(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['keywords_table'], 'Keyword_Group', options_file, multiple_columns=1)
+    # keyword_dict = keyword_dict[0]
 
     stemmer_pt = SnowballStemmer('porter')
     user_dict, force_dict, requests_dict_2 = {}, {}, {}
@@ -266,7 +266,7 @@ def new_request_type(df, df_top_words, df_manual_classification, options_file):
                     tokenized_key_word = [stemmer_pt.stem(x) for x in tokenized_key_word]
                     selected_cols = df_top_words[tokenized_key_word]
                 except KeyError:
-                    level_0_performance_report.log_record('Palavras chave {} que foram reduzidas a {} não foram encontradas de forma consecutiva.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
+                    # level_0_performance_report.log_record('Palavras chave {} que foram reduzidas a {} não foram encontradas de forma consecutiva.'.format(keywords, tokenized_key_word), options_file.project_id, flag=1)
                     continue
 
                 matched_index = selected_cols[selected_cols == 1].dropna(axis=0).index.values  # returns the requests with the keyword present
@@ -292,7 +292,7 @@ def new_request_type(df, df_top_words, df_manual_classification, options_file):
                         df_top_words.loc[df_top_words[stemmer_pt.stem(keywords)] == 1, 'Label'] = label
                         requests_dict_2 = request_matches(label, keywords, rank, df_top_words[df_top_words[stemmer_pt.stem(keywords)] == 1].index.values, requests_dict_2)
                     except KeyError:
-                        level_0_performance_report.log_record('Palavra chave não encontrada: {}'.format(keywords), options_file.project_id, flag=1)
+                        # level_0_performance_report.log_record('Palavra chave não encontrada: {}'.format(keywords), options_file.project_id, flag=1)
                         continue
 
     df = requests_draw_handling(df, requests_dict_2, ranking_dict)

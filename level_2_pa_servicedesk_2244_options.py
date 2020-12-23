@@ -34,6 +34,7 @@ sql_info = {
     'keywords_table_str': 'SDK_Setup_Keywords'
 }
 
+
 log_files = {
     'full_log': 'logs/ia_servicedesk_2244.txt',
 }

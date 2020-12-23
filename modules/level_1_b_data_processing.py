@@ -11,7 +11,9 @@ import pandas as pd
 from scipy import stats
 from langdetect import detect
 import matplotlib.pyplot as plt
+from Levenshtein import distance
 from multiprocessing import Pool
+from difflib import SequenceMatcher
 from dateutil.relativedelta import relativedelta
 from nltk.stem.snowball import SnowballStemmer
 from imblearn.over_sampling import RandomOverSampler
@@ -1079,6 +1081,75 @@ def summary_description_null_checkup(df):
     return df
 
 
+def similar_words_handling(df, keywords_df, similar_word_dict):
+    _, df_top_words_pt = top_words_processing(df[df['Language'] == 'pt'], description_col='Description')
+
+    # keywords_initial = [x for x in keywords_df['Keywords_PT'] if not x.startswith('User') and not x.startswith('Forced')]
+    # keywords_split = [x.split(';') for x in keywords_initial]
+    # keywords_v2 = [item for sublist in keywords_split for item in sublist]
+    # keywords_split_v2 = [x.split(' ') for x in keywords_v2]
+    # keywords_v3 = [item for sublist in keywords_split_v2 for item in sublist if len(item) > 2]
+    # keywords = np.unique(keywords_v3)
+    #
+    # similar_word_dict = {}
+    # levenshtein_similar_word_dict = {}
+    # used_words = []
+    #
+    # for keyword in keywords:
+    #     for word in df_top_words_pt:
+    #         result = similar(keyword, word)
+    #
+    #         if len(word) > 2:
+    #             result_3 = levenshtein_dist(keyword, word)
+    #             if result_3 == 1:
+    #
+    #                 if keyword in levenshtein_similar_word_dict.keys():
+    #                     if word not in levenshtein_similar_word_dict[keyword]:
+    #                         levenshtein_similar_word_dict[keyword].append(word)
+    #                 else:
+    #                     levenshtein_similar_word_dict[keyword] = [word]
+    #
+    #         if len(keyword) >= 4 and len(keyword) >= len(word):
+    #             if len(keyword) > 5:
+    #                 if 0.85 <= result < 1 and word not in used_words:
+    #                     print('Original Word: {}, Similar Word: {}, Similarity Ratio: {:.2f}'.format(keyword, word, result))
+    #                     used_words.append(word)
+    #
+    #                     if keyword in similar_word_dict.keys():
+    #                         if word not in similar_word_dict[keyword]:
+    #                             similar_word_dict[keyword].append(word)
+    #                     else:
+    #                         similar_word_dict[keyword] = [word]
+    #
+    #             elif len(keyword) <= 5:
+    #                 if 0.85 <= result < 1 and word not in used_words:
+    #                     print('Original Word: {}, Similar Word: {}, Similarity Ratio: {:.2f}'.format(keyword, word, result))
+    #                     used_words.append(word)
+    #
+    #                     if keyword in similar_word_dict.keys():
+    #                         if word not in similar_word_dict[keyword]:
+    #                             similar_word_dict[keyword].append(word)
+    #                     else:
+    #                         similar_word_dict[keyword] = [word]
+    #
+    # print(similar_word_dict)
+    # print(levenshtein_similar_word_dict)
+
+    for keyword, similar_words in zip(similar_word_dict.keys(), similar_word_dict.values()):
+        pattern = '\\b' + '\\b|\\b'.join(sorted(re.escape(k) for k in similar_words)) + '\\b'
+        df.loc[df['Language'] == 'pt', 'Description'] = df.loc[df['Language'] == 'pt', 'Description'].str.replace(pattern, keyword, regex=True)
+
+    return df
+
+
+def similar(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def levenshtein_dist(a, b):
+    return distance(a, b)
+
+
 def text_preprocess(df, unique_clients_decoded, options_file):
     df['StemmedDescription'] = str()
     stemmer_pt = SnowballStemmer('porter')
@@ -1095,7 +1166,7 @@ def text_preprocess(df, unique_clients_decoded, options_file):
         try:
             tokenized = nltk.tokenize.word_tokenize(description)
             for word in tokenized:
-                if word in unique_clients_decoded or word in ['\'\'', '``', '“', '”', '', '\'', ',']:
+                if word in ['\'\'', '``', '“', '”', '', '\'', ',']:
                     continue
                 else:
                     stemmed_word = stemmer_pt.stem(word)
@@ -1110,13 +1181,13 @@ def text_preprocess(df, unique_clients_decoded, options_file):
                 #         stemmed_word.append(stemmer_pt.stem(word))
         except TypeError:
             pass
-        df.at[key, 'StemmedDescription'] = ' '.join([x for x in stemmed_words if x not in options_file.words_to_remove_from_description])
-
+        # df.at[key, 'StemmedDescription'] = ' '.join([x for x in stemmed_words if x not in options_file.words_to_remove_from_description])
+        df.at[key, 'StemmedDescription'] = ' '.join([x for x in stemmed_words])
     return df
 
 
-def stop_words_removal(string_to_process, stop_words_list):
-    new_string = ' '.join([x for x in nltk.tokenize.word_tokenize(string_to_process) if x not in stop_words_list])
+def stop_words_removal(x, stop_words_list):
+    new_string = ' '.join([x for x in nltk.tokenize.word_tokenize(x) if x not in stop_words_list])
 
     return new_string
 
@@ -1277,19 +1348,18 @@ def threshold_grouping(x, column, value, threshold=0):
     return x
 
 
-def top_words_processing(df_facts):
+def top_words_processing(df_facts, description_col):
     time_tag_date, _ = level_1_e_deployment.time_tags(format_date="%Y_%m_%d")
 
     try:
-        df_cleaned = pd.read_csv(base_path + '/output/df_cleaned_' + str(time_tag_date) + '.csv', index_col=0)
-        df_top_words = pd.read_csv(base_path + '/output/df_top_words_' + str(time_tag_date) + '.csv', index_col=0)
+        df_cleaned = pd.read_csv(base_path + '/output/df_cleaned_' + str(time_tag_date) + '_' + str(description_col) + '.csv', index_col=0)
+        df_top_words = pd.read_csv(base_path + '/output/df_top_words_' + str(time_tag_date) + '_' + str(description_col) + '.csv', index_col=0)
     except FileNotFoundError:
-        top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts, unit_col='Request_Num', description_col='StemmedDescription')
-        df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency, unit_col='Request_Num', description_col='StemmedDescription')
+        top_words_frequency, top_words_ticket_frequency = word_frequency(df_facts, unit_col='Request_Num', description_col=description_col)
+        df_top_words, df_cleaned = words_dataframe_creation(df_facts, top_words_ticket_frequency, unit_col='Request_Num', description_col=description_col)
 
-        # These actually take to longer than a re-run, hence they are commented
-        df_top_words.to_csv(base_path + '/output/df_top_words_' + str(time_tag_date) + '.csv')
-        df_cleaned.to_csv(base_path + '/output/df_cleaned_' + str(time_tag_date) + '.csv')
+        # df_top_words.to_csv(base_path + '/output/df_top_words_' + str(time_tag_date) + '_' + str(description_col) + '.csv')
+        # df_cleaned.to_csv(base_path + '/output/df_cleaned_' + str(time_tag_date) + '_' + str(description_col) + '.csv')
 
     return df_cleaned, df_top_words
 
