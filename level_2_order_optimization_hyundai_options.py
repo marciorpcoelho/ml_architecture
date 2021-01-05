@@ -18,6 +18,7 @@ if 'nt' in os.name:
     DSN_SRV3_PRD = os.getenv('DSN_SRV3_Prd')
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd')
 elif 'posix' in os.name:
+    DSN = os.getenv('DSN_Prd_Linux')
     DSN_SRV3_PRD = os.getenv('DSN_SRV3_Prd_Linux')
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd_Linux')
 UID = os.getenv('UID')
@@ -127,9 +128,9 @@ column_translate_dict = {
     'Margin_HP': 'Margem HP',
     'TotalGrossMarginPerc': 'Margem Global (%)',
     'TotalGrossMarginPerc_normalized': 'Margem Global (%) (score)',
-    'MarginRatio': 'Rácio Margem',
+    'MarginRatio': 'Rácio Margem (HP/Global)',
     'MarginRatio_normalized': 'Rácio Margem (score)',
-    'OC': 'Obj. Cobertura',
+    'OC': 'Obj. Cobertura (unidades)',
     'Stock_VDC': '#Stock',
     'Stock_OC_Diff': 'O.C. vs Stock',
     'Stock_OC_Diff_normalized': 'O.C. vs Stock (score)',
@@ -155,7 +156,57 @@ column_translate_dict = {
     'Max_Qty_Per_Sales_Plan_Period': 'Quantidade Máx por Período',
     'Model_Code': 'Model Code',
     'PT_Stock_Status_Level_1_Desc': 'Estado (1º Nível)',
-    'PT_Stock_Status_Desc': 'Estado (2º Nível)'
+    'PT_Stock_Status_Desc': 'Estado (2º Nível)',
+    'SLR_Document_Date_CHS': 'Dt.Venda',
+}
+
+col_color_dict = {
+    "Sug.Encomenda": 'Beige',
+    "Motorização": 'FloralWhite',
+    "Transmissão": 'FloralWhite',
+    "Versão": 'FloralWhite',
+    "Cor Exterior": 'FloralWhite',
+    "Cor Interior": 'FloralWhite',
+    "Médias Dias em Stock": 'LightGray',
+    "Médias Dias em Stock (score)": 'LightGray',
+    "#Veículos Vendidos": 'Lavender',
+    "#Veículos Vendidos (score)": 'Lavender',
+    "#Propostas": 'LightGrey',
+    "#Propostas (score)": 'LightGrey',
+    "Margem HP": 'Lavender',
+    "Margem Global (%)": 'Lavender',
+    "Margem Global (%) (score)": 'Lavender',
+    "Rácio Margem (HP/Global)": 'LightSlateGray',
+    "Rácio Margem (score)": 'LightSlateGray',
+    "Obj. Cobertura (unidades)": 'LightSteelBlue',
+    "#Stock": 'LightSteelBlue',
+    "O.C. vs Stock": 'LightSteelBlue',
+    "O.C. vs Stock (score)": 'LightSteelBlue',
+    "Co2 (NEDC)": 'SlateGrey',
+    'Co2 (NEDC) (score)': 'SlateGrey',
+    "Score": 'LightBlue',
+}
+
+col_decimals_place_dict = {
+    "Sug.Encomenda": '{:.0f}',
+    "Médias Dias em Stock": '{:.0f}',
+    "Médias Dias em Stock (score)": '{:.2f}',
+    "#Veículos Vendidos": '{:.0f}',
+    "#Veículos Vendidos (score)": '{:.2f}',
+    "#Propostas": '{:.0f}',
+    "#Propostas (score)": '{:.2f}',
+    "Margem HP": '{:.3f}',
+    "Margem Global (%)": '{:.3f}',
+    "Margem Global (%) (score)": '{:.2f}',
+    "Rácio Margem (HP/Global)": '{:.2f}',
+    "Rácio Margem (score)": '{:.2f}',
+    "Obj. Cobertura (unidades)": '{:.1f}',
+    "#Stock": '{:.0f}',
+    "O.C. vs Stock": '{:.0f}',
+    "O.C. vs Stock (score)": '{:.2f}',
+    "Co2 (NEDC)": '{:.1f}',
+    'Co2 (NEDC) (score)': '{:.2f}',
+    "Score": '{:.3f}',
 }
 
 nlr_code_desc = {
@@ -956,6 +1007,7 @@ sales_validation_query = '''
           ,Sales.[DaysInStock_Global]
           ,Sales.[TotalGrossMargin]
           ,Sales.[TotalGrossMarginPerc]
+          ,Sales.[SLR_Document_Date_CHS]
     FROM [BI_DTR].[dbo].[View_VHE_Fact_PA_OrderOptimization_Sales] as Sales
     LEFT JOIN  Dealers ON Dealers.SLR_Account_CHS_Key = Sales.SLR_Account_CHS_Key
     LEFT JOIN  Customer_Group ON Customer_Group.Customer_Group_Code = Dealers.Customer_Group_Code
@@ -970,7 +1022,7 @@ sales_validation_query = '''
   '''
 
 sales_plan_validation_query_step_1 = '''
-    SELECT 
+    SELECT DISTINCT
         Sales_Plan.Factory_Model_Code as Model_Code
         ,  Sales_Plan.Local_Vehicle_Option_Code as OCN
         ,  Sales_Plan.Sales_Plan_Period
@@ -1021,7 +1073,7 @@ sales_plan_validation_query_step_2 = '''
             , PDB.PT_PDB_Interior_Color_Desc
             , Sales_Plan.Sales_Plan_Period
     )
-    SELECT 
+    SELECT DISTINCT
           Sales_Plan.WLTP_CO2
         ,  Sales_Plan.NEDC_CO2
         ,  Sales_Plan.Max_Qty_Per_Sales_Plan_Period
@@ -1052,4 +1104,9 @@ sales_plan_validation_query_step_3 = '''
       and PDB.[PT_PDB_Transmission_Type_Desc] = '{}'
       and PDB.[PT_PDB_Exterior_Color_Desc] = '{}'
       and PDB.[PT_PDB_Interior_Color_Desc] = '{}'
+'''
+
+proposals_max_date_query = '''
+    SELECT MAX([Record_Date])
+    FROM [BI_DTR].[dbo].[VHE_Fact_DW_HPK_Proposals_DTR]
 '''
