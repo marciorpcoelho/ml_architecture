@@ -2,6 +2,7 @@ import sys
 import time
 import logging
 import pandas as pd
+from traceback import format_exc
 import pa_servicedesk_models_training
 import level_2_pa_servicedesk_2244_options as options_file
 from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df, sql_mapping_retrieval
@@ -180,6 +181,6 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record(exception_desc, project_identifier, flag=2)
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
         log_record('Falhou - Projeto: ' + str(project_dict[project_identifier]) + '.', project_identifier)
 

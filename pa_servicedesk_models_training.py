@@ -28,9 +28,7 @@ def main():
     classified_dataset, non_classified_dataset = fourth_step(labeled_requests)
     final_df = fifth_step(classified_dataset, non_classified_dataset)
 
-    print('final_df shape', final_df.shape)
-
-    return
+    return final_df
 
 
 def first_step(requests, labels):
@@ -101,8 +99,8 @@ def fifth_step(classified_df, non_classified_df):
     print('before:', non_classified_df.shape)
     print('before:', non_classified_df.head())
     non_classified_df_scored, _, _, _, _ = model_training_dataiku(non_classified_df, clf_model)
-    print('before:', non_classified_df_scored.shape)
-    print('before:', non_classified_df_scored.head())
+    print('after:', non_classified_df_scored.shape)
+    print('after:', non_classified_df_scored.head())
 
     return pd.concat([classified_df, non_classified_df_scored])
 
@@ -137,7 +135,13 @@ def dataset_preparation(ml_dataset):
     del ml_dataset['Label']
 
     ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
-    train, test = train_test_split(ml_dataset, test_size=0.2, stratify=ml_dataset['__target__'])
+
+    if ml_dataset['__target__'].nunique() > 1:
+        train, test = train_test_split(ml_dataset, test_size=0.2, stratify=ml_dataset['__target__'])
+    elif ml_dataset['__target__'].nunique() == 1:
+        # This is for the case when only a single label is present, which happens when I want to classify the Non Classified Requests.
+        train = ml_dataset
+        test = train
 
     print('Train data has %i rows and %i columns' % (train.shape[0], train.shape[1]))
     print('Test data has %i rows and %i columns' % (test.shape[0], test.shape[1]))
