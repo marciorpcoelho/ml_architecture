@@ -4,6 +4,7 @@ import time
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
 from modules.level_1_e_deployment import sql_inject
 from modules.level_1_a_data_acquisition import sql_retrieve_df
+from modules.level_0_performance_report import log_record
 import level_2_pa_part_reference_options as options_file
 from dgo_parts_models_training import model_training
 import warnings
@@ -169,8 +170,10 @@ def main():
     dgo_family_10_loc = 'dbs/dgo_familia_10_prepared.csv'
     dgo_family_13_loc = 'dbs/dgo_familia_13_prepared.csv'
 
+    log_record('Step 1 started.', options_file.project_id)
     master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
     master_file['Product_Group_DW'] = master_file['Product_Group_DW'].astype(str)
+    log_record('Step 1 ended.', options_file.project_id)
 
     master_file = flow_step_2(master_file)
     print('2 - master_file shape', master_file.shape)
@@ -200,12 +203,18 @@ def main():
 
 # compute_current_stock_all_platforms_master_stock_matched_04_2020_prepared_distinct
 def flow_step_2(df):
+    log_record('Step 2 started.', options_file.project_id)
+
     df = df.drop_duplicates(subset=['Part_Ref', 'Part_Desc', 'Product_Group_DW', 'Client_Id', 'Average_Cost', 'PVP_1', 'PLR_Account', 'Part_Desc_PT'])
+
+    log_record('Step 2 ended.', options_file.project_id)
     return df
 
 
 # compute_Dataset_w_Count_prepared
 def flow_step_3(df):
+    log_record('Step 3 started.', options_file.project_id)
+
     # Step 1
     regex_filter_1 = r'^[0-9]*$'
     filter_1 = df['Part_Desc_PT'].str.contains(regex_filter_1, na=False)
@@ -246,11 +255,15 @@ def flow_step_3(df):
 
     # Step 10
     df = product_group_dw_complete_replaces(df.copy())
+
+    log_record('Step 3 ended.', options_file.project_id)
     return df
 
 
 # compute_Dataset_w_Count_prepared_by_Part_Ref_2_1_1
 def flow_step_4(df):
+    log_record('Step 4 started.', options_file.project_id)
+
     # Step 0 (not in dataiku)
     previous_size = df.shape[0]
     df.dropna(subset=['Product_Group_DW'], inplace=True)
@@ -265,11 +278,15 @@ def flow_step_4(df):
     df = df.groupby('Part_Ref').apply(group_by_rules)
     df.reset_index(inplace=True)
     df.to_csv('dbs/df_after_flow_step_4.csv')
+
+    log_record('Step 4 ended.', options_file.project_id)
     return df
 
 
 # compute_dataset_grouped_corrected
 def flow_step_5(df, manual_classified_files_loc):
+    log_record('Step 5 started.', options_file.project_id)
+
     # Step 0 - Merge all manual/application classifications
     manual_classified_families = get_dgo_manual_classifications(manual_classified_files_loc)
     pse_fact_pa_parts_classification_refs = get_fact_pa_classifications()
@@ -277,11 +294,15 @@ def flow_step_5(df, manual_classified_files_loc):
 
     # Step 1
     df = classification_corrections_start(df, all_classifications)
+
+    log_record('Step 5 ended.', options_file.project_id)
     return df, all_classifications
 
 
 # split_Dataset_w_Count_prepared_by_Part_Ref_1
 def flow_step_6(df):
+    log_record('Step 6 started.', options_file.project_id)
+
     other_families = ['O. Acessórios', 'O. Colisão', 'O. Consumíveis', 'O. Manutenção', 'O. Merchandising', 'O. Mota', 'O. Reparação', 'O. Diversos']
 
     df_non_classified = df[df['Product_Group_DW'] == '1']
@@ -295,22 +316,28 @@ def flow_step_6(df):
                             (df['Product_Group_DW'] == 'O. Diversos')]
     df_classified_families = df[~df['Product_Group_DW'].isin(other_families + ['1'])]
 
+    log_record('Step 6 ended.', options_file.project_id)
     return df_non_classified, df_other_families, df_classified_families
 
 
 # compute_full_dataset_min_count_part_ref_per_product_group_dw
 # compute_full_dataset_min_count_part_ref_per_product_group_dw_2
 def flow_step_7(df):
+    log_record('Step 7 started.', options_file.project_id)
+
     full_dataset_df = df
     value_counts_series = full_dataset_df['Product_Group_DW'].value_counts()
     value_counts_series_filter = value_counts_series[value_counts_series >= 100].index.values
 
     full_dataset_min_count_part_ref_per_product_group_dw_df = full_dataset_df[full_dataset_df['Product_Group_DW'].isin(value_counts_series_filter)]
 
+    log_record('Step 7 ended.', options_file.project_id)
     return full_dataset_min_count_part_ref_per_product_group_dw_df
 
 
 def flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified):
+    log_record('Step 8 started.', options_file.project_id)
+
     starting_cols = list(master_file_classified_families_filtered)
 
     _, main_families_clf, main_families_cm_train, main_families_cm_test, main_families_metrics_dict = model_training(master_file_classified_families_filtered)  # Modelo conhece 50 familias
@@ -338,10 +365,13 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])
     print(master_file_final.shape)
 
+    log_record('Step 8 ended.', options_file.project_id)
     return master_file_final, main_families_cm_test, main_families_metrics_dict, other_families_cm_test, other_families_metrics_dict
 
 
 def flow_step_9(df):
+    log_record('Step 9 started.', options_file.project_id)
+
     # Step 1
     df = product_group_dw_corrections_on_desc_end(df.copy())
 
@@ -367,14 +397,17 @@ def flow_step_9(df):
 
     # Step 10
     cols = list(df)
-    print(df.head())
     df = df[[x for x in cols if not x.startswith('probability_')]]
-    print(df.head())
+    log_record('Step 9 ended.', options_file.project_id)
     return df
 
 
 def flow_step_10(df, manual_classifications):
+    log_record('Step 9 started.', options_file.project_id)
+
     df = classification_corrections_end(df, manual_classifications)
+
+    log_record('Step 10 ended.', options_file.project_id)
     return df
 
 
