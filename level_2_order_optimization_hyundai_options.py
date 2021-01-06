@@ -130,7 +130,7 @@ column_translate_dict = {
     'TotalGrossMarginPerc_normalized': 'Margem Global (%) (score)',
     'MarginRatio': 'Rácio Margem (HP/Global)',
     'MarginRatio_normalized': 'Rácio Margem (score)',
-    'OC': 'Obj. Cobertura (unidades)',
+    'OC': 'Obj. Cobertura Stock (unidades)',
     'Stock_VDC': '#Stock',
     'Stock_OC_Diff': 'O.C. vs Stock',
     'Stock_OC_Diff_normalized': 'O.C. vs Stock (score)',

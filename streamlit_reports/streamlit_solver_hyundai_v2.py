@@ -161,7 +161,8 @@ def main():
 
             if sel_configurations.shape[0]:
                 sel_configurations.rename(index=str, columns={'Quantity': 'Sug.Encomenda'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
-                st.write('Sugestão Encomenda (Score Inicial):', sel_configurations[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
+                st.markdown("<h3 style='text-align: left;'>Sugestão de Encomenda (Score Inicial):</h3>", unsafe_allow_html=True)
+                st.write('', sel_configurations[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + ['Quantity_Sold'] + ['Average_Score_Euros']]
                          .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
                          .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}', 'Propostas Entregues': '{:.0f}', 'Em Stock': '{:.0f}'})
                          )
@@ -176,7 +177,8 @@ def main():
                 # st.write('Número de Configurações:', data_filtered_v2.shape[0])
 
                 sel_configurations_v2.rename(index=str, columns={'Quantity': 'Sug.Encomenda', 'Sum_Qty_CHS': '#Veículos Vendidos'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
-                st.write('Sugestão Encomenda (Novo Score):', sel_configurations_v2[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + temp_cols + ['Score']]
+                st.markdown("<h3 style='text-align: left;'>Sugestão de Encomenda (Novo Score):</h3>", unsafe_allow_html=True)
+                st.write('', sel_configurations_v2[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + temp_cols + ['Score']]
                          .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
                          .style.apply(highlight_cols, col_dict=options_file.col_color_dict)
                          .format(options_file.col_decimals_place_dict)
@@ -207,20 +209,18 @@ def main():
                     st.markdown("Situação Co2 (WLTP) após esta encomenda: {:.2f}(-<span style='color:green'>{:.2f}</span>) gCo2/km".format(co2_wltp_per_vehicle_after_order, co2_wltp_per_vehicle_evolution), unsafe_allow_html=True)
 
                 sel_configurations_v2['Configuration_Concat'] = sel_configurations_v2['PT_PDB_Model_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Engine_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Transmission_Type_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Version_Desc'] + ', ' +  sel_configurations_v2['PT_PDB_Exterior_Color_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Interior_Color_Desc']
-                sel_config = st.selectbox('Configuração a explorar:', ['-'] + [x for x in sel_configurations_v2['Configuration_Concat'].unique()], index=0)
+                st.markdown("<h3 style='text-align: left;'>Configuração a explorar:</h3>", unsafe_allow_html=True)
+                sel_config = st.selectbox('', ['-'] + [x for x in sel_configurations_v2['Configuration_Concat'].unique()], index=0)
                 if sel_config != '-':
                     validation_dfs = get_validation_info(sel_configurations_v2, sel_config)
                     validation_dfs_titles = ['Vendas', 'Propostas', 'Stock', 'Plano de Vendas, passo 1', 'Plano de Vendas, passo 2', 'Plano de Vendas, passo 3']
 
                     st.write(validation_dfs_titles[0] + ' ({}):'.format(validation_dfs[0].shape[0]), validation_dfs[0][[x for x in list(validation_dfs[0]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    left_table, right_table = st.beta_columns(2)
-                    with left_table:
-                        st.write(validation_dfs_titles[1] + ' ({}):'.format(validation_dfs[1].shape[0]), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                        st.write(validation_dfs_titles[3] + ':', validation_dfs[3][[x for x in list(validation_dfs[3]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                        st.write(validation_dfs_titles[4] + ':', validation_dfs[4][[x for x in list(validation_dfs[4]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                        st.write(validation_dfs_titles[5] + ':', validation_dfs[5][[x for x in list(validation_dfs[5]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    with right_table:
-                        st.write(validation_dfs_titles[2] + ' ({}):'.format(validation_dfs[2].shape[0]), validation_dfs[2][[x for x in list(validation_dfs[2]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    st.write(validation_dfs_titles[1] + ' ({}, para os últimos 3 meses):'.format(validation_dfs[1].shape[0]), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    st.write(validation_dfs_titles[3] + ':', validation_dfs[3][[x for x in list(validation_dfs[3]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    st.write(validation_dfs_titles[4] + ' - selecionado os máximos de valores de quantidade por período:', validation_dfs[4][[x for x in list(validation_dfs[4]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    st.write(validation_dfs_titles[5] + ' - aplicando a seguinte fórmula: *Objetivo de Cobertura de Stock no mês N = 2,5 \* média das vendas de (N, N+1, N+2, N+3 e N+4)*:', validation_dfs[5][[x for x in list(validation_dfs[5]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict), unsafe_allow_html=True)
+                    st.write(validation_dfs_titles[2] + ' ({}):'.format(validation_dfs[2].shape[0]), validation_dfs[2][[x for x in list(validation_dfs[2]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
 
             else:
                 return
@@ -660,7 +660,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR', sel_parameters=['sel_brand', 'sel_model', 'sel_order_size', 'sel_min_number_of_configuration', 'sel_min_sold_cars', 'sel_daysinstock_score_weight', 'sel_margin_score_weight', 'sel_margin_ratio_score_weight', 'sel_qty_sold_score_weight', 'sel_proposals_score_weight', 'sel_oc_stock_diff_score_weight', 'sel_co2_nedc_score_weight'])
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR', sel_parameters=['sel_brand', 'sel_model', 'sel_order_size', 'sel_min_number_of_configuration', 'sel_min_sold_cars', 'sel_daysinstock_score_weight', 'sel_margin_score_weight', 'sel_margin_ratio_score_weight', 'sel_qty_sold_score_weight', 'sel_proposals_score_weight', 'sel_oc_stock_diff_score_weight', 'sel_co2_nedc_score_weight'])
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)

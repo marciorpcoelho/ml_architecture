@@ -1,6 +1,8 @@
 import os
 from py_dotenv import read_dotenv
 from multiprocessing import cpu_count
+from sklearn.linear_model import LogisticRegression
+import lightgbm as lgb
 dotenv_path = '/info.env'
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 read_dotenv(base_path + dotenv_path)
@@ -38,7 +40,7 @@ log_files = {
     'full_log': 'logs/ia_servicedesk_2244.txt',
 }
 
-date_columns = ['Open_Date', 'Assignee_Date', 'Close_Date', 'Resolve_Date']
+date_columns = ['Open_Date', 'Creation_Date', 'Assignee_Date_Orig', 'Assignee_Date', 'Close_Date', 'Resolve_Date', 'Resolve_Date_Orig']
 
 project_id = 2244
 
@@ -64,6 +66,27 @@ sql_fact_columns = {
     'Request_Age_Code',
     'Cost_Centre',
     'Record_Type',
+}
+
+model_training_fact_cols = {
+    'Request_Num',
+    'Summary',
+    'Description',
+    'Status_Id',
+    'Creation_Date',
+    'Creation_TimeSpent',
+    'Open_Date', 'Assignee_Date_Orig',
+    'Assignee_Date', 'Resolve_Date_Orig',
+    'Resolve_Date', 'Close_Date', 'TimeSpent_Minutes',
+    'Contact_Assignee_Id', 'Application_Id', 'Contact_Customer_Id', 'Category_Id', 'SLA_Id',
+    'SLA_StdTime_Assignee_Hours', 'SLA_StdTime_Resolution_Hours', 'Request_Type_Orig', 'Request_Type',
+    'Priority_Id',
+    'SLA_Violation_Orig', 'SLA_Assignee_Flag', 'SLA_Resolution_Flag', 'SLA_Assignee_Minutes',
+    'SLA_Resolution_Minutes', 'SLA_Close_Minutes', 'WaitingTime_Assignee_Minutes', 'WaitingTime_Assignee_Minutes_Supplier',
+    'WaitingTime_Assignee_Minutes_Internal', 'WaitingTime_Assignee_Minutes_Customer', 'WaitingTime_Resolution_Minutes',
+    'WaitingTime_Resolution_Minutes_Supplier', 'WaitingTime_Resolution_Minutes_Internal', 'WaitingTime_Resolution_Minutes_Customer',
+    'SLA_Assignee_Minutes_Above', 'SLA_Resolution_Minutes_Above', 'SLA_Violation', 'SLA_Assignee_Violation', 'SLA_Resolution_Violation',
+    'Next_1Day_Minutes', 'Next_2Days_Minutes', 'Next_3Days_Minutes', 'NumReq_ReOpen', 'NumReq_ReOpen_Nr',
 }
 
 sql_pbi_categories_columns = {
@@ -162,3 +185,8 @@ testing_dict = {'aceder': ['acedem', 'acceder', 'acede'],
                 'viatura': ['viaturas']
                 }
 
+gridsearch_parameters = {
+    'lr': [LogisticRegression, [{'C': [0.01, 0.1, 1, 10, 100], 'solver': ['lbfgs', 'newton-cg', 'liblinear'], 'max_iter': [2000], 'multi_class': ['ovr', 'multinomial']}]],
+    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50, 100], 'n_estimators': [50, 100, 200], 'max_depth': ['50', '100'], 'objective': ['multiclass']}]],
+
+}

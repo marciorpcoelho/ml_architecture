@@ -1,10 +1,8 @@
 import sys
 import time
 import logging
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from traceback import format_exc
+import pa_servicedesk_models_training
 import level_2_pa_servicedesk_2244_options as options_file
 from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df, sql_mapping_retrieval
 from modules.level_1_b_data_processing import stop_words_removal, summary_description_null_checkup, top_words_processing, text_preprocess, literal_removal, string_to_list, df_join_function, null_handling, lowercase_column_conversion, null_analysis, remove_rows, value_replacement, value_substitution, duplicate_removal, language_detection, string_replacer, similar_words_handling
@@ -31,6 +29,11 @@ def main():
     df_facts, df_facts_duration, df_clients, df_pbi_categories, df_manual_classifications, keywords_df, keyword_dict, ranking_dict = data_acquisition([input_file_facts, input_file_durations, input_file_clients, input_file_pbi_categories, input_file_manual_classification, input_keywords_df], query_filters, local=0)
     df, df_top_words = data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories, keywords_df)
     df = data_modelling(df, df_top_words, df_manual_classifications, keyword_dict, ranking_dict)
+
+    final_df = pa_servicedesk_models_training.main()
+
+    print('final df:', final_df.shape)
+    print('normal processing df:', df.shape)
 
     deployment(df)
     performance_info(options_file.project_id, options_file, model_choice_message='N/A')
@@ -177,6 +180,6 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record(exception_desc, project_identifier, flag=2)
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1)
         log_record('Falhou - Projeto: ' + str(project_dict[project_identifier]) + '.', project_identifier)
 

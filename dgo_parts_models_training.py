@@ -30,8 +30,6 @@ pd.set_option('display.max_columns', 200)
 
 def main():
     return
-    # main_families_model_training(df)
-    # other_families_model_training(df)
 
 
 def model_training(ml_dataset, clf=None):
@@ -42,10 +40,6 @@ def model_training(ml_dataset, clf=None):
 
     if not clf:
         print('Classification Model not found. Training a new one...')
-        # clf = LogisticRegression(penalty="l2", random_state=1337, max_iter=500)
-        # start_time = time.time()
-        # clf.fit(train_X, train_Y)
-        # print("Fitting: --- %s seconds ---" % (time.time() - start_time))
 
         scorer = make_scorer(recall_score, average='weighted')
         classes, best_models, running_times = classification_model_training(['lgb'], train_X, train_Y, gridsearch_parameters, 3, scorer, 2610)
@@ -56,8 +50,6 @@ def model_training(ml_dataset, clf=None):
     predictions_test_converted_classes = predictions_test
     predictions_test = predictions_test.map(inv_target_map)
 
-    # print(test_Y, predictions_test)
-    # print(confusion_matrix(test_Y.astype(str), predictions_test.astype(str), labels=[inv_target_map[x] for x in clf.classes_]))
     if cm_flag:
         cm = confusion_matrix([inv_target_map[x] for x in test_Y], predictions_test.values, labels=[inv_target_map[x] for x in clf.classes_])
         labels = [inv_target_map[x] for x in clf.classes_]
@@ -81,23 +73,16 @@ def model_training(ml_dataset, clf=None):
     predictions_train_converted_classes = predictions_train
     predictions_train = predictions_train.map(inv_target_map)
 
-    # print(train_Y, predictions_train)
     if cm_flag:
         labels = [inv_target_map[x] for x in clf.classes_]
         cm = confusion_matrix([inv_target_map[x] for x in train_Y], predictions_train.values, labels=[inv_target_map[x] for x in clf.classes_])
         df_cm_train = pd.DataFrame(cm, columns=labels, index=labels)
-    # print(confusion_matrix(train_Y.astype(str), predictions_train.astype(str), labels=[inv_target_map[x] for x in clf.classes_]))
-    # train_y_ser = pd.Series(train_Y)
-    # print('Precision Score:', precision_score(train_y_ser, predictions_train_converted_classes, average='weighted'))
-    # print('Precision Score:', precision_score(train_y_ser, predictions_train_converted_classes, average='micro'))
-    # print('Precision Score:', precision_score(train_y_ser, predictions_train_converted_classes, average='macro'))
 
     predictions = pd.concat([predictions_train, predictions_test])
     probabilities = pd.concat([probabilities_train, probabilities_test])
 
     ml_dataset_scored = ml_dataset.join(predictions, how='left')
     ml_dataset_scored = ml_dataset_scored.join(probabilities, how='left')
-    # print(ml_dataset_scored.head())
     # ml_dataset_scored['Product_Group_DW'] = ml_dataset_scored['__target__'].replace(inv_target_map)
     # ml_dataset_scored.drop('__target__', axis=1, inplace=True)
 
@@ -105,7 +90,6 @@ def model_training(ml_dataset, clf=None):
 
 
 def dataset_preparation(ml_dataset):
-    # print('Base data has %i rows and %i columns' % (ml_dataset.shape[0], ml_dataset.shape[1]))
     ml_dataset = ml_dataset[[u'PLR_Account_first', u'Product_Group_DW', u'PVP_1_avg', u'Part_Desc_PT_concat', u'Client_Id', u'Part_Desc_concat', u'Part_Ref', u'Average_Cost_avg']]
 
     categorical_features = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
@@ -189,9 +173,8 @@ def dataset_preparation(ml_dataset):
         test_transformed = text_svds[text_feature].transform(HashingVectorizer(n_features=100000).transform(test[text_feature]))
 
         for i in range(0, n_components):
-            train[text_feature + ":text:" + str(i)] = train_transformed[:,i]
-
-            test[text_feature + ":text:" + str(i)] = test_transformed[:,i]
+            train[text_feature + ":text:" + str(i)] = train_transformed[:, i]
+            test[text_feature + ":text:" + str(i)] = test_transformed[:, i]
 
         train.drop(text_feature, axis=1, inplace=True)
         test.drop(text_feature, axis=1, inplace=True)
@@ -215,19 +198,7 @@ def model_prediction(model, df_to_predict, full_df, target_map, inv_target_map):
     _probas = model.predict_proba(df_to_predict)
     print("Probabilities: --- %s seconds ---" % (time.time() - start_time))
 
-    # print(df_to_predict.shape)
-    # print(df_to_predict.head())
-    # print(list(df_to_predict))
-    #
-    # print(full_df.shape)
-    # print(full_df.head())
-    # print(list(full_df))
-
     predictions = pd.Series(data=_predictions, index=df_to_predict.index, name='prediction')
-    # cols = [
-    #     u'probability_of_value_%s' % label
-    #     for (_, label) in sorted([(int(target_map[label]), label) for label in target_map])
-    # ]
     cols = [
         u'probability_of_value_%s' % label
         for (_, label) in sorted([(int(target_map[label]), label) for label in target_map if target_map[label] in model_classes])
