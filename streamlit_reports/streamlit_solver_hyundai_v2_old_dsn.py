@@ -72,7 +72,7 @@ def main():
 
     placeholder_dw_date.markdown("<p style='text-align: right;'>Última Atualização DW - {}</p>".format(dw_last_updated_date), unsafe_allow_html=True)
     placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
-    placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Proposatas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
+    placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
 
     co2_nedc_before_order = co2_nedc / total_sales
     co2_wltp_before_order = co2_wltp / total_sales
@@ -215,7 +215,7 @@ def main():
                     validation_dfs = get_validation_info(sel_configurations_v2, sel_config)
                     validation_dfs_titles = ['Vendas', 'Propostas', 'Stock', 'Plano de Vendas, passo 1', 'Plano de Vendas, passo 2', 'Plano de Vendas, passo 3']
 
-                    st.write(validation_dfs_titles[0] + ' ({}):'.format(validation_dfs[0].shape[0]), validation_dfs[0][[x for x in list(validation_dfs[0]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    st.write(validation_dfs_titles[0] + ' ({}):'.format(int(validation_dfs[0]['Quantity_CHS'].sum())), validation_dfs[0][[x for x in list(validation_dfs[0]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                     st.write(validation_dfs_titles[1] + ' ({}):'.format(validation_dfs[1].shape[0]), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                     st.write(validation_dfs_titles[3] + ':', validation_dfs[3][[x for x in list(validation_dfs[3]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                     st.write(validation_dfs_titles[4] + ' - selecionado os máximos de valores de quantidade por período:', validation_dfs[4][[x for x in list(validation_dfs[4]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
