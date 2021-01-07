@@ -126,8 +126,8 @@ column_translate_dict = {
     'Proposals_VDC': '#Propostas',
     'Proposals_VDC_normalized': '#Propostas (score)',
     'Margin_HP': 'Margem HP',
-    'TotalGrossMarginPerc': 'Margem Global (%)',
-    'TotalGrossMarginPerc_normalized': 'Margem Global (%) (score)',
+    'TotalGrossMarginPerc': 'Margem Global',
+    'TotalGrossMarginPerc_normalized': 'Margem Global (score)',
     'MarginRatio': 'Rácio Margem (HP/Global)',
     'MarginRatio_normalized': 'Rácio Margem (score)',
     'OC': 'Obj. Cobertura Stock (unidades)',
@@ -158,6 +158,7 @@ column_translate_dict = {
     'PT_Stock_Status_Level_1_Desc': 'Estado (1º Nível)',
     'PT_Stock_Status_Desc': 'Estado (2º Nível)',
     'SLR_Document_Date_CHS': 'Dt.Venda',
+    'Quantity_CHS': 'Quantidade'
 }
 
 col_color_dict = {
@@ -174,11 +175,11 @@ col_color_dict = {
     "#Propostas": 'LightGrey',
     "#Propostas (score)": 'LightGrey',
     "Margem HP": 'Lavender',
-    "Margem Global (%)": 'Lavender',
-    "Margem Global (%) (score)": 'Lavender',
+    "Margem Global": 'Lavender',
+    "Margem Global (score)": 'Lavender',
     "Rácio Margem (HP/Global)": 'LightSlateGray',
     "Rácio Margem (score)": 'LightSlateGray',
-    "Obj. Cobertura (unidades)": 'LightSteelBlue',
+    "Obj. Cobertura Stock (unidades)": 'LightSteelBlue',
     "#Stock": 'LightSteelBlue',
     "O.C. vs Stock": 'LightSteelBlue',
     "O.C. vs Stock (score)": 'LightSteelBlue',
@@ -195,12 +196,12 @@ col_decimals_place_dict = {
     "#Veículos Vendidos (score)": '{:.2f}',
     "#Propostas": '{:.0f}',
     "#Propostas (score)": '{:.2f}',
-    "Margem HP": '{:.3f}',
-    "Margem Global (%)": '{:.3f}',
-    "Margem Global (%) (score)": '{:.2f}',
+    "Margem HP": '{:.1%}',
+    "Margem Global": '{:.1%}',
+    "Margem Global (score)": '{:.2f}',
     "Rácio Margem (HP/Global)": '{:.2f}',
     "Rácio Margem (score)": '{:.2f}',
-    "Obj. Cobertura (unidades)": '{:.1f}',
+    "Obj. Cobertura Stock (unidades)": '{:.1f}',
     "#Stock": '{:.0f}',
     "O.C. vs Stock": '{:.0f}',
     "O.C. vs Stock (score)": '{:.2f}',
@@ -1008,6 +1009,7 @@ sales_validation_query = '''
           ,Sales.[TotalGrossMargin]
           ,Sales.[TotalGrossMarginPerc]
           ,Sales.[SLR_Document_Date_CHS]
+          ,Sales.[Quantity_CHS]
     FROM [BI_DTR].[dbo].[View_VHE_Fact_PA_OrderOptimization_Sales] as Sales
     LEFT JOIN  Dealers ON Dealers.SLR_Account_CHS_Key = Sales.SLR_Account_CHS_Key
     LEFT JOIN  Customer_Group ON Customer_Group.Customer_Group_Code = Dealers.Customer_Group_Code
