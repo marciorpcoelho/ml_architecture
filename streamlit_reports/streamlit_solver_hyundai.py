@@ -401,9 +401,9 @@ def solution_saving(df, sel_model, client_lvl_cols_in, client_lvl_sels):
 
     df = client_replacement(df, client_lvl_cols_in, client_lvl_sels)  # Replaces the values of Client's Levels by the actual values selected for this solution
 
-    level_1_e_deployment.sql_truncate(options_file.DSN_SRV3_PRD, options_file, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(sel_model) + truncate_query_part_2)
+    level_1_e_deployment.sql_truncate(options_file.DSN_MLG_PRD, options_file, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], query=truncate_query.format(sel_model) + truncate_query_part_2)
 
-    level_1_e_deployment.sql_inject(df, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], options_file,
+    level_1_e_deployment.sql_inject(df, options_file.DSN_MLG_PRD, options_file.sql_info['database_source'], options_file.sql_info['optimization_solution_table'], options_file,
                                     configuration_parameters + client_lvl_cols_in + ['Quantity', 'Average_Score_Euros', 'ML_VehicleData_Code'], check_date=1)
 
     st.write('Sugestão gravada com sucesso.')
