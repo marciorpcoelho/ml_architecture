@@ -399,7 +399,7 @@ def score_calculation(x, sel_daysinstock_score_weight, sel_margin_score_weight, 
     return y
 
 
-@st.cache(show_spinner=False, ttl=60*60*24*12)
+@st.cache(show_spinner=False, ttl=60*60*24*12, allow_output_mutation=True, suppress_st_warning=True)
 def gamas_selection(df, df_pdb, current_date):
 
     # Client Criteria
