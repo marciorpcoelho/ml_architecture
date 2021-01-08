@@ -66,6 +66,13 @@ def main():
     last_history = manual_classified_requests_df[['Request_Num', 'Label', 'Date']].rename(columns=column_translate_dict).tail(5)
     st.sidebar.table(last_history)
 
+    sel_prediction = st.sidebar.selectbox('Escolher Classificação via modelo:', ['-'] + [x for x in auto_classified_requests_df['Label'].unique()])
+
+    if sel_prediction != '-':
+        filtered_data = filter_data(auto_classified_requests_df, [sel_prediction], ['Label'], [None])
+    else:
+        filtered_data = auto_classified_requests_df
+
     st.sidebar.text('Para atualizar a tabela final no DW:')
     if st.sidebar.button('Atualizar DataWarehouse') or session_state.update_final_table_button_pressed_flag == 1:
         session_state.update_final_table_button_pressed_flag = 1
@@ -79,7 +86,7 @@ def main():
 
     if manual_classified_requests_df.shape[0]:
         manual_classified_reqs = manual_classified_requests_df['Request_Num'].unique()
-        auto_classified_requests_df = auto_classified_requests_df.loc[~auto_classified_requests_df['Request_Num'].isin(manual_classified_reqs), :]
+        filtered_data = filtered_data.loc[~filtered_data['Request_Num'].isin(manual_classified_reqs), :]
 
     fig = go.Figure(data=[go.Table(
         columnwidth=[120, 900, 120, 120],
@@ -88,7 +95,7 @@ def main():
             align=['center', 'center', 'center', 'center'],
             ),
         cells=dict(
-            values=[auto_classified_requests_df['Request_Num'], auto_classified_requests_df['Description'], auto_classified_requests_df['Open_Date'], auto_classified_requests_df['Label']],
+            values=[filtered_data['Request_Num'], filtered_data['Description'], filtered_data['Open_Date'], filtered_data['Label']],
             align=['center', 'right', 'center', 'center'],
             )
         )
@@ -96,12 +103,12 @@ def main():
     fig.update_layout(width=1600)
     st.write(fig)
 
-    st.write('Nº Pedidos com classe Não Definido: {}'.format(auto_classified_requests_df['Request_Num'].nunique()))
+    st.write('Nº Pedidos: {}'.format(filtered_data['Request_Num'].nunique()))
 
-    sel_req = st.multiselect('Por favor escolha um Pedido:', auto_classified_requests_df['Request_Num'].unique(), key=session_state.run_id)
+    sel_req = st.multiselect('Por favor escolha um Pedido:', filtered_data['Request_Num'].unique(), key=session_state.run_id)
 
     if len(sel_req) == 1:
-        description = auto_classified_requests_df.loc[auto_classified_requests_df['Request_Num'] == sel_req[0]]['Description'].values[0]
+        description = filtered_data.loc[filtered_data['Request_Num'] == sel_req[0]]['Description'].values[0]
         st.write('Descrição do pedido {}:'.format(sel_req[0]))
         st.write('"" {} ""'.format(description))  # ToDO: add markdown configuration like bold or italic
         sel_label = st.multiselect('Por favor escolha uma Categoria para o pedido {}:'.format(sel_req[0]), current_classes['Keyword_Group'].unique())
