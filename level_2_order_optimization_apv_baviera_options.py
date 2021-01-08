@@ -24,10 +24,10 @@ sql_info = {
     'sales_table': '',
     'purchases_table': '',
     'stock_table': '',
-    'final_table': 'PSE_Fact_BI_OrderOptimization',
-    'optimization_solution_table': 'PSE_Fact_BI_OrderOptimization_Solver_Optimization',
-    'ta_table': 'PSE_Fact_BI_OrderOptimization_TA_Groups',
-    'goals_table': 'PSE_Fact_BI_OrderOptimization_Goals',
+    'final_table': 'PSE_Fact_PA_OrderOptimization',
+    'optimization_solution_table': 'PSE_Fact_PA_OrderOptimization_Solver_Optimization',
+    'ta_table': 'PSE_Fact_PA_OrderOptimization_TA_Groups',
+    'goals_table': 'PSE_Fact_PA_OrderOptimization_Goals',
 }
 
 sql_info_stock_dbs = {

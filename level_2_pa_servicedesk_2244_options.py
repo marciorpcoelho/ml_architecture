@@ -30,8 +30,8 @@ sql_info = {
     'initial_table_clients': 'BI_SDK_Dim_Contacts',
     'initial_table_pbi_categories': 'BI_SDK_Dim_Requests_Categories',
     # 'final_table': 'SDK_Fact_BI_PA_ServiceDesk',
-    'final_table': 'BI_SDK_Fact_DW_Requests_Classification',
-    'aux_table': 'BI_SDK_Fact_DW_Requests_Manual_Classification',
+    'final_table': 'BI_SDK_Fact_PA_Requests_Classification',
+    'aux_table': 'BI_SDK_Fact_PA_Requests_Manual_Classification',
     'keywords_table': ['SDK_Setup_Keywords'],  # This is a mapping table, uses the sql_mapping_retrieval function, and therefore should be a list, not a string;
     'keywords_table_str': 'SDK_Setup_Keywords'
 }
@@ -190,3 +190,24 @@ gridsearch_parameters = {
     'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50, 100], 'n_estimators': [50, 100, 200], 'max_depth': ['50', '100'], 'objective': ['multiclass']}]],
 
 }
+
+drop_rows_when_missing_features = []
+
+impute_when_missing_features = [{'impute_with': u'MEAN', 'feature': u'NumReq_ReOpen_Nr'}, {'impute_with': u'MEAN', 'feature': u'Resolve_Date_Orig'}, {'impute_with': u'MEAN', 'feature': u'Request_Type_Orig'}, {'impute_with': u'MEAN', 'feature': u'SLA_Violation_Orig'}, {'impute_with': u'MEAN', 'feature': u'Close_Date'}, {'impute_with': u'MEAN', 'feature': u'Assignee_Date_Orig'}, {'impute_with': u'MEAN', 'feature': u'Creation_TimeSpent'},
+                                {'impute_with': u'MEAN', 'feature': u'SLA_Assignee_Minutes_Above'},
+                                {'impute_with': u'MEAN', 'feature': u'SLA_Close_Minutes'}, {'impute_with': u'MEDIAN', 'feature': u'SLA_Assignee_Minutes'}, {'impute_with': u'MEDIAN', 'feature': u'SLA_Resolution_Minutes'}, {'impute_with': u'MEAN', 'feature': u'TimeSpent_Minutes'}, {'impute_with': u'MEAN', 'feature': u'Next_3Days_Minutes'}, {'impute_with': u'MEAN', 'feature': u'WaitingTime_Resolution_Minutes_Customer'}, {'impute_with': u'MEAN', 'feature': u'SLA_Assignee_Violation'},
+                                {'impute_with': u'MEAN', 'feature': u'Application_Id'}, {'impute_with': u'MEAN', 'feature': u'Assignee_Date'}, {'impute_with': u'MEAN', 'feature': u'Resolve_Date'}, {'impute_with': u'MEAN', 'feature': u'WaitingTime_Resolution_Minutes_Internal'}, {'impute_with': u'MEAN', 'feature': u'Creation_Date'}, {'impute_with': u'MEAN', 'feature': u'SLA_Resolution_Minutes_Above'}, {'impute_with': u'MEAN', 'feature': u'Next_1Day_Minutes'},
+                                {'impute_with': u'MEAN', 'feature': u'NumReq_ReOpen'}, {'impute_with': u'MEAN', 'feature': u'SLA_Violation'}, {'impute_with': u'MEAN', 'feature': u'WaitingTime_Resolution_Minutes_Supplier'}, {'impute_with': u'MEAN', 'feature': u'SLA_Resolution_Violation'}, {'impute_with': u'MEAN', 'feature': u'Open_Date'}, {'impute_with': u'MEAN', 'feature': u'Next_2Days_Minutes'}]
+
+rescale_features = {u'NumReq_ReOpen_Nr': u'AVGSTD', u'Resolve_Date_Orig': u'AVGSTD', u'Request_Type_Orig': u'AVGSTD', u'SLA_Violation_Orig': u'AVGSTD', u'Close_Date': u'AVGSTD', u'Assignee_Date_Orig': u'AVGSTD', u'Creation_TimeSpent': u'AVGSTD', u'SLA_Assignee_Minutes_Above': u'AVGSTD', u'WaitingTime_Resolution_Minutes_Supplier': u'AVGSTD', u'SLA_Close_Minutes': u'AVGSTD', u'SLA_Assignee_Minutes': u'AVGSTD', u'TimeSpent_Minutes': u'AVGSTD', u'Next_3Days_Minutes': u'AVGSTD',
+                    u'WaitingTime_Resolution_Minutes_Customer': u'AVGSTD', u'Application_Id': u'AVGSTD', u'Assignee_Date': u'AVGSTD', u'SLA_Resolution_Minutes': u'AVGSTD', u'Resolve_Date': u'AVGSTD', u'WaitingTime_Resolution_Minutes_Internal': u'AVGSTD', u'Creation_Date': u'AVGSTD', u'SLA_Resolution_Minutes_Above': u'AVGSTD', u'Next_1Day_Minutes': u'AVGSTD', u'NumReq_ReOpen': u'AVGSTD', u'SLA_Violation': u'AVGSTD', u'SLA_Assignee_Violation': u'AVGSTD', u'SLA_Resolution_Violation': u'AVGSTD',
+                    u'Open_Date': u'AVGSTD', u'Next_2Days_Minutes': u'AVGSTD'}
+
+categorical_features = [u'SLA_StdTime_Resolution_Hours', u'Request_Type', u'SLA_Resolution_Flag', u'SLA_StdTime_Assignee_Hours', u'Contact_Assignee_Id', u'SLA_Id', u'Priority_Id', u'Language', u'Status_Id', u'Contact_Customer_Id',  u'Category_Id']
+
+numerical_features = [u'NumReq_ReOpen_Nr', u'Resolve_Date_Orig', u'Request_Type_Orig', u'SLA_Violation_Orig', u'Close_Date', u'Assignee_Date_Orig', u'Creation_TimeSpent', u'SLA_Assignee_Minutes_Above', u'SLA_Close_Minutes', u'SLA_Assignee_Minutes', u'SLA_Resolution_Minutes', u'TimeSpent_Minutes', u'Next_3Days_Minutes', u'WaitingTime_Resolution_Minutes_Customer', u'SLA_Assignee_Violation', u'Application_Id', u'Assignee_Date', u'Resolve_Date', u'WaitingTime_Resolution_Minutes_Internal',
+                      u'Creation_Date', u'SLA_Resolution_Minutes_Above', u'Next_1Day_Minutes', u'NumReq_ReOpen', u'SLA_Violation', u'WaitingTime_Resolution_Minutes', u'WaitingTime_Resolution_Minutes_Supplier', u'SLA_Resolution_Violation', u'Open_Date', u'Next_2Days_Minutes', u'WaitingTime_Assignee_Minutes']
+
+text_features = [u'Summary', u'Description', u'StemmedDescription']
+
+categorical_to_dummy_encode = [u'SLA_StdTime_Resolution_Hours', u'Request_Type', u'SLA_Resolution_Flag', u'SLA_StdTime_Assignee_Hours', u'Contact_Assignee_Id', u'SLA_Id', u'Priority_Id', u'Language', u'Status_Id', u'Contact_Customer_Id', u'Category_Id']

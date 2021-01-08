@@ -19,16 +19,16 @@ LIMIT_DUMMIES = 100
 
 def main():
     # get data
-    df_facts = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], 'BI_SDK_Fact_Requests', options_file, columns=options_file.model_training_fact_cols, query_filters={'Cost_Centre': '6825'}, parse_dates=options_file.date_columns)
-    df_labels = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], 'BI_SDK_Fact_DW_Requests_Classification', options_file, parse_dates=options_file.date_columns)
+    df_facts = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['initial_table_facts_durations'], options_file, columns=options_file.model_training_fact_cols, query_filters={'Cost_Centre': '6825'}, parse_dates=options_file.date_columns)
+    df_labels = sql_retrieve_df(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['final_table'], options_file, parse_dates=options_file.date_columns)
 
     labeled_requests = first_step(df_facts, df_labels)
     labeled_requests = second_step(labeled_requests)
     labeled_requests = third_step(labeled_requests)
     classified_dataset, non_classified_dataset = fourth_step(labeled_requests)
-    final_df = fifth_step(classified_dataset, non_classified_dataset)
+    non_classified_df_scored = fifth_step(classified_dataset, non_classified_dataset)
 
-    return final_df
+    return non_classified_df_scored
 
 
 def first_step(requests, labels):
@@ -93,30 +93,83 @@ def fourth_step(df):
 
 
 def fifth_step(classified_df, non_classified_df):
-    _, clf_model, _, _, metrics_dict = model_training_dataiku(classified_df)
+    print('classified_df.shape', classified_df.shape)
+    print('non_classified_df.shape', non_classified_df.shape)
+
+    dummy_values = select_dummy_values(pd.concat([x for x in [classified_df, non_classified_df] if x is not None]), options_file.categorical_to_dummy_encode)
+
+    # Model Training
+    _, clf_model, _, _, metrics_dict = model_training_dataiku(classified_df, dummy_values)
+
+    print('non_classified_df.shape', non_classified_df.shape)
 
     # Classification
     print('before:', non_classified_df.shape)
     print('before:', non_classified_df.head())
-    non_classified_df_scored, _, _, _, _ = model_training_dataiku(non_classified_df, clf_model)
-    print('after:', non_classified_df_scored.shape)
-    print('after:', non_classified_df_scored.head())
 
-    return pd.concat([classified_df, non_classified_df_scored])
+    all_classified_df, _, _, _, _ = model_training_dataiku(pd.concat([classified_df, non_classified_df]), dummy_values, clf=clf_model)
+    print('after:', all_classified_df.shape)
+    print('after:', all_classified_df.head())
+
+    non_classified_df_scored = all_classified_df[all_classified_df['Label'] == 'Não Definido']
+    print(non_classified_df_scored.shape)
+    print(non_classified_df_scored.head())
+
+    return non_classified_df_scored[['Request_Num', 'Label', 'prediction']]
 
 
-def dataset_preparation(ml_dataset):
-    ml_dataset.head(5)
-
+def dataset_preparation(ml_dataset, dummy_values):
     ml_dataset = ml_dataset[
         [u'NumReq_ReOpen_Nr', u'SLA_StdTime_Resolution_Hours', u'Resolve_Date_Orig', u'Request_Type_Orig', u'Label', u'Request_Type', u'SLA_Violation_Orig', u'Close_Date', u'SLA_Resolution_Flag', u'Assignee_Date_Orig', u'WaitingTime_Resolution_Minutes', u'Creation_TimeSpent', u'SLA_Assignee_Minutes_Above', u'SLA_StdTime_Assignee_Hours', u'SLA_Close_Minutes', u'Contact_Assignee_Id', u'SLA_Assignee_Minutes', u'SLA_Resolution_Minutes', u'TimeSpent_Minutes', u'SLA_Id', u'Next_3Days_Minutes',
          u'WaitingTime_Resolution_Minutes_Customer', u'SLA_Assignee_Violation', u'Priority_Id', u'Application_Id', u'Assignee_Date', u'Language', u'Status_Id', u'Resolve_Date', u'WaitingTime_Resolution_Minutes_Internal', u'Creation_Date', u'SLA_Resolution_Minutes_Above', u'Next_1Day_Minutes', u'NumReq_ReOpen', u'Summary', u'Description', u'SLA_Violation', u'WaitingTime_Resolution_Minutes_Supplier', u'StemmedDescription', u'Contact_Customer_Id', u'WaitingTime_Assignee_Minutes',
          u'SLA_Resolution_Violation', u'Open_Date', u'Category_Id', u'Next_2Days_Minutes']]
 
-    categorical_features = [u'SLA_StdTime_Resolution_Hours', u'Request_Type', u'SLA_Resolution_Flag', u'WaitingTime_Resolution_Minutes', u'SLA_StdTime_Assignee_Hours', u'Contact_Assignee_Id', u'SLA_Id', u'Priority_Id', u'Language', u'Status_Id', u'Contact_Customer_Id', u'WaitingTime_Assignee_Minutes', u'Category_Id']
-    numerical_features = [u'NumReq_ReOpen_Nr', u'Resolve_Date_Orig', u'Request_Type_Orig', u'SLA_Violation_Orig', u'Close_Date', u'Assignee_Date_Orig', u'Creation_TimeSpent', u'SLA_Assignee_Minutes_Above', u'SLA_Close_Minutes', u'SLA_Assignee_Minutes', u'SLA_Resolution_Minutes', u'TimeSpent_Minutes', u'Next_3Days_Minutes', u'WaitingTime_Resolution_Minutes_Customer', u'SLA_Assignee_Violation', u'Application_Id', u'Assignee_Date', u'Resolve_Date', u'WaitingTime_Resolution_Minutes_Internal',
-                          u'Creation_Date', u'SLA_Resolution_Minutes_Above', u'Next_1Day_Minutes', u'NumReq_ReOpen', u'SLA_Violation', u'WaitingTime_Resolution_Minutes_Supplier', u'SLA_Resolution_Violation', u'Open_Date', u'Next_2Days_Minutes']
-    text_features = [u'Summary', u'Description', u'StemmedDescription']
+    ml_dataset = def_data_type_convertion(ml_dataset, options_file.categorical_features, options_file.text_features, options_file.numerical_features)
+
+    target_map = target_map_creation(ml_dataset, 'Label')
+    inv_target_map = {target_map[label]: label for label in target_map}
+    ml_dataset['__target__'] = ml_dataset['Label'].map(str).map(target_map)
+
+    del ml_dataset['Label']
+
+    ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
+
+    # if ml_dataset['__target__'].nunique() > 1:
+    train, test = train_test_split(ml_dataset, test_size=0.2, stratify=ml_dataset['__target__'], random_state=42)
+    # elif ml_dataset['__target__'].nunique() == 1:
+    #     This is for the case when only a single label is present, which happens when I want to classify the Non Classified Requests.
+        # train = ml_dataset
+        # test = ml_dataset
+
+    print('Train data has %i rows and %i columns' % (train.shape[0], train.shape[1]))
+    print('Test data has %i rows and %i columns' % (test.shape[0], test.shape[1]))
+
+    train, test = def_drop_rows_when_missing(train, test, options_file.drop_rows_when_missing_features)
+    train, test = def_impute_when_missing(train, test, options_file.impute_when_missing_features)
+
+    print('1', train.shape)
+    print('1', test.shape)
+    dummy_encode_dataframe(train, dummy_values)
+    print('2', train.shape)
+    print('2', test.shape)
+    # if ml_dataset['__target__'].nunique() > 1:
+    dummy_encode_dataframe(test, dummy_values)  # No need for this, as it applies to both datasets simultaneously
+    print('3', train.shape)
+    print('3', test.shape)
+
+    train, test = def_rescale_feature(train, test, options_file.rescale_features)
+    train, test = def_text_feature_handling(train, test, options_file.text_features)
+
+    # #### Modeling
+    train_x = train.drop('__target__', axis=1)
+    test_x = test.drop('__target__', axis=1)
+    train_y = np.array(train['__target__'])
+    test_y = np.array(test['__target__'])
+
+    return train, test, train_x, test_x, train_y, test_y, target_map, inv_target_map
+
+
+def def_data_type_convertion(ml_dataset, categorical_features, text_features, numerical_features):
     for feature in categorical_features:
         ml_dataset[feature] = ml_dataset[feature].apply(coerce_to_unicode)
     for feature in text_features:
@@ -128,39 +181,61 @@ def dataset_preparation(ml_dataset):
         else:
             ml_dataset[feature] = ml_dataset[feature].astype('double')
 
-    target_map = {u'Hyperion Gest\xe3o': 18, u'Antiguidade Saldos': 23, u'Outros Cubos': 0, u'Vendas Pe\xe7as': 24, u'Balan\xe7o + DR': 7, u'ORs / WIPs': 15, u'Book': 13, u'IFRS': 11, u'IDG': 9, u'Stock': 16, u'Finance': 5, u'Caetano BUS': 14, u'Sytner': 27, u'Custos com o Pessoal': 26, u'Manuten\xe7\xe3o Cognos': 10, u'Movicargo': 20, u'Portal Parametriza\xe7\xe3o': 8, u'Or\xe7amento': 1, u'Reports': 2, u'Seguran\xe7a Cognos': 4, u'Workspace': 25, u'Cart\xe3o Caetano Retail': 21,
-                  u'Vendas Oficina': 19, u'Importador': 6, u'Hyperion Legal': 12, u'Ocupa\xe7\xe3o + Efici\xeancia': 3, u'Acompanhamento Compras': 22, u'Viaturas': 17}
-    inv_target_map = {target_map[label]: label for label in target_map}
-    ml_dataset['__target__'] = ml_dataset['Label'].map(str).map(target_map)
-    del ml_dataset['Label']
+    return ml_dataset
 
-    ml_dataset = ml_dataset[~ml_dataset['__target__'].isnull()]
 
-    if ml_dataset['__target__'].nunique() > 1:
-        train, test = train_test_split(ml_dataset, test_size=0.2, stratify=ml_dataset['__target__'])
-    elif ml_dataset['__target__'].nunique() == 1:
-        # This is for the case when only a single label is present, which happens when I want to classify the Non Classified Requests.
-        train = ml_dataset
-        test = train
+def def_text_feature_handling(train, test, text_features):
+    text_svds = {}
+    for text_feature in text_features:
+        n_components = 50
+        text_svds[text_feature] = TruncatedSVD(n_components=n_components)
+        s = HashingVectorizer(n_features=100000).transform(train[text_feature])
+        text_svds[text_feature].fit(s)
 
-    print('Train data has %i rows and %i columns' % (train.shape[0], train.shape[1]))
-    print('Test data has %i rows and %i columns' % (test.shape[0], test.shape[1]))
+        train_transformed = text_svds[text_feature].transform(s)
+        test_transformed = text_svds[text_feature].transform(HashingVectorizer(n_features=100000).transform(test[text_feature]))
 
-    drop_rows_when_missing = []
-    impute_when_missing = [{'impute_with': u'MEAN', 'feature': u'NumReq_ReOpen_Nr'}, {'impute_with': u'MEAN', 'feature': u'Resolve_Date_Orig'}, {'impute_with': u'MEAN', 'feature': u'Request_Type_Orig'}, {'impute_with': u'MEAN', 'feature': u'SLA_Violation_Orig'}, {'impute_with': u'MEAN', 'feature': u'Close_Date'}, {'impute_with': u'MEAN', 'feature': u'Assignee_Date_Orig'}, {'impute_with': u'MEAN', 'feature': u'Creation_TimeSpent'},
-                           {'impute_with': u'MEAN', 'feature': u'SLA_Assignee_Minutes_Above'},
-                           {'impute_with': u'MEAN', 'feature': u'SLA_Close_Minutes'}, {'impute_with': u'MEDIAN', 'feature': u'SLA_Assignee_Minutes'}, {'impute_with': u'MEDIAN', 'feature': u'SLA_Resolution_Minutes'}, {'impute_with': u'MEAN', 'feature': u'TimeSpent_Minutes'}, {'impute_with': u'MEAN', 'feature': u'Next_3Days_Minutes'}, {'impute_with': u'MEAN', 'feature': u'WaitingTime_Resolution_Minutes_Customer'}, {'impute_with': u'MEAN', 'feature': u'SLA_Assignee_Violation'},
-                           {'impute_with': u'MEAN', 'feature': u'Application_Id'}, {'impute_with': u'MEAN', 'feature': u'Assignee_Date'}, {'impute_with': u'MEAN', 'feature': u'Resolve_Date'}, {'impute_with': u'MEAN', 'feature': u'WaitingTime_Resolution_Minutes_Internal'}, {'impute_with': u'MEAN', 'feature': u'Creation_Date'}, {'impute_with': u'MEAN', 'feature': u'SLA_Resolution_Minutes_Above'}, {'impute_with': u'MEAN', 'feature': u'Next_1Day_Minutes'},
-                           {'impute_with': u'MEAN', 'feature': u'NumReq_ReOpen'}, {'impute_with': u'MEAN', 'feature': u'SLA_Violation'}, {'impute_with': u'MEAN', 'feature': u'WaitingTime_Resolution_Minutes_Supplier'}, {'impute_with': u'MEAN', 'feature': u'SLA_Resolution_Violation'}, {'impute_with': u'MEAN', 'feature': u'Open_Date'}, {'impute_with': u'MEAN', 'feature': u'Next_2Days_Minutes'}]
+        for i in range(0, n_components):
+            train.loc[:, text_feature + ":text:" + str(i)] = train_transformed[:, i]
+            test.loc[:, text_feature + ":text:" + str(i)] = test_transformed[:, i]
 
-    # Features for which we drop rows with missing values"
-    for feature in drop_rows_when_missing:
-        train = train[train[feature].notnull()]
-        test = test[test[feature].notnull()]
-        print('Dropped missing records in %s' % feature)
+        train.drop(text_feature, axis=1, inplace=True)
+        # try:
+        test.drop(text_feature, axis=1, inplace=True)
+        # except KeyError:
+        #     continue
 
+    return train, test
+
+
+def def_rescale_feature(train, test, rescale_features):
+    for (feature_name, rescale_method) in rescale_features.items():
+        if rescale_method == 'MINMAX':
+            _min = train[feature_name].min()
+            _max = train[feature_name].max()
+            scale = _max - _min
+            shift = _min
+        else:
+            shift = train[feature_name].mean()
+            scale = train[feature_name].std()
+        if scale == 0.:
+            del train[feature_name]
+            # try:
+            del test[feature_name]
+            # except KeyError:
+            #     continue
+            # print('Feature %s was dropped because it has no variance' % feature_name)
+        else:
+            # print('Rescaled %s' % feature_name)
+            train.loc[:, feature_name] = (train[feature_name] - shift).astype(np.float64) / scale
+            test.loc[:, feature_name] = (test[feature_name] - shift).astype(np.float64) / scale
+
+    return train, test
+
+
+def def_impute_when_missing(train, test, impute_when_missing_features):
     # Features for which we impute missing values"
-    for feature in impute_when_missing:
+    for feature in impute_when_missing_features:
         if feature['impute_with'] == 'MEAN':
             v = train[feature['feature']].mean()
         elif feature['impute_with'] == 'MEDIAN':
@@ -173,83 +248,42 @@ def dataset_preparation(ml_dataset):
             v = feature['value']
         train[feature['feature']] = train[feature['feature']].fillna(v)
         test[feature['feature']] = test[feature['feature']].fillna(v)
-        print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
+        # print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
-    categorical_to_dummy_encode = [u'SLA_StdTime_Resolution_Hours', u'Request_Type', u'SLA_Resolution_Flag', u'WaitingTime_Resolution_Minutes', u'SLA_StdTime_Assignee_Hours', u'Contact_Assignee_Id', u'SLA_Id', u'Priority_Id', u'Language', u'Status_Id', u'Contact_Customer_Id', u'WaitingTime_Assignee_Minutes', u'Category_Id']
-
-    dummy_values = select_dummy_values(train, categorical_to_dummy_encode)
-
-    dummy_encode_dataframe(train, dummy_values)
-    dummy_encode_dataframe(test, dummy_values)
-
-    rescale_features = {u'NumReq_ReOpen_Nr': u'AVGSTD', u'Resolve_Date_Orig': u'AVGSTD', u'Request_Type_Orig': u'AVGSTD', u'SLA_Violation_Orig': u'AVGSTD', u'Close_Date': u'AVGSTD', u'Assignee_Date_Orig': u'AVGSTD', u'Creation_TimeSpent': u'AVGSTD', u'SLA_Assignee_Minutes_Above': u'AVGSTD', u'WaitingTime_Resolution_Minutes_Supplier': u'AVGSTD', u'SLA_Close_Minutes': u'AVGSTD', u'SLA_Assignee_Minutes': u'AVGSTD', u'TimeSpent_Minutes': u'AVGSTD', u'Next_3Days_Minutes': u'AVGSTD',
-                        u'WaitingTime_Resolution_Minutes_Customer': u'AVGSTD', u'Application_Id': u'AVGSTD', u'Assignee_Date': u'AVGSTD', u'SLA_Resolution_Minutes': u'AVGSTD', u'Resolve_Date': u'AVGSTD', u'WaitingTime_Resolution_Minutes_Internal': u'AVGSTD', u'Creation_Date': u'AVGSTD', u'SLA_Resolution_Minutes_Above': u'AVGSTD', u'Next_1Day_Minutes': u'AVGSTD', u'NumReq_ReOpen': u'AVGSTD', u'SLA_Violation': u'AVGSTD', u'SLA_Assignee_Violation': u'AVGSTD', u'SLA_Resolution_Violation': u'AVGSTD',
-                        u'Open_Date': u'AVGSTD', u'Next_2Days_Minutes': u'AVGSTD'}
-
-    for (feature_name, rescale_method) in rescale_features.items():
-        if rescale_method == 'MINMAX':
-            _min = train[feature_name].min()
-            _max = train[feature_name].max()
-            scale = _max - _min
-            shift = _min
-        else:
-            shift = train[feature_name].mean()
-            scale = train[feature_name].std()
-        if scale == 0.:
-            del train[feature_name]
-            del test[feature_name]
-            print('Feature %s was dropped because it has no variance' % feature_name)
-        else:
-            print('Rescaled %s' % feature_name)
-            train.loc[:, feature_name] = (train[feature_name] - shift).astype(np.float64) / scale
-            test.loc[:, feature_name] = (test[feature_name] - shift).astype(np.float64) / scale
-
-    text_svds = {}
-    for text_feature in text_features:
-        n_components = 50
-        text_svds[text_feature] = TruncatedSVD(n_components=n_components)
-        s = HashingVectorizer(n_features=100000).transform(train[text_feature])
-        text_svds[text_feature].fit(s)
-        train_transformed = text_svds[text_feature].transform(s)
-
-        test_transformed = text_svds[text_feature].transform(HashingVectorizer(n_features=100000).transform(test[text_feature]))
-
-        for i in range(0, n_components):
-            train.loc[:, text_feature + ":text:" + str(i)] = train_transformed[:, i]
-            test.loc[:, text_feature + ":text:" + str(i)] = test_transformed[:, i]
-
-        train.drop(text_feature, axis=1, inplace=True)
-        test.drop(text_feature, axis=1, inplace=True)
-
-    # #### Modeling
-    train_x = train.drop('__target__', axis=1)
-    test_x = test.drop('__target__', axis=1)
-    train_y = np.array(train['__target__'])
-    test_y = np.array(test['__target__'])
-
-    return train, test, train_x, test_x, train_y, test_y, target_map, inv_target_map
+    return train, test
 
 
-def model_training_dataiku(ml_dataset, clf=None):
-    train, test, train_X, test_X, train_Y, test_Y, target_map, inv_target_map = dataset_preparation(ml_dataset)
+def def_drop_rows_when_missing(train, test, drop_rows_when_missing_features):
+    # Features for which we drop rows with missing values"
+    for feature in drop_rows_when_missing_features:
+        train = train[train[feature].notnull()]
+        test = test[test[feature].notnull()]
+        # print('Dropped missing records in %s' % feature)
+
+    return train, test
+
+
+def target_map_creation(df, target_col_name):
+    target_map, i = {}, 0
+    for value in df[target_col_name].unique():
+        target_map[value] = i
+        i += 1
+
+    return target_map
+
+
+def model_training_dataiku(ml_dataset, dummy_values, clf=None):
+    train, test, train_X, test_X, train_Y, test_Y, target_map, inv_target_map = dataset_preparation(ml_dataset, dummy_values)
     cm_flag = 0
     df_cm_train, df_cm_test = pd.DataFrame(), pd.DataFrame()
     metrics_dict = {}
 
     if not clf:
         print('Classification Model not found. Training a new one...')
-        # clf = LogisticRegression(penalty="l2", random_state=1337, max_iter=500)
-        # start_time = time.time()
-        # clf.fit(train_X, train_Y)
-        # print("Fitting: --- %s seconds ---" % (time.time() - start_time))
-
         scorer = make_scorer(recall_score, average='weighted')
         classes, best_models, running_times = classification_model_training(['lgb'], train_X, train_Y, options_file.gridsearch_parameters, 3, scorer, options_file.project_id)
         clf = best_models['lgb']
         cm_flag = 1
-
-    # clf = LogisticRegression(solver='liblinear', multi_class='ovr', penalty="l1", random_state=1337)
-    # clf.fit(train_X, train_Y)
 
     predictions_test, probabilities_test, text_x_scored = model_prediction(clf, test_X, test, target_map, inv_target_map)
     predictions_test_converted_classes = predictions_test
@@ -288,8 +322,6 @@ def model_training_dataiku(ml_dataset, clf=None):
 
     ml_dataset_scored = ml_dataset.join(predictions, how='left')
     ml_dataset_scored = ml_dataset_scored.join(probabilities, how='left')
-
-    print(metrics_dict)
 
     return ml_dataset_scored, clf, df_cm_train, df_cm_test, metrics_dict
 
@@ -346,10 +378,11 @@ def select_dummy_values(train, features):
             for (value, _) in Counter(train[feature]).most_common(LIMIT_DUMMIES)
         ]
         dummy_values[feature] = values
+
     return dummy_values
 
 
-def dummy_encode_dataframe(df,dummy_values):
+def dummy_encode_dataframe(df, dummy_values):
     for (feature, dummy_values) in dummy_values.items():
         for dummy_value in dummy_values:
             dummy_name = u'%s_value_%s' % (feature, coerce_to_unicode(dummy_value))

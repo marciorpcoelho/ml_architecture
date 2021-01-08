@@ -666,3 +666,19 @@ def data_grouping_by_locals_temp(df, configuration_parameters):
     df.to_csv(base_path + '/output/bmw_dataset.csv')
 
     return 'N/A', df, df.shape[0]
+
+
+def update_labels(df, new_df, key_col, target_col):
+
+    left_a = df.set_index(key_col)
+    right_a = new_df.set_index(key_col)
+    res = left_a.reindex(columns=left_a.columns.union(right_a.columns))
+    res.update(right_a)
+    res.reset_index(inplace=True)
+    res['Classification_Flag'] = np.where(res['prediction'].isnull(), 0, 1)
+    res['prediction'].fillna(res[target_col], inplace=True)
+    res.rename(index=str, columns={target_col: 'old_{}'.format(target_col)}, inplace=True)
+    res.drop(['old_{}'.format(target_col)], axis=1, inplace=True)
+    res.rename(index=str, columns={'prediction': target_col}, inplace=True)
+
+    return res

@@ -8,9 +8,9 @@ import level_2_pa_servicedesk_2244_options as options_file
 from modules.level_1_a_data_acquisition import read_csv, sql_retrieve_df, sql_mapping_retrieval
 from modules.level_1_b_data_processing import stop_words_removal, summary_description_null_checkup, top_words_processing, text_preprocess, literal_removal, string_to_list, df_join_function, null_handling, lowercase_column_conversion, null_analysis, remove_rows, value_replacement, value_substitution, duplicate_removal, language_detection, string_replacer, similar_words_handling
 from modules.level_1_c_data_modelling import new_request_type
+from modules.level_1_d_model_evaluation import update_labels
 from modules.level_1_e_deployment import save_csv, sql_inject
 from modules.level_0_performance_report import error_upload, log_record, project_dict, performance_info, performance_info_append
-from sklearn.decomposition import PCA
 my_dpi = 96
 pd.set_option('display.expand_frame_repr', False)
 
@@ -19,7 +19,6 @@ logging.Logger('errors')
 logging.getLogger().addHandler(logging.StreamHandler(sys.stderr))
 
 similar_process_flag = 1
-sel_request_num = 'RE-125884'
 
 
 def main():
@@ -30,15 +29,10 @@ def main():
     df_facts, df_facts_duration, df_clients, df_pbi_categories, df_manual_classifications, keywords_df, keyword_dict, ranking_dict = data_acquisition([input_file_facts, input_file_durations, input_file_clients, input_file_pbi_categories, input_file_manual_classification, input_keywords_df], query_filters, local=0)
     df, df_top_words = data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories, keywords_df)
     df = data_modelling(df, df_top_words, df_manual_classifications, keyword_dict, ranking_dict)
-
-    final_df = pa_servicedesk_models_training.main()
-
-    print('final df:', final_df.shape)
-    print('normal processing df:', df.shape)
-
+    df = model_training(df)
     deployment(df)
-    performance_info(options_file.project_id, options_file, model_choice_message='N/A')
 
+    performance_info(options_file.project_id, options_file, model_choice_message='N/A')
     log_record('Conclusão com sucesso - Projeto: {}'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
@@ -162,12 +156,23 @@ def data_modelling(df, df_top_words, df_manual_classification, keyword_dict, ran
     return df
 
 
+def model_training(df):
+    performance_info_append(time.time(), 'Section_E_Start')
+    log_record('Início Secção D...', options_file.project_id)
+
+    non_classified_df_scored = pa_servicedesk_models_training.main()
+    df = update_labels(df, non_classified_df_scored, 'Request_Num', 'Label')
+
+    log_record('Fim Secção D.', options_file.project_id)
+    return df
+
+
 def deployment(df):
     performance_info_append(time.time(), 'Section_E_Start')
     log_record('Início Secção E...', options_file.project_id)
     df = df.astype(object).where(pd.notnull(df), None)
 
-    sql_inject(df, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['final_table'], options_file, ['Request_Num', 'StemmedDescription', 'Description', 'Language', 'Open_Date', 'Label'], truncate=1)
+    sql_inject(df, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['final_table'], options_file, ['Request_Num', 'StemmedDescription', 'Description', 'Language', 'Open_Date', 'Label', 'Classification_Flag'], truncate=1)
 
     log_record('Fim Secção E.', options_file.project_id)
     performance_info_append(time.time(), 'Section_E_End')

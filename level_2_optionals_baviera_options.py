@@ -37,13 +37,13 @@ sql_info = {
     'database_final': 'BI_MLG',
     'initial_table': 'VHE_Fact_DW_SalesNew_WithSpecs',
     'unit_count_number_history': 'LOG_Project_Units_Count_History',
-    'checkpoint_b_table': 'VHE_Fact_Checkpoint_B_OrderOptimization',
+    'checkpoint_b_table': 'VHE_Fact_DW_Checkpoint_B_OrderOptimization',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
-    'final_table': 'VHE_Fact_BI_OrderOptimization',
+    'final_table': 'VHE_Fact_PA_OrderOptimization',
     'model_mapping': ['VHE_MapBI_Model_Fase2'],
     'mappings': ['VHE_MapBI_Rims_Size', 'VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Model', 'VHE_MapBI_Version', 'VHE_MapBI_Interior_Type', 'VHE_MapBI_Color_Ext', 'VHE_MapBI_Color_Int', 'VHE_MapBI_Motor_Desc'],
     'mappings_temp': ['VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Sales_Place_Fase2'],  # When no training is needed in this project
-    'optimization_solution_table': 'VHE_Fact_BI_OrderOptimization_Solver_Optimization',
+    'optimization_solution_table': 'VHE_Fact_PA_OrderOptimization_Solver_Optimization',
 }
 
 project_id = 2162
