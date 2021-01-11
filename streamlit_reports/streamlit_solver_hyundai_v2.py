@@ -62,8 +62,8 @@ total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 def main():
     data = get_data(options_file)
-    data_v2 = get_data_v2(options_file, options_file.sql_info['database_source'], options_file.sql_info['new_score_streamlit_view'], query_filter={'CommercialVersion_Flag': 1}, model_flag=1)
-    sales_plan = get_data_v2(options_file, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
+    data_v2 = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], query_filter={'CommercialVersion_Flag': 1}, model_flag=1)
+    sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     co2_nedc, co2_wltp, total_sales = co2_processing(sales_plan.copy())
 
     proposals_last_updated_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query).values[0][0]
@@ -355,13 +355,13 @@ def model_lowercase(df):
     return df
 
 
-@st.cache(show_spinner=False, allow_output_mutation=True)
-def get_data_v2(options_file_in, db, table, query_filter=None, model_flag=0):
+@st.cache(show_spinner=False, allow_output_mutation=True, ttl=60*60*24)
+def get_data_v2(options_file_in, dsn, db, table, query_filter=None, model_flag=0):
 
     if query_filter is not None:
-        df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_SRV3_PRD, db, table, options_file_in, query_filters=query_filter)
+        df = level_1_a_data_acquisition.sql_retrieve_df(dsn, db, table, options_file_in, query_filters=query_filter)
     else:
-        df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_SRV3_PRD, db, table, options_file_in)
+        df = level_1_a_data_acquisition.sql_retrieve_df(dsn, db, table, options_file_in)
 
     if model_flag:
         df = model_lowercase(df)
