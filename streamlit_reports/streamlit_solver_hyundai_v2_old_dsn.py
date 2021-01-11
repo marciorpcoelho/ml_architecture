@@ -62,8 +62,8 @@ total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 def main():
     data = get_data(options_file)
-    data_v2 = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], query_filter={'CommercialVersion_Flag': 1}, model_flag=1)
-    sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
+    data_v2 = get_data_v2(options_file, options_file.DSN, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], query_filter={'CommercialVersion_Flag': 1}, model_flag=1)
+    sales_plan = get_data_v2(options_file, options_file.DSN_MLG, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     co2_nedc, co2_wltp, total_sales = co2_processing(sales_plan.copy())
 
     proposals_last_updated_date = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query).values[0][0]
