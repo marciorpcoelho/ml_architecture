@@ -1827,3 +1827,111 @@ def update_new_gamas(df, df_pdb):
         df.loc[df['VehicleData_Code'] == row['VehicleData_Code'], 'PT_PDB_Engine_Desc'] = row['PT_PDB_Engine_Desc_New']
 
     return df
+
+
+def feat_eng(df_in):
+    # PRJ - 2527
+
+    df = df_in.copy()
+
+    df['Power_Weight_Ratio'] = df['Power_kW'] / df['Weight_Empty']
+    df['Contract_km'] = df['Contract_km']/1000
+
+    # contract start month
+    df['contract_start_month'] = df['contract_start_date'].str[5:7]
+
+    # create additional column, representing accident vs no accident
+    df['target_accident'] = 0
+    df.loc[~df.target.isna(), 'target_accident'] = 1
+
+    # change target column name, representing the cost
+    df['target_cost'] = df.target
+    df = df.drop(['target'], axis = 1)
+    df['target_cost'] = df['target_cost'].fillna(0)
+
+    values = {
+        'Mean_repair_value_cust_full': 0,
+        'Sum_contrat_km_full': 0,
+        'Sum_repair_value_full': 0,
+        'Mean_accident_rel_date_cust_full': 0,
+        'Mean_contract_duration_cust_full': 0,
+        'Mean_monthly_repair_cost_cust_full': 0,
+        'Mean_repair_value_cust_full.1': 0,
+        'Mean_repair_value_cust_1year': 0,
+        'Mean_accident_rel_date_cust_1year': 0,
+        'Mean_contract_duration_cust_1year': 0,
+        'Mean_monthly_repair_cost_cust_1year': 0,
+        'Mean_repair_value_cust_1year.1': 0,
+        'Mean_repair_value_cust_5year': 0,
+        'Mean_accident_rel_date_cust_5year': 0,
+        'Mean_contract_duration_cust_5year': 0,
+        'Mean_monthly_repair_cost_cust_5year': 0,
+        'Mean_repair_value_cust_5year.1': 0,
+    }
+    df = df.fillna(value = values)
+
+    df['LL_2'] = '0'
+    df.loc[df.LL.str[:2] == 'RC', 'LL_2'] = df.LL.str[:4]
+    df.loc[df.LL.str[:2] != 'RC', 'LL_2'] = df.LL.str[:8]
+    df['LL'] = df['LL_2']
+    df = df.drop(['LL_2'], axis=1)
+
+    df['PI_2'] = '0'
+    df.loc[df.PI.str[:2] == 'OC', 'PI_2'] = df.PI.str[:4]
+    df.loc[df.PI.str[:2] != 'OC', 'PI_2'] = df.PI.str[:7]
+    df['PI'] = df['PI_2']
+    df = df.drop(['PI_2'], axis=1)
+
+    df['LA_2'] = '0'
+    df.loc[df.LA.str[:4] == 'AVK0', 'LA_2'] = df.LA.str[:4]
+    df.loc[df.LA.str[:4] != 'AVK0', 'LA_2'] = df.LA
+
+    df['LA'] = df['LA_2']
+    df = df.drop(['LA_2'], axis=1)
+
+    df['FI_2'] = '0'
+    df.loc[df.FI.str[:4] == 'QIVI', 'FI_2'] = df.FI.str[:4]
+    df.loc[df.FI.str[:4] != 'QIVI', 'FI_2'] = df.FI.str[:7]
+    df['FI'] = df['FI_2']
+    df = df.drop(['FI_2'], axis=1)
+
+    values = {
+        'LL': '0',
+        'AR': '0',
+        'PI': '0',
+        'LA': '0',
+        'FI': '0'
+    }
+    df = df.fillna(value = values)
+
+    columns_to_drop = [
+        'contract_customer',
+        'contract_contract',
+        'Vehicle_No',
+        'Accident_No',
+        'contract_start_date',
+        'contract_end_date',
+        'Customer_Name'
+    ]
+
+    df = df.drop(columns_to_drop, axis = 1)
+
+    return df
+
+
+def apply_ohenc(col, df_apply_in, enc):
+    # PRJ - 2527
+
+    import pandas as pd
+
+    df_apply = df_apply_in.copy()
+
+    #process test df
+    df_apply = pd.concat([
+        df_apply,
+        pd.DataFrame(
+            enc.transform(df_apply[[col]]).toarray(),
+            columns=col + '_' + enc.get_feature_names())
+    ], axis=1).drop([col], axis=1)
+
+    return df_apply
