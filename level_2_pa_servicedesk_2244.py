@@ -1,6 +1,7 @@
 import sys
 import time
 import logging
+import numpy as np
 import pandas as pd
 from traceback import format_exc
 import pa_servicedesk_models_training
@@ -29,6 +30,9 @@ def main():
     df_facts, df_facts_duration, df_clients, df_pbi_categories, df_manual_classifications, keywords_df, keyword_dict, ranking_dict = data_acquisition([input_file_facts, input_file_durations, input_file_clients, input_file_pbi_categories, input_file_manual_classification, input_keywords_df], query_filters, local=0)
     df, df_top_words = data_processing(df_facts, df_facts_duration, df_clients, df_pbi_categories, keywords_df)
     df = data_modelling(df, df_top_words, df_manual_classifications, keyword_dict, ranking_dict)
+
+    df['Classification_Flag'] = np.where(df['Label'] == 'Não Definido', 1, 0)
+    deployment(df)  # Deploys all according to current classification
     df = model_training(df)
     deployment(df)
 

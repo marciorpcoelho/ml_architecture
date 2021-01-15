@@ -281,8 +281,8 @@ def model_training_dataiku(ml_dataset, dummy_values, clf=None):
     if not clf:
         print('Classification Model not found. Training a new one...')
         scorer = make_scorer(recall_score, average='weighted')
-        classes, best_models, running_times = classification_model_training(['lgb'], train_X, train_Y, options_file.gridsearch_parameters, 3, scorer, options_file.project_id)
-        clf = best_models['lgb']
+        classes, best_models, running_times = classification_model_training(['lr'], train_X, train_Y, options_file.gridsearch_parameters, 3, scorer, options_file.project_id)
+        clf = best_models['lr']
         cm_flag = 1
 
     predictions_test, probabilities_test, text_x_scored = model_prediction(clf, test_X, test, target_map, inv_target_map)
