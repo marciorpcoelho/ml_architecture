@@ -728,7 +728,7 @@ int_color_translation = {
     'Bege/Preto': ['beige + black'],
     'Branco': ['ivory'],
     'Castanho': ['brilliant brown'],
-    'Cinzento': ['gray2', 'blue grey', 'grey', 'pele sintética cinza', 'dark grey', 'grey/blue'],
+    'Cinzento': ['light grey', 'gray2', 'blue grey', 'grey', 'pele sintética cinza', 'dark grey', 'grey/blue'],
     'Laranja': ['orange'],
     'Preto': ['black', 'black 2', 'black 3', 'black3', 'neutral black', 'black/darred 4', ' black2'],
     'Preto/Castanho': ['black / brown'],
