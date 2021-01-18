@@ -700,15 +700,16 @@ version_grouping = {
 # Cor Exterior
 ext_color_translation = {
     'Amarelo': ['acid yellow', 'acid yellow (tt)', 'ral1016', 'charge yellow'],
-    'Azul': ['aqua turquoise', 'p crystal blue m.', 'slate blue (teto preto)', 'midnight blue beam m', 'midnight blue beam m.', 'aqua turquoise (teto preto)', 'cosmic blue m.', 'obsidian blue p.', 'stormy sea', 'ocean view', 'aqua sparkling', 'clean slate', 'intense blue', 'brilliant sporty blue m.', 'morpho blue p.', 'stargazing blue', 'champion blue', 'ceramic blue', 'stellar blue', 'blue lagoon', 'performance blue', 'morning blue', 'ara blue', 'marina blue', 'ceramic blue (tt)', 'blue lagoon (tt)', 'skyride blue m.',
+    'Azul': ['teal', 'teal ( teto preto ) ', 'surfy blue', 'intense blue (teto preto)', 'aqua turquoise', 'p crystal blue m.', 'slate blue (teto preto)', 'midnight blue beam m', 'midnight blue beam m.', 'aqua turquoise (teto preto)', 'cosmic blue m.', 'obsidian blue p.', 'stormy sea', 'ocean view', 'aqua sparkling', 'clean slate', 'intense blue', 'brilliant sporty blue m.', 'morpho blue p.', 'stargazing blue', 'champion blue', 'ceramic blue', 'stellar blue', 'blue lagoon', 'performance blue', 'morning blue', 'ara blue', 'marina blue', 'ceramic blue (tt)', 'blue lagoon (tt)', 'skyride blue m.',
              'twilight blue m.', 'surf blue', 'taffeta white iii'],
-    'Branco': ['polar white (teto vermelho)', 'polar white  (teto preto)', 'taffeta white', 'platinum white p', 'platinum white p.', 'white orchid p.', 'polar white', 'white sand', 'creamy white', 'chalk white', 'pure white', 'white crystal', 'white cream', 'chalk white (tt)', 'championship white', 'psunlight whitepearl'],
+    'Branco': ['polar white ( teto preto )', 'polar white (teto vermelho)', 'polar white  (teto preto)', 'taffeta white', 'platinum white p', 'platinum white p.', 'white orchid p.', 'polar white', 'white sand', 'creamy white', 'chalk white', 'pure white', 'white crystal', 'white cream', 'chalk white (tt)', 'championship white', 'psunlight whitepearl'],
     'Castanho': ['brass (teto preto)', 'iced coffee', 'moon rock', 'golden brown m.', 'cashmere brown', 'tan brown', 'demitasse brown', 'premium agate brown p.'],
-    'Cinzento': ['shining gray m', 'urban titanium m.', 'velvet dune', 'velvet dune (tt)', 'dark knight (tt)', 'wild explorer', 'rain forest', 'magnetic force', 'olivine grey', 'dark knight', 'star dust', 'polished metal m.', 'shining grey m.', 'modern steel m.', 'micron grey', 'galactic grey', 'iron gray', 'galactic grey (tt)', 'sonic grey p.', 'shadow grey', 'stone gray'],
+    'Cinzento': ['amazon grey ( teto preto )', 'amazon grey ', 'cyber gray', 'shining gray m', 'urban titanium m.', 'velvet dune', 'velvet dune (tt)', 'dark knight (tt)', 'wild explorer', 'rain forest', 'magnetic force', 'olivine grey', 'dark knight', 'star dust', 'polished metal m.', 'shining grey m.', 'modern steel m.', 'micron grey', 'galactic grey', 'iron gray', 'galactic grey (tt)', 'sonic grey p.', 'shadow grey', 'stone gray'],
     'Laranja': ['tangerine comet (tt)', 'tangerine comet', 'sunset orange ii'],
-    'Prateado': ['aurora grey', 'fluidic metal', 'star dust (teto vermelho)', 'sleek silver (teto preto)', 'lunar silver m.', 'platinum silver', 'sleek silver', 'lake silver', 'aurora silver', 'titanium silver', 'platinum silve', 'typhoon silver', 'lake silver (tt)', 'alabaster silver m.', 'tinted silver m.', 'platinum gray m'],
-    'Preto': ['electric shadow', 'phantom black (teto vermelho)', 'midnight burgundy p.', 'crystal black p.', 'ruse black m.', 'phantom black', ' black2'],
-    'Vermelho': ['dragon red', 'dragon red (teto preto)', 'premium crystal red m.', 'ral3000', 'rallye red', 'milano red', 'fiery red', 'passion red', 'tomato red', 'pulse red', 'engine red', 'magma red', 'pulse red (tt)', 'passion red p.'],
+    'Prateado': ['shimmering silver ( teto cinza ) ', 'shimmering silver ', 'aurora grey', 'fluidic metal', 'star dust (teto vermelho)', 'sleek silver (teto preto)', 'lunar silver m.', 'platinum silver', 'sleek silver', 'lake silver', 'aurora silver', 'titanium silver', 'platinum silve', 'typhoon silver', 'lake silver (tt)', 'alabaster silver m.', 'tinted silver m.', 'platinum gray m'],
+    'Preto': ['phantom black ( teto cinza )', 'electric shadow', 'phantom black (teto vermelho)', 'midnight burgundy p.', 'crystal black p.', 'ruse black m.', 'phantom black', ' black2'],
+    'Vermelho': ['engine red ( teto preto )', 'dragon red', 'dragon red (teto preto)', 'premium crystal red m.', 'ral3000', 'rallye red', 'milano red', 'fiery red', 'passion red', 'tomato red', 'pulse red', 'engine red', 'magma red', 'pulse red (tt)', 'passion red p.'],
+    'Verde': ['misty jungle'],
     'NÃO_PARAMETRIZADOS': [],
 }
 
@@ -718,7 +719,7 @@ ext_color_grouping = {
     'Prateado': ['Prateado'],
     'Preto': ['Preto'],
     'Vermelho/Azul': ['Vermelho', 'Azul'],
-    'Castanho/Laranja/Amarelo': ['Castanho', 'Amarelo', 'Laranja'],
+    'Castanho/Laranja/Amarelo/Verde': ['Castanho', 'Amarelo', 'Laranja', 'Verde'],
 }
 
 int_color_translation = {
