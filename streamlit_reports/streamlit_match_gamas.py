@@ -44,7 +44,7 @@ def main():
     unmatched_data = get_data_non_cached(options_file, 0)
     matched_data = get_data_non_cached(options_file, 1)
 
-    sel_goal = st.sidebar.radio('Modo de utilização:', ['Gamas por Corresponder', 'Gamas Correspondidas'], index=0)
+    sel_goal = st.sidebar.radio('Modo de utilização:', ['Gamas por Corresponder', 'Gamas Mortas Correspondidas', 'Gamas Vivas Correspondidas'], index=0)
 
     if sel_goal == 'Gamas por Corresponder':
         session_state.validate_button_pressed = 0
@@ -142,7 +142,7 @@ def main():
                                     time.sleep(0.1)
                                     raise RerunException(RerunData())
 
-    elif sel_goal == 'Gamas Correspondidas':
+    elif sel_goal == 'Gamas Mortas Correspondidas':
         session_state.validate_button_pressed = 0
         sel_brand = st.sidebar.selectbox('Marca:', ['-'] + list(matched_data['PT_PDB_Franchise_Desc'].unique()), index=0)
 
@@ -162,7 +162,7 @@ def main():
                     matched_data_filtered = filter_data(data, [sel_model, sel_brand], ['PT_PDB_Model_Desc', 'PT_PDB_Franchise_Desc'])
                     session_state.gama_viva_per_model = matched_data_filtered.loc[matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1, 'PT_PDB_Commercial_Version_Desc_Old'].unique()
 
-                    st.write('Existem as seguintes gamas correspondidas para a marca {} e modelo {}:'.format(sel_brand, sel_model))
+                    st.write('Existem as seguintes gamas mortas correspondidas para a marca {} e modelo {}:'.format(sel_brand, sel_model))
 
                     row_even_color = 'lightgrey'
                     row_odd_color = 'white'
@@ -219,6 +219,84 @@ def main():
                                     time.sleep(0.1)
                                     raise RerunException(RerunData())
 
+    elif sel_goal == 'Gamas Vivas Correspondidas':
+        session_state.validate_button_pressed = 0
+        sel_brand = st.sidebar.selectbox('Marca:', ['-'] + list(matched_data['PT_PDB_Franchise_Desc'].unique()), index=0)
+
+        if sel_brand != '-':
+            matched_data = matched_data.loc[matched_data['PT_PDB_Franchise_Desc'] == sel_brand.upper(), :]
+
+            unique_models = [x for x in list(matched_data['PT_PDB_Model_Desc'].unique()) if x not in ['H-1', 'H-1 3 lugares', 'H-1 6 lugares', 'H350', 'i20 Coupe', 'i20 VAN']]
+
+            sel_model = st.sidebar.selectbox('Modelo', ['-'] + unique_models, index=0)
+
+            if sel_model != '-':
+                if sel_brand != session_state.sel_brand or sel_model != session_state.sel_model:
+                    # session_state.sel_brand = sel_brand
+                    # session_state.sel_model = sel_model
+
+                    matched_data_filtered = filter_data(data, [sel_model, sel_brand], ['PT_PDB_Model_Desc', 'PT_PDB_Franchise_Desc'])
+                    session_state.gama_morta_per_model = matched_data_filtered.loc[matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == -1, 'PT_PDB_Commercial_Version_Desc_Old'].unique()
+
+                    st.write('Existem as seguintes gamas vivas correspondidas para a marca {} e modelo {}:'.format(sel_brand, sel_model))
+
+                    row_even_color = 'lightgrey'
+                    row_odd_color = 'white'
+
+                    if matched_data_filtered.shape[0]:
+                        matched_data_temp = matched_data_filtered.loc[(matched_data_filtered['PT_PDB_Commercial_Version_Flag'] == 1) & (matched_data_filtered['Classification_Flag'] == 1)]
+                        st.subheader('Correspondências:')
+                        fig = go.Figure(data=[go.Table(
+                            columnwidth=[500, 500],
+                            header=dict(
+                                values=[['Gama Viva'], ['Gama Correspondente']],
+                                align=['center', 'center'],
+                            ),
+                            cells=dict(
+                                values=[matched_data_temp['PT_PDB_Commercial_Version_Desc_Old'], matched_data_temp['PT_PDB_Commercial_Version_Desc_New']],
+                                align=['center', 'center'],
+                                fill_color=[[row_odd_color, row_even_color] * matched_data_temp.shape[0]],
+                            )
+                        )
+                        ])
+
+                        fig.update_layout(width=1100)
+                        st.write(fig)
+
+                        sel_gama = st.selectbox('Por favor escolha uma Gama Viva:', ['-'] + list(matched_data_temp['PT_PDB_Commercial_Version_Desc_Old'].unique()), index=0, key=session_state.run_id)
+                        if sel_gama != '-':
+                            matched_sel_gama = matched_data_filtered.loc[matched_data_filtered['PT_PDB_Commercial_Version_Desc_Old'] == sel_gama, :]['PT_PDB_Commercial_Version_Desc_New'].values[0]
+
+                            if len(matched_sel_gama) > 1:
+                                st.write('A Gama morta correspondente é: {}. Se desejar alterar, escolha entre as seguintes:'.format(matched_sel_gama))
+                            else:
+                                st.write('Para escolher uma nova correspondência, escolha entre as seguintes:')
+
+                            session_state.df_sim = calculate_cosine_similarity(sel_gama, -1, session_state.gama_morta_per_model, [])
+
+                            if session_state.df_sim.shape[0]:
+                                suggestions = session_state.df_sim[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].sort_values(by=['similarity_cosine'], ascending=False).head(5).reset_index()
+                                st.write('Sugestões:')
+                                st.table(suggestions[['PT_PDB_Commercial_Version_Desc_Old', 'similarity_cosine']].rename(index=str, columns={'PT_PDB_Commercial_Version_Desc_Old': 'Gama', 'similarity_cosine': 'Grau de Semelhança'}))
+                            else:
+                                st.write('Sem Sugestões de Correspondência.')
+
+                            sel_gama_match = st.selectbox('Por favor escolha a correspondente Gama:', ['-', 's/ correspondência'] + list([x for x in session_state.gama_morta_per_model if x not in [' ', '']]), index=0, key=session_state.run_id)
+
+                            if sel_gama_match != '-':
+                                if st.button('Validar') or session_state.validate_button_pressed == 1:
+                                    session_state.validate_button_pressed = 1
+
+                                    st.write('A gama viva: \n{} corresponde à gama \n{}'.format(sel_gama, sel_gama_match))
+                                    save_function(sel_gama, sel_gama_match, sel_brand, sel_model)
+
+                                    session_state.validate_button_pressed = 0
+                                    session_state.run_id += 1
+                                    time.sleep(0.1)
+                                    raise RerunException(RerunData())
+
+        return
+
 
 def save_function(gama_morta, gama_viva, sel_brand, sel_model):
     if gama_viva == 's/ correspondência':
@@ -233,7 +311,7 @@ def save_function(gama_morta, gama_viva, sel_brand, sel_model):
     and PT_PDB_Franchise_Desc = '{}'
     and PT_PDB_Model_Desc = '{}' '''.format(gama_viva_sql, gama_morta.replace('\'', '\'\''), sel_brand, sel_model)
 
-    level_1_e_deployment.sql_query(query, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['commercial_version_matching'], options_file)
+    level_1_e_deployment.sql_query(query, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file)
     return
 
 

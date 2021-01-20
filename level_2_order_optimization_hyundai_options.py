@@ -1022,6 +1022,29 @@ sales_validation_query = '''
       and Quantity_CHS > 0
   '''
 
+sales_plan_current_sales_single_model = '''
+    WITH Sales_Plan_Single_Model as (
+        SELECT DISTINCT
+            Sales_Plan.Factory_Model_Code as Model_Code
+            ,  Sales_Plan.Local_Vehicle_Option_Code as OCN
+            ,  Sales_Plan.Sales_Plan_Period
+            ,  Sales_Plan.WLTP_CO2
+            ,  Sales_Plan.NEDC_CO2
+            ,  Sales_Plan.Quantity
+            ,  Sales_Plan.Record_Date
+        FROM  dbo.VHE_Setup_Sales_Plan_DTR AS Sales_Plan
+        LEFT OUTER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.Factory_Model_Code = Sales_Plan.Factory_Model_Code AND PDB.Local_Vehicle_Option_Code = Sales_Plan.Local_Vehicle_Option_Code				
+        LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = PDB.PT_PDB_Transmission_Type_Desc
+        LEFT JOIN VHE_MapDMS_Ext_Color_DTR AS Ext_Color_Map ON Ext_Color_Map.Original_Value = PDB.PT_PDB_Exterior_Color_Desc
+        LEFT JOIN VHE_MapDMS_Int_Color_DTR AS Int_Color_Map ON Int_Color_Map.Original_Value = PDB.PT_PDB_Interior_Color_Desc
+        WHERE (1 = 1)
+        AND (Sales_Plan.Sales_Plan_Period BETWEEN YEAR(GETDATE()) * 100 + MONTH(0) AND YEAR(GETDATE()) * 100 + MONTH(DATEADD(month, {}, GETDATE())))
+        AND Sales_Plan.Factory_Model_Code <> '1'
+          and PDB.PT_PDB_Model_Desc = '{}'
+    )
+    SELECT SUM(Sales_Plan_Single_Model.Quantity) FROM Sales_Plan_Single_Model
+'''
+
 sales_plan_validation_query_step_1 = '''
     SELECT DISTINCT
         Sales_Plan.Factory_Model_Code as Model_Code
@@ -1110,4 +1133,9 @@ sales_plan_validation_query_step_3 = '''
 proposals_max_date_query = '''
     SELECT MAX([Record_Date])
     FROM [BI_DTR].[dbo].[VHE_Fact_DW_HPK_Proposals_DTR]
+'''
+
+margins_max_date_query = '''
+    SELECT MAX([Record_Date])
+    FROM [BI_DTR].[dbo].[VHE_Setup_Potential_Margin_DTR] 
 '''

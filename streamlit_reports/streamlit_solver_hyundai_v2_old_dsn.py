@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import json
 import logging
+import base64
 import pandas as pd
 import numpy as np
 import cvxpy as cp
@@ -53,6 +54,7 @@ url_hyperlink = '''
 placeholder_dw_date = st.empty()
 placeholder_sales_plan_date = st.empty()
 placeholder_proposal_date = st.empty()
+placeholder_margins_date = st.empty()
 
 session_state = SessionState.get(first_run_flag=0, run_id=0, save_button_pressed_flag=0, order_suggestion_button_pressed_flag=0, model='', brand='', daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'], sel_margin_score_weight = score_weights['TotalGrossMarginPerc_normalized'], sel_margin_ratio_score_weight = score_weights['MarginRatio_normalized'], sel_qty_sold_score_weight = score_weights['Sum_Qty_CHS_normalized'], sel_proposals_score_weight = score_weights['Proposals_VDC_normalized'], sel_oc_stock_diff_score_weight = score_weights['Stock_OC_Diff_normalized'], sel_co2_nedc_score_weight = score_weights['NEDC_normalized'])
 
@@ -64,20 +66,29 @@ def main():
     data = get_data(options_file)
     data_v2 = get_data_v2(options_file, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], query_filter={'CommercialVersion_Flag': 1}, model_flag=1)
     sales_plan = get_data_v2(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
-    co2_nedc, co2_wltp, total_sales = co2_processing(sales_plan.copy())
+    end_month_index, current_year = period_calculation()
+    co2_nedc, co2_wltp, total_sales = co2_processing(sales_plan.copy(), end_month_index, current_year)
 
     proposals_last_updated_date = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query).values[0][0]
+    margins_last_update_date = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query).values[0][0]
     dw_last_updated_date = data_v2['Record_Date'].max()
     sales_plan_last_updated_date = sales_plan['Record_Date'].max()
 
     placeholder_dw_date.markdown("<p style='text-align: right;'>Última Atualização DW - {}</p>".format(dw_last_updated_date), unsafe_allow_html=True)
     placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
     placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
+    placeholder_margins_date.markdown("<p style='text-align: right;'>Última Atualização Margens HP - {}</p>".format(margins_last_update_date), unsafe_allow_html=True)
 
     co2_nedc_before_order = co2_nedc / total_sales
     co2_wltp_before_order = co2_wltp / total_sales
-    st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc_before_order, co2_wltp_before_order))  # ToDo Make bold
-    st.write('Total de Vendas (Plano de Vendas): {} viaturas'.format(int(total_sales)))  # ToDo Make bold
+    st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc_before_order, co2_wltp_before_order))
+    if end_month_index == 1:
+        sel_period_string = '{} de {}'.format('Jan', current_year)
+    else:
+        sel_period_string = '{} a {} de {}'.format(total_months_list[0], total_months_list[end_month_index - 1], current_year)
+
+    st.write('Plano de Vendas Total, {}: {} viaturas'.format(sel_period_string, int(total_sales)))
+    placeholder_sales_plan_single_model = st.empty()
 
     data_v2 = col_normalization(data_v2.copy(), cols_to_normalize, reverse_normalization_cols)
     # data_v2['Score'] = data_v2.apply(score_calculation, args=(session_state.daysinstock_score_weight,), axis=1)
@@ -137,6 +148,9 @@ def main():
         session_state.overwrite_button_pressed, session_state.save_button_pressed_flag, session_state.order_suggestion_button_pressed_flag = 0, 0, 0
 
     if '-' not in [sel_model] and '-' not in [sel_brand]:
+        sales_plan_sel_model_sales = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.sales_plan_current_sales_single_model.format(end_month_index - 1, sel_model)).values[0][0]
+        placeholder_sales_plan_single_model.write('Plano de Vendas para {}, {}: {} viaturas'.format(sel_model, sel_period_string, int(sales_plan_sel_model_sales)))
+
         data_filtered = filter_data(data, [sel_model, sel_min_sold_cars], ['PT_PDB_Model_Desc', 'Quantity_Sold'])
         data_filtered_v2 = filter_data_v2(data_v2, [sel_model, sel_min_sold_cars], ['PT_PDB_Model_Desc', 'Sum_Qty_CHS'])
 
@@ -197,16 +211,22 @@ def main():
                 co2_wltp_per_vehicle_after_order = co2_wltp_after_order / total_sales_after_order
 
                 co2_nedc_per_vehicle_evolution = co2_nedc_per_vehicle_after_order - co2_nedc_before_order
-                if co2_nedc_after_order > co2_nedc_before_order:
+                if co2_nedc_per_vehicle_evolution > 0:
                     st.markdown("Situação Co2 (NEDC) após esta encomenda: {:.2f}(<span style='color:red'>+{:.2f}</span>) gCo2/km".format(co2_nedc_per_vehicle_after_order, co2_nedc_per_vehicle_evolution), unsafe_allow_html=True)
+                elif co2_nedc_per_vehicle_evolution < 0:
+                    st.markdown("Situação Co2 (NEDC) após esta encomenda: {:.2f}(<span style='color:green'>{:.2f}</span>) gCo2/km".format(co2_nedc_per_vehicle_after_order, co2_nedc_per_vehicle_evolution), unsafe_allow_html=True)
                 else:
-                    st.markdown("Situação Co2 (NEDC) após esta encomenda: {:.2f}(-<span style='color:green'>{:.2f}</span>) gCo2/km".format(co2_nedc_per_vehicle_after_order, co2_nedc_per_vehicle_evolution), unsafe_allow_html=True)
+                    st.markdown("Situação Co2 (NEDC) sem alterações após esta encomenda.")
 
                 co2_wltp_per_vehicle_evolution = co2_wltp_per_vehicle_after_order - co2_wltp_before_order
-                if co2_wltp_after_order > co2_wltp_before_order:
+                if co2_wltp_per_vehicle_evolution > 0:
                     st.markdown("Situação Co2 (WLTP) após esta encomenda: {:.2f}(<span style='color:red'>+{:.2f}</span>) gCo2/km".format(co2_wltp_per_vehicle_after_order, co2_wltp_per_vehicle_evolution), unsafe_allow_html=True)
+                elif co2_wltp_per_vehicle_evolution < 0:
+                    st.markdown("Situação Co2 (WLTP) após esta encomenda: {:.2f}(<span style='color:green'>{:.2f}</span>) gCo2/km".format(co2_wltp_per_vehicle_after_order, co2_wltp_per_vehicle_evolution), unsafe_allow_html=True)
                 else:
-                    st.markdown("Situação Co2 (WLTP) após esta encomenda: {:.2f}(-<span style='color:green'>{:.2f}</span>) gCo2/km".format(co2_wltp_per_vehicle_after_order, co2_wltp_per_vehicle_evolution), unsafe_allow_html=True)
+                    st.markdown("Situação Co2 (WLTP) sem alterações após esta encomenda.")
+
+                # file_export(sel_configurations_v2[['Sug.Encomenda', 'Part_Desc', 'Quantity']].rename(columns=column_translate_dict), 'Otimização_{}_{}'.format(sel_group_original, current_date))
 
                 sel_configurations_v2['Configuration_Concat'] = sel_configurations_v2['PT_PDB_Model_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Engine_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Transmission_Type_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Version_Desc'] + ', ' +  sel_configurations_v2['PT_PDB_Exterior_Color_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Interior_Color_Desc']
                 st.markdown("<h3 style='text-align: left;'>Configuração a explorar:</h3>", unsafe_allow_html=True)
@@ -216,9 +236,9 @@ def main():
                     validation_dfs_titles = ['Vendas', 'Propostas', 'Stock', 'Plano de Vendas, passo 1', 'Plano de Vendas, passo 2', 'Plano de Vendas, passo 3']
 
                     st.write(validation_dfs_titles[0] + ' ({}):'.format(int(validation_dfs[0]['Quantity_CHS'].sum())), validation_dfs[0][[x for x in list(validation_dfs[0]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    st.write(validation_dfs_titles[1] + ' ({}):'.format(validation_dfs[1].shape[0]), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    st.write(validation_dfs_titles[1] + ' ({}, para os últimos 3 meses):'.format(validation_dfs[1].shape[0]), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                     st.write(validation_dfs_titles[3] + ':', validation_dfs[3][[x for x in list(validation_dfs[3]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    st.write(validation_dfs_titles[4] + ' - selecionado os máximos de valores de quantidade por período:', validation_dfs[4][[x for x in list(validation_dfs[4]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    st.write(validation_dfs_titles[4] + ' - selecionando os máximos de valores de quantidade por período:', validation_dfs[4][[x for x in list(validation_dfs[4]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
                     st.write(validation_dfs_titles[5] + ' - aplicando a seguinte fórmula: *Objetivo de Cobertura de Stock no mês N = 2,5 \* média das vendas de (N, N+1, N+2, N+3 e N+4)*:', validation_dfs[5][[x for x in list(validation_dfs[5]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict), unsafe_allow_html=True)
                     st.write(validation_dfs_titles[2] + ' ({}):'.format(validation_dfs[2].shape[0]), validation_dfs[2][[x for x in list(validation_dfs[2]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
 
@@ -270,19 +290,24 @@ def run_single_query(dsn, database, options_file_in, query):
     return query_result
 
 
-@st.cache(show_spinner=False)
-def co2_processing(df):
+def period_calculation():
     start_date = date(date.today().year, 1, 1)
     end_date = date.today()  # + relativedelta(months=+2)  # ToDo might be needed later on
     start_date_year = start_date.year
     # end_date_year = end_date.year
     end_date_month_number = end_date.month
 
+    # sel_months_index = total_months_list[0:end_date_month_number - 1]
+    return end_date_month_number, start_date_year
+
+
+@st.cache(show_spinner=False)
+def co2_processing(df, end_date_month_number, current_year):
     # The following condition is only for the first year of the month, where, even though January isn't complete, we default to use the sales plan for that month;
     if end_date_month_number == 1:
-        df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == start_date_year), :].loc[:, ['Jan']].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
+        df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == current_year), :].loc[:, ['Jan']].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
     else:
-        df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == start_date_year), :].loc[:, total_months_list[0:end_date_month_number - 1]].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
+        df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == current_year), :].loc[:, total_months_list[0:end_date_month_number - 1]].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
 
     df.loc[:, 'Sales_Sum_Times_Co2_WLTP'] = df['Sales_Sum'] * df['WLTP_CO2']
     df.loc[:, 'Sales_Sum_Times_Co2_NEDC'] = df['Sales_Sum'] * df['NEDC_CO2']
@@ -293,7 +318,7 @@ def co2_processing(df):
     return co2_nedc_sum, co2_wltp_sum, total_sales
 
 
-@st.cache(show_spinner=False, suppress_st_warning=True)
+@st.cache(show_spinner=False)
 def get_data(options_file_in):
     df_cols = ['NLR_Code', 'Chassis_Number', 'Registration_Number', 'PDB_Start_Order_Date', 'PDB_End_Order_Date', 'VehicleData_Code', 'DaysInStock_Distributor', 'DaysInStock_Global', 'Measure_9', 'Fixed_Margin_II', 'NDB_VATGroup_Desc', 'VAT_Number_Display', 'NDB_Contract_Dealer_Desc', 'NDB_VHE_PerformGroup_Desc', 'NDB_VHE_Team_Desc', 'Customer_Display', 'Customer_Group_Desc', 'NDB_Dealer_Code', 'Quantity_Sold', 'Average_DaysInStock_Global', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc', 'ML_VehicleData_Code']
     df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN, options_file_in.sql_info['database_source'], options_file_in.sql_info['final_table'], options_file_in, columns=df_cols, query_filters={'Customer_Group_Desc': ['Direct', 'Dealers', 'Not Defined']})
@@ -642,6 +667,14 @@ def solution_saving(df, sel_model, client_lvl_cols_in, client_lvl_sels):
 
     st.write('Sugestão gravada com sucesso.')
     return
+
+
+def file_export(df, file_name):
+
+    csv = df.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}">Gravar Otimização</a> (carregar botão direito e Guardar Link como: {file_name}.csv)'
+    st.markdown(href, unsafe_allow_html=True)
 
 
 def client_replacement(df, client_lvl_cols_in, client_lvl_sels):
