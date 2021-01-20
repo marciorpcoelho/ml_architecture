@@ -19,6 +19,7 @@ if 'nt' in os.name:
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd')
 elif 'posix' in os.name:
     DSN = os.getenv('DSN_Prd_Linux')
+    DSN_MLG = os.getenv('DSN_MLG_Linux')
     DSN_SRV3_PRD = os.getenv('DSN_SRV3_Prd_Linux')
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd_Linux')
 UID = os.getenv('UID')

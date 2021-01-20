@@ -80,7 +80,7 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
         elif type(query_filters) == dict:
             for key in query_filters:
                 if type(query_filters[key]) == list:
-                    testing_string = '\'%s\'' % "\', \'".join(query_filters[key])
+                    testing_string = '\'%s\'' % "\', \'".join([str(x) for x in query_filters[key]])
                     query_filters_string_list.append(key + ' in (' + testing_string + ')')
                 else:
                     query_filters_string_list.append(key + ' = \'%s\'' % str(query_filters[key]))
