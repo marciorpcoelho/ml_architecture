@@ -44,7 +44,7 @@ metric, metric_threshold = 'R2', 0.50  # The metric to compare on the final mode
 k, gridsearch_score = 10, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 gamas_match_temp_file = base_path + '/dbs/gamas_match_{}.xlsx'
 documentation_url_solver_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/ETn-fkuxzHVJj1L5KdQrUeUBMWxtiPU8wkEH9CxXRxsoNg?e=Ja90Mb'
-documentation_url_gamas_match_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/EUnbjdE09-lBtoa-0BKWWToBtdfHCux_E3nAmdstl8lRxw?e=80NEuN'
+documentation_url_gamas_match_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/ESiJ1-IC4yZGjnKBLvK9qhMBFPPz8ZuBtIWJbhpi1ZfV5g?e=e6bnla'
 
 sql_info = {
     'database_source': 'BI_DTR',
