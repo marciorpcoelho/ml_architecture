@@ -1135,11 +1135,11 @@ sales_plan_validation_query_step_3 = '''
 proposals_max_date_query = '''
     SELECT MAX([Record_Date])
     FROM [BI_DTR].[dbo].[VHE_Fact_DW_HPK_Proposals_DTR]
-    WHERE NLR_Code = {}
+    WHERE NLR_Code = '{}'
 '''
 
 margins_max_date_query = '''
     SELECT MAX([Record_Date])
     FROM [BI_DTR].[dbo].[VHE_Setup_Potential_Margin_DTR]
-    WHERE NLR_Code = {}
+    WHERE NLR_Code = '{}'
 '''
