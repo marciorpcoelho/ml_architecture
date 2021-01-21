@@ -699,7 +699,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR', sel_parameters=['sel_brand', 'sel_model', 'sel_order_size', 'sel_min_number_of_configuration', 'sel_min_sold_cars', 'sel_daysinstock_score_weight', 'sel_margin_score_weight', 'sel_margin_ratio_score_weight', 'sel_qty_sold_score_weight', 'sel_proposals_score_weight', 'sel_oc_stock_diff_score_weight', 'sel_co2_nedc_score_weight'])
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR', sel_parameters=['sel_brand', 'sel_model', 'sel_order_size', 'sel_min_number_of_configuration', 'sel_min_sold_cars', 'sel_daysinstock_score_weight', 'sel_margin_score_weight', 'sel_margin_ratio_score_weight', 'sel_qty_sold_score_weight', 'sel_proposals_score_weight', 'sel_oc_stock_diff_score_weight', 'sel_co2_nedc_score_weight'])
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
