@@ -65,20 +65,13 @@ total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 def main():
     data = get_data(options_file)
     data_v2 = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], model_flag=1)
-    sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
+    all_brands_sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     live_ocn_df = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['current_live_ocn_table'])
     end_month_index, current_year = period_calculation()
-    co2_nedc, co2_wltp, total_sales = co2_processing(sales_plan.copy(), end_month_index, current_year)
+    co2_nedc, co2_wltp, total_sales = co2_processing(all_brands_sales_plan.copy(), end_month_index, current_year)
 
-    proposals_last_updated_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query).values[0][0]
-    margins_last_update_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query).values[0][0]
     dw_last_updated_date = data_v2['Record_Date'].max()
-    sales_plan_last_updated_date = sales_plan['Record_Date'].max()
-
     placeholder_dw_date.markdown("<p style='text-align: right;'>Última Atualização DW - {}</p>".format(dw_last_updated_date), unsafe_allow_html=True)
-    placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
-    placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
-    placeholder_margins_date.markdown("<p style='text-align: right;'>Última Atualização Margens HP - {}</p>".format(margins_last_update_date), unsafe_allow_html=True)
 
     co2_nedc_before_order = co2_nedc / total_sales
     co2_wltp_before_order = co2_wltp / total_sales
@@ -109,6 +102,14 @@ def main():
         data_models_v2 = data_v2.loc[data_v2['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'PT_PDB_Model_Desc'].unique()
         common_models = [x for x in data_models if x in data_models_v2]
         sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(common_models), index=0)
+
+        sales_plan_last_updated_date = all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'Record_Date'].max()
+        proposals_last_updated_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
+        margins_last_update_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
+
+        placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
+        placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
+        placeholder_margins_date.markdown("<p style='text-align: right;'>Última Atualização Margens HP - {}</p>".format(margins_last_update_date), unsafe_allow_html=True)
     else:
         sel_model = ''
 
@@ -698,7 +699,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR', sel_parameters=['sel_brand', 'sel_model', 'sel_order_size', 'sel_min_number_of_configuration', 'sel_min_sold_cars', 'sel_daysinstock_score_weight', 'sel_margin_score_weight', 'sel_margin_ratio_score_weight', 'sel_qty_sold_score_weight', 'sel_proposals_score_weight', 'sel_oc_stock_diff_score_weight', 'sel_co2_nedc_score_weight'])
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR', sel_parameters=['sel_brand', 'sel_model', 'sel_order_size', 'sel_min_number_of_configuration', 'sel_min_sold_cars', 'sel_daysinstock_score_weight', 'sel_margin_score_weight', 'sel_margin_ratio_score_weight', 'sel_qty_sold_score_weight', 'sel_proposals_score_weight', 'sel_oc_stock_diff_score_weight', 'sel_co2_nedc_score_weight'])
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
