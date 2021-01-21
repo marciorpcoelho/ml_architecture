@@ -64,25 +64,13 @@ total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 def main():
     data = get_data(options_file)
-    data_v2 = get_data_v2(options_file, options_file.DSN_MLG, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], model_flag=1)
+    data_v2 = get_data_v2(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['new_score_streamlit_view'], model_flag=1)
     all_brands_sales_plan = get_data_v2(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     live_ocn_df = get_data_v2(options_file, options_file.DSN, options_file.sql_info['database_source'], options_file.sql_info['current_live_ocn_table'])
     end_month_index, current_year = period_calculation()
-    co2_nedc, co2_wltp, total_sales = co2_processing(all_brands_sales_plan.copy(), end_month_index, current_year)
 
     dw_last_updated_date = data_v2['Record_Date'].max()
     placeholder_dw_date.markdown("<p style='text-align: right;'>Última Atualização DW - {}</p>".format(dw_last_updated_date), unsafe_allow_html=True)
-
-    co2_nedc_before_order = co2_nedc / total_sales
-    co2_wltp_before_order = co2_wltp / total_sales
-    st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc_before_order, co2_wltp_before_order))
-    if end_month_index == 1:
-        sel_period_string = '{} de {}'.format('Jan', current_year)
-    else:
-        sel_period_string = '{} a {} de {}'.format(total_months_list[0], total_months_list[end_month_index - 1], current_year)
-
-    st.write('Plano de Vendas Total, {}: {} viaturas'.format(sel_period_string, int(total_sales)))
-    placeholder_sales_plan_single_model = st.empty()
 
     data_v2 = col_normalization(data_v2.copy(), cols_to_normalize, reverse_normalization_cols)
 
@@ -94,6 +82,18 @@ def main():
     sel_brand = st.sidebar.selectbox('Marca:', ['-', 'Hyundai'], index=1, key=session_state.run_id)
 
     if '-' not in sel_brand:
+        co2_nedc, co2_wltp, total_sales = co2_processing(all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), :].copy(), end_month_index, current_year)
+        co2_nedc_before_order = co2_nedc / total_sales
+        co2_wltp_before_order = co2_wltp / total_sales
+        st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc_before_order, co2_wltp_before_order))
+        if end_month_index == 1:
+            sel_period_string = '{} de {}'.format('Jan', current_year)
+        else:
+            sel_period_string = '{} a {} de {}'.format(total_months_list[0], total_months_list[end_month_index - 1], current_year)
+
+        st.write('Plano de Vendas Total, {}: {} viaturas'.format(sel_period_string, int(total_sales)))
+        placeholder_sales_plan_single_model = st.empty()
+
         # st.write(list(data.loc[data['NLR_Code'] == options_file.nlr_code_desc[sel_brand], 'PT_PDB_Model_Desc'].unique()))
         # st.write(list(data_v2.loc[data_v2['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'PT_PDB_Model_Desc'].unique()))
         # ToDo: Porque é que há diferenças de modelos entre as duas fontes de dados? Exemplo, data_v2 não tem H-1 6 lugares, H350 ou Ioniq
@@ -104,8 +104,8 @@ def main():
         sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(common_models), index=0)
 
         sales_plan_last_updated_date = all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'Record_Date'].max()
-        proposals_last_updated_date = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query).values[0][0]
-        margins_last_update_date = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query).values[0][0]
+        proposals_last_updated_date = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
+        margins_last_update_date = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
 
         placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
         placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
