@@ -666,7 +666,7 @@ def file_export(df, file_name):
 
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
-    href = f'<a href="data:file/csv;base64,{b64}">Gravar Otimização</a> (carregar botão direito e Guardar Link como: {file_name + current_date}.csv)'
+    href = f'<a href="data:file/csv;base64,{b64}">Gravar Sugestão</a> (carregar botão direito e Guardar Link como: {file_name + current_date}.csv)'
     st.markdown(href, unsafe_allow_html=True)
 
 
