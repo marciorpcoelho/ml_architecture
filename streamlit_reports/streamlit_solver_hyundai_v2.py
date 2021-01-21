@@ -22,7 +22,7 @@ from modules.level_0_performance_report import log_record, error_upload
 from modules.level_0_api_endpoint import api_endpoint_ip
 import level_2_order_optimization_hyundai_options as options_file
 import modules.SessionState as SessionState
-from modules.level_1_b_data_processing import null_analysis
+from modules.level_1_b_data_processing import null_analysis, df_join_function
 from level_2_order_optimization_hyundai_options import configuration_parameters, client_lvl_cols, client_lvl_cols_renamed, score_weights, cols_to_normalize, reverse_normalization_cols
 
 st.set_page_config(page_title='Sugestão de Encomenda - Importador', layout="wide")
@@ -64,8 +64,9 @@ total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 def main():
     data = get_data(options_file)
-    data_v2 = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], query_filter={'CommercialVersion_Flag': [1, 2]}, model_flag=1)
+    data_v2 = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], model_flag=1)
     sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
+    live_ocn_df = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['current_live_ocn_table'])
     end_month_index, current_year = period_calculation()
     co2_nedc, co2_wltp, total_sales = co2_processing(sales_plan.copy(), end_month_index, current_year)
 
@@ -91,7 +92,6 @@ def main():
     placeholder_sales_plan_single_model = st.empty()
 
     data_v2 = col_normalization(data_v2.copy(), cols_to_normalize, reverse_normalization_cols)
-    # data_v2['Score'] = data_v2.apply(score_calculation, args=(session_state.daysinstock_score_weight,), axis=1)
 
     parameters_values, parameter_restriction_vectors = [], []
     max_number_of_cars_sold_v1 = max(data['Quantity_Sold'])
@@ -114,7 +114,8 @@ def main():
 
     st.sidebar.title('Opções:')
     sel_order_size = st.sidebar.number_input('Por favor escolha o número de viaturas a encomendar:', 1, 1000, value=150)
-    sel_min_number_of_configuration = st.sidebar.number_input('Por favor escolha o número mínimo de configurações (default={}):'.format(min_number_of_configuration), 1, 100, value=min_number_of_configuration)
+    sel_min_number_of_configuration = st.sidebar.number_input('Por favor escolha o número mínimo de configurações:', 1, 100, value=min_number_of_configuration)
+    placeholder_value = st.sidebar.empty()
     sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, max_number_of_cars_sold, value=5)
     st.sidebar.title('Pesos:')
     session_state.sel_daysinstock_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Dias em Stock: (default={:.0f}%)'.format(score_weights['Avg_DaysInStock_Global_normalized'] * 100), 1, 100, value=int(score_weights['Avg_DaysInStock_Global_normalized'] * 100), key=session_state.run_id)
@@ -127,7 +128,7 @@ def main():
 
     weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight
     if weights_sum != 100:
-        st.sidebar.error('Alerta: a soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
+        st.sidebar.error('Alerta: Soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
 
     if st.sidebar.button('Reset Scores'):
         session_state.sel_daysinstock_score_weight = score_weights['Avg_DaysInStock_Global_normalized'] * 100
@@ -157,17 +158,13 @@ def main():
         if not data_filtered.shape[0]:
             st.write('Não foram encontrados registos para as presentes escolhas - Por favor altere o modelo/cliente/valor mínimo de viaturas por configuração.')
             return
-        # st.write('Número de Configurações:', data_filtered['ML_VehicleData_Code'].nunique())
 
         proposals_col = 'Proposals_Count_VDC'
         stock_col = 'Stock_Count_VDC'
 
         session_state.order_suggestion_button_pressed_flag = 1
-        # status, total_value_optimized, selection, selection_configuration_ids = solver(data_filtered, parameter_restriction_vectors, sel_order_size)
         status, total_value_optimized, selection, selection_configuration_ids = solver(data_filtered, parameter_restriction_vectors, sel_order_size)
-        # status_v2, total_value_optimized_v2, selection_v2, selection_configuration_ids_v2 = solver_v2(data_filtered_v2[~data_filtered_v2['NEDC'].isnull()], parameter_restriction_vectors, sel_order_size, co2_nedc, total_sales)
         data_filtered['Quantity'] = selection
-        # data_filtered_v2['Quantity'] = selection
 
         if status == 'optimal':
             sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size, proposals_col, stock_col, sel_min_number_of_configuration)
@@ -181,14 +178,11 @@ def main():
                          .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}', 'Propostas Entregues': '{:.0f}', 'Em Stock': '{:.0f}'})
                          )
 
-                # st.write('Propostas Entregues para esta sugestão: ', int(sel_configurations[proposals_col].sum()))
-                # st.write('Viaturas em Stock para esta sugestão: ', int(sel_configurations[stock_col].sum()))
                 sel_configurations.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
             else:
                 return
 
             if sel_configurations_v2.shape[0]:
-                # st.write('Número de Configurações:', data_filtered_v2.shape[0])
 
                 sel_configurations_v2.rename(index=str, columns={'Quantity': 'Sug.Encomenda', 'Sum_Qty_CHS': '#Veículos Vendidos'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
                 st.markdown("<h3 style='text-align: left;'>Sugestão de Encomenda - Score v2:</h3>", unsafe_allow_html=True)
@@ -197,10 +191,10 @@ def main():
                          .style.apply(highlight_cols, col_dict=options_file.col_color_dict)
                          .format(options_file.col_decimals_place_dict)
                          )
-                # .style.format({'Score (€)': '{:.2f}', 'Sug.Encomenda': '{:.0f}', 'Propostas Entregues': '{:.0f}', 'Em Stock': '{:.0f}'})
-                # st.write('Propostas Entregues para esta sugestão: ', int(sel_configurations_v2['Proposals_VDC'].sum()))
-                # st.write('Viaturas em Stock para esta sugestão: ', int(sel_configurations_v2['Stock_VDC'].sum()))
                 sel_configurations_v2.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
+
+                if sel_min_number_of_configuration > sel_configurations_v2.shape[0]:
+                    placeholder_value.error("Alerta: Número mínimo de configurações é superior ao número de configurações disponíveis para este modelo ({}).".format(sel_configurations_v2.shape[0]))
 
                 total_sales_after_order = total_sales + sel_configurations_v2['Quantity'].sum()
                 sel_configurations_v2['nedc_after_order'] = sel_configurations_v2['Quantity'] * sel_configurations_v2['NEDC']
@@ -226,7 +220,8 @@ def main():
                 else:
                     st.markdown("Situação Co2 (WLTP) sem alterações após esta encomenda.")
 
-                # file_export(sel_configurations_v2[['Sug.Encomenda', 'Part_Desc', 'Quantity']].rename(columns=column_translate_dict), 'Otimização_{}_{}'.format(sel_group_original, current_date))
+                df_to_export = file_export_preparation(sel_configurations_v2[['Quantity', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']].reset_index(drop=True), live_ocn_df)
+                file_export(df_to_export.rename(columns=options_file.column_translate_dict), 'Sugestão_Encomenda_{}_{}_'.format(sel_brand, sel_model))
 
                 sel_configurations_v2['Configuration_Concat'] = sel_configurations_v2['PT_PDB_Model_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Engine_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Transmission_Type_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Version_Desc'] + ', ' +  sel_configurations_v2['PT_PDB_Exterior_Color_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Interior_Color_Desc']
                 st.markdown("<h3 style='text-align: left;'>Configuração a explorar:</h3>", unsafe_allow_html=True)
@@ -383,10 +378,7 @@ def model_lowercase(df):
 @st.cache(show_spinner=False, allow_output_mutation=True, ttl=60*60*24)
 def get_data_v2(options_file_in, dsn, db, table, query_filter=None, model_flag=0):
 
-    if query_filter is not None:
-        df = level_1_a_data_acquisition.sql_retrieve_df(dsn, db, table, options_file_in, query_filters=query_filter)
-    else:
-        df = level_1_a_data_acquisition.sql_retrieve_df(dsn, db, table, options_file_in)
+    df = level_1_a_data_acquisition.sql_retrieve_df(dsn, db, table, options_file_in, query_filters=query_filter)
 
     if model_flag:
         df = model_lowercase(df)
@@ -670,11 +662,24 @@ def solution_saving(df, sel_model, client_lvl_cols_in, client_lvl_sels):
 
 
 def file_export(df, file_name):
+    current_date, _ = level_1_e_deployment.time_tags(format_date='%Y%m%d')
 
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
-    href = f'<a href="data:file/csv;base64,{b64}">Gravar Otimização</a> (carregar botão direito e Guardar Link como: {file_name}.csv)'
+    href = f'<a href="data:file/csv;base64,{b64}">Gravar Otimização</a> (carregar botão direito e Guardar Link como: {file_name + current_date}.csv)'
     st.markdown(href, unsafe_allow_html=True)
+
+
+def file_export_preparation(df, ocn_df):
+
+    df_joined = df_join_function(df,
+                                 ocn_df[['Model_Code', 'OCN', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']]
+                                 .set_index(['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']),
+                                 on=['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc'],
+                                 how='left'
+                                 )
+
+    return df_joined
 
 
 def client_replacement(df, client_lvl_cols_in, client_lvl_sels):

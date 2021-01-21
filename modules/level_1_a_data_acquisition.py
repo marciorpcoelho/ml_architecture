@@ -75,7 +75,7 @@ def sql_retrieve_df(dsn, db, view, options_file, columns='*', query_filters=0, c
         elif OS_PLATFORM == 'LINUX':
             cnxn = pyodbc.connect('Driver=ODBC Driver 17 for SQL Server;Server=tcp:' + str(dsn) + ';UID=' + str(options_file.UID) + ';PWD=' + str(options_file.PWD) + ';DATABASE=' + str(db), searchescape='\\')
 
-        if type(query_filters) == int:
+        if not query_filters:
             query = 'SELECT ' + columns + ' FROM ' + view + ' WITH (NOLOCK)'
         elif type(query_filters) == dict:
             for key in query_filters:

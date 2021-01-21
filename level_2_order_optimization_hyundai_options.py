@@ -60,6 +60,7 @@ sql_info = {
     'stock_view': 'View_VHE_Fact_PA_OrderOptimization_Stock_Old',
     'unit_count_number_history': 'LOG_Project_Units_Count_History',
     'new_score_streamlit_view': 'VHE_Fact_PA_OrderOptimization_Streamlit',
+    'current_live_ocn_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Export',
     'sales_plan_aux': 'VHE_Setup_Sales_Plan_Aux_DTR',
 }
 
