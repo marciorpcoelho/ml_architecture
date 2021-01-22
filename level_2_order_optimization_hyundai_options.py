@@ -911,8 +911,9 @@ sales_plan_validation_query_step_1_v2 = '''
 
 sales_plan_validation_query_step_2_v2 = '''
     SELECT DISTINCT
-        WLTP_CO2
+           WLTP_CO2
         ,  NEDC_CO2
+        ,  Sales_Plan_Period
         ,  Max_Qty_Per_Sales_Plan_Period
     FROM [{}].[dbo].[{}]
     WHERE 1=1

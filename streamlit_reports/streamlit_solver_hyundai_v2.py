@@ -34,9 +34,8 @@ truncate_query = ''' DELETE
 FROM [BI_DTR].[dbo].[VHE_Fact_MLG_OrderOptimization_Solver_Optimization_DTR]
 WHERE PT_PDB_Model_Desc = '{}'  '''
 
-# st.markdown("<h1 style='text-align: center; color: red;'>Sugestão de Encomenda - Importador - Demo</h1>", unsafe_allow_html=True)
 st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda - Importador - Demo</h1>", unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Hyundai</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Hyundai e Honda</h2>", unsafe_allow_html=True)
 
 
 hide_menu_style = """
@@ -66,7 +65,7 @@ def main():
     data = get_data(options_file)
     data_v2 = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['new_score_streamlit_view'], model_flag=1)
     all_brands_sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
-    live_ocn_df = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['current_live_ocn_table'])
+    live_ocn_df = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['current_live_ocn_table'], model_flag=1)
     end_month_index, current_year = period_calculation()
 
     dw_last_updated_date = data_v2['Record_Date'].max()
@@ -221,7 +220,7 @@ def main():
                 else:
                     st.markdown("Situação Co2 (WLTP) sem alterações após esta encomenda.")
 
-                df_to_export = file_export_preparation(sel_configurations_v2[['Quantity', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']].reset_index(drop=True), live_ocn_df)
+                df_to_export = file_export_preparation(sel_configurations_v2[['Quantity', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc', 'PT_PDB_Exterior_Color_Desc', 'PT_PDB_Interior_Color_Desc']].reset_index(drop=True), live_ocn_df, sel_brand)
                 file_export(df_to_export.rename(columns=options_file.column_translate_dict), 'Sugestão_Encomenda_{}_{}_'.format(sel_brand, sel_model))
 
                 sel_configurations_v2['Configuration_Concat'] = sel_configurations_v2['PT_PDB_Model_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Engine_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Transmission_Type_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Version_Desc'] + ', ' +  sel_configurations_v2['PT_PDB_Exterior_Color_Desc'] + ', ' + sel_configurations_v2['PT_PDB_Interior_Color_Desc']
@@ -690,14 +689,24 @@ def file_export(df, file_name):
     st.markdown(href, unsafe_allow_html=True)
 
 
-def file_export_preparation(df, ocn_df):
+def file_export_preparation(df, ocn_df, sel_brand):
 
-    df_joined = df_join_function(df,
-                                 ocn_df[['Model_Code', 'OCN', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']]
-                                 .set_index(['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']),
-                                 on=['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc'],
-                                 how='left'
-                                 )
+    if options_file.nlr_code_desc[sel_brand] == 702:
+        df_joined = df_join_function(df,
+                                     ocn_df[['Model_Code', 'OCN', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']]
+                                     .set_index(['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']),
+                                     on=['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc'],
+                                     how='left'
+                                     )
+    elif options_file.nlr_code_desc[sel_brand] == 706:
+        df_joined = df_join_function(df,
+                                     ocn_df[['Model_Code', 'PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']]
+                                     .set_index(['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc']),
+                                     on=['PT_PDB_Model_Desc', 'PT_PDB_Engine_Desc', 'PT_PDB_Transmission_Type_Desc', 'PT_PDB_Version_Desc'],
+                                     how='left'
+                                     )
+    else:
+        raise ValueError('Unknown Selected Brand - {}'.format(sel_brand))
 
     return df_joined
 
