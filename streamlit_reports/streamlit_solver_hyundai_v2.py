@@ -79,7 +79,7 @@ def main():
     max_number_of_cars_sold_v2 = max(data_v2['Sum_Qty_CHS'])
     max_number_of_cars_sold = max(int(max_number_of_cars_sold_v1), int(max_number_of_cars_sold_v2))
 
-    sel_brand = st.sidebar.selectbox('Marca:', ['-', 'Hyundai'], index=1, key=session_state.run_id)
+    sel_brand = st.sidebar.selectbox('Marca:', ['-', 'Hyundai', 'Honda'], index=0, key=session_state.run_id)
 
     if '-' not in sel_brand:
         co2_nedc, co2_wltp, total_sales = co2_processing(all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), :].copy(), end_month_index, current_year)

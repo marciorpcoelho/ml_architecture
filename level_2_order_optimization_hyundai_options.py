@@ -1044,7 +1044,7 @@ sales_plan_current_sales_single_model = '''
         AND Sales_Plan.Factory_Model_Code <> '1'
           and PDB.PT_PDB_Model_Desc = '{}'
     )
-    SELECT SUM(Sales_Plan_Single_Model.Quantity) FROM Sales_Plan_Single_Model
+    SELECT ISNULL(SUM(Sales_Plan_Single_Model.Quantity), 0) FROM Sales_Plan_Single_Model
 '''
 
 sales_plan_validation_query_step_1 = '''
