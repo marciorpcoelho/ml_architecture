@@ -228,15 +228,16 @@ def main():
                 st.markdown("<h3 style='text-align: left;'>Configuração a explorar:</h3>", unsafe_allow_html=True)
                 sel_config = st.selectbox('', ['-'] + [x for x in sel_configurations_v2['Configuration_Concat'].unique()], index=0)
                 if sel_config != '-':
-                    validation_dfs = get_validation_info(sel_configurations_v2, sel_config)
-                    validation_dfs_titles = ['Vendas', 'Propostas', 'Stock', 'Plano de Vendas, passo 1', 'Plano de Vendas, passo 2', 'Plano de Vendas, passo 3']
+                    validation_dfs_v2 = get_validation_info(sel_configurations_v2, sel_config)
+                    validation_dfs_titles = ['Vendas ({}):', 'Propostas ({}, para os últimos 3 meses):', 'Stock ({}):', 'Plano de Vendas, passo 1:', 'Plano de Vendas, passo 2 - selecionando os máximos de valores de quantidade por período:',
+                                             'Plano de Vendas, passo 3 - aplicando a seguinte fórmula: *Objetivo de Cobertura de Stock no mês N = 2,5 \* média das vendas de (N, N+1, N+2, N+3 e N+4)*:']
 
-                    st.write(validation_dfs_titles[0] + ' ({}):'.format(int(validation_dfs[0]['Quantity_CHS'].sum())), validation_dfs[0][[x for x in list(validation_dfs[0]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    st.write(validation_dfs_titles[1] + ' ({}, para os últimos 3 meses):'.format(validation_dfs[1].shape[0]), validation_dfs[1][[x for x in list(validation_dfs[1]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    st.write(validation_dfs_titles[3] + ':', validation_dfs[3][[x for x in list(validation_dfs[3]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    st.write(validation_dfs_titles[4] + ' - selecionando os máximos de valores de quantidade por período:', validation_dfs[4][[x for x in list(validation_dfs[4]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
-                    st.write(validation_dfs_titles[5] + ' - aplicando a seguinte fórmula: *Objetivo de Cobertura de Stock no mês N = 2,5 \* média das vendas de (N, N+1, N+2, N+3 e N+4)*:', validation_dfs[5][[x for x in list(validation_dfs[5]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict), unsafe_allow_html=True)
-                    st.write(validation_dfs_titles[2] + ' ({}):'.format(validation_dfs[2].shape[0]), validation_dfs[2][[x for x in list(validation_dfs[2]) if x != 'Last_Modified_Date']].rename(columns=options_file.column_translate_dict))
+                    validation_queries_display(str_title=validation_dfs_titles[0], int_count=int(validation_dfs_v2[0]['Quantity_CHS'].sum()), df_data=validation_dfs_v2[0][[x for x in list(validation_dfs_v2[0]) if x != 'Last_Modified_Date']])
+                    validation_queries_display(str_title=validation_dfs_titles[1], int_count=validation_dfs_v2[1].shape[0], df_data=validation_dfs_v2[1][[x for x in list(validation_dfs_v2[1]) if x != 'Last_Modified_Date']])
+                    validation_queries_display(str_title=validation_dfs_titles[3], df_data=validation_dfs_v2[3][[x for x in list(validation_dfs_v2[3]) if x != 'Last_Modified_Date']])
+                    validation_queries_display(str_title=validation_dfs_titles[4], df_data=validation_dfs_v2[4][[x for x in list(validation_dfs_v2[4]) if x != 'Last_Modified_Date']])
+                    validation_queries_display(str_title=validation_dfs_titles[5], df_data=validation_dfs_v2[5][[x for x in list(validation_dfs_v2[5]) if x != 'Last_Modified_Date']])
+                    validation_queries_display(str_title=validation_dfs_titles[2], int_count=validation_dfs_v2[2].shape[0], df_data=validation_dfs_v2[2][[x for x in list(validation_dfs_v2[2]) if x != 'Last_Modified_Date']])
 
             else:
                 return
@@ -248,6 +249,16 @@ def main():
         st.markdown("<p style='text-align: center;'>Por favor escolha uma marca e modelo para sugerir a respetiva encomenda.</p>", unsafe_allow_html=True)
 
 
+def validation_queries_display(str_title, int_count=None, df_data=pd.DataFrame()):
+
+    # if df_data.shape:
+    st.write(str_title.format(int_count), df_data.rename(columns=options_file.column_translate_dict))
+    # else:
+    #     st.write('Configuração sem {}'.format(str_title.split(' ')[0]))
+
+    return
+
+
 def highlight_cols(s, col_dict):
 
     if s.name in col_dict.keys():
@@ -255,9 +266,9 @@ def highlight_cols(s, col_dict):
     return [''] * len(s)
 
 
-@st.cache(show_spinner=False)
+# @st.cache(show_spinner=False)
 def get_validation_info(sel_configurations_v2, sel_config):
-    validation_dfs = []
+    validations_dfs_v2 = []
 
     sel_config_model = sel_configurations_v2.loc[sel_configurations_v2['Configuration_Concat'] == sel_config, 'PT_PDB_Model_Desc'].values[0]
     sel_config_engine = sel_configurations_v2.loc[sel_configurations_v2['Configuration_Concat'] == sel_config, 'PT_PDB_Engine_Desc'].values[0]
@@ -266,18 +277,26 @@ def get_validation_info(sel_configurations_v2, sel_config):
     sel_config_ext_color = sel_configurations_v2.loc[sel_configurations_v2['Configuration_Concat'] == sel_config, 'PT_PDB_Exterior_Color_Desc'].values[0]
     sel_config_int_color = sel_configurations_v2.loc[sel_configurations_v2['Configuration_Concat'] == sel_config, 'PT_PDB_Interior_Color_Desc'].values[0]
 
-    validation_queries = [options_file.sales_validation_query,
-                          options_file.proposals_validation_query,
-                          options_file.stock_validation_query,
-                          options_file.sales_plan_validation_query_step_1,
-                          options_file.sales_plan_validation_query_step_2,
-                          options_file.sales_plan_validation_query_step_3]
+    validation_queries_v2 = [options_file.sales_validation_query_v2,
+                             options_file.proposals_validation_query_v2,
+                             options_file.stock_validation_query_v2,
+                             options_file.sales_plan_validation_query_step_1_v2,
+                             options_file.sales_plan_validation_query_step_2_v2,
+                             options_file.sales_plan_validation_query_step_3_v2]
 
-    for query in validation_queries:
-        validation_df = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, query.format(sel_config_model, sel_config_engine, sel_config_version, sel_config_transmission, sel_config_ext_color, sel_config_int_color))
-        validation_dfs.append(validation_df)
+    validation_tables = [options_file.sql_info['sales_validation_table'],
+                         options_file.sql_info['proposals_validation_table'],
+                         options_file.sql_info['stock_validation_table'],
+                         options_file.sql_info['sales_plan_step_1_validation_table'],
+                         options_file.sql_info['sales_plan_step_2_validation_table'],
+                         options_file.sql_info['sales_plan_step_3_validation_table']]
 
-    return validation_dfs
+    for query, validation_table in zip(validation_queries_v2, validation_tables):
+        query.format(options_file.sql_info['database_source'], validation_table, sel_config_model, sel_config_engine, sel_config_version, sel_config_transmission, sel_config_ext_color, sel_config_int_color)
+        validation_df_v2 = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, query.format(options_file.sql_info['database_source'], validation_table, sel_config_model, sel_config_engine, sel_config_version, sel_config_transmission, sel_config_ext_color, sel_config_int_color))
+        validations_dfs_v2.append(validation_df_v2)
+
+    return validations_dfs_v2
 
 
 def run_single_query(dsn, database, options_file_in, query):
