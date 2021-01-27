@@ -107,8 +107,14 @@ def main():
         margins_last_update_date = run_single_query(options_file.DSN, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
 
         placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
-        placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
         placeholder_margins_date.markdown("<p style='text-align: right;'>Última Atualização Margens HP - {}</p>".format(margins_last_update_date), unsafe_allow_html=True)
+
+        if sel_brand == 'Hyundai':
+            placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
+        elif sel_brand == 'Honda':
+            placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
+        else:
+            raise ValueError('Unknown Selected Brand - {}'.format(sel_brand))
     else:
         sel_model = ''
 

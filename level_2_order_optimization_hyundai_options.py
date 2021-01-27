@@ -877,7 +877,8 @@ sales_plan_current_sales_single_model = '''
             ,  Sales_Plan.Quantity
             ,  Sales_Plan.Record_Date
         FROM  dbo.VHE_Setup_Sales_Plan_DTR AS Sales_Plan
-        LEFT OUTER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.Factory_Model_Code = Sales_Plan.Factory_Model_Code AND PDB.Local_Vehicle_Option_Code = Sales_Plan.Local_Vehicle_Option_Code				
+        LEFT OUTER JOIN dbo.VHE_Dim_VehicleData_DTR AS PDB ON PDB.Factory_Model_Code = Sales_Plan.Factory_Model_Code 
+            AND PDB.Local_Vehicle_Option_Code = CASE WHEN Sales_Plan.NLR_Code = '706' THEN '' ELSE Sales_Plan.Local_Vehicle_Option_Code END
         LEFT JOIN VHE_MapDMS_Transmission_DTR AS Transmission_Map ON Transmission_Map.Original_Value = PDB.PT_PDB_Transmission_Type_Desc
         LEFT JOIN VHE_MapDMS_Ext_Color_DTR AS Ext_Color_Map ON Ext_Color_Map.Original_Value = PDB.PT_PDB_Exterior_Color_Desc
         LEFT JOIN VHE_MapDMS_Int_Color_DTR AS Int_Color_Map ON Int_Color_Map.Original_Value = PDB.PT_PDB_Interior_Color_Desc
