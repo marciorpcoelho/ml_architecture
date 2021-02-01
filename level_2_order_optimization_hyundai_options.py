@@ -68,7 +68,6 @@ sql_info = {
     'sales_plan_step_1_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_SalesPlan_Step1_Validation',
     'sales_plan_step_2_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_SalesPlan_Step2_Validation',
     'sales_plan_step_3_validation_table': 'View_VHE_Fact_PA_OrderOptimization_Sales_Plan'
-
 }
 
 log_files = {
