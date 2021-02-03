@@ -65,6 +65,7 @@ project_dict = {2244: 'PA@Service Desk',
                 1112: 'Fotografia Stock - CRP ATL',
                 2610: 'Catalogação Peças @ DGO',
                 0000: 'Performance Analysis',
+                2775: 'Otimização Encomenda CDSU Viaturas'
                 }
 
 app_dict = {2244: 'Classificação Pedidos Service Desk',
@@ -81,6 +82,7 @@ project_sql_dict = {2244: 'Project_SD',
                     2610: 'Project_Part_Ref_Catalog',
                     1111: 'DMS Stock Photograph',
                     1112: 'DMS Stock Photograph - CRP, ATL',
+                    2775: 'Project_VHE_CDSU',
                     }
 
 project_pbi_performance_link = 'https://bit.ly/2SJIYJy'

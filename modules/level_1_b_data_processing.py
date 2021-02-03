@@ -98,7 +98,7 @@ def remove_rows(df, rows, project_id, warning=0):
 def string_replacer(df, dictionary):
 
     for key in dictionary.keys():
-        df.loc[:, key[0]] = df[key[0]].str.replace(key[1], dictionary[key])
+        df.loc[:, key[0]] = df[key[0]].str.replace(r'\b{}\b'.format(key[1]), dictionary[key], regex=True)
     return df
 
 
@@ -219,25 +219,93 @@ def save_fig(name, save_dir=base_path + '/output/'):
     plt.savefig(save_dir + str(name) + '.png')
 
 
-def options_scraping(df, model_training_check, model_mapping, options_file):
+def options_scraping_v2(df, options_file, model_mapping={}, model_training_check=0):
+
+    if options_file.project_id == 2162:  # Baviera
+        from level_2_optionals_baviera_options import colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors
+        colors_list = [colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors]
+        df_grouped = df.groupby('Nº Stock')
+
+        options_scraping_model(df, options_file.project_id, model_mapping=model_mapping, model_training_check=model_training_check)
+        options_scraping_motorization(df, options_file)
+
+        pool = Pool(processes=level_0_performance_report.pool_workers_count)
+        results = pool.map(options_scraping_per_group, [(key, group, colors_list, options_file.project_id) for (key, group) in df_grouped])
+        pool.close()
+        df = pd.concat([result[0] for result in results if result is not None])
+
+        baviera_standard_equipment(df)
+
+    elif options_file.project_id == 2775:  # CDSU
+        options_scraping_model(df, options_file.project_id, approach='first_word')
+        options_scraping_motorization(df, options_file, regex_approach=1)
+        from level_2_optionals_cdsu_options import colors_pt, colors_en
+        colors_list = [colors_pt, colors_en]
+
+        pool = Pool(processes=level_0_performance_report.pool_workers_count)
+        results = pool.map(options_scraping_per_group_cdsu, [(key, group, colors_list, options_file.project_id) for (key, group) in df.groupby('Nº Stock')])
+        pool.close()
+        df = pd.concat([result for result in results if result is not None])
+
+    return df
+
+
+def options_scraping_model(df, project_id, approach='', model_mapping={}, model_training_check=0):
+    level_0_performance_report.performance_info_append(time.time(), 'Model_Code_Start')
+
+    if approach != 'first_word':
+        if model_training_check:
+            unique_models = df['Modelo'].unique()
+            for model in unique_models:
+                tokenized_modelo = nltk.word_tokenize(model)
+                df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
+        elif not model_training_check:
+            unique_version_code = df['Version_Code'].unique()
+            for version_code in unique_version_code:
+                found_flag = 0
+                for key in model_mapping.keys():
+                    if version_code in model_mapping[key]:
+                        df.loc[df['Version_Code'] == version_code, 'Modelo'] = key
+                        found_flag = 1
+                        break
+                if not found_flag:
+                    level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte código de versão: {}.'.format(version_code), project_id, flag=1)
+    elif approach == 'first_word':
+        unique_models = df['Modelo'].unique()
+        for model in unique_models:
+            tokenized_modelo = nltk.word_tokenize(model)
+            df.loc[df['Modelo'] == model, 'Modelo'] = tokenized_modelo[0]
+
+    level_0_performance_report.performance_info_append(time.time(), 'Model_Code_End')
+
+    return df
+
+
+def options_scraping_motorization(df, options_file, regex_approach=0):
+    level_0_performance_report.performance_info_append(time.time(), 'Motor_Desc_Start')
+
+    unique_versions = df['Versão'].unique()
+    for version in unique_versions:
+        mask_version = df['Versão'] == version
+        if regex_approach:
+            df.loc[mask_version, 'Motor'] = df.loc[mask_version, 'Versão'].str.findall(options_file.regex_dict['motorization_value']).str[0]
+        else:
+            if 'x1 ' in version or 'x2 ' in version or 'x3 ' in version or 'x4 ' in version or 'x5 ' in version or 'x6 ' in version or 'x7 ' in version:  # The extra free space in the X models is because there are references next to the version description that match the searching criteria. Ex: 420D Coupé (4X31) matches when searched by X3
+                df.loc[mask_version, 'Motor'] = [x.split(' ')[1] for x in df[mask_version]['Versão']]
+            else:
+                df.loc[mask_version, 'Motor'] = [x.split(' ')[0] for x in df[mask_version]['Versão']]
+
+    level_0_performance_report.performance_info_append(time.time(), 'Motor_Desc_End')
+    return df
+
+
+def options_scraping(df, options_file, model_mapping={}, model_training_check=0):
     from level_2_optionals_baviera_options import colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors
     colors_list = [colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors]
 
     project_id = options_file.project_id
-    # Project_Id = 2162
-    # df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index])  # No need for Prov filtering, as it is already filtered in the data source;
-    # df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index])  # This removes Toyota Vehicles that aren't supposed to be in this model
-    # df = remove_rows(df, [df['Registration_Number'].str.contains('/').index, [df['Registration_Number'].str.len() > 8].index])  # This removes vehicles with erroneous registration numbers;
-
-    # if not model_training_check:
-    #     model_mapping, _ = level_1_a_data_acquisition.sql_mapping_retrieval(options_file.DSN_MLG, options_file.sql_info['database'], options_file.sql_info['model_mapping'], 'Mapped_Value', options_file)
-    #     model_mapping = model_mapping[0]
 
     df_grouped = df.groupby('Nº Stock')
-    nav_all, barras_all, alarme_all = [], [], []
-    seven_lug_all, prot_all, ac_all = [], [], []
-    teto_all, cor_ext_all, cor_int_all, int_type_all = [], [], [], []
-    sens_all, trans_all, versao_all, farois_all, jantes_all, motor_all = [], [], [], [], [], []
 
     # Modelo
     level_0_performance_report.performance_info_append(time.time(), 'Model_Code_Start')
@@ -247,16 +315,22 @@ def options_scraping(df, model_training_check, model_mapping, options_file):
             tokenized_modelo = nltk.word_tokenize(model)
             df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
     elif not model_training_check:
-        unique_version_code = df['Version_Code'].unique()
-        for version_code in unique_version_code:
-            found_flag = 0
-            for key in model_mapping.keys():
-                if version_code in model_mapping[key]:
-                    df.loc[df['Version_Code'] == version_code, 'Modelo'] = key
-                    found_flag = 1
-                    break
-            if not found_flag:
-                level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte código de versão: {}.'.format(version_code), project_id, flag=1)
+        if len(list(model_mapping.keys())):
+            unique_version_code = df['Version_Code'].unique()
+            for version_code in unique_version_code:
+                found_flag = 0
+                for key in model_mapping.keys():
+                    if version_code in model_mapping[key]:
+                        df.loc[df['Version_Code'] == version_code, 'Modelo'] = key
+                        found_flag = 1
+                        break
+                if not found_flag:
+                    level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte código de versão: {}.'.format(version_code), project_id, flag=1)
+        else:
+            unique_models = df['Modelo'].unique()
+            for model in unique_models:
+                tokenized_modelo = nltk.word_tokenize(model)
+                df.loc[df['Modelo'] == model, 'Modelo'] = tokenized_modelo.split(' ')[0]
     level_0_performance_report.performance_info_append(time.time(), 'Model_Code_End')
 
     # Motorização
@@ -274,27 +348,11 @@ def options_scraping(df, model_training_check, model_mapping, options_file):
     results = pool.map(options_scraping_per_group, [(key, group, colors_list, project_id) for (key, group) in df_grouped])
     pool.close()
     df = pd.concat([result[0] for result in results if result is not None])
-    durations_times = [nav_all, barras_all, alarme_all, seven_lug_all, prot_all, ac_all, teto_all, cor_ext_all, cor_int_all, int_type_all, sens_all, trans_all, versao_all, farois_all, jantes_all]
-    durations_names = ['Navigation_Duration', 'Roof_Bars_Duration', 'Alarm_Duration', 'Seven_Seats_Duration', 'Solar_Protection_Duration', 'AC_Auto_Duration', 'Open_Roof_Duration', 'Colour_Ext_Duration', 'Colour_Int_Duration', 'Interior_Type_Duration', 'Park_Front_Sens_Duration', 'Auto_Trans_Duration', 'Version_Duration', 'Lights_Duration', 'Rims_Size_Duration']
 
-    [nav_all.append(result[1]) for result in results if result is not None]
-    [barras_all.append(result[2]) for result in results if result is not None]
-    [alarme_all.append(result[3]) for result in results if result is not None]
-    [seven_lug_all.append(result[4]) for result in results if result is not None]
-    [prot_all.append(result[5]) for result in results if result is not None]
-    [ac_all.append(result[6]) for result in results if result is not None]
-    [teto_all.append(result[7]) for result in results if result is not None]
-    [cor_ext_all.append(result[8]) for result in results if result is not None]
-    [cor_int_all.append(result[9]) for result in results if result is not None]
-    [int_type_all.append(result[10]) for result in results if result is not None]
-    [trans_all.append(result[11]) for result in results if result is not None]
-    [sens_all.append(result[12]) for result in results if result is not None]
-    [versao_all.append(result[13]) for result in results if result is not None]
-    [farois_all.append(result[14]) for result in results if result is not None]
-    [jantes_all.append(result[15]) for result in results if result is not None]
-    # [durations[i-1].append(result[i] for result in results) for i in range(1, 16)]
+    return df
 
-    [level_0_performance_report.performance_info_append(duration, tag) for (duration, tag) in zip(durations_times, durations_names)]
+
+def baviera_standard_equipment(df):
 
     # ToDo: move the following code to it's own function?
     # Standard Equipment
@@ -342,77 +400,46 @@ def options_scraping_per_group(args):
     key, group, colors_list, project_id = args
     colors_pt, colors_en, dakota_colors, vernasca_colors, nappa_colors, nevada_colors, merino_colors = colors_list[0], colors_list[1], colors_list[2], colors_list[3], colors_list[4], colors_list[5], colors_list[6]
 
-    duration_sens, duration_trans, duration_versao, duration_farois, duration_jantes = 0, 0, 0, 0, 0
     line_modelo = group['Modelo'].head(1).values[0]
     tokenized_modelo = nltk.word_tokenize(line_modelo)
     optionals = set(group['Opcional'])
-    local_time = time.time
 
     # Navegação
-    start_nav = local_time()
     if len([x for x in optionals if 'navegação' in x]):
         group['Navegação'] = 1
-    end_nav = local_time()
 
     # Barras Tejadilho
-    start_barras = local_time()
     if len([x for x in optionals if 'barras' in x]):
         group['Barras_Tej'] = 1
-    end_barras = local_time()
 
     # Alarme
-    start_alarme = local_time()
     if len([x for x in optionals if 'alarme' in x]):
         group['Alarme'] = 1
-    end_alarme = local_time()
-
-    # 7 Lugares
-    start_7_lug = local_time()
-    # if len([x for x in optionals if 'terceira' in x]):
-    #     group['7_Lug'] = 1
-    end_7_lug = local_time()
-
-    # Vidros com Proteção Solar
-    start_prot = local_time()
-    # if len([x for x in optionals if 'proteção' in x and 'solar' in x]):
-    #     group['Prot.Solar'] = 1
-    end_prot = local_time()
 
     # AC Auto
-    start_ac = local_time()
     if len([x for x in optionals if 'ar' in x and 'condicionado' in x and 'automático' in x]):
         group['AC Auto'] = 1
-    end_ac = local_time()
 
     # Teto Abrir
-    start_teto = local_time()
     if len([x for x in optionals if 'teto' in x and 'abrir' in x]):
         group['Teto_Abrir'] = 1
-    end_teto = local_time()
 
     # Sensor/Transmissão/Versão/Jantes
     jantes_size = [0]
     for line_options in group['Opcional']:
         tokenized_options = nltk.word_tokenize(line_options)
 
-        start = local_time()
         if 'pdc-sensores' in tokenized_options:
             for word in tokenized_options:
                 if 'diant' in word:
                     group['Sensores'] = 1
-        duration = local_time() - start
-        duration_sens += duration
 
-        start = local_time()
         if 'transmissão' in tokenized_options or 'caixa' in tokenized_options:
             for word in tokenized_options:
                 if 'auto' in word:
                     group['Caixa Auto'] = 1
-        duration = local_time() - start
-        duration_trans += duration
 
         # Versão
-        start = local_time()
         if 'advantage' in tokenized_options:
             group['Versao'] = 'advantage'
         elif 'versão' in tokenized_options or 'bmw' in tokenized_options:
@@ -436,29 +463,20 @@ def options_scraping_per_group(args):
                 group['Versao'] = 'line_urban'
         if 'xline' in tokenized_options:
             group['Versao'] = 'xline'
-        duration = local_time() - start
-        duration_versao += duration
 
         # Faróis
-        start = local_time()
         # if "xénon" in tokenized_options or 'bixénon' in tokenized_options:
         #     group['Farois_Xenon'] = 1
         if "luzes" in tokenized_options and "led" in tokenized_options and 'nevoeiro' not in tokenized_options or 'luzes' in tokenized_options and 'adaptativas' in tokenized_options and 'led' in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options and 'nevoeiro' not in tokenized_options:
             group['Farois_LED'] = 1
-        duration = local_time() - start
-        duration_farois += duration
 
         # Jantes
-        start = local_time()
         for value in range(15, 21):
             if str(value) in tokenized_options and value > int(jantes_size[0]):
                 jantes_size = [str(value)] * group.shape[0]
                 group['Jantes'] = jantes_size
-        duration = local_time() - start
-        duration_jantes += duration
 
     # Cor Exterior
-    start_cor_ext = local_time()
     line_color = group['Cor'].head(1).values[0]
     tokenized_color = nltk.word_tokenize(line_color)
     color = [x for x in colors_pt if x in tokenized_color]
@@ -492,10 +510,8 @@ def options_scraping_per_group(args):
         group['Cor_Exterior'] = color
     except ValueError:
         print(color)
-    end_cor_ext = local_time()
 
     # Cor Interior
-    start_cor_int = local_time()
     line_interior = group['Interior'].head(1).values[0]
     tokenized_interior = nltk.word_tokenize(line_interior)
 
@@ -537,10 +553,8 @@ def options_scraping_per_group(args):
         else:
             group['Cor_Interior'] = '0'
             # level_0_performance_report.log_record('Cor Interior não encontrada: \'{}\' para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
-    end_cor_int = local_time()
 
     # Tipo Interior
-    start_int_type = local_time()
     if 'comb' in tokenized_interior or 'combin' in tokenized_interior or 'combinação' in tokenized_interior or 'tecido/pele' in tokenized_interior:
         group['Tipo_Interior'] = 'combinação'
     elif 'hexagon\'' in tokenized_interior or 'hexagon/alcantara' in tokenized_interior:
@@ -551,9 +565,191 @@ def options_scraping_per_group(args):
         group['Tipo_Interior'] = 'pele'
     else:
         group['Tipo_Interior'] = '0'
-    end_int_type = local_time()
 
-    return group, (end_nav - start_nav), (end_barras - start_barras), (end_alarme - start_alarme), (end_7_lug - start_7_lug), (end_prot - start_prot), (end_ac - start_ac), (end_teto - start_teto), (end_cor_ext - start_cor_ext), (end_cor_int - start_cor_int), (end_int_type - start_int_type), duration_trans, duration_sens, duration_versao, duration_farois, duration_jantes
+    return group
+
+
+def options_scraping_per_group_cdsu(args):
+    key, group, colors_list, project_id = args
+    colors_pt, colors_en = colors_list[0], colors_list[1]
+
+    line_modelo = group['Modelo'].head(1).values[0]
+    tokenized_modelo = nltk.word_tokenize(line_modelo)
+    optionals = set(group['Opcional'])
+
+    # Navegação
+    if len([x for x in optionals if 'sistema' in x and 'navegação' in x]):
+        group['Navegação'] = 1
+
+    # Barras Tejadilho
+    if len([x for x in optionals if 'barras' in x and 'tejadilho' in x or 'barra' in x and 'tejadilho' in x]):
+        group['Barras_Tej'] = 1
+
+    # Alarme
+    if len([x for x in optionals if 'alarme' in x]):
+        group['Alarme'] = 1
+
+    # AC Auto
+    if len([x for x in optionals if 'ar' in x and 'condicionado' in x and 'automático' in x]):
+        group['AC Auto'] = 1
+
+    # Teto Abrir
+    if len([x for x in optionals if 'teto' in x and 'abrir' in x or 'tecto' in x and 'abrir' in x]):
+        group['Teto_Abrir'] = 1
+
+    # Sensor/Transmissão/Versão/Jantes
+    jantes_size = [0]
+    for line_options in group['Opcional']:
+        tokenized_options = nltk.word_tokenize(line_options)
+
+        if 'caixa' in tokenized_options:
+            for word in tokenized_options:
+                if 'aut' in word:
+                    group['Caixa Auto'] = 1
+
+        if 'sensores' in tokenized_options and 'estacionamento' in tokenized_options and 'dianteiros' in tokenized_options \
+                or 'sensores' in tokenized_options and 'estacionamento' in tokenized_options and 'frt' in tokenized_options \
+                or 'sensores' in tokenized_options and 'estcmt' in tokenized_options and 'dianteiros' in tokenized_options \
+                or 'sensores' in tokenized_options and 'estcmt' in tokenized_options and 'frt' in tokenized_options:
+            group['Sensores'] = 1
+
+        # Versão
+        # if 'advantage' in tokenized_options:
+        #     group['Versao'] = 'advantage'
+        # elif 'versão' in tokenized_options or 'bmw' in tokenized_options:
+        #     if 'line' in tokenized_options and 'sport' in tokenized_options:
+        #         group['Versao'] = 'line_sport'
+        #     if 'line' in tokenized_options and 'urban' in tokenized_options:
+        #         group['Versao'] = 'line_urban'
+        #     if 'desportiva' in tokenized_options and 'm' in tokenized_options:
+        #         group['Versao'] = 'desportiva_m'
+        #     if 'line' in tokenized_options and 'luxury' in tokenized_options:
+        #         group['Versao'] = 'line_luxury'
+        # if 'pack' in tokenized_options and 'desportivo' in tokenized_options and 'm' in tokenized_options:
+        #     if 'S1' in tokenized_modelo:
+        #         group['Versao'] = 'desportiva_m'
+        #     elif 'S5' in tokenized_modelo or 'S3' in tokenized_modelo or 'S2' in tokenized_modelo:
+        #         group['Versao'] = 'pack_desportivo_m'
+        # if 'bmw' in tokenized_options and 'modern' in tokenized_options:  # no need to search for string line, there are no bmw modern without line;
+        #     if 'S5' in tokenized_modelo:
+        #         group['Versao'] = 'line_luxury'
+        #     else:
+        #         group['Versao'] = 'line_urban'
+        # if 'xline' in tokenized_options:
+        #     group['Versao'] = 'xline'
+
+        # Faróis
+        if "xénon" in tokenized_options or 'bixénon' in tokenized_options or 'xenon' in tokenized_options:
+            group['Farois_Xenon'] = 1
+        elif "farois" in tokenized_options and "led" in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options:
+            group['Farois_LED'] = 1
+
+        # Jantes
+        if 'sobresselente' not in tokenized_options or 'sobressalente' not in tokenized_options:
+            # if 'jantes' in tokenized_options and 'sobresselente' not in tokenized_options \
+            #         or 'jante' in tokenized_options and 'sobresselente' not in tokenized_options \
+            #         or 'jantes' in tokenized_options and 'sobressalente' not in tokenized_options \
+            #         or 'jante' in tokenized_options and 'sobressalente' not in tokenized_options :
+            if 'jantes' in tokenized_options \
+                    or 'jante' in tokenized_options \
+                    or 'jantes' in tokenized_options  \
+                    or 'jante' in tokenized_options:
+                for word in tokenized_options:
+                    for value in range(15, 21):
+                        if str(value) == str(word):
+                            group['Jantes'] = [str(value)] * group.shape[0]
+
+    # Cor Exterior
+    line_color = group['Cor'].head(1).values[0]
+    tokenized_color = nltk.word_tokenize(line_color)
+    color = [x for x in colors_pt if x in tokenized_color]
+    if not color:
+        color = [x for x in colors_en if x in tokenized_color]
+    if not color:
+        if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58'] or tokenized_color == [' '] or tokenized_color == ['pintura', 'metalizada']:
+            color = ['undefined']
+            # level_0_performance_report.log_record('1 - Cor exterior não encontrada {} para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
+        elif tokenized_color == ['verm', 'tk', 'mmm']:
+            color = ['vermelho']
+        else:
+            line_color_ext_code = group['Colour_Ext_Code'].head(1).values[0]
+            if line_color_ext_code == 'P0X13':
+                color = ['castanho']
+            elif len(tokenized_color) == 0:
+                level_0_performance_report.log_record('Não foi encontrada a cor exterior do veículo {} com a seguinte descrição de cor exterior: \'{}\'.'.format(key, line_color), project_id, flag=1)
+                return
+            else:
+                level_0_performance_report.log_record('2 - Cor exterior não encontrada {} para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
+                color = np.nan
+                pass
+                # raise ValueError('Color Ext Not Found: {} in Vehicle {}'.format(tokenized_color, key))
+    try:
+        if len(color) > 1:  # Fixes cases such as 'white silver'
+            color = [color[0]]
+        color = color * group.shape[0]
+    except TypeError:
+        pass
+    try:
+        group['Cor_Exterior'] = color
+    except ValueError:
+        print(color)
+
+    # Cor Interior
+    # line_interior = group['Interior'].head(1).values[0]
+    # tokenized_interior = nltk.word_tokenize(line_interior)
+    #
+    # if 'dakota' in tokenized_interior:
+    #     color_int = [x for x in tokenized_interior if x in dakota_colors]
+    #     if color_int:
+    #         group['Cor_Interior'] = 'dakota_' + color_int[0]
+    # elif 'nappa' in tokenized_interior:
+    #     color_int = [x for x in tokenized_interior if x in nappa_colors]
+    #     if color_int:
+    #         group['Cor_Interior'] = 'nappa_' + color_int[0]
+    # elif 'vernasca' in tokenized_interior:
+    #     color_int = [x for x in tokenized_interior if x in vernasca_colors]
+    #     if color_int:
+    #         group['Cor_Interior'] = 'vernasca_' + color_int[0]
+    # elif 'nevada' in tokenized_interior:
+    #     color_int = [x for x in tokenized_interior if x in nevada_colors]
+    #     if color_int:
+    #         group['Cor_Interior'] = 'nevada_' + color_int[0]
+    # elif 'merino' in tokenized_interior:
+    #     color_int = [x for x in tokenized_interior if x in merino_colors]
+    #     if color_int:
+    #         group['Cor_Interior'] = 'merino_' + color_int[0]
+    # else:
+    #     if 'antraci' in tokenized_interior or 'antracit' in tokenized_interior or 'anthracite/silver' in tokenized_interior or 'preto/laranja' in tokenized_interior or 'preto/silver' in tokenized_interior or 'preto/preto' in tokenized_interior or 'confort' in tokenized_interior or 'standard' in tokenized_interior or 'preto' in tokenized_interior or 'antracite' in tokenized_interior or 'antracite/laranja' in tokenized_interior or 'antracite/preto' in tokenized_interior or 'antracite/cinza/preto' in tokenized_interior or 'antracite/vermelho/preto' in tokenized_interior or 'antracite/vermelho' in tokenized_interior or 'interiores' in tokenized_interior:
+    #         group['Cor_Interior'] = 'preto'
+    #     elif 'oyster/preto' in tokenized_interior:
+    #         group['Cor_Interior'] = 'oyster'
+    #     elif 'platinu' in tokenized_interior or 'grey' in tokenized_interior or 'prata/preto/preto' in tokenized_interior or 'prata/cinza' in tokenized_interior:
+    #         group['Cor_Interior'] = 'cinzento'
+    #     elif 'castanho' in tokenized_interior or 'walnut' in tokenized_interior:
+    #         group['Cor_Interior'] = 'castanho'
+    #     elif 'âmbar/preto/pr' in tokenized_interior:
+    #         group['Cor_Interior'] = 'amarelo'
+    #     elif 'champagne' in tokenized_interior:
+    #         group['Cor_Interior'] = 'bege'
+    #     elif 'crimson' in tokenized_interior:
+    #         group['Cor_Interior'] = 'vermelho'
+    #     else:
+    #         group['Cor_Interior'] = '0'
+            # level_0_performance_report.log_record('Cor Interior não encontrada: \'{}\' para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
+
+    # Tipo Interior
+    # if 'comb' in tokenized_interior or 'combin' in tokenized_interior or 'combinação' in tokenized_interior or 'tecido/pele' in tokenized_interior:
+    #     group['Tipo_Interior'] = 'combinação'
+    # elif 'hexagon\'' in tokenized_interior or 'hexagon/alcantara' in tokenized_interior:
+    #     group['Tipo_Interior'] = 'tecido_micro'
+    # elif 'tecido' in tokenized_interior or 'cloth' in tokenized_interior:
+    #     group['Tipo_Interior'] = 'tecido'
+    # elif 'pele' in tokenized_interior or 'leather' in tokenized_interior or 'dakota\'' in tokenized_interior or 'couro' in tokenized_interior:
+    #     group['Tipo_Interior'] = 'pele'
+    # else:
+    #     group['Tipo_Interior'] = '0'
+
+    return group
 
 
 def datasets_dictionary_function(train_x, train_y, test_x, test_y, train_x_oversampled=pd.DataFrame(), train_y_oversampled=pd.Series()):
@@ -698,15 +894,14 @@ def prov_replacement(df):
     return df
 
 
-def color_replacement(df, project_id):
+def color_replacement(df, color_replacement_dict, project_id):
     # Project_Id = 2162
 
     color_types = ['Cor_Exterior']
-    colors_to_replace = {'black': 'preto', 'preto/silver': 'preto/prateado', 'tartufo': 'truffle', 'preto/laranja/preto/lara': 'preto/laranja', 'white': 'branco', 'blue': 'azul', 'red': 'vermelho', 'grey': 'cinzento', 'silver': 'prateado', 'orange': 'laranja', 'green': 'verde', 'anthrazit': 'antracite', 'antracit': 'antracite', 'brown': 'castanho', 'antracito': 'antracite', 'âmbar/preto/pr': 'ambar/preto/preto', 'beige': 'bege', 'kaschmirsilber': 'cashmere', 'beje': 'bege'}
 
     try:
         for color_type in color_types:
-            df[color_type] = df[color_type].replace(colors_to_replace)
+            df[color_type] = df[color_type].replace(color_replacement_dict)
             df.drop(df[df[color_type] == 0].index, axis=0, inplace=True)
     except TypeError:
         level_0_performance_report.log_record('Color Ext Not Found', project_id, flag=1)
@@ -715,7 +910,7 @@ def color_replacement(df, project_id):
 
 
 def score_calculation(df, stockdays_threshold, margin_threshold, project_id):
-    if project_id == 2162:
+    if project_id == 2162 or project_id == 2775:
         df['stock_days'] = (df['Data Venda'] - df['Data Compra']).dt.days
         df.loc[df['stock_days'].lt(0), 'stock_days'] = 0
 
@@ -762,11 +957,11 @@ def value_substitution(df, non_null_column=None, null_column=None):
 
 def new_features(df, sel_cols, project_id):
 
-    if project_id == 2162:
+    if project_id == 2162 or project_id == 2775:
         df.dropna(inplace=True)  # This is here for the cases where a value is not grouped. So it doesn't stop the code. Warning will still be uploaded to SQL.
         df_grouped = df.sort_values(by=['Data Venda']).groupby(sel_cols)
         print('Number of Configurations: {}'.format(len(df_grouped)))
-        df = df_grouped.apply(previous_sales_info_optionals_baviera)
+        df = df_grouped.apply(previous_sales_info_order_optimization_projects)
 
         return df.fillna(0)
 
@@ -824,7 +1019,7 @@ def additional_info_optimization_hyundai(args):
     return x
 
 
-def previous_sales_info_optionals_baviera(x):
+def previous_sales_info_order_optimization_projects(x):
     # Project_ID = 2162
 
     prev_scores, i = [], 0

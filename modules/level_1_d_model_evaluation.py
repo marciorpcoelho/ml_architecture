@@ -645,7 +645,7 @@ def plot_conf_matrix(groundtruth, prediction, classes, model, project_id):
     plt.close()
 
 
-def data_grouping_by_locals_temp(df, configuration_parameters):
+def data_grouping_by_locals_temp(df, configuration_parameters, project_id):
     df['score_class_gt'] = df['new_score']
 
     df_grouped = df.groupby(configuration_parameters)
@@ -654,16 +654,17 @@ def data_grouping_by_locals_temp(df, configuration_parameters):
     df_grouped2 = df.groupby(configuration_parameters + ['Local da Venda'])
     df = df_grouped2.apply(additional_info_temp, ('_local',))
 
-    df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda_v2'])
-    df = df_grouped3.apply(additional_info_temp, ('_local_v2',))
+    if project_id == 2162:
+        df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda_v2'])
+        df = df_grouped3.apply(additional_info_temp, ('_local_v2',))
 
-    df_grouped4 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_1'])
-    df = df_grouped4.apply(additional_info_temp, ('_local_Fase2_level_1',))
+        df_grouped4 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_1'])
+        df = df_grouped4.apply(additional_info_temp, ('_local_Fase2_level_1',))
 
-    df_grouped5 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_2'])
-    df = df_grouped5.apply(additional_info_temp, ('_local_Fase2_level_2',))
+        df_grouped5 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_2'])
+        df = df_grouped5.apply(additional_info_temp, ('_local_Fase2_level_2',))
 
-    df.to_csv(base_path + '/output/bmw_dataset.csv')
+        df.to_csv(base_path + '/output/bmw_dataset.csv')
 
     return 'N/A', df, df.shape[0]
 

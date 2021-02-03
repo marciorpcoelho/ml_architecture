@@ -50,7 +50,7 @@ def main():
         classes, best_models, running_times = data_modelling(df, datasets, models)
         model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, oversample_check, project_id)
     else:
-        model_choice_message, best_model, vehicle_count = data_grouping_by_locals_temp(df, configuration_parameters)
+        model_choice_message, best_model, vehicle_count = data_grouping_by_locals_temp(df, configuration_parameters, level_2_optionals_baviera_options.project_id)
 
     deployment(best_model, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['final_table'])
 
@@ -90,7 +90,7 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
         df = lowercase_column_conversion(df, ['Opcional', 'Cor', 'Interior', 'Versão'])  # Lowercases the strings of these columns
 
-        dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather',
+        dict_strings_to_replace = {('Modelo', ' - não utilizar'): '', ('Interior', '\\|'): '/', ('Cor', '|'): '', ('Interior', 'ind.'): '', ('Interior', ']'): '/', ('Interior', '.'): ' ', ('Interior', '\'merino\''): 'merino', ('Interior', '\' merino\''): 'merino', ('Interior', '\'vernasca\''): 'vernasca', ('Interior', 'leder'): 'leather',
                                    ('Interior', 'p '): 'pele', ('Interior', 'pelenevada'): 'pele nevada', ('Opcional', 'bi-xénon'): 'bixénon', ('Opcional', 'vidro'): 'vidros', ('Opcional', 'dacota'): 'dakota', ('Opcional', 'whites'): 'white', ('Opcional', 'beige'): 'bege', ('Interior', '\'dakota\''): 'dakota', ('Interior', 'dacota'): 'dakota',
                                    ('Interior', 'mokka'): 'mocha', ('Interior', 'beige'): 'bege', ('Interior', 'dakota\''): 'dakota', ('Interior', 'antracite/cinza/p'): 'antracite/cinza/preto', ('Interior', 'antracite/cinza/pretoreto'): 'antracite/cinza/preto', ('Interior', 'nevada\''): 'nevada',
                                    ('Interior', '"nappa"'): 'nappa', ('Interior', 'anthrazit'): 'antracite', ('Interior', 'antracito'): 'antracite', ('Interior', 'preto/laranja/preto/lara'): 'preto/laranja', ('Interior', 'anthtacite'): 'antracite',
@@ -114,13 +114,13 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
             model_mapping, _ = sql_mapping_retrieval(level_2_optionals_baviera_options.DSN_MLG_PRD, level_2_optionals_baviera_options.sql_info['database'], level_2_optionals_baviera_options.sql_info['model_mapping'], 'Mapped_Value', level_2_optionals_baviera_options)
             model_mapping = model_mapping[0]
 
-        df = options_scraping(df, model_training_check, model_mapping, level_2_optionals_baviera_options)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+        df = options_scraping(df, model_mapping, level_2_optionals_baviera_options, model_training_check=model_training_check)  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
         df = remove_rows(df, [df[df.Modelo.isnull()].index], project_id, warning=1)
         df = remove_columns(df, ['Colour_Ext_Code'], project_id)  # This column was only needed for some very specific cases where no Colour_Ext_Code was available;
 
         project_units_count_checkup(df, 'Nº Stock', level_2_optionals_baviera_options, sql_check=1)
 
-        df = color_replacement(df, project_id)  # Translates all english colors to portuguese
+        df = color_replacement(df, level_2_optionals_baviera_options.colors_to_replace_dict, project_id)  # Translates all english colors to portuguese
 
         df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
 
