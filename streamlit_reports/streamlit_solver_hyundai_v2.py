@@ -312,7 +312,7 @@ def run_single_query(dsn, database, options_file_in, query):
 
 def period_calculation():
     start_date = date(date.today().year, 1, 1)
-    end_date = date.today()  # + relativedelta(months=+2)  # ToDo might be needed later on
+    end_date = date.today()  # + relativedelta(months=+2)  # ToDo might be needed later on. Also, from dateutil.relativedelta import relativedelta
     start_date_year = start_date.year
     # end_date_year = end_date.year
     end_date_month_number = end_date.month

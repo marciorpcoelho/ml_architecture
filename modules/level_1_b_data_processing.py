@@ -5,6 +5,7 @@ import time
 import string
 import warnings
 import operator
+import itertools
 import unidecode
 import numpy as np
 import pandas as pd
@@ -750,6 +751,35 @@ def options_scraping_per_group_cdsu(args):
     #     group['Tipo_Interior'] = '0'
 
     return group
+
+
+def pandas_regex_extraction_v2(df, pattern_dict, sel_col_to_search, sel_col_to_flag):
+
+    for key, value in pattern_dict.items():
+        find_words = []
+        non_find_words = []
+
+        words = value[0::2]
+        word_flags = value[1::2]
+        for word, word_flag in zip(words, word_flags):
+            if word_flag:
+                find_words.append(word)
+            else:
+                non_find_words.append(word)
+
+        print('non_find_words', non_find_words)
+        non_find_words_pattern = r'^(?:(?!{}).)*$'.format('|'.join(non_find_words))
+        print('non_find_words_pattern: {}'.format(non_find_words_pattern))
+
+        print('find_words', find_words)
+        all_sel_text_list_combinations = list(itertools.permutations(find_words))  # Creates all combinations with the selected words, taking order into account
+        print(all_sel_text_list_combinations)
+
+        find_words_pattern = '|'.join(['.*{}.*'.format(x) for x in ['\\b.*\\b'.join(x) for x in all_sel_text_list_combinations]])
+        print('find_words_pattern: {}'.format(find_words_pattern))
+
+        df.loc[(df[sel_col_to_search].str.contains(non_find_words_pattern, regex=True)) & (df[sel_col_to_search].str.contains(find_words_pattern, regex=True)), sel_col_to_flag] = 1
+        print(df)
 
 
 def datasets_dictionary_function(train_x, train_y, test_x, test_y, train_x_oversampled=pd.DataFrame(), train_y_oversampled=pd.Series()):
@@ -2030,7 +2060,7 @@ def feat_eng(df_in):
     df = df_in.copy()
 
     df['Power_Weight_Ratio'] = df['Power_kW'] / df['Weight_Empty']
-    df['Contract_km'] = df['Contract_km']/1000
+    df['Contract_km'] = df['Contract_km'] / 1000
 
     # contract start month
     df['contract_start_month'] = df['contract_start_date'].str[5:7]
@@ -2041,7 +2071,7 @@ def feat_eng(df_in):
 
     # change target column name, representing the cost
     df['target_cost'] = df.target
-    df = df.drop(['target'], axis = 1)
+    df = df.drop(['target'], axis=1)
     df['target_cost'] = df['target_cost'].fillna(0)
 
     values = {
@@ -2065,39 +2095,16 @@ def feat_eng(df_in):
     }
     df = df.fillna(value = values)
 
-    df['LL_2'] = '0'
-    df.loc[df.LL.str[:2] == 'RC', 'LL_2'] = df.LL.str[:4]
-    df.loc[df.LL.str[:2] != 'RC', 'LL_2'] = df.LL.str[:8]
-    df['LL'] = df['LL_2']
-    df = df.drop(['LL_2'], axis=1)
-
-    df['PI_2'] = '0'
-    df.loc[df.PI.str[:2] == 'OC', 'PI_2'] = df.PI.str[:4]
-    df.loc[df.PI.str[:2] != 'OC', 'PI_2'] = df.PI.str[:7]
-    df['PI'] = df['PI_2']
-    df = df.drop(['PI_2'], axis=1)
-
-    df['LA_2'] = '0'
-    df.loc[df.LA.str[:4] == 'AVK0', 'LA_2'] = df.LA.str[:4]
-    df.loc[df.LA.str[:4] != 'AVK0', 'LA_2'] = df.LA
-
-    df['LA'] = df['LA_2']
-    df = df.drop(['LA_2'], axis=1)
-
-    df['FI_2'] = '0'
-    df.loc[df.FI.str[:4] == 'QIVI', 'FI_2'] = df.FI.str[:4]
-    df.loc[df.FI.str[:4] != 'QIVI', 'FI_2'] = df.FI.str[:7]
-    df['FI'] = df['FI_2']
-    df = df.drop(['FI_2'], axis=1)
+    df.loc[df['LL'].str.startswith('€50.000.000'), 'LL'] = '€50.000.000'
+    df['AR'] = df['AR'].str.extract(r'^(.+%)')
+    df.loc[df['FI'].str.startswith('Até €1.000/Ano'), 'FI'] = 'Até €1.000/Ano'
 
     values = {
         'LL': '0',
         'AR': '0',
-        'PI': '0',
-        'LA': '0',
         'FI': '0'
     }
-    df = df.fillna(value = values)
+    df = df.fillna(value=values)
 
     columns_to_drop = [
         'contract_customer',
@@ -2109,7 +2116,7 @@ def feat_eng(df_in):
         'Customer_Name'
     ]
 
-    df = df.drop(columns_to_drop, axis = 1)
+    df = df.drop(columns_to_drop, axis=1)
 
     return df
 

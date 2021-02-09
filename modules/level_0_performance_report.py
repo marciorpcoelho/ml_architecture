@@ -65,6 +65,7 @@ project_dict = {2244: 'PA@Service Desk',
                 1112: 'Fotografia Stock - CRP ATL',
                 2610: 'Catalogação Peças @ DGO',
                 0000: 'Performance Analysis',
+                2527: 'Finlog - Previsão de Acidente',
                 2775: 'Otimização Encomenda CDSU Viaturas'
                 }
 
@@ -72,7 +73,8 @@ app_dict = {2244: 'Classificação Pedidos Service Desk',
             2162: 'Sugestão de Encomenda Baviera (Fase II)',
             2259: 'Sugestão de Encomenda de Peças - Após-Venda Baviera',
             2406: 'Sugestão de Encomenda - Importador',
-            2610: 'Apoio Classificação Peças - DGO'
+            2610: 'Apoio Classificação Peças - DGO',
+            2527: 'Finlog - Previsão de Acidente',
             }
 
 project_sql_dict = {2244: 'Project_SD',
@@ -83,6 +85,7 @@ project_sql_dict = {2244: 'Project_SD',
                     1111: 'DMS Stock Photograph',
                     1112: 'DMS Stock Photograph - CRP, ATL',
                     2775: 'Project_VHE_CDSU',
+                    2527: 'Project_VHE_Finlog',
                     }
 
 project_pbi_performance_link = 'https://bit.ly/2SJIYJy'

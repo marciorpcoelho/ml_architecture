@@ -194,8 +194,13 @@ def lower_between_same_kms_solution_2(x):
 def negative_values_evolution_control(df, tag):
 
     owner_account_w_negative_kms_evo = df[df['Kms_diff'] < 0]['Owner_Account'].unique()
+    owner_accounts = df['Owner_Account'].nunique()
+    chassis_numbers = df['Chassis_Number'].nunique()
+
     print('{} - #Owner Accounts com evolução de Kms negativa: {}'.format(tag, len(owner_account_w_negative_kms_evo)))
     print('{} - Owner Accounts com evolução de Kms negativa: {}'.format(tag, owner_account_w_negative_kms_evo))
+    print('{} - #Owners'.format(owner_accounts))
+    print('{} - #Chassis'.format(chassis_numbers))
 
     return
 
