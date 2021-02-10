@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import time
+import pickle
 import pyodbc
 import logging
 import pandas as pd
@@ -73,16 +74,19 @@ def data_modelling_v2(df):
     enc_Client_type, df = custom_ohenc_v2('Client_type', df)
     enc_Num_Vehicles_Total, df = custom_ohenc_v2('Num_Vehicles_Total', df)
     enc_Num_Vehicles_Finlog, df = custom_ohenc_v2('Num_Vehicles_Finlog', df)
+    enc_Customer_Group, df = custom_ohenc_v2('Customer_Group', df)
+    pickle_dict('Customer_Group', 'Client_Type', df)  # Creates a dictionary with all Customer Groups/Companies to be used in the streamlit app;
 
-    dump(enc_LL, 'models/enc_LL_v2.joblib')
-    dump(enc_AR, 'models/enc_AR_v2.joblib')
-    dump(enc_FI, 'models/enc_FI_v2.joblib')
-    dump(enc_Make, 'models/enc_Make_v2.joblib')
-    dump(enc_Fuel, 'models/enc_Fuel_v2.joblib')
-    dump(enc_Vehicle_Tipology, 'models/enc_Vehicle_Tipology_v2.joblib')
-    dump(enc_Client_type, 'models/enc_Client_type_v2.joblib')
-    dump(enc_Num_Vehicles_Total, 'models/enc_Num_Vehicles_Total_v2.joblib')
-    dump(enc_Num_Vehicles_Finlog, 'models/enc_Num_Vehicles_Finlog_v2.joblib')
+    dump(enc_LL, 'models/enc_LL.joblib')
+    dump(enc_AR, 'models/enc_AR.joblib')
+    dump(enc_FI, 'models/enc_FI.joblib')
+    dump(enc_Make, 'models/enc_Make.joblib')
+    dump(enc_Fuel, 'models/enc_Fuel.joblib')
+    dump(enc_Vehicle_Tipology, 'models/enc_Vehicle_Tipology.joblib')
+    dump(enc_Client_type, 'models/enc_Client_type.joblib')
+    dump(enc_Num_Vehicles_Total, 'models/enc_Num_Vehicles_Total.joblib')
+    dump(enc_Num_Vehicles_Finlog, 'models/enc_Num_Vehicles_Finlog.joblib')
+    dump(enc_Customer_Group, 'models/enc_Customer_Group.joblib')
 
     columns_to_drop = [
         # 'contract_duration',
@@ -215,6 +219,25 @@ def data_modelling_v2(df):
     log_record('Fim Secção D.', project_id)
     performance_info_append(time.time(), 'Section_D_End')
     return df_train_test_prob
+
+
+def pickle_dict(key_col, value_col, df):
+
+    df_in = df[[key_col, value_col]].copy()
+    df_in.drop_duplicates(inplace=True)
+
+    from collections import defaultdict
+    d = defaultdict(list)
+    for i, j in zip(df[key_col], df[value_col]):
+        d[i].append(j)
+
+    file_name = options_file.Customer_Group_dict_path
+
+    file_handler = open(file_name, 'wb')
+    pickle.dump(d, file_handler)
+    file_handler.close()
+
+    return
 
 
 def data_modelling(df):
@@ -519,20 +542,8 @@ def feat_eng_v2(df_in):
     }
     df = df.fillna(value=values)
 
-    # df['LL_2'] = '0'
-    # df.loc[df.LL.str[:2] == 'RC', 'LL_2'] = df.LL.str[:4]
-    # df.loc[df.LL.str[:2] != 'RC', 'LL_2'] = df.LL.str[:8]
-    # df['LL'] = df['LL_2']
-    # df = df.drop(['LL_2'], axis=1)
     df.loc[df['LL'].str.startswith('€50.000.000'), 'LL'] = '€50.000.000'
-
     df['AR'] = df['AR'].str.extract(r'^(.+%)')
-
-    # df['FI_2'] = '0'
-    # df.loc[df.FI.str[:4] == 'QIVI', 'FI_2'] = df.FI.str[:4]
-    # df.loc[df.FI.str[:4] != 'QIVI', 'FI_2'] = df.FI.str[:7]
-    # df['FI'] = df['FI_2']
-    # df = df.drop(['FI_2'], axis=1)
     df.loc[df['FI'].str.startswith('Até €1.000/Ano'), 'FI'] = 'Até €1.000/Ano'
 
     values = {
@@ -593,7 +604,6 @@ def custom_ohenc_v2(col, df_in):
             columns=col + '_' + enc.get_feature_names()
         )
     ], axis=1).drop([col], axis=1)
-
 
     return enc, df
 

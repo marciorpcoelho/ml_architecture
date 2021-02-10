@@ -48,7 +48,7 @@ def main():
 
     if model_training_check:
         classes, best_models, running_times = data_modelling(df, datasets, models)
-        model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, level_2_optionals_baviera_options, oversample_check, project_id)
+        model_choice_message, best_model, vehicle_count = model_evaluation(df, models, best_models, running_times, datasets, number_of_features, level_2_optionals_baviera_options, oversample_check, project_id)
     else:
         model_choice_message, best_model, vehicle_count = data_grouping_by_locals_temp(df, configuration_parameters, level_2_optionals_baviera_options.project_id)
 
@@ -198,11 +198,11 @@ def data_modelling(df, datasets, models):
     return classes, best_models, running_times
 
 
-def model_evaluation(df, models, best_models, running_times, classes, datasets, number_of_features, options_file, oversample_check, proj_id):
+def model_evaluation(df, models, best_models, running_times, datasets, number_of_features, options_file, oversample_check, proj_id):
     performance_info_append(time.time(), 'Section_D_Start')
     log_record('Início Secção D...', proj_id)
 
-    results_training, results_test, predictions = performance_evaluation_classification(models, best_models, classes, running_times, datasets, options_file, proj_id)  # Creates a df with the performance of each model evaluated in various metrics, explained in the provided pdf
+    results_training, results_test, predictions = performance_evaluation_classification(models, best_models, running_times, datasets, options_file, proj_id)  # Creates a df with the performance of each model evaluated in various metrics, explained in the provided pdf
     plot_roc_curve(best_models, models, datasets, 'roc_curve_temp_' + str(number_of_features))
 
     df_model_dict = multiprocess_model_evaluation(df, models, datasets, best_models, predictions, configuration_parameters, oversample_check, proj_id)

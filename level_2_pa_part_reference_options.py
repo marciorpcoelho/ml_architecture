@@ -1,13 +1,17 @@
 import os
 from py_dotenv import read_dotenv
 from multiprocessing import cpu_count
+from sklearn.linear_model import LogisticRegression
+import lightgbm as lgb
 dotenv_path = '/info.env'
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 read_dotenv(base_path + dotenv_path)
 
+
 if 'nt' in os.name:
     DSN_SRV3_PRD = os.getenv('DSN_SRV3_Prd')
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd')
+    DSN_MLG_DEV = os.getenv('DSN_MLG_Dev')
 elif 'posix' in os.name:
     DSN_SRV3_PRD = os.getenv('DSN_SRV3_Prd_Linux')
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd_Linux')
@@ -50,6 +54,12 @@ column_translate_dict = {
     'Classification_desc': 'Família Classificada',
     'Classification_Prob': 'Grau Confiança',
     'Percentage_Predicted': '% Conf.',
+}
+
+gridsearch_parameters = {
+    # 'lr': [LogisticRegression, [{'C': [0.01, 0.1, 1, 10, 100], 'solver': ['lbfgs', 'newton-cg'], 'max_iter': [2000], 'multi_class': ['ovr', 'multinomial']}]],
+    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50, 100], 'n_estimators': [50, 100, 200], 'max_depth': ['50', '100'], 'objective': ['multiclass']}]],
+
 }
 
 others_families_dict = {

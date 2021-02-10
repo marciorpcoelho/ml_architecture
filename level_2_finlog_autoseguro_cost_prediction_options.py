@@ -44,19 +44,20 @@ DATA_PROB_PATH = '../dbs/df_train_test_prob_for_plotting_20200817.csv'  # File c
 # Encoders created with jupyter notebook Finlog_20200810_candidate_V4.ipynb
 MODEL_PATH = '../models/model.joblib'
 
-enc_LL_path = '../models/enc_LL_v2.joblib'
-enc_AR_path = '../models/enc_AR_v2.joblib'
-enc_PI_path = '../models/enc_PI_v2.joblib'
-enc_LA_path = '../models/enc_LA_v2.joblib'
-enc_FI_path = '../models/enc_FI_v2.joblib'
-
-enc_Make_path = '../models/enc_Make_v2.joblib'
-enc_Fuel_path = '../models/enc_Fuel_v2.joblib'
-enc_Vehicle_Segment_path = '../models/enc_Vehicle_Segment_v2.joblib'
-enc_Vehicle_Tipology_path = '../models/enc_Vehicle_Tipology_v2.joblib'
-enc_Client_type_path = '../models/enc_Client_type_v2.joblib'
-enc_Num_Vehicles_Total_path = '../models/enc_Num_Vehicles_Total_v2.joblib'
-enc_Num_Vehicles_Finlog_path = '../models/enc_Num_Vehicles_Finlog_v2.joblib'
+enc_LL_path = '../models/enc_LL.joblib'
+enc_AR_path = '../models/enc_AR.joblib'
+enc_PI_path = '../models/enc_PI.joblib'
+enc_LA_path = '../models/enc_LA.joblib'
+enc_FI_path = '../models/enc_FI.joblib'
+enc_Make_path = '../models/enc_Make.joblib'
+enc_Fuel_path = '../models/enc_Fuel.joblib'
+enc_Vehicle_Segment_path = '../models/enc_Vehicle_Segment.joblib'
+enc_Vehicle_Tipology_path = '../models/enc_Vehicle_Tipology.joblib'
+enc_Client_type_path = '../models/enc_Client_type.joblib'
+enc_Num_Vehicles_Total_path = '../models/enc_Num_Vehicles_Total.joblib'
+enc_Num_Vehicles_Finlog_path = '../models/enc_Num_Vehicles_Finlog.joblib'
+enc_Customer_Group_path = '../models/enc_Customer_Group.joblib'
+Customer_Group_dict_path = '../models/customer_group_dict'
 
 
 apply_query_v2 = '''
@@ -390,6 +391,7 @@ get_train_dataset_query = '''
         customer.Vehicle_No,
         customer.Accident_No,
         customer.target,
+        customer.Customer_Group,
         vehicle.FI,
         --vehicle.LA,
         vehicle.LL,

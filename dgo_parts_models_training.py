@@ -1,27 +1,21 @@
 import sys
 import numpy as np
 import pandas as pd
-import lightgbm as lgb
 import sklearn as sk
 import time
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import auc, precision_score, confusion_matrix, make_scorer, recall_score
+from sklearn.metrics import auc, precision_score, confusion_matrix, make_scorer, recall_score, accuracy_score
 from modules.level_1_c_data_modelling import classification_model_training
+import level_2_pa_part_reference_options as options_file
 # Text Features
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.decomposition import TruncatedSVD
-from sklearn.linear_model import LogisticRegression
 import warnings
 import sklearn.exceptions
 warnings.filterwarnings("ignore", category=sklearn.exceptions.UndefinedMetricWarning)
 
 from collections import defaultdict, Counter
 
-gridsearch_parameters = {
-    'lr': [LogisticRegression, [{'C': [0.01, 0.1, 1, 10, 100], 'solver': ['lbfgs', 'newton-cg'], 'max_iter': [2000], 'multi_class': ['ovr', 'multinomial']}]],
-    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50, 100], 'n_estimators': [50, 100, 200], 'max_depth': ['50', '100'], 'objective': ['multiclass']}]],
-
-}
 
 pd.set_option('display.width', 3000)
 pd.set_option('display.max_rows', 200)
@@ -42,7 +36,8 @@ def model_training(ml_dataset, clf=None):
         print('Classification Model not found. Training a new one...')
 
         scorer = make_scorer(recall_score, average='weighted')
-        classes, best_models, running_times = classification_model_training(['lgb'], train_X, train_Y, gridsearch_parameters, 3, scorer, 2610)
+        classes, best_models, running_times = classification_model_training(options_file.gridsearch_parameters.keys(), train_X, train_Y, options_file.gridsearch_parameters, 3, scorer, 2610)
+        metrics_dict['Running_Time'] = running_times['lgb']
         clf = best_models['lgb']
         cm_flag = 1
 
@@ -55,19 +50,20 @@ def model_training(ml_dataset, clf=None):
         labels = [inv_target_map[x] for x in clf.classes_]
         df_cm_test = pd.DataFrame(cm, columns=labels, index=labels)
         test_y_ser = pd.Series(test_Y)
-        metrics_dict['precision_score_weighted'] = precision_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes))
-        metrics_dict['precision_score_micro'] = precision_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes))
-        metrics_dict['precision_score_macro'] = precision_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes))
-        metrics_dict['recall_score_weighted'] = recall_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes))
-        metrics_dict['recall_score_micro'] = recall_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes))
-        metrics_dict['recall_score_macro'] = recall_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['Precision_Weighted'] = precision_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['Precision_Micro'] = precision_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['Precision_Macro'] = precision_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['Recall_Weighted'] = recall_score(test_y_ser, predictions_test_converted_classes, average='weighted', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['Recall_Micro'] = recall_score(test_y_ser, predictions_test_converted_classes, average='micro', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['Recall_Macro'] = recall_score(test_y_ser, predictions_test_converted_classes, average='macro', labels=np.unique(predictions_test_converted_classes))
+        metrics_dict['Accuracy'] = accuracy_score(test_y_ser, predictions_test_converted_classes)
 
-        print('\n### Precision Score (Weighted):', metrics_dict['precision_score_weighted'])
-        print('### Precision Score (Micro):', metrics_dict['precision_score_micro'])
-        print('### Precision Score (Macro):\n', metrics_dict['precision_score_macro'])
-        print('\n### Recall Score (Weighted):', metrics_dict['recall_score_weighted'])
-        print('### Recall Score (Micro):', metrics_dict['recall_score_micro'])
-        print('### Recall Score (Macro):\n', metrics_dict['recall_score_macro'])
+        # print('\n### Precision Score (Weighted):', metrics_dict['precision_score_weighted'])
+        # print('### Precision Score (Micro):', metrics_dict['precision_score_micro'])
+        # print('### Precision Score (Macro):\n', metrics_dict['precision_score_macro'])
+        # print('\n### Recall Score (Weighted):', metrics_dict['recall_score_weighted'])
+        # print('### Recall Score (Micro):', metrics_dict['recall_score_micro'])
+        # print('### Recall Score (Macro):\n', metrics_dict['recall_score_macro'])
 
     predictions_train, probabilities_train, train_x_scored = model_prediction(clf, train_X, train, target_map, inv_target_map)
     predictions_train_converted_classes = predictions_train

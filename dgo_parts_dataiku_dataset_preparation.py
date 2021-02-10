@@ -4,6 +4,7 @@ import time
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
 from modules.level_1_e_deployment import sql_inject
 from modules.level_1_a_data_acquisition import sql_retrieve_df
+from modules.level_1_d_model_evaluation import algorithms_performance_dataset_creation, model_performance_saving
 from modules.level_0_performance_report import log_record
 import level_2_pa_part_reference_options as options_file
 from dgo_parts_models_training import model_training
@@ -349,7 +350,7 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     other_families_cm_test.to_csv('dbs/other_families_cm_tmp.csv')
 
     # First Classification
-    master_file_scored, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), main_families_clf)
+    master_file_scored, _, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), main_families_clf)
     master_file_scored = prob_thres_col_creation(master_file_scored)
 
     # First 0.5 CutOff
@@ -359,14 +360,35 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     print('first classification, sub 50 shape:', master_file_scored_sub_50.shape)
 
     # Second Classification
-    master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], other_families_clf)
+    master_file_sub_50_scored, _, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], other_families_clf)
     master_file_sub_50_scored = prob_thres_col_creation(master_file_sub_50_scored)
 
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])
     print(master_file_final.shape)
 
+    models_metrics_dict = {
+        'lgb_main_families': main_families_metrics_dict,
+        'lgb_other_families': other_families_metrics_dict
+    }
+
+    performance_saving(models_metrics_dict)
+
     log_record('Step 8 ended.', options_file.project_id)
     return master_file_final, main_families_cm_test, main_families_metrics_dict, other_families_cm_test, other_families_metrics_dict
+
+
+def performance_saving(models_metrics_dict):
+
+    results_test = []
+    models = models_metrics_dict.keys()
+
+    for model in models:
+        results_test.append(models_metrics_dict[model])
+        df_results = algorithms_performance_dataset_creation(results_test, 'Test', models_metrics_dict.keys())
+
+        model_performance_saving(df_results, options_file)
+
+    return
 
 
 def flow_step_9(df):
