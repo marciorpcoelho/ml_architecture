@@ -77,7 +77,7 @@ apply_query_v2 = '''
         '{}' AS contract_duration,
         '{}' AS Contract_km,
         '{}' AS contract_start_date
-    FROM [BI_MLG].[dbo].[VHE_Finlog_Vehicle_Data]), 
+    FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data]), 
     cte AS (
         SELECT DISTINCT
         NULL AS contract_customer,
@@ -126,11 +126,11 @@ apply_query_v2 = '''
         vehicle_data.Max_speed AS Max_speed,
         vehicle_data.Max_Add_Load AS Max_Add_Load
     FROM filters
-    LEFT JOIN [BI_MLG].[dbo].[VHE_Finlog_Vehicle_Data] vehicle_data ON
+    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] vehicle_data ON
     vehicle_data.Fuel = filters.Fuel AND
     vehicle_data.Make = filters.Make AND
     vehicle_data.Vehicle_Tipology = filters.Vehicle_Tipology
-    LEFT JOIN [BI_MLG].[dbo].[VHE_Finlog_Customer_Data] customer_data ON
+    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] customer_data ON
     customer_data.Client_type = filters.Client_type AND
     customer_data.Num_Vehicles_Total = filters.Num_Vehicles_Total AND
     customer_data.Num_Vehicles_Finlog = filters.Num_Vehicles_Finlog
@@ -225,7 +225,7 @@ apply_query = '''
         '${contract_duration}' AS contract_duration,
         '${km_year}' AS Contract_km,
         '${contract_start_date}' AS contract_start_date
-        FROM [BI_MLG].[dbo].[VHE_Finlog_Vehicle_Data]), 
+        FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data]), 
         cte AS (
         SELECT DISTINCT
         NULL AS contract_customer,
@@ -276,12 +276,12 @@ apply_query = '''
         vehicle_data.Max_speed AS Max_speed,
         vehicle_data.Max_Add_Load AS Max_Add_Load
     FROM filters
-    LEFT JOIN [BI_MLG].[dbo].[VHE_Finlog_Vehicle_Data] vehicle_data ON
+    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] vehicle_data ON
         vehicle_data.Fuel = filters.Fuel AND
         vehicle_data.Make = filters.Make AND
         vehicle_data.Vehicle_Segment = filters.Vehicle_Segment
     
-    LEFT JOIN [BI_MLG].[dbo].[VHE_Finlog_Customer_Data] customer_data ON
+    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] customer_data ON
         customer_data.Client_type = filters.Client_type AND
         customer_data.Num_Vehicles_Total = filters.Num_Vehicles_Total AND
         customer_data.Num_Vehicles_Finlog = filters.Num_Vehicles_Finlog)
@@ -366,7 +366,7 @@ auth_description = '''
         vehicle.Vehicle_Segment,
         auth.*
     FROM [BI_MLG].[dbo].[VHE_Authorization_Line] auth
-    LEFT JOIN [BI_MLG].[dbo].[VHE_Finlog_Vehicle_Data] vehicle ON
+    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] vehicle ON
     auth.Vehicle = vehicle.Vehicle_No
     WHERE
     auth.[Invoice Type] IN ('SINISTRO', 'VSSINISTRO', 'VS ROUBO') --AND
@@ -439,9 +439,9 @@ get_train_dataset_query = '''
         vehicle.Max_speed,
         vehicle.Max_Add_Load
     FROM
-        [BI_MLG].[dbo].[VHE_Finlog_Customer_Data] customer
+        [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] customer
     LEFT JOIN
-        [BI_MLG].[dbo].[VHE_Finlog_Vehicle_Data] vehicle
+        [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] vehicle
     ON
         vehicle.Vehicle_No = customer.Vehicle_No
     WHERE
@@ -483,7 +483,7 @@ customer_data_query = '''
         customer_data.Num_Vehicles_Total,
         customer_data.Num_Vehicles_Finlog,
         1 as cross_join_key
-    FROM [BI_MLG].[dbo].[VHE_Finlog_Customer_Data] as customer_data
+    FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] as customer_data
     WHERE 1=1
     and customer_data.Client_type in ({})
     and customer_data.Num_Vehicles_Total in ({})
@@ -522,7 +522,7 @@ vehicle_data_query = '''
         VHE.Make,
         VHE.Vehicle_Tipology,
         1 as cross_join_key
-    FROM [BI_MLG].[dbo].[VHE_Finlog_Vehicle_Data] as VHE
+    FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] as VHE
     WHERE 1=1
     and VHE.Fuel in ({})
     and VHE.Make in ({})

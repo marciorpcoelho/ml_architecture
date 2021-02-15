@@ -29,7 +29,7 @@ def main():
     query_filters = {'NLR_CODE': '4R0', 'Franchise_Code_DW': '43'}
 
     df = data_acquisition(query_filters)
-    control_prints(df, 'after getting data')
+    control_prints(df, 'after getting data', head=1)
 
     df = data_processing(df)
 
@@ -37,7 +37,6 @@ def main():
 
     control_prints(df, 'before deployment', head=1)
     deployment(df, level_2_optionals_cdsu_options.sql_info['database'], level_2_optionals_cdsu_options.sql_info['final_table_temp'])
-
     # performance_info(level_2_optionals_cdsu_options.project_id, level_2_optionals_cdsu_options, model_choice_message, vehicle_count)
 
     log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[project_id]), project_id)
@@ -56,11 +55,12 @@ def data_acquisition(query_filters):
     return df
 
 
-def control_prints(df, tag, head=0, save=0):
+def control_prints(df, tag, head=0, save=0, null_analysis_flag=0):
 
     print('{}\n{}'.format(tag, df.shape))
     try:
         print('Unique Vehicles: {}'.format(df['Nº Stock'].nunique()))
+
     except KeyError:
         print('Unique Vehicles: {}'.format(df['VHE_Number'].nunique()))
 
@@ -68,6 +68,8 @@ def control_prints(df, tag, head=0, save=0):
         print(df.head())
     if save:
         df.to_csv('dbs/cdsu_control_save_tag_{}.csv'.format(tag))
+    if null_analysis_flag:
+        null_analysis(df)
 
     return
 
@@ -88,30 +90,35 @@ def data_processing(df):
                                    ('Interior', 'champag'): 'champagne', ('Interior', 'cri'): 'crimson', ('Modelo', 'Enter Model Details'): '', ('Registration_Number', '\.'): '', ('Interior', 'preto/m '): 'preto ', ('Interior', 'congnac/preto'): 'cognac/preto',
                                    ('Local da Venda', 'DCN'): 'DCP', ('Cor', 'oceanao'): 'oceano', ('Cor', 'ocenao'): 'oceano', ('Interior', 'reto'): 'preto', ('Cor', 'banco'): 'branco', ('Cor', 'catanho'): 'castanho', ('Cor', 'petrìleo'): 'petróleo', ('Interior', 'ecido'): 'tecido',
                                    ('Interior', 'ege'): 'bege', ('Interior', 'inza'): 'cinza', ('Interior', 'inzento'): 'cinzento', ('Interior', 'teciso'): 'tecido', ('Opcional', 'autmático'): 'automático', ('Opcional', 'esctacionamento'): 'estacionamento',
-                                   ('Opcional', 'estacionamernto'): 'estacionamento', ('Opcional', 'pct'): 'pacote', ('Opcional', 'navegaçãp'): 'navegação', ('Opcional', '\\+'): ''}
+                                   ('Opcional', 'estacionamernto'): 'estacionamento', ('Opcional', 'pct'): 'pacote', ('Opcional', 'navegaçãp'): 'navegação', ('Opcional', '\\+'): '', ('Versão', 'bussiness'): 'business', ('Versão', 'r-line'): 'rline', ('Versão', 'confortl'): 'confortline',
+                                   ('Versão', 'high'): 'highline', ('Opcional', 'p/dsg'): 'para dsg', ('Opcional', 'dianteirostraseiros'): 'dianteiros traseiros', ('Opcional', 'dianteirostras'): 'dianteiros traseiros', ('Opcional', 'diant'): 'dianteiros',
+                                   ('Opcional', 'dttras'): 'dianteiros traseiros', ('Opcional', 'dttrpark'): 'dianteiros traseiros park', ('Opcional', 'dianttras'): 'dianteiros traseiros', ('Opcional', 'câmara'): 'camara', ('Opcional', 'camera'): 'camara',
+                                   ('Opcional', 'câmera'): 'camara', ('Versão', 'trendtline'): 'trendline', ('Versão', 'trendtline'): 'trendline', ('Versão', 'confort'): 'confortline', ('Versão', 'conftl'): 'confortline', ('Versão', 'hightline'): 'highline', ('Versão', 'bluem'): 'bluemotion',
+                                   ('Versão', 'bmt'): 'bluemotion', ('Versão', 'up!bluemotion'): 'up! bluemotion', ('Versão', 'up!bluem'): 'up! bluemotion', ('Versão', 'trendl'): 'trendline', ('Versão', 'conft'): 'confortline', ('Versão', 'highlin'): 'highline',
+                                   ('Versão', 'confortine'): 'confortline', ('Versão', 'cofrtl'): 'confortline', ('Versão', 'confortlline'): 'confortline', ('Versão', 'highl'): 'highline'}
 
         control_prints(df, '1')
         df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
 
-        null_analysis(df)
+        control_prints(df, '1b', null_analysis_flag=1)
         df.dropna(subset=['Cor', 'Colour_Ext_Code', 'Modelo', 'Interior', 'Tipo Encomenda'], axis=0, inplace=True)  # Removes all remaining NA's
         control_prints(df, '2')
 
-        df = new_column_creation(df, [x for x in level_2_optionals_cdsu_options.configuration_parameters_full if x != 'Modelo'], 0)  # Creates new columns filled with zeros, which will be filled in the future
+        df = new_column_creation(df, [x for x in level_2_optionals_cdsu_options.configuration_parameters_full if x != 'Modelo' and x != 'Combustível'], 0)  # Creates new columns filled with zeros, which will be filled in the future
 
-        # dict_cols_to_take_date_info = {'buy_': 'Data Compra'}
-        # df = date_cols(df, dict_cols_to_take_date_info)  # Creates columns for the datetime columns of dict_cols_to_take_date_info, with just the day, month and year
         df = total_price(df)  # Creates a new column with the total cost for each configuration;
         control_prints(df, '3a', head=0)
 
         df = remove_zero_price_total_vhe(df, project_id)  # Removes VHE with a price total of 0; ToDo: keep checking up if this is still necessary
         control_prints(df, '3b', head=0)
 
-        # df = remove_rows(df, [df[df.Modelo.str.contains('Série|Z4|i3|MINI')].index], project_id)  # No need for Prov filtering, as it is already filtered in the data source;
-        # df = remove_rows(df, [df[df.Franchise_Code.str.contains('T|Y|R|G')].index], project_id)  # This removes Toyota Vehicles that aren't supposed to be in this model
+        df = remove_rows(df, [df[df.Franchise_Code.str.contains('X')].index], project_id)  # This removes VW Commercials Vehicles that aren't supposed to be in this model
         df = remove_rows(df, [df[(df.Colour_Ext_Code == ' ') & (df.Cor == ' ')].index], project_id, warning=1)
+        control_prints(df, '3c')
 
         df = options_scraping_v2(df, level_2_optionals_cdsu_options, 'Modelo')  # Scrapes the optionals columns for information regarding the GPS, Auto Transmission, Posterior Parking Sensors, External and Internal colours, Model and Rim's Size
+        control_prints(df, '3d', head=1, null_analysis_flag=1)
+        df.loc[df['Combustível'].isin(['Elétrico', 'Híbrido']), 'Motor'] = 'N/A'  # Defaults the value of motorization for electric/hybrid cars;
         control_prints(df, '4', head=0, save=1)
 
         # df = remove_rows(df, [df[df.Modelo.isnull()].index], project_id, warning=1)
@@ -122,7 +129,7 @@ def data_processing(df):
         # project_units_count_checkup(df, 'Nº Stock', level_2_optionals_cdsu_options, sql_check=1)
 
         df = color_replacement(df, level_2_optionals_cdsu_options.colors_to_replace_dict, project_id)  # Translates all english colors to portuguese
-        control_prints(df, '6', head=0, save=1)
+        control_prints(df, '6', head=0, save=0)
 
         df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
         control_prints(df, '7')
@@ -148,7 +155,9 @@ def data_processing(df):
 
         # df = col_group(df, cols_to_group_layer_2[0:2], mapping_dictionaries[0:2], project_id)  # Based on the information provided by Manuel some entries were grouped as to remove small groups. The columns grouped are mentioned in cols_to_group, and their respective groups are shown in level_2_optionals_cdsu_options
 
+        control_prints(df, '9b, before new features', null_analysis_flag=1)
         df = new_features(df, configuration_parameters, project_id)  # Creates a series of new features, explained in the provided pdf
+        control_prints(df, '10, after new_features', null_analysis_flag=1)
 
         # global_variables_saving(df, level_2_optionals_cdsu_options.project_id)  # Small functions to save 2 specific global variables which will be needed later
 
