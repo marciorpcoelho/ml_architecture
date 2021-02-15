@@ -16,7 +16,7 @@ read_dotenv(base_path + dotenv_path)
 margin_threshold = 3.5
 stock_days_threshold = 45
 update_frequency_days = 0
-selected_configuration_parameters = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+selected_configuration_parameters = ['Motor', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Modelo', 'Sensores Est. Tras.', 'Sensores Est. Front.', 'Tipo_Interior', 'Versao', 'Combustível', 'Câmara Traseira']
 # Full: ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 if 'nt' in os.name:
@@ -28,7 +28,7 @@ elif 'posix' in os.name:
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd_Linux')
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
-configuration_parameters_full = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_Xenon', 'Farois_LED', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
+configuration_parameters_full = ['Motor', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Modelo', 'Sensores Est. Tras.', 'Sensores Est. Front.', 'Tipo_Interior', 'Versao', 'Combustível', 'Câmara Traseira']
 
 # Dictionaries:
 sql_info = {
@@ -49,16 +49,14 @@ project_id = 2775
 
 regex_dict = {
     # 'motorization_value': r'(\d{1}\.{1}\d{1}\s{0,1}[a-zA-Z]{1,3}|\d{1}\.{1}\d{1})'
-    'motorization_value': r'\d{1}\.{1}\d{1}\s{0,}\w{0,1}\s{0,}[a-zA-Z]{2,3}|\d{1}\.{1}\d{1}\w{1}|\d{1}\.{1}\d{1}'
+    'motorization_value': r'(\d{1}\.{1}\d{1})',
+    'interior_type_value': r'(couro|tecido)',
+    'version_type': r'(confortline|hybrid|stream|rline|life|elegance|business|design|sport|style|trendline|highline|bluemotion|lounge|connect|alltrack|cross|alive!)',
+    'rims_size': r'\d{2}',
 }
 
 # New Cor_Exterior
 color_ext_dict = {
-    'preto': ['preto'],
-    'branco': ['branco'],
-    'cinzento': ['cinzento', 'prateado', 'prata', 'cinza', 'bluestone'],
-    'azul': ['azul'],
-    'outros': ['undefined', 'sunstone', 'castanho', 'topaz', 'terra', 'jatoba', 'burgundy', 'aqua', 'storm', 'cedar', 'bronze', 'chestnut', 'havanna', 'cashmere', 'champagne', 'dourado', 'amarelo', 'bege', 'silverstone', 'moonstone', 'verde', 'vermelho', 'laranja']
 }
 
 colors_pt = ['petróleo', 'oceano', 'cobre', 'branco', 'azul', 'verde', 'tartufo', 'vermelho', 'antracite/vermelho', 'anthtacite/preto', 'preto/laranja/preto/lara', 'prata/cinza', 'cinza', 'preto/silver', 'cinzento', 'prateado', 'prata', 'amarelo',
@@ -68,12 +66,6 @@ colors_en = ['black', 'havanna', 'merino', 'walnut', 'chocolate', 'nevada', 'moo
              'truffle', 'brown', 'oyster', 'tobacco', 'jatoba', 'storm', 'champagne', 'cedar', 'silverstone', 'chestnut', 'kaschmirsilber', 'oak', 'mokka', 'sunstone', 'topaz']
 
 colors_to_replace_dict = {'petróleo': 'preto', 'cobre': 'castanho', 'oceano': 'azul', 'black': 'preto', 'preto/silver': 'preto/prateado', 'tartufo': 'truffle', 'preto/laranja/preto/lara': 'preto/laranja', 'white': 'branco', 'blue': 'azul', 'red': 'vermelho', 'grey': 'cinzento', 'silver': 'prateado', 'orange': 'laranja', 'green': 'verde', 'anthrazit': 'antracite', 'antracit': 'antracite', 'brown': 'castanho', 'antracito': 'antracite', 'âmbar/preto/pr': 'ambar/preto/preto', 'beige': 'bege', 'kaschmirsilber': 'cashmere', 'beje': 'bege'}
-
-dakota_colors = ['oyster/cinza', 'preto/laranja/preto', 'black/contrast', 'preto/preto', 'preto/vermelho/preto', 'preto/oyster', 'preto/debroado', 'preto/azul/preto', 'oyster/preto', 'ivory/preto', 'ivory', 'coral', 'preto', 'preta', 'branco', 'branca', 'bege', 'veneto/preto', 'oyster', 'oyster/oyster', 'castanho', 'terra', 'conhaque', 'conhaque/castanho/preto', 'conhaque/castanho/preto/conhaque', 'cognac/preto', 'brown', 'azul', 'mocha/preto', 'mocha/preto/mocha', 'mocha']
-nappa_colors = ['preto', 'white', 'ivory', 'ivory/branco', 'bege', 'mocha', 'castanho', 'cognac/preto', 'antracite']
-vernasca_colors = ['castanhas/preto', 'canberra', 'bege', 'preta', 'preto/com', 'preto/preto', 'oyster', 'mocha', 'mocha/preto', 'cognac', 'azuis/preto', 'anthracite/preto', 'cognac/preto', 'branco', 'coffee/preto']
-nevada_colors = ['terra', 'brown', 'preto/preto', 'bege', 'oyster', 'oyster/leather', 'preto', 'branco', 'mocha']
-merino_colors = ['branco/azul', 'preto', 'bege', 'castanho', 'silverstone', 'preto/preto', 'branco', 'laranja', 'orange', 'taupe/preto', 'vermelho', 'coffee/preto', 'tartufo/preto', 'tartufo/preto/preto', 'night/preto/pret']
 
 # Cor_Interior single parametrization table:
 color_int_dict = {
@@ -98,39 +90,10 @@ jantes_dict = {
 }
 
 sales_place_dict = {
-    'centro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
-    'norte': ['DCC - Feira', 'DCG - Gaia', 'DCP-Porto', 'DCP-Porto Mini', 'DCG - Gaia Mini', 'DCP-Porto Usados', 'DCG - Gaia Usados', 'DCC - Feira Usados', 'DCP-Maia', 'DCP-Maia Usados'],
-    'sul': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
-    'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
-    'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
 }
 
-sales_place_dict_v2 = {
-    'porto': ['DCP-Porto', 'DCP-Porto Mini', 'DCP-Porto Usados',  'DCP-Maia', 'DCP-Maia Usados'],
-    'gaia': ['DCC - Feira', 'DCG - Gaia', 'DCG - Gaia Mini', 'DCG - Gaia Usados', 'DCC - Feira Usados'],
-    'aveiro': ['DCV - Coimbrões', 'DCC - Aveiro', 'DCC - Aveiro Usados', 'DCC - Viseu Usados',  'DCV - Viseu Usados'],
-    'lisboa': ['DCS-Expo Frotas Busi', 'DCS-V Especiais BMW', 'DCS-V Especiais MINI', 'DCS-Expo Frotas Flee', 'DCS-Cascais', 'DCS-Parque Nações', 'DCS-Parque Nações Mi', 'DCS-24 Jul BMW Usad', 'DCS-Cascais Usados', 'DCS-24 Jul MINI Usad', 'DCS-Lisboa Usados'],
-    'algarve': ['DCA - Faro', 'DCA - Portimão', 'DCA - Mini Faro', 'DCA -Portimão Usados'],
-    'motorcycles': ['DCA - Motos Faro', 'DCS- Vendas Motas', 'DCC - Motos Aveiro']
-}
 
 model_dict = {
-    's2_gran': ['S2 Gran Tourer'],
-    's2_active': ['S2 Active Tourer'],
-    's3_touring': ['S3 Touring'],
-    's3_berlina': ['S3 Berlina'],
-    's4_gran': ['S4 Gran Coupé'],
-    's5_touring': ['S5 Touring'],
-    's5_lim_ber': ['S5 Limousine', 'S5 Berlina'],
-    's1': ['S1 3p', 'S1 5p'],
-    'x1': ['X1'],
-    'x3': ['X3 SUV'],
-    'mini_club': ['MINI CLUBMAN'],
-    'mini_cabrio': ['MINI CABRIO'],
-    'mini_country': ['MINI COUNTRYMAN'],
-    'mini': ['MINI 5p', 'MINI 3p'],
-    'motos': ['Série C', 'Série F', 'Série K', 'Série R'],
-    'outros': ['X7 SUV', 'S8 Cabrio', 'S8 Coupe', 'S2 Cabrio', 'S2 Coupé', 'S3 Gran Turismo', 'S4 Coupé', 'S4 Cabrio', 'S5 Gran Turismo', 'S6 Cabrio', 'S6 Gran Turismo', 'S6 Gran Coupe', 'S6 Coupé', 'S7 Berlina', 'S7 L Berlina', 'X2 SAC', 'X4 SUV', 'X5 SUV', 'X5 M', 'X6', 'X6 M', 'Z4 Roadster', 'M2 Coupé', 'M3 Berlina', 'M4 Cabrio', 'M4 Coupé', 'M5 Berlina', 'S6 Gran Turismo', 'S6 Cabrio', 'S6 Coupé', 'S6 Gran Coupe', 'S7 Berlina', 'S7 L Berlina']
 }
 
 versao_dict = {
@@ -152,43 +115,6 @@ tipo_int_dict = {
 
 # Motor v1
 motor_dict_v1 = {
-    '16d': ['114d', '116d', '214d', '216d', '316d', 'sdrive16d'],
-    '16i': ['114i', '116i', '216i'],
-    '18d': ['118d', '218d', '318d', '418d', '518d', 'sdrive18d', 'xdrive18d'],
-    '18i': ['118i', '218i', 'sdrive18i'],
-    '20d': ['120d', '220d', '320d', '420d', '520d', '620d', 'sdrive20d', 'xdrive20d', 'sdrive'],
-    '20i': ['125i', '320i', '420i', '520i', 'sdrive20i', 'xdrive20i'],
-    '25d': ['125d', '225d', '325d', '425d', '525d', '725d', 'xdrive25d', 'sdrive25d'],
-    '25i': ['xdrive25i'],
-    '28i': ['228i', '428i', '528i'],
-    '30d': ['330d', '430d', '530d', '630d', '730d', '730ld', 'xdrive30d', 'xdrive'],
-    '30i': ['m235i', '230i', '330i', '430i', '530i', '630i', 'xdrive30i'],
-    '35d': ['335d', '435d', '535d', 'xdrive35d'],
-    '35i': ['335i', '435i', 'xdrive35i'],
-    '40d': ['540d', '640d', '740ld', '740d', 'xdrive40d', '840d'],
-    '40i': ['m140i', '340i', '440i', '540i', '640i', '740i', '740li', 'm40i', 'm240i'],
-    '50d': ['m550d', '750d', '750ld', 'm50d'],
-    '50i': ['750li', 'm850i'],
-    'Híbrido': ['225xe', '330e', 'activehybrid', '530e', '740e', '745e', '745le', '740le', 'xdrive40e'],
-    'M2': ['m2'],
-    'M3': ['m3'],
-    'M4': ['m4'],
-    'M5': ['m5'],
-    'M6': ['m6'],
-    'M': ['m'],
-}
-
-
-# Motor v2
-motor_dict_v2 = {
-    '1.5d': ['114d', '116d', '214d', '216d', '316d', 'sdrive16d'],
-    '1.5i': ['114i', '116i', '118i', '216i', '218i', 'sdrive18i'],
-    '2.0d': ['118d', '120d', '125d', '218d', '220d', '225d', '318d', '320d', '325d', '418d', '420d', '425d', '518d', '520d', '525d', '620d', '725d', 'sdrive', 'sdrive18d', 'sdrive20d', 'sdrive25d', 'xdrive18d', 'xdrive20d', 'xdrive25d'],
-    '2.0i': ['125i', '228i', '230i', '320i', '330i', '420i', '428i', '430i', '520i', '528i', '530i', 'sdrive20i', 'xdrive20i', 'xdrive25i', 'xdrive30i', '630i'],
-    '3.0d': ['330d', '335d', '430d', '435d', '530d', '535d', '540d', '630d', '640d', '730d', '730ld', '740d', '740ld', '750d', '750ld', 'm550d', 'xdrive30d', 'xdrive35d', 'm50d', 'xdrive', 'xdrive40d', '840d', 'm40d'],
-    '3.0i': ['335i', '340i', '435i', '440i', '540i', '640i', '740i', '740li', 'm140i', 'm2', 'm3', 'm4', 'm40i', 'xdrive35i', 'm235i', 'xdrive40i', 'm240i'],
-    '4.0i': ['750li', 'm5', 'm6', 'm', 'm850i'],
-    'Híbrido': ['225xe', '330e', '530e', '740e', '740le', 'activehybrid', 'xdrive40e', '745e', '745le'],
 }
 
 
@@ -209,20 +135,20 @@ sql_to_code_renaming = {
     'Estimated_Cost': 'Custo',
     'Registration_Number': 'Registration_Number',
     'Franchise_Code': 'Franchise_Code',
+    'Fuel_Type_Desc': 'Combustível'
 }
+
 column_sql_renaming = {
         'Jantes': 'Rims_Size',
         'Caixa Auto': 'Auto_Trans',
-        'Navegação': 'Navigation',
-        'Sensores': 'Park_Front_Sens',
-        'Cor_Interior': 'Colour_Int',
+        'Combustível': 'Fuel_Type',
+        'Câmara Traseira': 'Rear_Cam',
+        'Sensores Est. Tras.': 'Park_Front_Sens',
+        'Sensores Est. Front.': 'Park_Rear_Sens',
         'Cor_Exterior': 'Colour_Ext',
         'Modelo': 'Model_Code',
         'Motor': 'Motor_Desc',
         'Local da Venda': 'Sales_Place',
-        'Local da Venda_v2': 'Sales_Place_v2',
-        'Local da Venda_Fase2_level_1': 'Sales_Place_Fase2_Level_1',
-        'Local da Venda_Fase2_level_2': 'Sales_Place_Fase2_Level_2',
         'Margem': 'Margin',
         'margem_percentagem': 'Margin_Percentage',
         'price_total': 'Sell_Value',
@@ -238,13 +164,7 @@ column_sql_renaming = {
         'proba_1': 'Probability_1',
         'score_class_gt': 'Score_Class_GT',
         'score_class_pred': 'Score_Class_Pred',
-        # '7_Lug': 'Seven_Seats',
         'AC Auto': 'AC_Auto', 'Alarme': 'Alarm',
-        'Barras_Tej': 'Roof_Bars',
-        'Teto_Abrir': 'Open_Roof',
-        'Farois_LED': 'LED_Lights',
-        'Farois_Xenon': 'Xenon_Lights',
-        # 'Prot.Solar': 'Solar_Protection',
         'Tipo_Interior': 'Interior_Type',
         'Versao': 'Version',
         'Nº Stock': 'VHE_Number',
@@ -279,10 +199,10 @@ column_sql_renaming = {
 }
 
 
-columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
+columns_for_sql = ['Auto_Trans', 'Rear_Cam', 'Fuel_Type', 'Rear_Front_Sens', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Ext', 'Sales_Place',
                    'Sales_Place_v2', 'Model_Code', 'Margin', 'Margin_Percentage',
                    'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value', 'Probability_0', 'Probability_1', 'Score_Class_GT',
-                   'Score_Class_Pred', 'Sell_Date', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
+                   'Score_Class_Pred', 'Sell_Date',
                    'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
                    'Average_Stock_Days', 'Average_Score_Class_GT', 'Average_Score_Class_Pred', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Number_Cars_Sold_Local_v2',
                    'Average_Margin_Percentage_Local', 'Average_Margin_Percentage_Local_v2', 'Average_Score_Euros_Local', 'Average_Score_Euros_Local_v2',
@@ -291,69 +211,39 @@ columns_for_sql = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', '
                    'Average_Margin_Percentage_Local_Fase2_Level_1', 'Average_Margin_Percentage_Local_Fase2_Level_2', 'Average_Score_Euros_Local_Fase2_Level_1', 'Average_Score_Euros_Local_Fase2_Level_2',
                    'Average_Stock_Days_Local_Fase2_Level_1', 'Average_Stock_Days_Local_Fase2_Level_2', 'Number_Cars_Sold_Local_Fase2_Level_1', 'Number_Cars_Sold_Local_Fase2_Level_2']
 
-columns_for_sql_temp = ['Auto_Trans', 'Navigation', 'Park_Front_Sens', 'Rims_Size', 'Colour_Int', 'Colour_Ext', 'Sales_Place',
+columns_for_sql_temp = ['Auto_Trans', 'Park_Front_Sens', 'Rims_Size', 'Colour_Ext', 'Sales_Place',
                         'Model_Code', 'Margin', 'Margin_Percentage',
                         'Stock_Days_Price', 'Score_Euros', 'Stock_Days', 'Sell_Value',
-                        'Sell_Date', 'AC_Auto', 'Alarm', 'Roof_Bars', 'Open_Roof', 'LED_Lights',
+                        'Sell_Date',
                         'Interior_Type', 'Version', 'Motor_Desc', 'Average_Margin_Percentage', 'Average_Score_Euros',
                         'Average_Stock_Days', 'Number_Cars_Sold', 'Number_Cars_Sold_Local',
                         'Average_Margin_Percentage_Local', 'Average_Score_Euros_Local',
                         'Average_Stock_Days_Local', 'Registration_Number', 'VHE_Number',
-                        'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Score_Class_GT']
+                        'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Score_Class_GT', 'Rear_Cam', 'Fuel_Type', 'Rear_Front_Sens']
 
 column_checkpoint_sql_renaming = {
     'Jantes': 'Rims_Size',
     'Caixa Auto': 'Auto_Trans',
-    'Navegação': 'Navigation',
-    'Sensores': 'Park_Front_Sens',
-    'Cor_Interior': 'Colour_Int',
+    'Combustível': 'Fuel_Type',
+    'Câmara Traseira': 'Rear_Cam',
+    'Sensores Est. Tras.': 'Park_Front_Sens',
+    'Sensores Est. Front.': 'Park_Rear_Sens',
     'Cor_Exterior': 'Colour_Ext',
     'Modelo': 'Model_Code',
     'Local da Venda': 'Sales_Place',
-    # 'Local da Venda_v2': 'Sales_Place_v2',
-    # 'Local da Venda_Fase2_level_1': 'Sales_Place_Fase2_Level_1',
-    # 'Local da Venda_Fase2_level_2': 'Sales_Place_Fase2_Level_2',
     'Margem': 'Margin',
     'margem_percentagem': 'Margin_Percentage',
     'price_total': 'Sell_Value',
     'Data Compra': 'Purchase_Date',
     'Data Venda': 'Sell_Date',
-    # 'buy_day': 'Purchase_Day',
-    # 'buy_month': 'Purchase_Month',
-    # 'buy_year': 'Purchase_Year',
     'score_euros': 'Score_Euros',
     'stock_days': 'Stock_Days',
     'days_stock_price': 'Stock_Days_Price',
-    # '7_Lug': 'Seven_Seats',
-    'AC Auto': 'AC_Auto',
-    'Alarme': 'Alarm',
-    'Barras_Tej': 'Roof_Bars',
-    'Teto_Abrir': 'Open_Roof',
-    'Farois_LED': 'LED_Lights',
-    # 'Prot.Solar': 'Solar_Protection',
     'Tipo_Interior': 'Interior_Type',
     'Versao': 'Version',
     'Motor': 'Motor_Desc',
     'Nº Stock': 'VHE_Number',
-    # 'average_score_dynamic': 'Average_Score_Dynamic',
-    # 'average_score_dynamic_std': 'Average_Score_Dynamic_STD',
-    # 'average_score_global': 'Average_Score_Global',
-    # 'last_margin': 'Margin_Last',
-    # 'last_score': 'Score_Last',
-    # 'last_stock_days': 'Stock_Days_Last',
-    # 'margin_class': 'Margin_Class',
-    # 'max_score_global': 'Max_Score_Global',
-    # 'median_score_global': 'Median_Score_Global',
-    # 'min_score_global': 'Min_Score_Global',
-    # 'new_score': 'New_Score',
     'score_class_gt': 'Score_Class_GT',
-    # 'number_prev_sales': 'Number_Previous_Sales',
-    # 'prev_average_score_dynamic': 'Prev_Average_Score_Dynamic',
-    # 'prev_average_score_dynamic_std': 'Prev_Average_Score_Dynamic_STD',
-    # 'prev_sales_check': 'Previous_Sales_Check',
-    # 'q1_score_global': 'Q1_Score_Global',
-    # 'q3_score_global': 'Q3_Score_Global',
-    # 'stock_days_class': 'Stock_Days_Class',
     'Registration_Number': 'Registration_Number',
     'nr_cars_sold': 'Number_Cars_Sold',
     'average_percentage_margin': 'Average_Margin_Percentage',
@@ -366,12 +256,6 @@ column_checkpoint_sql_renaming = {
     'average_score_local': 'Average_Score_Class_GT_Local',
     'average_score_euros_local': 'Average_Score_Euros_Local',
 }
-
-# '', '',
-# '', '', '',
-# '', '',
-# '', '', '',
-# 'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Score_Class_GT'
 
 log_files = {
     'full_log': 'logs/optionals_cdsu.txt'

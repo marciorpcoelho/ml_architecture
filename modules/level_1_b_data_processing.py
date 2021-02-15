@@ -239,12 +239,16 @@ def options_scraping_v2(df, options_file, model_mapping={}, model_training_check
 
     elif options_file.project_id == 2775:  # CDSU
         options_scraping_model(df, options_file.project_id, approach='first_word')
-        options_scraping_motorization(df, options_file, regex_approach=1)
+        options_scraping_motorization(df, options_file, fillna_value='0', regex_approach=1)
+        options_scraping_interior_type(df, options_file, fillna_value='0', regex_approach=1)
+        options_scraping_version(df, options_file, fillna_value='0', regex_approach=1)
+        # Combustível columns is handled as is;
+
         from level_2_optionals_cdsu_options import colors_pt, colors_en
         colors_list = [colors_pt, colors_en]
 
         pool = Pool(processes=level_0_performance_report.pool_workers_count)
-        results = pool.map(options_scraping_per_group_cdsu, [(key, group, colors_list, options_file.project_id) for (key, group) in df.groupby('Nº Stock')])
+        results = pool.map(options_scraping_per_group_cdsu, [(key, group, colors_list, options_file.project_id, options_file.regex_dict) for (key, group) in df.groupby('Nº Stock')])
         pool.close()
         df = pd.concat([result for result in results if result is not None])
 
@@ -275,28 +279,62 @@ def options_scraping_model(df, project_id, approach='', model_mapping={}, model_
         unique_models = df['Modelo'].unique()
         for model in unique_models:
             tokenized_modelo = nltk.word_tokenize(model)
-            df.loc[df['Modelo'] == model, 'Modelo'] = tokenized_modelo[0]
+            first_word_model = tokenized_modelo[0]
+            if first_word_model.lower() == 'novo':
+                df.loc[df['Modelo'] == model, 'Modelo'] = tokenized_modelo[1]
+            else:
+                df.loc[df['Modelo'] == model, 'Modelo'] = tokenized_modelo[0]
 
     level_0_performance_report.performance_info_append(time.time(), 'Model_Code_End')
 
     return df
 
 
-def options_scraping_motorization(df, options_file, regex_approach=0):
+def options_scraping_motorization(df, options_file, fillna_value=None, regex_approach=0):
     level_0_performance_report.performance_info_append(time.time(), 'Motor_Desc_Start')
 
-    unique_versions = df['Versão'].unique()
-    for version in unique_versions:
-        mask_version = df['Versão'] == version
-        if regex_approach:
-            df.loc[mask_version, 'Motor'] = df.loc[mask_version, 'Versão'].str.findall(options_file.regex_dict['motorization_value']).str[0]
-        else:
+    if regex_approach:
+        string_regex_extraction(df, 'Versão', 'Motor', options_file.regex_dict['motorization_value'], fillna_value)
+    else:
+        unique_versions = df['Versão'].unique()
+        for version in unique_versions:
+            mask_version = df['Versão'] == version
             if 'x1 ' in version or 'x2 ' in version or 'x3 ' in version or 'x4 ' in version or 'x5 ' in version or 'x6 ' in version or 'x7 ' in version:  # The extra free space in the X models is because there are references next to the version description that match the searching criteria. Ex: 420D Coupé (4X31) matches when searched by X3
                 df.loc[mask_version, 'Motor'] = [x.split(' ')[1] for x in df[mask_version]['Versão']]
             else:
                 df.loc[mask_version, 'Motor'] = [x.split(' ')[0] for x in df[mask_version]['Versão']]
 
     level_0_performance_report.performance_info_append(time.time(), 'Motor_Desc_End')
+    return df
+
+
+def options_scraping_interior_type(df, options_file, fillna_value=None, regex_approach=1):
+    level_0_performance_report.performance_info_append(time.time(), 'Int_Type_Start')
+
+    if regex_approach:
+        string_regex_extraction(df, 'Interior', 'Tipo_Interior', options_file.regex_dict['interior_type_value'], fillna_value)
+
+    level_0_performance_report.performance_info_append(time.time(), 'Int_Type_End')
+    return df
+
+
+def options_scraping_version(df, options_file, fillna_value=None, regex_approach=1):
+    level_0_performance_report.performance_info_append(time.time(), 'Version_Start')
+
+    if regex_approach:
+        string_regex_extraction(df, 'Versão', 'Versao', options_file.regex_dict['version_type'], fillna_value)
+
+    level_0_performance_report.performance_info_append(time.time(), 'Version_End')
+
+
+def string_regex_extraction(df, orig_col, new_col, regex_rule, fillna_value=None):
+
+    if fillna_value:
+        df[new_col] = df[orig_col].str.extract(regex_rule).fillna(fillna_value)
+        # When str.extract matches nothing, it returns NaN
+    else:
+        df[new_col] = df[orig_col].str.extract(regex_rule)
+
     return df
 
 
@@ -571,94 +609,40 @@ def options_scraping_per_group(args):
 
 
 def options_scraping_per_group_cdsu(args):
-    key, group, colors_list, project_id = args
+    key, group, colors_list, project_id, regex_dict = args
     colors_pt, colors_en = colors_list[0], colors_list[1]
 
-    line_modelo = group['Modelo'].head(1).values[0]
-    tokenized_modelo = nltk.word_tokenize(line_modelo)
-    optionals = set(group['Opcional'])
-
-    # Navegação
-    if len([x for x in optionals if 'sistema' in x and 'navegação' in x]):
-        group['Navegação'] = 1
-
-    # Barras Tejadilho
-    if len([x for x in optionals if 'barras' in x and 'tejadilho' in x or 'barra' in x and 'tejadilho' in x]):
-        group['Barras_Tej'] = 1
-
-    # Alarme
-    if len([x for x in optionals if 'alarme' in x]):
-        group['Alarme'] = 1
-
-    # AC Auto
-    if len([x for x in optionals if 'ar' in x and 'condicionado' in x and 'automático' in x]):
-        group['AC Auto'] = 1
-
-    # Teto Abrir
-    if len([x for x in optionals if 'teto' in x and 'abrir' in x or 'tecto' in x and 'abrir' in x]):
-        group['Teto_Abrir'] = 1
-
     # Sensor/Transmissão/Versão/Jantes
-    jantes_size = [0]
     for line_options in group['Opcional']:
-        tokenized_options = nltk.word_tokenize(line_options)
+        tokenized_options = nltk.word_tokenize(str(line_options))
 
         if 'caixa' in tokenized_options:
             for word in tokenized_options:
                 if 'aut' in word:
                     group['Caixa Auto'] = 1
+        if 'dsg' in tokenized_options:
+            group['Caixa Auto'] = 1
 
-        if 'sensores' in tokenized_options and 'estacionamento' in tokenized_options and 'dianteiros' in tokenized_options \
-                or 'sensores' in tokenized_options and 'estacionamento' in tokenized_options and 'frt' in tokenized_options \
-                or 'sensores' in tokenized_options and 'estcmt' in tokenized_options and 'dianteiros' in tokenized_options \
-                or 'sensores' in tokenized_options and 'estcmt' in tokenized_options and 'frt' in tokenized_options:
-            group['Sensores'] = 1
+        if 'sensores' in tokenized_options:
+            if 'estacionamento' in tokenized_options or 'estcmt' in tokenized_options:
+                if 'dianteiros' in tokenized_options or 'frt' in tokenized_options:
+                    group['Sensores Est. Front.'] = 1
+                if 'traseiros' in tokenized_options or 'tras' in tokenized_options:
+                    group['Sensores Est. Tras.'] = 1
 
-        # Versão
-        # if 'advantage' in tokenized_options:
-        #     group['Versao'] = 'advantage'
-        # elif 'versão' in tokenized_options or 'bmw' in tokenized_options:
-        #     if 'line' in tokenized_options and 'sport' in tokenized_options:
-        #         group['Versao'] = 'line_sport'
-        #     if 'line' in tokenized_options and 'urban' in tokenized_options:
-        #         group['Versao'] = 'line_urban'
-        #     if 'desportiva' in tokenized_options and 'm' in tokenized_options:
-        #         group['Versao'] = 'desportiva_m'
-        #     if 'line' in tokenized_options and 'luxury' in tokenized_options:
-        #         group['Versao'] = 'line_luxury'
-        # if 'pack' in tokenized_options and 'desportivo' in tokenized_options and 'm' in tokenized_options:
-        #     if 'S1' in tokenized_modelo:
-        #         group['Versao'] = 'desportiva_m'
-        #     elif 'S5' in tokenized_modelo or 'S3' in tokenized_modelo or 'S2' in tokenized_modelo:
-        #         group['Versao'] = 'pack_desportivo_m'
-        # if 'bmw' in tokenized_options and 'modern' in tokenized_options:  # no need to search for string line, there are no bmw modern without line;
-        #     if 'S5' in tokenized_modelo:
-        #         group['Versao'] = 'line_luxury'
-        #     else:
-        #         group['Versao'] = 'line_urban'
-        # if 'xline' in tokenized_options:
-        #     group['Versao'] = 'xline'
-
-        # Faróis
-        if "xénon" in tokenized_options or 'bixénon' in tokenized_options or 'xenon' in tokenized_options:
-            group['Farois_Xenon'] = 1
-        elif "farois" in tokenized_options and "led" in tokenized_options or 'faróis' in tokenized_options and 'led' in tokenized_options:
-            group['Farois_LED'] = 1
+        if 'camara' in tokenized_options:
+            group['Câmara Traseira'] = 1
 
         # Jantes
-        if 'sobresselente' not in tokenized_options or 'sobressalente' not in tokenized_options:
-            # if 'jantes' in tokenized_options and 'sobresselente' not in tokenized_options \
-            #         or 'jante' in tokenized_options and 'sobresselente' not in tokenized_options \
-            #         or 'jantes' in tokenized_options and 'sobressalente' not in tokenized_options \
-            #         or 'jante' in tokenized_options and 'sobressalente' not in tokenized_options :
+        if 'sobresselente' not in tokenized_options and 'sobressalente' not in tokenized_options:
             if 'jantes' in tokenized_options \
                     or 'jante' in tokenized_options \
                     or 'jantes' in tokenized_options  \
-                    or 'jante' in tokenized_options:
-                for word in tokenized_options:
-                    for value in range(15, 21):
-                        if str(value) == str(word):
-                            group['Jantes'] = [str(value)] * group.shape[0]
+                    or 'jante' in tokenized_options \
+                    or '"woodstack"' in tokenized_options:
+                match = re.search(regex_dict['rims_size'], line_options)
+                if match:
+                    group['Jantes'] = re.search(regex_dict['rims_size'], line_options).group()
 
     # Cor Exterior
     line_color = group['Cor'].head(1).values[0]
@@ -667,11 +651,13 @@ def options_scraping_per_group_cdsu(args):
     if not color:
         color = [x for x in colors_en if x in tokenized_color]
     if not color:
-        if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58'] or tokenized_color == [' '] or tokenized_color == ['pintura', 'metalizada']:
+        if tokenized_color == ['pintura', 'bmw', 'individual'] or tokenized_color == ['hp', 'motorsport', ':', 'branco/azul/vermelho', '``', 'racing', "''"] or tokenized_color == ['p0b58'] or tokenized_color == [' ']:
             color = ['undefined']
-            # level_0_performance_report.log_record('1 - Cor exterior não encontrada {} para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
+            level_0_performance_report.log_record('1 - Cor exterior não encontrada {} para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
         elif tokenized_color == ['verm', 'tk', 'mmm']:
             color = ['vermelho']
+        elif tokenized_color == ['pintura', 'metalizada']:
+            color = ['cinzento']
         else:
             line_color_ext_code = group['Colour_Ext_Code'].head(1).values[0]
             if line_color_ext_code == 'P0X13':
@@ -694,61 +680,6 @@ def options_scraping_per_group_cdsu(args):
         group['Cor_Exterior'] = color
     except ValueError:
         print(color)
-
-    # Cor Interior
-    # line_interior = group['Interior'].head(1).values[0]
-    # tokenized_interior = nltk.word_tokenize(line_interior)
-    #
-    # if 'dakota' in tokenized_interior:
-    #     color_int = [x for x in tokenized_interior if x in dakota_colors]
-    #     if color_int:
-    #         group['Cor_Interior'] = 'dakota_' + color_int[0]
-    # elif 'nappa' in tokenized_interior:
-    #     color_int = [x for x in tokenized_interior if x in nappa_colors]
-    #     if color_int:
-    #         group['Cor_Interior'] = 'nappa_' + color_int[0]
-    # elif 'vernasca' in tokenized_interior:
-    #     color_int = [x for x in tokenized_interior if x in vernasca_colors]
-    #     if color_int:
-    #         group['Cor_Interior'] = 'vernasca_' + color_int[0]
-    # elif 'nevada' in tokenized_interior:
-    #     color_int = [x for x in tokenized_interior if x in nevada_colors]
-    #     if color_int:
-    #         group['Cor_Interior'] = 'nevada_' + color_int[0]
-    # elif 'merino' in tokenized_interior:
-    #     color_int = [x for x in tokenized_interior if x in merino_colors]
-    #     if color_int:
-    #         group['Cor_Interior'] = 'merino_' + color_int[0]
-    # else:
-    #     if 'antraci' in tokenized_interior or 'antracit' in tokenized_interior or 'anthracite/silver' in tokenized_interior or 'preto/laranja' in tokenized_interior or 'preto/silver' in tokenized_interior or 'preto/preto' in tokenized_interior or 'confort' in tokenized_interior or 'standard' in tokenized_interior or 'preto' in tokenized_interior or 'antracite' in tokenized_interior or 'antracite/laranja' in tokenized_interior or 'antracite/preto' in tokenized_interior or 'antracite/cinza/preto' in tokenized_interior or 'antracite/vermelho/preto' in tokenized_interior or 'antracite/vermelho' in tokenized_interior or 'interiores' in tokenized_interior:
-    #         group['Cor_Interior'] = 'preto'
-    #     elif 'oyster/preto' in tokenized_interior:
-    #         group['Cor_Interior'] = 'oyster'
-    #     elif 'platinu' in tokenized_interior or 'grey' in tokenized_interior or 'prata/preto/preto' in tokenized_interior or 'prata/cinza' in tokenized_interior:
-    #         group['Cor_Interior'] = 'cinzento'
-    #     elif 'castanho' in tokenized_interior or 'walnut' in tokenized_interior:
-    #         group['Cor_Interior'] = 'castanho'
-    #     elif 'âmbar/preto/pr' in tokenized_interior:
-    #         group['Cor_Interior'] = 'amarelo'
-    #     elif 'champagne' in tokenized_interior:
-    #         group['Cor_Interior'] = 'bege'
-    #     elif 'crimson' in tokenized_interior:
-    #         group['Cor_Interior'] = 'vermelho'
-    #     else:
-    #         group['Cor_Interior'] = '0'
-            # level_0_performance_report.log_record('Cor Interior não encontrada: \'{}\' para o veículo {}.'.format(tokenized_color, key), project_id, flag=1)
-
-    # Tipo Interior
-    # if 'comb' in tokenized_interior or 'combin' in tokenized_interior or 'combinação' in tokenized_interior or 'tecido/pele' in tokenized_interior:
-    #     group['Tipo_Interior'] = 'combinação'
-    # elif 'hexagon\'' in tokenized_interior or 'hexagon/alcantara' in tokenized_interior:
-    #     group['Tipo_Interior'] = 'tecido_micro'
-    # elif 'tecido' in tokenized_interior or 'cloth' in tokenized_interior:
-    #     group['Tipo_Interior'] = 'tecido'
-    # elif 'pele' in tokenized_interior or 'leather' in tokenized_interior or 'dakota\'' in tokenized_interior or 'couro' in tokenized_interior:
-    #     group['Tipo_Interior'] = 'pele'
-    # else:
-    #     group['Tipo_Interior'] = '0'
 
     return group
 
