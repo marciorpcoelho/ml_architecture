@@ -350,7 +350,7 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     other_families_cm_test.to_csv('dbs/other_families_cm_tmp.csv')
 
     # First Classification
-    master_file_scored, _, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), main_families_clf)
+    master_file_scored, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), main_families_clf)
     master_file_scored = prob_thres_col_creation(master_file_scored)
 
     # First 0.5 CutOff
@@ -360,7 +360,7 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     print('first classification, sub 50 shape:', master_file_scored_sub_50.shape)
 
     # Second Classification
-    master_file_sub_50_scored, _, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], other_families_clf)
+    master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], other_families_clf)
     master_file_sub_50_scored = prob_thres_col_creation(master_file_sub_50_scored)
 
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])
@@ -384,8 +384,7 @@ def performance_saving(models_metrics_dict):
 
     for model in models:
         results_test.append(models_metrics_dict[model])
-        df_results = algorithms_performance_dataset_creation(results_test, 'Test', models_metrics_dict.keys())
-
+        df_results = algorithms_performance_dataset_creation(results_test[0], 'Test', 'lgb', options_file.project_id)
         model_performance_saving(df_results, options_file)
 
     return

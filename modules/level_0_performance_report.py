@@ -14,6 +14,7 @@ read_dotenv(dotenv_path)
 if 'nt' in os.name:
     OS_PLATFORM = 'WINDOWS'
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd')
+    DSN_MLG_DEV = os.getenv('DSN_MLG_Dev')
 elif 'posix' in os.name:
     OS_PLATFORM = 'LINUX'
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd_Linux')

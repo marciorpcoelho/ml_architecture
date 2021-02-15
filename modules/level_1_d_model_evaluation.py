@@ -128,43 +128,38 @@ def performance_evaluation_classification(models, best_models, running_times, da
         results_train.append(row_train)
         results_test.append(row_test)
 
-    # df_results_train = pd.DataFrame(results_train, index=models)
-    # df_results_train['Algorithms'] = df_results_train.index
-    # df_results_train['Dataset'] = ['Train'] * df_results_train.shape[0]
-    # df_results_train['Project_Id'] = [project_id] * df_results_train.shape[0]
-    # df_results_test = pd.DataFrame(results_test, index=models)
-    # df_results_test['Algorithms'] = df_results_test.index
-    # df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
-    # df_results_test['Project_Id'] = [project_id] * df_results_train.shape[0]
-
-    df_results_train = algorithms_performance_dataset_creation(results_train, 'Train', models)
-    df_results_test = algorithms_performance_dataset_creation(results_test, 'Test', models)
+    df_results_train = pd.DataFrame(results_train, index=models)
+    df_results_train['Algorithms'] = df_results_train.index
+    df_results_train['Dataset'] = ['Train'] * df_results_train.shape[0]
+    df_results_train['Project_Id'] = [project_id] * df_results_train.shape[0]
+    df_results_test = pd.DataFrame(results_test, index=models)
+    df_results_test['Algorithms'] = df_results_test.index
+    df_results_test['Dataset'] = ['Test'] * df_results_train.shape[0]
+    df_results_test['Project_Id'] = [project_id] * df_results_train.shape[0]
 
     metric_bar_plot(df_results_train, 'project_{}_train_dataset'.format(project_id))
     metric_bar_plot(df_results_test, 'project_{}_test_dataset'.format(project_id))
 
-    # performance_df = pd.concat([df_results_train, df_results_test])
-    # performance_df.to_csv(base_path + '/output/performance_hyundai_multiclass.csv')
-
     model_performance_saving(pd.concat([df_results_train, df_results_test]), options_file)
-    # level_1_e_deployment.sql_inject(pd.concat([df_results_train, df_results_test]), level_0_performance_report.performance_sql_info['DSN'], level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
+    level_1_e_deployment.sql_inject(pd.concat([df_results_train, df_results_test]), level_0_performance_report.performance_sql_info['DSN'], level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['performance_algorithm_results'], options_file, list(df_results_train), check_date=1)
 
     return df_results_train, df_results_test, predictions
 
 
-def algorithms_performance_dataset_creation(results_list, dataset_type_str, models_name_list):
+def algorithms_performance_dataset_creation(results_list, dataset_type_str, models_name_list, project_id):
 
-    df_results = pd.DataFrame(results_list, index=models_name_list)
-    df_results['Algorithms'] = df_results.index
+    df_results = pd.DataFrame(results_list.items()).set_index([0])
+    df_results = df_results.transpose()
+    df_results['Algorithms'] = [models_name_list] * df_results.shape[0]
+    df_results['Project_Id'] = [project_id] * df_results.shape[0]
     df_results['Dataset'] = [dataset_type_str] * df_results.shape[0]
-    df_results['Project_Id'] = [df_results] * df_results.shape[0]
 
     return df_results
 
 
 def model_performance_saving(df, options_file):
 
-    level_1_e_deployment.sql_inject(df, level_0_performance_report.performance_sql_info['DSN'], level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['performance_algorithm_results'], options_file, list(df), check_date=1)
+    level_1_e_deployment.sql_inject(df, level_0_performance_report.DSN_MLG_PRD, level_0_performance_report.performance_sql_info['DB'], level_0_performance_report.performance_sql_info['performance_algorithm_results'], options_file, list(df), check_date=1)
 
     return
 
