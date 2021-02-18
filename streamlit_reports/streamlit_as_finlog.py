@@ -215,7 +215,7 @@ def main():
         #        **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, client_type_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
         #          )
 
-        df = rows_to_predict_creation(options_file.DSN_MLG, 'BI_MLG', options_file, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, client_type_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date)
+        df = rows_to_predict_creation(options_file.DSN_MLG_PRD, 'BI_MLG', options_file, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, client_type_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date)
 
         df = feat_eng(df)
 
