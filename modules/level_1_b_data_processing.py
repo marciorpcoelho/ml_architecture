@@ -239,9 +239,9 @@ def options_scraping_v2(df, options_file, model_mapping={}, model_training_check
 
     elif options_file.project_id == 2775:  # CDSU
         options_scraping_model(df, options_file.project_id, approach='first_word')
-        options_scraping_motorization(df, options_file, fillna_value='0', regex_approach=1)
-        options_scraping_interior_type(df, options_file, fillna_value='0', regex_approach=1)
-        options_scraping_version(df, options_file, fillna_value='0', regex_approach=1)
+        options_scraping_motorization(df, options_file, fillna_value='Sem Info Motorização', regex_approach=1)
+        options_scraping_interior_type(df, options_file, fillna_value='Tecido', regex_approach=1)
+        options_scraping_version(df, options_file, fillna_value='Sem Info Versão', regex_approach=1)
         # Combustível columns is handled as is;
 
         from level_2_optionals_cdsu_options import colors_pt, colors_en
@@ -643,6 +643,9 @@ def options_scraping_per_group_cdsu(args):
                 match = re.search(regex_dict['rims_size'], line_options)
                 if match:
                     group['Jantes'] = re.search(regex_dict['rims_size'], line_options).group()
+
+    if group['Jantes'].head(1).values[0] == 0:
+        group['Jantes'] = 'Standard'
 
     # Cor Exterior
     line_color = group['Cor'].head(1).values[0]

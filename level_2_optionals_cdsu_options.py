@@ -51,7 +51,7 @@ regex_dict = {
     # 'motorization_value': r'(\d{1}\.{1}\d{1}\s{0,1}[a-zA-Z]{1,3}|\d{1}\.{1}\d{1})'
     'motorization_value': r'(\d{1}\.{1}\d{1})',
     'interior_type_value': r'(couro|tecido)',
-    'version_type': r'(confortline|hybrid|stream|rline|life|elegance|business|design|sport|style|trendline|highline|bluemotion|lounge|connect|alltrack|cross|alive!)',
+    'version_type': r'(confortline|hybrid|stream|rline|life|elegance|business|design|sport|style|trendline|highline|alltrack)',
     'rims_size': r'\d{2}',
 }
 

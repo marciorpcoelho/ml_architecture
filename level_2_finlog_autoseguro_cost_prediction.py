@@ -64,7 +64,7 @@ def data_modelling_v2(df):
     split_date = date(start_date_3_years_ago.year, start_date_3_years_ago.month, 1)
 
     df = feat_eng_v2(df)
-
+    pickle_dict('Customer_Group', 'Client_type', df)  # Creates a dictionary with all Customer Groups/Companies to be used in the streamlit app;
     enc_LL, df = custom_ohenc_v2('LL', df)
     enc_AR, df = custom_ohenc_v2('AR', df)
     enc_FI, df = custom_ohenc_v2('FI', df)
@@ -75,7 +75,6 @@ def data_modelling_v2(df):
     enc_Num_Vehicles_Total, df = custom_ohenc_v2('Num_Vehicles_Total', df)
     enc_Num_Vehicles_Finlog, df = custom_ohenc_v2('Num_Vehicles_Finlog', df)
     enc_Customer_Group, df = custom_ohenc_v2('Customer_Group', df)
-    pickle_dict('Customer_Group', 'Client_Type', df)  # Creates a dictionary with all Customer Groups/Companies to be used in the streamlit app;
 
     dump(enc_LL, 'models/enc_LL.joblib')
     dump(enc_AR, 'models/enc_AR.joblib')
@@ -103,6 +102,7 @@ def data_modelling_v2(df):
         # 'AR_Code',
         # 'AR_Franchise',
         'contract_customer',
+        # 'Customer_Group',
         'contract_contract',
         'Vehicle_No',
         'Accident_No',
@@ -229,7 +229,10 @@ def pickle_dict(key_col, value_col, df):
     from collections import defaultdict
     d = defaultdict(list)
     for i, j in zip(df[key_col], df[value_col]):
-        d[i].append(j)
+        if j in d[i]:
+            pass
+        else:
+            d[i].append(j)
 
     file_name = options_file.Customer_Group_dict_path
 

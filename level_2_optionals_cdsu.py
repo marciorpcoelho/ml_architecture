@@ -95,7 +95,7 @@ def data_processing(df):
                                    ('Opcional', 'dttras'): 'dianteiros traseiros', ('Opcional', 'dttrpark'): 'dianteiros traseiros park', ('Opcional', 'dianttras'): 'dianteiros traseiros', ('Opcional', 'câmara'): 'camara', ('Opcional', 'camera'): 'camara',
                                    ('Opcional', 'câmera'): 'camara', ('Versão', 'trendtline'): 'trendline', ('Versão', 'trendtline'): 'trendline', ('Versão', 'confort'): 'confortline', ('Versão', 'conftl'): 'confortline', ('Versão', 'hightline'): 'highline', ('Versão', 'bluem'): 'bluemotion',
                                    ('Versão', 'bmt'): 'bluemotion', ('Versão', 'up!bluemotion'): 'up! bluemotion', ('Versão', 'up!bluem'): 'up! bluemotion', ('Versão', 'trendl'): 'trendline', ('Versão', 'conft'): 'confortline', ('Versão', 'highlin'): 'highline',
-                                   ('Versão', 'confortine'): 'confortline', ('Versão', 'cofrtl'): 'confortline', ('Versão', 'confortlline'): 'confortline', ('Versão', 'highl'): 'highline'}
+                                   ('Versão', 'confortine'): 'confortline', ('Versão', 'cofrtl'): 'confortline', ('Versão', 'confortlline'): 'confortline', ('Versão', 'highl'): 'highline', ('Modelo', 'up!'): 'up'}
 
         control_prints(df, '1')
         df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
@@ -129,7 +129,7 @@ def data_processing(df):
         # project_units_count_checkup(df, 'Nº Stock', level_2_optionals_cdsu_options, sql_check=1)
 
         df = color_replacement(df, level_2_optionals_cdsu_options.colors_to_replace_dict, project_id)  # Translates all english colors to portuguese
-        control_prints(df, '6', head=0, save=0)
+        control_prints(df, '6', head=0, save=1)
 
         df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
         control_prints(df, '7')

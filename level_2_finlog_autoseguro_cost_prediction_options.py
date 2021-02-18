@@ -57,7 +57,7 @@ enc_Client_type_path = '../models/enc_Client_type.joblib'
 enc_Num_Vehicles_Total_path = '../models/enc_Num_Vehicles_Total.joblib'
 enc_Num_Vehicles_Finlog_path = '../models/enc_Num_Vehicles_Finlog.joblib'
 enc_Customer_Group_path = '../models/enc_Customer_Group.joblib'
-Customer_Group_dict_path = '../models/customer_group_dict'
+Customer_Group_dict_path = 'models/customer_group_dict'
 
 
 apply_query_v2 = '''
