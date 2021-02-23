@@ -43,7 +43,7 @@ range_dates = ['PDB_Start_Order_Date', 'PDB_End_Order_Date']
 metric, metric_threshold = 'R2', 0.50  # The metric to compare on the final models and the minimum threshold to consider;
 k, gridsearch_score = 10, 'neg_mean_squared_error'  # Stratified Cross-Validation number of Folds and the Metric on which to optimize GridSearchCV
 gamas_match_temp_file = base_path + '/dbs/gamas_match_{}.xlsx'
-documentation_url_solver_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/ETn-fkuxzHVJj1L5KdQrUeUBMWxtiPU8wkEH9CxXRxsoNg?e=Ja90Mb'
+documentation_url_solver_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/EXpckyPR14VGgLMlm5d9dHEBd12AaS6Imc-2NWSgUCPtkg?e=YXKJ2d'
 documentation_url_gamas_match_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/ESiJ1-IC4yZGjnKBLvK9qhMBFPPz8ZuBtIWJbhpi1ZfV5g?e=e6bnla'
 
 sql_info = {

@@ -42,7 +42,7 @@ st.markdown(hide_menu_style, unsafe_allow_html=True)
 url_hyperlink = '''
     <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
 '''.format(options_file.documentation_url_solver_app)
-# st.markdown(url_hyperlink, unsafe_allow_html=True)
+st.markdown(url_hyperlink, unsafe_allow_html=True)
 
 placeholder_dw_date = st.empty()
 placeholder_sales_plan_date = st.empty()
@@ -104,7 +104,7 @@ def main():
     sel_order_size = st.sidebar.number_input('Por favor escolha o número de viaturas a encomendar:', 1, 1000, value=150)
     sel_min_number_of_configuration = st.sidebar.number_input('Por favor escolha o número de configurações:', 1, 100, value=min_number_of_configuration)
     placeholder_value = st.sidebar.empty()
-    sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um *valor mínimo de viaturas vendidas por configuração* (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, int(max_number_of_cars_sold), value=5)
+    sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas por configuração (valor máximo é de {:.0f}):'.format(max_number_of_cars_sold), 1, int(max_number_of_cars_sold), value=5)
     st.sidebar.title('Pesos:')
     session_state.sel_daysinstock_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Dias em Stock: (default={:.0f}%)'.format(score_weights['Avg_DaysInStock_Global_normalized'] * 100), 0, 100, value=int(score_weights['Avg_DaysInStock_Global_normalized'] * 100), key=session_state.run_id_scores)
     session_state.sel_margin_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Margem: (default={:.0f}%)'.format(score_weights['TotalGrossMarginPerc_normalized'] * 100), 0, 100, value=int(score_weights['TotalGrossMarginPerc_normalized'] * 100), key=session_state.run_id_scores)
@@ -118,7 +118,7 @@ def main():
     if weights_sum != 100:
         st.sidebar.error('Alerta: Soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
 
-    if st.sidebar.button('Reset Scores'):
+    if st.sidebar.button('Reset Pesos'):
         session_state.sel_daysinstock_score_weight = score_weights['Avg_DaysInStock_Global_normalized'] * 100
         session_state.sel_margin_score_weight = score_weights['TotalGrossMarginPerc_normalized'] * 100
         session_state.sel_margin_ratio_score_weight = score_weights['MarginRatio_normalized'] * 100
