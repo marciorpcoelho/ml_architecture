@@ -1681,48 +1681,42 @@ def na_group_fill_hyundai(args):
     cols_to_fill = ['Quantity_CHS']
     measure_cols = ['Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12']
     support_measure_cols = ['Measure_13', 'Measure_14', 'Measure_15']
-    # print('group.shape:', group.shape)
-    # print('Quantity_CHS:', group['Quantity_CHS'].values)
 
     if group[measure_cols].sum(axis=0).sum(axis=0) == 0:
-        # print('inside case 0 - ', key)
+        # print('inside case 0 - ', key, '\n', group)
         return None
 
     if group.shape[0] == 1 and group['Quantity_CHS'].values == 0:
-        # print('inside case 1')
+        # print('inside case 1', key, '\n', group)
         return None
 
     if sum(group['SLR_Document_Date_CHS'].isnull()) == group['SLR_Document_Date_CHS'].shape[0]:  # Sem data de fatura de chassis
-        # print('inside case 2')
+        # print('inside case 2', key, '\n', group)
         # print('No SLR_Document_Date_CHS: \n', group)
         return None
 
     if group['SLR_Document_Date_CHS'].nunique() > 1:
-        # print('inside case 3')
+        # print('inside case 3', key, '\n', group)
         slr_document_date_chs_min = group['SLR_Document_Date_CHS'].min()
         # print('min slr_document_date_chs found:', slr_document_date_chs_min)
         try:
             slr_document_date_chs_min_idx = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) & (group['Quantity_CHS'] == 1)].index.values[0]
-            # print('case 3 - min date found which follows the requirements')
+            # print('case 3 - min date found which follows the requirements', key, '\n', group)
             # print('the line found was: \n', group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) & (group['Quantity_CHS'] == 1)][['Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12']])
         except IndexError:
             slr_document_date_chs_min_idx = group['SLR_Document_Date_CHS'].idxmin()
             # print('case 3 - min date not found')
     elif group['SLR_Document_Date_CHS'].nunique() == 1:
-        # print('inside case 4')
-        # slr_document_date_chs_min = group['SLR_Document_Date_CHS'].head(1).values[0]
+        # print('inside case 4', key, '\n', group)
         slr_document_date_chs_min = group['SLR_Document_Date_CHS'].min()
-        # slr_document_date_chs_min_idx = group[group['Quantity_CHS'] == 1].head(1).index.values[0]
         slr_document_date_chs_min_idx = group['SLR_Document_Date_CHS'].idxmin()
 
     check_for_registration_number = group['Registration_Number'].nunique()
     check_for_slr_document_chs = group['SLR_Document_CHS'].nunique()
     check_for_slr_document_rgn = group['SLR_Document_RGN'].nunique()
 
-    group.loc[:, cols_to_fill] = group[group.index == slr_document_date_chs_min_idx][cols_to_fill]
-    # print('outside case 3, part1, \n', group[['SLR_Document_Date_CHS', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Measure_13', 'Measure_14', 'Measure_15', 'Quantity_CHS']])
+    group.loc[:, cols_to_fill] = group[group.index == slr_document_date_chs_min_idx][cols_to_fill].head(1).values[0][0]
 
-    # exception_check = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) & (group['Quantity_CHS'] == 1)]['Measure_2'].sum(axis=0)
     exception_check = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) | (group['SLR_Document_Date_CHS'].isnull())]['Measure_2'].sum(axis=0)
     second_exception_check = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min) | (group['Quantity_CHS'] == 1)]['Measure_2'].sum(axis=0)
 
@@ -1740,16 +1734,10 @@ def na_group_fill_hyundai(args):
     for col_s in support_measure_cols:
         group[col_s] = group[(group['SLR_Document_Date_CHS'] == slr_document_date_chs_min)][col_s].sum(axis=0)
 
-    # print('outside case 3, part2, \n', group[['SLR_Document_Date_CHS', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Measure_13', 'Measure_14', 'Measure_15', 'Quantity_CHS']])
-
-    # print('sum of measure_2 axis=0:', group['Measure_2'].sum(axis=0))
-
     group['SLR_Document_Date_CHS'] = group['SLR_Document_Date_CHS'].min()
     group['SLR_Document_Date_RGN'] = group['SLR_Document_Date_RGN'].min()
 
     [group[x].fillna(method='bfill', inplace=True) for x in cols_to_fill]
-
-    # print('outside case 3, part3, \n', group[['SLR_Document_Date_CHS', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Quantity_CHS']])
 
     if not check_for_registration_number and check_for_slr_document_chs:
         group['No_Registration_Number_Flag'] = 1
@@ -1759,9 +1747,6 @@ def na_group_fill_hyundai(args):
         group['SLR_Document_RGN_Flag'] = 1
     else:
         group['Undefined_VHE_Status'] = 1
-
-    # print('outside case 3, part4, \n', group[['SLR_Document_Date_CHS', 'Measure_2', 'Measure_3', 'Measure_4', 'Measure_5', 'Measure_6', 'Measure_7', 'Measure_8', 'Measure_9', 'Measure_10', 'Measure_11', 'Measure_12', 'Quantity_CHS']])
-    # print('returned: \n', group.head(1))
 
     return group.head(1)
 
