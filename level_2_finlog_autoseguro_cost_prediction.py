@@ -40,6 +40,7 @@ def main():
     # df_train_test_prob = data_modelling(df)
     df_train_test_prob = data_modelling_v2(df)
 
+    deployment(df_train_test_prob)
     return
 
 
@@ -64,17 +65,19 @@ def data_modelling_v2(df):
     split_date = date(start_date_3_years_ago.year, start_date_3_years_ago.month, 1)
 
     df = feat_eng_v2(df)
-    pickle_dict('Customer_Group', 'Client_type', df)  # Creates a dictionary with all Customer Groups/Companies to be used in the streamlit app;
+    pickle_dict('Customer_Group', 'Customer_Name', df)  # Creates a dictionary with all Customer Groups/Companies to be used in the streamlit app;
     enc_LL, df = custom_ohenc_v2('LL', df)
     enc_AR, df = custom_ohenc_v2('AR', df)
     enc_FI, df = custom_ohenc_v2('FI', df)
     enc_Make, df = custom_ohenc_v2('Make', df)
     enc_Fuel, df = custom_ohenc_v2('Fuel', df)
     enc_Vehicle_Tipology, df = custom_ohenc_v2('Vehicle_Tipology', df)
-    enc_Client_type, df = custom_ohenc_v2('Client_type', df)
+    # enc_Client_type, df = custom_ohenc_v2('Client_type', df)
     enc_Num_Vehicles_Total, df = custom_ohenc_v2('Num_Vehicles_Total', df)
     enc_Num_Vehicles_Finlog, df = custom_ohenc_v2('Num_Vehicles_Finlog', df)
     enc_Customer_Group, df = custom_ohenc_v2('Customer_Group', df)
+    # enc_Customer_Name = create_encoder('Customer_Name', df)
+    # enc_Customer_Name = custom_ohenc_v2('Customer_Name', df)
 
     dump(enc_LL, 'models/enc_LL.joblib')
     dump(enc_AR, 'models/enc_AR.joblib')
@@ -82,10 +85,11 @@ def data_modelling_v2(df):
     dump(enc_Make, 'models/enc_Make.joblib')
     dump(enc_Fuel, 'models/enc_Fuel.joblib')
     dump(enc_Vehicle_Tipology, 'models/enc_Vehicle_Tipology.joblib')
-    dump(enc_Client_type, 'models/enc_Client_type.joblib')
+    # dump(enc_Client_type, 'models/enc_Client_type.joblib')
     dump(enc_Num_Vehicles_Total, 'models/enc_Num_Vehicles_Total.joblib')
     dump(enc_Num_Vehicles_Finlog, 'models/enc_Num_Vehicles_Finlog.joblib')
     dump(enc_Customer_Group, 'models/enc_Customer_Group.joblib')
+    # dump(enc_Customer_Name, 'models/enc_Customer_Name.joblib')
 
     columns_to_drop = [
         # 'contract_duration',
@@ -212,13 +216,18 @@ def data_modelling_v2(df):
 
     df_train_test_prob = pd.concat([df_test_prob, df_train_prob], axis=0)
 
-    df_train_test_prob.to_csv('dbs/df_train_test_prob_for_plotting_20200807.csv')
-
     print("Test dataset is ", 100 * round(test_X.shape[0] / df.shape[0], 3), "% of the total")
 
     log_record('Fim Secção D.', project_id)
     performance_info_append(time.time(), 'Section_D_End')
     return df_train_test_prob
+
+
+def deployment(df):
+
+    df.to_csv(options_file.DATA_PROB_PATH)  # ToDo: Upload to SQL?
+
+    return
 
 
 def pickle_dict(key_col, value_col, df):
@@ -594,10 +603,7 @@ def custom_ohenc_v2(col, df_in):
 
     df = df_in.copy()
 
-    enc = sk.preprocessing.OneHotEncoder()
-
-    # fit the encoder
-    enc.fit(df[[col]])
+    enc = create_encoder(col, df)
 
     # process train df
     df = pd.concat([
@@ -609,6 +615,16 @@ def custom_ohenc_v2(col, df_in):
     ], axis=1).drop([col], axis=1)
 
     return enc, df
+
+
+def create_encoder(col, df_in):
+
+    encoder = sk.preprocessing.OneHotEncoder()
+
+    # fit the encoder
+    encoder.fit(df_in[[col]])
+
+    return encoder
 
 
 def apply_ohenc(col, df_apply_in, enc):

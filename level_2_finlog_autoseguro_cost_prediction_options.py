@@ -36,326 +36,327 @@ log_files = {
 project_id = 2527
 update_frequency_days = 0
 
-DATA_PATH = '../dbs/dataset_train_20200817_v6.csv'  # File created with code in get_train_dataset.py
-DATA_PROB_PATH = '../dbs/df_train_test_prob_for_plotting_20200817.csv'  # File created with jupyter notebook Finlog_20200810_candidate_V4
+DATA_PATH = 'dbs/dataset_train_20200817_v6.csv'  # File created with code in get_train_dataset.py
+DATA_PROB_PATH = 'dbs/df_train_test_prob_for_plotting.csv'  # File created with jupyter notebook Finlog_20200810_candidate_V4
 
 # Encoders created with jupyter notebook Finlog_20200810_candidate_V4.ipynb
-MODEL_PATH = '../models/model.joblib'
+MODEL_PATH = '/models/model.joblib'
 
-enc_LL_path = '../models/enc_LL.joblib'
-enc_AR_path = '../models/enc_AR.joblib'
-enc_PI_path = '../models/enc_PI.joblib'
-enc_LA_path = '../models/enc_LA.joblib'
-enc_FI_path = '../models/enc_FI.joblib'
-enc_Make_path = '../models/enc_Make.joblib'
-enc_Fuel_path = '../models/enc_Fuel.joblib'
-enc_Vehicle_Segment_path = '../models/enc_Vehicle_Segment.joblib'
-enc_Vehicle_Tipology_path = '../models/enc_Vehicle_Tipology.joblib'
-enc_Client_type_path = '../models/enc_Client_type.joblib'
-enc_Num_Vehicles_Total_path = '../models/enc_Num_Vehicles_Total.joblib'
-enc_Num_Vehicles_Finlog_path = '../models/enc_Num_Vehicles_Finlog.joblib'
-enc_Customer_Group_path = '../models/enc_Customer_Group.joblib'
+enc_LL_path = '/models/enc_LL.joblib'
+enc_AR_path = '/models/enc_AR.joblib'
+enc_PI_path = '/models/enc_PI.joblib'
+enc_LA_path = '/models/enc_LA.joblib'
+enc_FI_path = '/models/enc_FI.joblib'
+enc_Make_path = '/models/enc_Make.joblib'
+enc_Fuel_path = '/models/enc_Fuel.joblib'
+enc_Vehicle_Segment_path = '/models/enc_Vehicle_Segment.joblib'
+enc_Vehicle_Tipology_path = '/models/enc_Vehicle_Tipology.joblib'
+enc_Client_type_path = '/models/enc_Client_type.joblib'
+enc_Num_Vehicles_Total_path = '/models/enc_Num_Vehicles_Total.joblib'
+enc_Num_Vehicles_Finlog_path = '/models/enc_Num_Vehicles_Finlog.joblib'
+enc_Customer_Group_path = '/models/enc_Customer_Group.joblib'
+enc_Customer_Name = '/models/enc_Customer_Name.joblib'
 Customer_Group_dict_path = 'models/customer_group_dict'
 
 
-apply_query_v2 = '''
-    WITH filters AS (
-        SELECT DISTINCT
-        --NULL AS Vehicle_No,
-        '{}' AS FI,
-        '{}' AS LL,
-        '{}' AS AR,
-        '{}' AS Vehicle_Tipology,
-        '{}' AS Make,
-        '{}' AS Fuel,
-        --
-        '{}' AS Client_type,
-        '{}' AS Num_Vehicles_Total,
-        '{}' AS Num_Vehicles_Finlog,
-        '{}' AS contract_duration,
-        '{}' AS Contract_km,
-        '{}' AS contract_start_date
-    FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data]), 
-    cte AS (
-        SELECT DISTINCT
-        NULL AS contract_customer,
-        NULL AS Customer_Name,
-        NULL AS contract_contract,
-        NULL AS Vehicle_No,
-        NULL AS Accident_No,
-        NULL AS target,
-        filters.FI,
-        filters.LL,
-        filters.AR,
-        filters.Client_type,
-        filters.Num_Vehicles_Total,
-        filters.Num_Vehicles_Finlog,
-        customer_data.Mean_repair_value_FULL,
-        customer_data.Sum_repair_value_FULL,
-        customer_data.Sum_contrat_km_FULL,
-        customer_data.Num_Accidents_FULL,
-        customer_data.Mean_contract_duration_FULL,
-        customer_data.Mean_monthly_repair_cost_FULL,
-        customer_data.Mean_repair_value_5YEAR,
-        customer_data.Sum_repair_value_5YEAR,
-        customer_data.Sum_contrat_km_5YEAR,
-        customer_data.Num_Accidents_5YEAR,
-        customer_data.Mean_contract_duration_5YEAR,
-        customer_data.Mean_monthly_repair_cost_5YEAR,
-        customer_data.Mean_repair_value_1YEAR,
-        customer_data.Sum_repair_value_1YEAR,
-        customer_data.Sum_contrat_km_1YEAR,
-        customer_data.Num_Accidents_1YEAR,
-        customer_data.Mean_contract_duration_1YEAR,
-        customer_data.Mean_monthly_repair_cost_1YEAR,
-        --
-        filters.Contract_km * 1000 AS Contract_km,
-        filters.contract_start_date,
-        --contract_end_date,
-        CAST(DATEADD(month, CAST(filters.contract_duration AS int), filters.contract_start_date) AS DATE)  AS contract_end_date,
-        filters.contract_duration,
-        filters.Vehicle_Tipology,
-        filters.Make,
-        filters.Fuel,
-        vehicle_data.Weight_Empty AS Weight_Empty,
-        vehicle_data.Insurable_Value AS Insurable_Value,
-        vehicle_data.Engine_CC AS Engine_CC,
-        vehicle_data.Power_kW AS Power_kW,
-        vehicle_data.Max_speed AS Max_speed,
-        vehicle_data.Max_Add_Load AS Max_Add_Load
-    FROM filters
-    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] vehicle_data ON
-    vehicle_data.Fuel = filters.Fuel AND
-    vehicle_data.Make = filters.Make AND
-    vehicle_data.Vehicle_Tipology = filters.Vehicle_Tipology
-    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] customer_data ON
-    customer_data.Client_type = filters.Client_type AND
-    customer_data.Num_Vehicles_Total = filters.Num_Vehicles_Total AND
-    customer_data.Num_Vehicles_Finlog = filters.Num_Vehicles_Finlog
-    )
-    SELECT
-        contract_customer,
-        Customer_Name,
-        contract_contract,
-        Vehicle_No,
-        Accident_No,
-        target,
-        FI,
-        LL,
-        AR,
-        Client_type,
-        Num_Vehicles_Total,
-        Num_Vehicles_Finlog,
-        --
-        AVG(Mean_repair_value_FULL) AS Mean_repair_value_FULL,
-        AVG(Sum_repair_value_FULL) AS Sum_repair_value_FULL,
-        AVG(Sum_contrat_km_FULL) AS Sum_contrat_km_FULL,
-        AVG(Num_Accidents_FULL) AS Num_Accidents_FULL,
-        AVG(Mean_contract_duration_FULL) AS Mean_contract_duration_FULL,
-        AVG(Mean_monthly_repair_cost_FULL) AS Mean_monthly_repair_cost_FULL,
-        AVG(Mean_repair_value_5YEAR) AS Mean_repair_value_5YEAR,
-        AVG(Sum_repair_value_5YEAR) AS Sum_repair_value_5YEAR,
-        AVG(Sum_contrat_km_5YEAR) AS Sum_contrat_km_5YEAR,
-        AVG(Num_Accidents_5YEAR) AS Num_Accidents_5YEAR,
-        AVG(Mean_contract_duration_5YEAR) AS Mean_contract_duration_5YEAR,
-        AVG(Mean_monthly_repair_cost_5YEAR) AS Mean_monthly_repair_cost_5YEAR,
-        AVG(Mean_repair_value_1YEAR) AS Mean_repair_value_1YEAR,
-        AVG(Sum_repair_value_1YEAR) AS Sum_repair_value_1YEAR,
-        AVG(Sum_contrat_km_1YEAR) AS Sum_contrat_km_1YEAR,
-        AVG(Num_Accidents_1YEAR) AS Num_Accidents_1YEAR,
-        AVG(Mean_contract_duration_1YEAR) AS Mean_contract_duration_1YEAR,
-        AVG(Mean_monthly_repair_cost_1YEAR) AS Mean_monthly_repair_cost_1YEAR,
-        --
-        Contract_km,
-        contract_start_date,
-        contract_end_date,
-        contract_duration,
-        Vehicle_Tipology,
-        Make,
-        Fuel,
-        --
-        AVG(Weight_Empty) AS Weight_Empty,
-        AVG(Insurable_Value) AS Insurable_Value,
-        AVG(Engine_CC) AS Engine_CC,
-        AVG(Power_kW) AS Power_kW,
-        AVG(Max_speed) AS Max_speed,
-        AVG(Max_Add_Load) AS Max_Add_Load
-    FROM cte
-    GROUP BY
-        contract_customer,
-        Customer_Name,
-        contract_contract,
-        Vehicle_No,
-        Accident_No,
-        target,
-        FI,
-        LL,
-        AR,
-        Client_type,
-        Num_Vehicles_Total,
-        Num_Vehicles_Finlog,
-        Contract_km,
-        contract_start_date,
-        contract_end_date,
-        contract_duration,
-        Vehicle_Tipology,
-        Make,
-        Fuel
-'''
+# apply_query_v2 = '''
+#     WITH filters AS (
+#         SELECT DISTINCT
+#         --NULL AS Vehicle_No,
+#         '{}' AS FI,
+#         '{}' AS LL,
+#         '{}' AS AR,
+#         '{}' AS Vehicle_Tipology,
+#         '{}' AS Make,
+#         '{}' AS Fuel,
+#         --
+#         '{}' AS Client_type,
+#         '{}' AS Num_Vehicles_Total,
+#         '{}' AS Num_Vehicles_Finlog,
+#         '{}' AS contract_duration,
+#         '{}' AS Contract_km,
+#         '{}' AS contract_start_date
+#     FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data]),
+#     cte AS (
+#         SELECT DISTINCT
+#         NULL AS contract_customer,
+#         NULL AS Customer_Name,
+#         NULL AS contract_contract,
+#         NULL AS Vehicle_No,
+#         NULL AS Accident_No,
+#         NULL AS target,
+#         filters.FI,
+#         filters.LL,
+#         filters.AR,
+#         filters.Client_type,
+#         filters.Num_Vehicles_Total,
+#         filters.Num_Vehicles_Finlog,
+#         customer_data.Mean_repair_value_FULL,
+#         customer_data.Sum_repair_value_FULL,
+#         customer_data.Sum_contrat_km_FULL,
+#         customer_data.Num_Accidents_FULL,
+#         customer_data.Mean_contract_duration_FULL,
+#         customer_data.Mean_monthly_repair_cost_FULL,
+#         customer_data.Mean_repair_value_5YEAR,
+#         customer_data.Sum_repair_value_5YEAR,
+#         customer_data.Sum_contrat_km_5YEAR,
+#         customer_data.Num_Accidents_5YEAR,
+#         customer_data.Mean_contract_duration_5YEAR,
+#         customer_data.Mean_monthly_repair_cost_5YEAR,
+#         customer_data.Mean_repair_value_1YEAR,
+#         customer_data.Sum_repair_value_1YEAR,
+#         customer_data.Sum_contrat_km_1YEAR,
+#         customer_data.Num_Accidents_1YEAR,
+#         customer_data.Mean_contract_duration_1YEAR,
+#         customer_data.Mean_monthly_repair_cost_1YEAR,
+#         --
+#         filters.Contract_km * 1000 AS Contract_km,
+#         filters.contract_start_date,
+#         --contract_end_date,
+#         CAST(DATEADD(month, CAST(filters.contract_duration AS int), filters.contract_start_date) AS DATE)  AS contract_end_date,
+#         filters.contract_duration,
+#         filters.Vehicle_Tipology,
+#         filters.Make,
+#         filters.Fuel,
+#         vehicle_data.Weight_Empty AS Weight_Empty,
+#         vehicle_data.Insurable_Value AS Insurable_Value,
+#         vehicle_data.Engine_CC AS Engine_CC,
+#         vehicle_data.Power_kW AS Power_kW,
+#         vehicle_data.Max_speed AS Max_speed,
+#         vehicle_data.Max_Add_Load AS Max_Add_Load
+#     FROM filters
+#     LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] vehicle_data ON
+#     vehicle_data.Fuel = filters.Fuel AND
+#     vehicle_data.Make = filters.Make AND
+#     vehicle_data.Vehicle_Tipology = filters.Vehicle_Tipology
+#     LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] customer_data ON
+#     customer_data.Client_type = filters.Client_type AND
+#     customer_data.Num_Vehicles_Total = filters.Num_Vehicles_Total AND
+#     customer_data.Num_Vehicles_Finlog = filters.Num_Vehicles_Finlog
+#     )
+#     SELECT
+#         contract_customer,
+#         Customer_Name,
+#         contract_contract,
+#         Vehicle_No,
+#         Accident_No,
+#         target,
+#         FI,
+#         LL,
+#         AR,
+#         Client_type,
+#         Num_Vehicles_Total,
+#         Num_Vehicles_Finlog,
+#         --
+#         AVG(Mean_repair_value_FULL) AS Mean_repair_value_FULL,
+#         AVG(Sum_repair_value_FULL) AS Sum_repair_value_FULL,
+#         AVG(Sum_contrat_km_FULL) AS Sum_contrat_km_FULL,
+#         AVG(Num_Accidents_FULL) AS Num_Accidents_FULL,
+#         AVG(Mean_contract_duration_FULL) AS Mean_contract_duration_FULL,
+#         AVG(Mean_monthly_repair_cost_FULL) AS Mean_monthly_repair_cost_FULL,
+#         AVG(Mean_repair_value_5YEAR) AS Mean_repair_value_5YEAR,
+#         AVG(Sum_repair_value_5YEAR) AS Sum_repair_value_5YEAR,
+#         AVG(Sum_contrat_km_5YEAR) AS Sum_contrat_km_5YEAR,
+#         AVG(Num_Accidents_5YEAR) AS Num_Accidents_5YEAR,
+#         AVG(Mean_contract_duration_5YEAR) AS Mean_contract_duration_5YEAR,
+#         AVG(Mean_monthly_repair_cost_5YEAR) AS Mean_monthly_repair_cost_5YEAR,
+#         AVG(Mean_repair_value_1YEAR) AS Mean_repair_value_1YEAR,
+#         AVG(Sum_repair_value_1YEAR) AS Sum_repair_value_1YEAR,
+#         AVG(Sum_contrat_km_1YEAR) AS Sum_contrat_km_1YEAR,
+#         AVG(Num_Accidents_1YEAR) AS Num_Accidents_1YEAR,
+#         AVG(Mean_contract_duration_1YEAR) AS Mean_contract_duration_1YEAR,
+#         AVG(Mean_monthly_repair_cost_1YEAR) AS Mean_monthly_repair_cost_1YEAR,
+#         --
+#         Contract_km,
+#         contract_start_date,
+#         contract_end_date,
+#         contract_duration,
+#         Vehicle_Tipology,
+#         Make,
+#         Fuel,
+#         --
+#         AVG(Weight_Empty) AS Weight_Empty,
+#         AVG(Insurable_Value) AS Insurable_Value,
+#         AVG(Engine_CC) AS Engine_CC,
+#         AVG(Power_kW) AS Power_kW,
+#         AVG(Max_speed) AS Max_speed,
+#         AVG(Max_Add_Load) AS Max_Add_Load
+#     FROM cte
+#     GROUP BY
+#         contract_customer,
+#         Customer_Name,
+#         contract_contract,
+#         Vehicle_No,
+#         Accident_No,
+#         target,
+#         FI,
+#         LL,
+#         AR,
+#         Client_type,
+#         Num_Vehicles_Total,
+#         Num_Vehicles_Finlog,
+#         Contract_km,
+#         contract_start_date,
+#         contract_end_date,
+#         contract_duration,
+#         Vehicle_Tipology,
+#         Make,
+#         Fuel
+# '''
 
 
-apply_query = '''
-    WITH filters AS (
-        SELECT DISTINCT
-        --NULL AS Vehicle_No,
-        '${FI_filter}' AS FI,
-        '${LA_filter}' AS LA,
-        '${LL_filter}' AS LL,
-        '${PI_filter}' AS PI,
-        '${AR_filter}' AS AR,
-        '${segment_filter}' AS Vehicle_Segment,
-        '${make_filter}' AS Make,
-        '${fuel_filter}' AS Fuel,
-        --
-        '${client_type_filter}' AS Client_type,
-        '${fleet_size_total_filter}' AS Num_Vehicles_Total,
-        '${fleet_size_finlog_filter}' AS Num_Vehicles_Finlog,
-        '${contract_duration}' AS contract_duration,
-        '${km_year}' AS Contract_km,
-        '${contract_start_date}' AS contract_start_date
-        FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data]), 
-        cte AS (
-        SELECT DISTINCT
-        NULL AS contract_customer,
-        NULL AS Customer_Name,
-        NULL AS contract_contract,
-        NULL AS Vehicle_No,
-        NULL AS Accident_No,
-        NULL AS target,
-        filters.FI,
-        filters.LA,
-        filters.LL,
-        filters.PI,
-        filters.AR,
-        filters.Client_type,
-        filters.Num_Vehicles_Total,
-        filters.Num_Vehicles_Finlog,
-        customer_data.Mean_repair_value_FULL,
-        customer_data.Sum_repair_value_FULL,
-        customer_data.Sum_contrat_km_FULL,
-        customer_data.Num_Accidents_FULL,
-        customer_data.Mean_contract_duration_FULL,
-        customer_data.Mean_monthly_repair_cost_FULL,
-        customer_data.Mean_repair_value_5YEAR,
-        customer_data.Sum_repair_value_5YEAR,
-        customer_data.Sum_contrat_km_5YEAR,
-        customer_data.Num_Accidents_5YEAR,
-        customer_data.Mean_contract_duration_5YEAR,
-        customer_data.Mean_monthly_repair_cost_5YEAR,
-        customer_data.Mean_repair_value_1YEAR,
-        customer_data.Sum_repair_value_1YEAR,
-        customer_data.Sum_contrat_km_1YEAR,
-        customer_data.Num_Accidents_1YEAR,
-        customer_data.Mean_contract_duration_1YEAR,
-        customer_data.Mean_monthly_repair_cost_1YEAR,
-        --
-        filters.Contract_km * 1000 AS Contract_km,
-        filters.contract_start_date,
-        --contract_end_date,
-        CAST(DATEADD(month, CAST(filters.contract_duration AS int), filters.contract_start_date) AS DATE)  AS contract_end_date,
-        filters.contract_duration,
-        filters.Vehicle_Segment,
-        filters.Make,
-        filters.Fuel,
-        vehicle_data.Weight_Empty AS Weight_Empty,
-        vehicle_data.Insurable_Value AS Insurable_Value,
-        vehicle_data.Engine_CC AS Engine_CC,
-        vehicle_data.Power_kW AS Power_kW,
-        vehicle_data.Max_speed AS Max_speed,
-        vehicle_data.Max_Add_Load AS Max_Add_Load
-    FROM filters
-    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] vehicle_data ON
-        vehicle_data.Fuel = filters.Fuel AND
-        vehicle_data.Make = filters.Make AND
-        vehicle_data.Vehicle_Segment = filters.Vehicle_Segment
-    
-    LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] customer_data ON
-        customer_data.Client_type = filters.Client_type AND
-        customer_data.Num_Vehicles_Total = filters.Num_Vehicles_Total AND
-        customer_data.Num_Vehicles_Finlog = filters.Num_Vehicles_Finlog)
-    SELECT
-        contract_customer,
-        Customer_Name,
-        contract_contract,
-        Vehicle_No,
-        Accident_No,
-        target,
-        FI,
-        LA,
-        LL,
-        PI,
-        AR,
-        Client_type,
-        Num_Vehicles_Total,
-        Num_Vehicles_Finlog,
-        --
-        AVG(Mean_repair_value_FULL) AS Mean_repair_value_FULL,
-        AVG(Sum_repair_value_FULL) AS Sum_repair_value_FULL,
-        AVG(Sum_contrat_km_FULL) AS Sum_contrat_km_FULL,
-        AVG(Num_Accidents_FULL) AS Num_Accidents_FULL,
-        AVG(Mean_contract_duration_FULL) AS Mean_contract_duration_FULL,
-        AVG(Mean_monthly_repair_cost_FULL) AS Mean_monthly_repair_cost_FULL,
-        AVG(Mean_repair_value_5YEAR) AS Mean_repair_value_5YEAR,
-        AVG(Sum_repair_value_5YEAR) AS Sum_repair_value_5YEAR,
-        AVG(Sum_contrat_km_5YEAR) AS Sum_contrat_km_5YEAR,
-        AVG(Num_Accidents_5YEAR) AS Num_Accidents_5YEAR,
-        AVG(Mean_contract_duration_5YEAR) AS Mean_contract_duration_5YEAR,
-        AVG(Mean_monthly_repair_cost_5YEAR) AS Mean_monthly_repair_cost_5YEAR,
-        AVG(Mean_repair_value_1YEAR) AS Mean_repair_value_1YEAR,
-        AVG(Sum_repair_value_1YEAR) AS Sum_repair_value_1YEAR,
-        AVG(Sum_contrat_km_1YEAR) AS Sum_contrat_km_1YEAR,
-        AVG(Num_Accidents_1YEAR) AS Num_Accidents_1YEAR,
-        AVG(Mean_contract_duration_1YEAR) AS Mean_contract_duration_1YEAR,
-        AVG(Mean_monthly_repair_cost_1YEAR) AS Mean_monthly_repair_cost_1YEAR,
-        --
-        Contract_km,
-        contract_start_date,
-        contract_end_date,
-        contract_duration,
-        Vehicle_Segment,
-        Make,
-        Fuel,
-        --
-        AVG(Weight_Empty) AS Weight_Empty,
-        AVG(Insurable_Value) AS Insurable_Value,
-        AVG(Engine_CC) AS Engine_CC,
-        AVG(Power_kW) AS Power_kW,
-        AVG(Max_speed) AS Max_speed,
-        AVG(Max_Add_Load) AS Max_Add_Load
-    FROM cte
-    GROUP BY
-        contract_customer,
-        Customer_Name,
-        contract_contract,
-        Vehicle_No,
-        Accident_No,
-        target,
-        FI,
-        LA,
-        LL,
-        PI,
-        AR,
-        Client_type,
-        Num_Vehicles_Total,
-        Num_Vehicles_Finlog,
-        Contract_km,
-        contract_start_date,
-        contract_end_date,
-        contract_duration,
-        Vehicle_Segment,
-        Make,
-        Fuel
-'''
+# apply_query = '''
+#     WITH filters AS (
+#         SELECT DISTINCT
+#         --NULL AS Vehicle_No,
+#         '${FI_filter}' AS FI,
+#         '${LA_filter}' AS LA,
+#         '${LL_filter}' AS LL,
+#         '${PI_filter}' AS PI,
+#         '${AR_filter}' AS AR,
+#         '${segment_filter}' AS Vehicle_Segment,
+#         '${make_filter}' AS Make,
+#         '${fuel_filter}' AS Fuel,
+#         --
+#         '${client_type_filter}' AS Client_type,
+#         '${fleet_size_total_filter}' AS Num_Vehicles_Total,
+#         '${fleet_size_finlog_filter}' AS Num_Vehicles_Finlog,
+#         '${contract_duration}' AS contract_duration,
+#         '${km_year}' AS Contract_km,
+#         '${contract_start_date}' AS contract_start_date
+#         FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data]),
+#         cte AS (
+#         SELECT DISTINCT
+#         NULL AS contract_customer,
+#         NULL AS Customer_Name,
+#         NULL AS contract_contract,
+#         NULL AS Vehicle_No,
+#         NULL AS Accident_No,
+#         NULL AS target,
+#         filters.FI,
+#         filters.LA,
+#         filters.LL,
+#         filters.PI,
+#         filters.AR,
+#         filters.Client_type,
+#         filters.Num_Vehicles_Total,
+#         filters.Num_Vehicles_Finlog,
+#         customer_data.Mean_repair_value_FULL,
+#         customer_data.Sum_repair_value_FULL,
+#         customer_data.Sum_contrat_km_FULL,
+#         customer_data.Num_Accidents_FULL,
+#         customer_data.Mean_contract_duration_FULL,
+#         customer_data.Mean_monthly_repair_cost_FULL,
+#         customer_data.Mean_repair_value_5YEAR,
+#         customer_data.Sum_repair_value_5YEAR,
+#         customer_data.Sum_contrat_km_5YEAR,
+#         customer_data.Num_Accidents_5YEAR,
+#         customer_data.Mean_contract_duration_5YEAR,
+#         customer_data.Mean_monthly_repair_cost_5YEAR,
+#         customer_data.Mean_repair_value_1YEAR,
+#         customer_data.Sum_repair_value_1YEAR,
+#         customer_data.Sum_contrat_km_1YEAR,
+#         customer_data.Num_Accidents_1YEAR,
+#         customer_data.Mean_contract_duration_1YEAR,
+#         customer_data.Mean_monthly_repair_cost_1YEAR,
+#         --
+#         filters.Contract_km * 1000 AS Contract_km,
+#         filters.contract_start_date,
+#         --contract_end_date,
+#         CAST(DATEADD(month, CAST(filters.contract_duration AS int), filters.contract_start_date) AS DATE)  AS contract_end_date,
+#         filters.contract_duration,
+#         filters.Vehicle_Segment,
+#         filters.Make,
+#         filters.Fuel,
+#         vehicle_data.Weight_Empty AS Weight_Empty,
+#         vehicle_data.Insurable_Value AS Insurable_Value,
+#         vehicle_data.Engine_CC AS Engine_CC,
+#         vehicle_data.Power_kW AS Power_kW,
+#         vehicle_data.Max_speed AS Max_speed,
+#         vehicle_data.Max_Add_Load AS Max_Add_Load
+#     FROM filters
+#     LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Vehicle_Data] vehicle_data ON
+#         vehicle_data.Fuel = filters.Fuel AND
+#         vehicle_data.Make = filters.Make AND
+#         vehicle_data.Vehicle_Segment = filters.Vehicle_Segment
+#
+#     LEFT JOIN [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] customer_data ON
+#         customer_data.Client_type = filters.Client_type AND
+#         customer_data.Num_Vehicles_Total = filters.Num_Vehicles_Total AND
+#         customer_data.Num_Vehicles_Finlog = filters.Num_Vehicles_Finlog)
+#     SELECT
+#         contract_customer,
+#         Customer_Name,
+#         contract_contract,
+#         Vehicle_No,
+#         Accident_No,
+#         target,
+#         FI,
+#         LA,
+#         LL,
+#         PI,
+#         AR,
+#         Client_type,
+#         Num_Vehicles_Total,
+#         Num_Vehicles_Finlog,
+#         --
+#         AVG(Mean_repair_value_FULL) AS Mean_repair_value_FULL,
+#         AVG(Sum_repair_value_FULL) AS Sum_repair_value_FULL,
+#         AVG(Sum_contrat_km_FULL) AS Sum_contrat_km_FULL,
+#         AVG(Num_Accidents_FULL) AS Num_Accidents_FULL,
+#         AVG(Mean_contract_duration_FULL) AS Mean_contract_duration_FULL,
+#         AVG(Mean_monthly_repair_cost_FULL) AS Mean_monthly_repair_cost_FULL,
+#         AVG(Mean_repair_value_5YEAR) AS Mean_repair_value_5YEAR,
+#         AVG(Sum_repair_value_5YEAR) AS Sum_repair_value_5YEAR,
+#         AVG(Sum_contrat_km_5YEAR) AS Sum_contrat_km_5YEAR,
+#         AVG(Num_Accidents_5YEAR) AS Num_Accidents_5YEAR,
+#         AVG(Mean_contract_duration_5YEAR) AS Mean_contract_duration_5YEAR,
+#         AVG(Mean_monthly_repair_cost_5YEAR) AS Mean_monthly_repair_cost_5YEAR,
+#         AVG(Mean_repair_value_1YEAR) AS Mean_repair_value_1YEAR,
+#         AVG(Sum_repair_value_1YEAR) AS Sum_repair_value_1YEAR,
+#         AVG(Sum_contrat_km_1YEAR) AS Sum_contrat_km_1YEAR,
+#         AVG(Num_Accidents_1YEAR) AS Num_Accidents_1YEAR,
+#         AVG(Mean_contract_duration_1YEAR) AS Mean_contract_duration_1YEAR,
+#         AVG(Mean_monthly_repair_cost_1YEAR) AS Mean_monthly_repair_cost_1YEAR,
+#         --
+#         Contract_km,
+#         contract_start_date,
+#         contract_end_date,
+#         contract_duration,
+#         Vehicle_Segment,
+#         Make,
+#         Fuel,
+#         --
+#         AVG(Weight_Empty) AS Weight_Empty,
+#         AVG(Insurable_Value) AS Insurable_Value,
+#         AVG(Engine_CC) AS Engine_CC,
+#         AVG(Power_kW) AS Power_kW,
+#         AVG(Max_speed) AS Max_speed,
+#         AVG(Max_Add_Load) AS Max_Add_Load
+#     FROM cte
+#     GROUP BY
+#         contract_customer,
+#         Customer_Name,
+#         contract_contract,
+#         Vehicle_No,
+#         Accident_No,
+#         target,
+#         FI,
+#         LA,
+#         LL,
+#         PI,
+#         AR,
+#         Client_type,
+#         Num_Vehicles_Total,
+#         Num_Vehicles_Finlog,
+#         Contract_km,
+#         contract_start_date,
+#         contract_end_date,
+#         contract_duration,
+#         Vehicle_Segment,
+#         Make,
+#         Fuel
+# '''
 
 auth_description = '''
     WITH cte AS (
@@ -396,7 +397,7 @@ get_train_dataset_query = '''
         --vehicle.PI,
         vehicle.AR,
         --customer_accident_history.Vehicle_Segment,
-        customer.Client_type,
+        --customer.Client_type,
         --
         customer.Num_Vehicles_Total,
         customer.Num_Vehicles_Finlog,
@@ -477,13 +478,15 @@ customer_data_query = '''
         customer_data.Num_Accidents_1YEAR,
         customer_data.Mean_contract_duration_1YEAR,
         customer_data.Mean_monthly_repair_cost_1YEAR,
-        customer_data.Client_type,
+        --customer_data.Client_type,
+        --customer_data.Customer_Name,
+        customer_data.Customer_Group,
         customer_data.Num_Vehicles_Total,
         customer_data.Num_Vehicles_Finlog,
         1 as cross_join_key
     FROM [BI_MLG].[dbo].[VHE_FNG_Fact_DW_Customer_Data] as customer_data
     WHERE 1=1
-    and customer_data.Client_type in ({})
+    and customer_data.Customer_Group in ({})
     and customer_data.Num_Vehicles_Total in ({})
     and customer_data.Num_Vehicles_Finlog in ({})
 '''
@@ -530,6 +533,6 @@ vehicle_data_query = '''
 vehicle_data_cols = ['Weight_Empty', 'Insurable_Value', 'Engine_CC', 'Power_kW', 'Max_speed', 'Max_Add_Load']
 
 vhe_data_col_keys = ['Fuel', 'Make', 'Vehicle_Tipology']
-customer_data_col_keys = ['Client_type', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog']
+customer_data_col_keys = ['Customer_Group', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog']
 
 

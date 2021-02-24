@@ -1,30 +1,21 @@
 import os
-# import re
 import sys
 import shap
 import time
-import pyodbc
 # import logging
-# import graphviz
-import matplotlib
 import pickle
 import numpy as np
 import pandas as pd
-# import sklearn as sk
 import seaborn as sns
-# import lightgbm as lgb
 import streamlit as st
 from datetime import date
 from joblib import load
-from datetime import datetime
 import matplotlib.pyplot as plt
 from traceback import format_exc
 from dateutil.relativedelta import relativedelta
 from streamlit.script_runner import RerunException
 from streamlit.script_request_queue import RerunData
-# from collections import defaultdict, Counter
 base_path = os.path.abspath(os.path.join(os.path.dirname("__file__"), '..', ''))
-# base_path = os.path.dirname(os.path.abspath("__file__"))
 sys.path.insert(1, base_path)
 import level_2_finlog_autoseguro_cost_prediction_options as options_file
 from modules.level_1_a_data_acquisition import sql_retrieve_df_specified_query
@@ -45,16 +36,17 @@ st.markdown("<h2 style='text-align: center;'>Previsão de Probabilidade de Sinis
 
 
 def main():
-    enc_LL = load(options_file.enc_LL_path)
-    enc_AR = load(options_file.enc_AR_path)
-    enc_FI = load(options_file.enc_FI_path)
-    enc_Make = load(options_file.enc_Make_path)
-    enc_Fuel = load(options_file.enc_Fuel_path)
-    enc_Vehicle_Tipology = load(options_file.enc_Vehicle_Tipology_path)
-    enc_Client_type = load(options_file.enc_Client_type_path)
-    enc_Num_Vehicles_Total = load(options_file.enc_Num_Vehicles_Total_path)
-    enc_Num_Vehicles_Finlog = load(options_file.enc_Num_Vehicles_Finlog_path)
-    enc_Customer_Group = load(options_file.enc_Customer_Group_path)
+    enc_LL = load(base_path + options_file.enc_LL_path)
+    enc_AR = load(base_path + options_file.enc_AR_path)
+    enc_FI = load(base_path + options_file.enc_FI_path)
+    enc_Make = load(base_path + options_file.enc_Make_path)
+    enc_Fuel = load(base_path + options_file.enc_Fuel_path)
+    enc_Vehicle_Tipology = load(base_path + options_file.enc_Vehicle_Tipology_path)
+    # enc_Client_type = load(base_path + options_file.enc_Client_type_path)
+    enc_Num_Vehicles_Total = load(base_path + options_file.enc_Num_Vehicles_Total_path)
+    enc_Num_Vehicles_Finlog = load(base_path + options_file.enc_Num_Vehicles_Finlog_path)
+    enc_Customer_Group = load(base_path + options_file.enc_Customer_Group_path)
+    # enc_Customer_Name = load(base_path + options_file.enc_Customer_Name)
     dict_Customer_Group = load_pickle(options_file.Customer_Group_dict_path)
 
     col1, col2 = st.sidebar.beta_columns(2)
@@ -77,11 +69,13 @@ def main():
 
     customer_group_list = enc_Customer_Group.categories_[0]
     customer_group_filter = st.sidebar.selectbox('Grupo de Empresas:', ['-'] + list(customer_group_list), index=0)
-    if customer_group_filter != '-':
-        client_type_list = dict_Customer_Group[customer_group_filter]
-    else:
-        client_type_list = enc_Client_type.categories_[0]
-    client_type_filter = st.sidebar.selectbox('Tipo de cliente:', ['-'] + list(client_type_list), index=0)
+    # if customer_group_filter != '-':
+    #     customer_name_list = dict_Customer_Group[customer_group_filter]
+    # else:
+    #     customer_name_list = list(enc_Customer_Name.categories_[0])
+    # customer_name_filter = st.sidebar.multiselect('Cliente(s):', list(customer_name_list))
+    # if not len(customer_name_filter):
+    #     customer_name_filter = customer_name_list
 
     LL_list = list(enc_LL.categories_[0])
     LL_filter = st.sidebar.multiselect('Cobertura Responsabilidade Civil (LL):', LL_list)
@@ -117,7 +111,7 @@ def main():
         make_filter = ['AUDI', 'CITROEN']
         fuel_filter = fuel_filter
         customer_group_filter = 'Banco BPI'
-        client_type_filter = 'Empresa'
+        # customer_name_filter = ['Banco BPI, S.A.', 'BANCO PORTUGUES DE INVESTIMENTO, SA']
         LL_filter = LL_filter
         AR_filter = ['Franquia 8%', 'Franquia 4%']
         FI_filter = 'Até €1.000/Ano'
@@ -131,7 +125,6 @@ def main():
                Marca: **{}**\n
                Combustível: **{}**\n
                Grupo de Empresas: **{}**\n
-               Tipo de cliente: **{}**\n
                Franquia LL: **{}**\n
                Franquia AR: **{}**\n
                Franquia FI: **{}**\n
@@ -139,29 +132,41 @@ def main():
                Dimensão da frota com Auto Seguro: **{}**\n
                Duração do contrato: **{}**\n
                Estimativa de km por ano: **{}**\n
-               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, client_type_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
+               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
                  )
 
     if col2.button('Perfil 2'):
-        tipology_filter = 'Ligeiros de Mercadorias'
-        make_filter = 'TOYOTA'
+        # tipology_filter = 'Ligeiros de Mercadorias'
+        # make_filter = 'TOYOTA'
+        # fuel_filter = 'Gasóleo'
+        # customer_group_filter = 'Grupo Choice Car'
+        # client_type_filter = 'Empresa'
+        # LL_filter = 'Fidelidade 2012 - RC 50M€ Passageiros'
+        # AR_filter = 'Franquia 4%'
+        # FI_filter = 'Até €1.000/Ano'
+        # fleet_size_total_filter = '250-449'
+        # fleet_size_finlog_filter = '80-99'
+        # contract_duration = '24'
+        # km_year = '10'
+
+        tipology_filter = 'Ligeiros de Passageiros'
+        make_filter = 'RENAULT'
         fuel_filter = 'Gasóleo'
-        customer_group_filter = 'Grupo Choice Car'
-        client_type_filter = 'Empresa'
-        LL_filter = 'Fidelidade 2012 - RC 50M€ Passageiros'
-        AR_filter = 'Franquia 4%'
+        customer_group_filter = 'Empresa'
+        # customer_name_filter = 'Modelo Continente Hipermercados, S.A.'
+        LL_filter = '€50.000.000'
+        AR_filter = 'Franquia 2%'
         FI_filter = 'Até €1.000/Ano'
         fleet_size_total_filter = '250-449'
-        fleet_size_finlog_filter = '80-99'
-        contract_duration = '24'
-        km_year = '10'
+        fleet_size_finlog_filter = '>180'
+        contract_duration = '2'
+        km_year = '24'
 
         st.write('''
                Tipologia do veículo: **{}**\n
                Marca: **{}**\n
                Combustível: **{}**\n
                Grupo de Empresas: **{}**\n
-               Tipo de cliente: **{}**\n
                Franquia LL: **{}**\n
                Franquia AR: **{}**\n
                Franquia FI: **{}**\n
@@ -169,7 +174,7 @@ def main():
                Dimensão da frota com Auto Seguro: **{}**\n
                Duração do contrato: **{}**\n
                Estimativa de km por ano: **{}**\n
-               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, client_type_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
+               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
                  )
 
     if tipology_filter == '-':
@@ -180,8 +185,8 @@ def main():
         st.text("Por favor selecione o combustível do veículo")
     elif customer_group_filter == '-':
         st.text("Por favor selecione o grupo de empresas")
-    elif client_type_filter == '-':
-        st.text("Por favor selecione o tipo de cliente")
+    # elif customer_name_filter == '-':
+    #     st.text("Por favor selecione o tipo de cliente")
     elif LL_filter == '-':
         st.text("Por favor selecione a franquia LL")
     elif AR_filter == '-':
@@ -215,7 +220,7 @@ def main():
         #        **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, client_type_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
         #          )
 
-        df = rows_to_predict_creation(options_file.DSN_MLG_PRD, 'BI_MLG', options_file, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, client_type_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date)
+        df = rows_to_predict_creation(options_file.DSN_MLG_DEV, 'BI_MLG', options_file, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date)
 
         df = feat_eng(df)
 
@@ -224,7 +229,7 @@ def main():
 
         df.Fuel = np.nan_to_num(df.Fuel)
 
-        clf = load(options_file.MODEL_PATH)
+        clf = load(base_path + options_file.MODEL_PATH)
 
         df = apply_ohenc('LL', df, enc_LL)
         df = apply_ohenc('AR', df, enc_AR)
@@ -232,37 +237,45 @@ def main():
         df = apply_ohenc('Make', df, enc_Make)
         df = apply_ohenc('Fuel', df, enc_Fuel)
         df = apply_ohenc('Vehicle_Tipology', df, enc_Vehicle_Tipology)
-        df = apply_ohenc('Client_type', df, enc_Client_type)
+        # df = apply_ohenc('Client_type', df, enc_Client_type)
         df = apply_ohenc('Num_Vehicles_Total', df, enc_Num_Vehicles_Total)
         df = apply_ohenc('Num_Vehicles_Finlog', df, enc_Num_Vehicles_Finlog)
         df = apply_ohenc('Customer_Group', df, enc_Customer_Group)
+        # df = apply_ohenc('Customer_Name', df, enc_Customer_Name)
 
         df = df.astype('float32')
         prediction_proba = clf.predict_proba(df)
         prediction = np.mean([x[1] for x in prediction_proba])
-        # prediction = prediction_proba[0][1]
 
         st.write('Probabilidade de sinistro: {:.1f}%'.format(prediction*100))
 
-        df_test_prob_full = pd.read_csv(options_file.DATA_PROB_PATH, index_col=0)
+        df_test_prob_full = pd.read_csv(base_path + '/' + options_file.DATA_PROB_PATH, index_col=0)
 
         # Casos Semelhantes
         df_test_prob = df_test_prob_full.copy()
 
         df_test_prob = df_test_prob[df_test_prob['pred_prob'] < 0.95]
 
-        if type(make_filter) == list:
-            df_test_prob_similar = df_test_prob[
-                # (df_test_prob['Client_type'] == client_type_filter) &
-                (df_test_prob['Vehicle_Tipology'] == tipology_filter) &
-                (df_test_prob['Make'].isin(make_filter))
-            ]
-        elif type(make_filter) == str:
-            df_test_prob_similar = df_test_prob[
-                # (df_test_prob['Client_type'] == client_type_filter) &
-                (df_test_prob['Vehicle_Tipology'] == tipology_filter) &
-                (df_test_prob['Make'] == make_filter)
-                ]
+        df_test_prob['Make_Reverse_OHE'] = enc_Make.inverse_transform(df_test_prob[[x for x in list(df_test_prob) if x.startswith('Make')]])
+        # df_test_prob['Customer_Name_Reverse_OHE'] = enc_Customer_Name.inverse_transform(df_test_prob[[x for x in list(df_test_prob) if x.startswith('Customer_Name')]])
+        df_test_prob['Vehicle_Tipology_Reverse_OHE'] = enc_Vehicle_Tipology.inverse_transform(df_test_prob[[x for x in list(df_test_prob) if x.startswith('Vehicle_Tipology')]])
+
+        if type(make_filter) == str:
+            make_filter = [make_filter]
+        if type(fuel_filter) == str:
+            fuel_filter = [fuel_filter]
+        if type(LL_filter) == str:
+            LL_filter = [LL_filter]
+        if type(AR_filter) == str:
+            AR_filter = [AR_filter]
+        if type(FI_filter) == str:
+            FI_filter = [FI_filter]
+
+        df_test_prob_similar = df_test_prob[
+            # (df_test_prob['Client_type'] == client_type_filter) &
+            (df_test_prob['Vehicle_Tipology_Reverse_OHE'] == tipology_filter) &
+            (df_test_prob['Make_Reverse_OHE'].isin(make_filter))
+        ]
 
         # Calculate the percentile for this simulation and present it
         num_cases_higher_prob = df_test_prob[df_test_prob['pred_prob'] > prediction].shape[0]
@@ -359,22 +372,11 @@ def main():
 
             shap_values_plot(clf, df)
 
-            if type(make_filter) == list:
-                # Calculate distribution of repair cost
-                df_test_prob_comparable_cases = df_test_prob[
-                    (df_test_prob['Client_type'] == client_type_filter) &
-                    (df_test_prob['Vehicle_Tipology'] == tipology_filter) &
-                    (df_test_prob['Make'].isin(make_filter)) &
-                    (df_test_prob['target_accident'] == 1)
-                    ].reset_index(drop=True)
-            elif type(make_filter) == str:
-                # Calculate distribution of repair cost
-                df_test_prob_comparable_cases = df_test_prob[
-                    (df_test_prob['Client_type'] == client_type_filter) &
-                    (df_test_prob['Vehicle_Tipology'] == tipology_filter) &
-                    (df_test_prob['Make'] == make_filter) &
-                    (df_test_prob['target_accident'] == 1)
-                    ].reset_index(drop=True)
+            df_test_prob_comparable_cases = df_test_prob[
+                (df_test_prob['Vehicle_Tipology_Reverse_OHE'] == tipology_filter) &
+                (df_test_prob['Make_Reverse_OHE'].isin(make_filter)) &
+                (df_test_prob['target_accident'] == 1)
+                ].reset_index(drop=True)
 
             df_test_prob_comparable_cases = df_test_prob_comparable_cases.sort_values('target_cost', ascending=True).reset_index(drop=True)
             num_rows = df_test_prob_comparable_cases.shape[0]
@@ -498,19 +500,20 @@ def shap_values_plot(clf, df):
     return
 
 
-def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, client_type_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date):
+def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date):
 
-    sel_values_df = selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, client_type_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date)
+    sel_values_df = selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date)
 
     fuel_filter = query_list_string_handling(fuel_filter)
     make_filter = query_list_string_handling(make_filter)
     tipology_filter = query_list_string_handling(tipology_filter)
-    client_type_filter = query_list_string_handling(client_type_filter)
+    # customer_name_filter = query_list_string_handling(customer_name_filter)
+    customer_group_filter = query_list_string_handling(customer_group_filter)
     fleet_size_total_filter = query_list_string_handling(fleet_size_total_filter)
     fleet_size_finlog_filter = query_list_string_handling(fleet_size_finlog_filter)
 
     vhe_data = get_data(dsn, db, options_file_in, options_file_in.vehicle_data_query.format(fuel_filter, make_filter, tipology_filter))
-    customer_data = get_data(dsn, db, options_file_in, options_file_in.customer_data_query.format(client_type_filter, fleet_size_total_filter, fleet_size_finlog_filter))
+    customer_data = get_data(dsn, db, options_file_in, options_file_in.customer_data_query.format(customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter))
 
     # middle_df = pd.merge(sel_values_df, vhe_data, on=['Fuel', 'Make', 'Vehicle_Tipology'])
     if vhe_data.shape[0]:
@@ -520,7 +523,7 @@ def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_
 
         middle_df = pd.merge(sel_values_df, vhe_data, on=['Fuel_lower', 'Make_lower', 'Vehicle_Tipology_lower'], suffixes=(None, '_y'))
     elif not vhe_data.shape[0]:
-        # st.write('vhe empty')
+        st.write('vhe empty')
         middle_df = sel_values_df
         for col in options_file.vehicle_data_cols:
             middle_df[col] = np.nan
@@ -530,7 +533,7 @@ def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_
             customer_data[col + '_lower'] = customer_data[col].str.lower()
             middle_df[col + '_lower'] = middle_df[col].str.lower()
 
-        middle_df = pd.merge(middle_df, customer_data, on=['Client_type_lower', 'Num_Vehicles_Total_lower', 'Num_Vehicles_Finlog_lower'], suffixes=(None, '_y'))
+        middle_df = pd.merge(middle_df, customer_data, on=['Customer_Group_lower', 'Num_Vehicles_Total_lower', 'Num_Vehicles_Finlog_lower'], suffixes=(None, '_y'))
     elif not customer_data.shape[0]:
         # st.write('customer empty')
         for col in options_file.customer_data_cols:
@@ -543,13 +546,14 @@ def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_
     middle_df.drop([x for x in list(middle_df) if x.endswith('_y') and x.endswith('_y') in list(middle_df)], axis=1, inplace=True)
 
     middle_df['contract_customer'] = np.nan
-    middle_df['Customer_Name'] = np.nan
+    # middle_df['Client_type'] = np.nan
+    # middle_df['Customer_Name'] = np.nan
     middle_df['contract_contract'] = np.nan
     middle_df['Vehicle_No'] = np.nan
     middle_df['Accident_No'] = np.nan
     middle_df['target'] = np.nan
 
-    key_cols = ['contract_customer', 'Customer_Name', 'contract_contract', 'Vehicle_No', 'Accident_No', 'target', 'FI', 'LL', 'AR', 'Customer_Group', 'Client_type', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog', 'Contract_km', 'contract_start_date', 'contract_end_date', 'contract_duration', 'Vehicle_Tipology', 'Make', 'Fuel']
+    key_cols = ['contract_customer', 'contract_contract', 'Vehicle_No', 'Accident_No', 'target', 'FI', 'LL', 'AR', 'Customer_Group', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog', 'Contract_km', 'contract_start_date', 'contract_end_date', 'contract_duration', 'Vehicle_Tipology', 'Make', 'Fuel']
 
     df_grouped = middle_df.groupby(by=key_cols, as_index=False, dropna=False).mean()
 
@@ -566,12 +570,12 @@ def query_list_string_handling(parameter):
     return parameter
 
 
-def selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, client_type_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date):
-    single_value_cols = ['Vehicle_Tipology', 'Customer_Group', 'Client_type', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog', 'contract_duration', 'Contract_km', 'contract_start_date']
+def selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date):
+    single_value_cols = ['Vehicle_Tipology', 'Customer_Group', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog', 'contract_duration', 'Contract_km', 'contract_start_date']
     df = pd.DataFrame(columns=single_value_cols)
     df['Vehicle_Tipology'] = [tipology_filter]
     df['Customer_Group'] = [customer_group_filter]
-    df['Client_type'] = client_type_filter
+    # df['Client_type'] = client_type_filter
     df['Num_Vehicles_Total'] = fleet_size_total_filter
     df['Num_Vehicles_Finlog'] = fleet_size_finlog_filter
     df['contract_duration'] = contract_duration
@@ -619,7 +623,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
         raise RerunException(RerunData())

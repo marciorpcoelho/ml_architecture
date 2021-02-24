@@ -2012,7 +2012,7 @@ def feat_eng(df_in):
         'Mean_monthly_repair_cost_cust_5year': 0,
         'Mean_repair_value_cust_5year.1': 0,
     }
-    df = df.fillna(value = values)
+    df = df.fillna(value=values)
 
     df.loc[df['LL'].str.startswith('€50.000.000'), 'LL'] = '€50.000.000'
     df['AR'] = df['AR'].str.extract(r'^(.+%)')
@@ -2031,8 +2031,7 @@ def feat_eng(df_in):
         'Vehicle_No',
         'Accident_No',
         'contract_start_date',
-        'contract_end_date',
-        'Customer_Name'
+        'contract_end_date'
     ]
 
     df = df.drop(columns_to_drop, axis=1)
