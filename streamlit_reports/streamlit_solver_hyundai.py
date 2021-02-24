@@ -242,7 +242,6 @@ def get_validation_info(sel_configurations_v2, sel_config):
                              options_file.sales_plan_validation_query_step_1_v2,
                              options_file.sales_plan_validation_query_step_2_v2
                              ]
-
     validation_queries_dtr_v2 = [options_file.sales_plan_validation_query_step_3_v2]
 
     validation_tables = [options_file.sql_info['sales_validation_table'],
@@ -251,7 +250,6 @@ def get_validation_info(sel_configurations_v2, sel_config):
                          options_file.sql_info['sales_plan_step_1_validation_table'],
                          options_file.sql_info['sales_plan_step_2_validation_table']
                          ]
-
     validation_tables_dtr = [options_file.sql_info['sales_plan_step_3_validation_table']]
 
     for query, validation_table in zip(validation_queries_v2, validation_tables):
@@ -513,7 +511,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
