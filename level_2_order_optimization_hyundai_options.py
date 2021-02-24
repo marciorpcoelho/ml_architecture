@@ -60,13 +60,13 @@ sql_info = {
     'stock_view': 'View_VHE_Fact_PA_OrderOptimization_Stock_Old',
     'unit_count_number_history': 'LOG_Project_Units_Count_History',
     'new_score_streamlit_view': 'VHE_Fact_PA_OrderOptimization_Streamlit_DTR',
-    'current_live_ocn_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Export',
+    'current_live_ocn_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Export_DTR',
     'sales_plan_aux': 'VHE_Setup_Sales_Plan_Aux_DTR',
-    'stock_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Stock_Validation',
-    'sales_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Sales_Validation',
-    'proposals_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Proposals_Validation',
-    'sales_plan_step_1_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_SalesPlan_Step1_Validation',
-    'sales_plan_step_2_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_SalesPlan_Step2_Validation',
+    'stock_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Stock_Validation_DTR',
+    'sales_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Sales_Validation_DTR',
+    'proposals_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_Proposals_Validation_DTR',
+    'sales_plan_step_1_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_SalesPlan_Step1_Validation_DTR',
+    'sales_plan_step_2_validation_table': 'VHE_Fact_PA_OrderOptimization_Streamlit_SalesPlan_Step2_Validation_DTR',
     'sales_plan_step_3_validation_table': 'View_VHE_Fact_PA_OrderOptimization_Sales_Plan'
 }
 

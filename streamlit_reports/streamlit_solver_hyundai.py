@@ -58,7 +58,7 @@ total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 def main():
     data_v2 = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['new_score_streamlit_view'], model_flag=1)
     all_brands_sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
-    live_ocn_df = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['current_live_ocn_table'], model_flag=1)
+    live_ocn_df = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['current_live_ocn_table'], model_flag=1)
     end_month_index, current_year = period_calculation()
 
     dw_last_updated_date = data_v2['Record_Date'].max()
@@ -240,17 +240,26 @@ def get_validation_info(sel_configurations_v2, sel_config):
                              options_file.proposals_validation_query_v2,
                              options_file.stock_validation_query_v2,
                              options_file.sales_plan_validation_query_step_1_v2,
-                             options_file.sales_plan_validation_query_step_2_v2,
-                             options_file.sales_plan_validation_query_step_3_v2]
+                             options_file.sales_plan_validation_query_step_2_v2
+                             ]
+
+    validation_queries_dtr_v2 = [options_file.sales_plan_validation_query_step_3_v2]
 
     validation_tables = [options_file.sql_info['sales_validation_table'],
                          options_file.sql_info['proposals_validation_table'],
                          options_file.sql_info['stock_validation_table'],
                          options_file.sql_info['sales_plan_step_1_validation_table'],
-                         options_file.sql_info['sales_plan_step_2_validation_table'],
-                         options_file.sql_info['sales_plan_step_3_validation_table']]
+                         options_file.sql_info['sales_plan_step_2_validation_table']
+                         ]
+
+    validation_tables_dtr = [options_file.sql_info['sales_plan_step_3_validation_table']]
 
     for query, validation_table in zip(validation_queries_v2, validation_tables):
+        query.format(options_file.sql_info['database_final'], validation_table, sel_config_model, sel_config_engine, sel_config_version, sel_config_transmission, sel_config_ext_color, sel_config_int_color)
+        validation_df_v2 = run_single_query(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file, query.format(options_file.sql_info['database_final'], validation_table, sel_config_model, sel_config_engine, sel_config_version, sel_config_transmission, sel_config_ext_color, sel_config_int_color))
+        validations_dfs_v2.append(validation_df_v2)
+
+    for query, validation_table in zip(validation_queries_dtr_v2, validation_tables_dtr):
         query.format(options_file.sql_info['database_source'], validation_table, sel_config_model, sel_config_engine, sel_config_version, sel_config_transmission, sel_config_ext_color, sel_config_int_color)
         validation_df_v2 = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, query.format(options_file.sql_info['database_source'], validation_table, sel_config_model, sel_config_engine, sel_config_version, sel_config_transmission, sel_config_ext_color, sel_config_int_color))
         validations_dfs_v2.append(validation_df_v2)
@@ -504,7 +513,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         session_state.run_id += 1
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
