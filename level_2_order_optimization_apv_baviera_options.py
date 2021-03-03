@@ -10,6 +10,7 @@ api_backend_loc = 'optimizations/apv_parts_baviera/'
 if 'nt' in os.name:
     DSN_SRV3_PRD = os.getenv('DSN_SRV3_Prd')
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd')
+    DSN_MLG_DEV = os.getenv('DSN_MLG_Dev')
 elif 'posix' in os.name:
     DSN_SRV3_PRD = os.getenv('DSN_SRV3_Prd_Linux')
     DSN_MLG_PRD = os.getenv('DSN_MLG_Prd_Linux')
@@ -60,7 +61,8 @@ sql_info_stock_tables = {
 
 project_id = 2259
 urgent_purchases_flags = [4, 5]
-min_date = '20180131'  # This is a placeholder for the minimum possible date - It already searches for the last processed date.
+# min_date = '20180131'  # This is a placeholder for the minimum possible date - It already searches for the last processed date.
+min_date = '20201001'  # This refers to the date where this data change DMS Source
 documentation_url_solver_apv = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/ERAmjgJYWztNiMhPUZQHAVIBWZFd_xqdQDzKSbWB7VtTkQ?e=xXzBwu'
 
 log_files = {
@@ -76,6 +78,16 @@ bmw_ta_mapping = {
     'BMW_Bonus_Group_3': ['Chemical'],  # Químicos
     'BMW_Bonus_Group_4': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
     'BMW_Bonus_Group_5': ['8'],  # Pneus
+    'Outros': ['4', '6', '9'],
+    'NO_SAME_BRAND_TA': ['NO_SAME_BRAND_TA'],
+    'NO_TA': ['NO_TA'],
+}
+
+mini_ta_mapping = {
+    'MINI_Bonus_Group_1': ['1', '2'],  # Peças + Óleos
+    'MINI_Bonus_Group_2': ['-'],  # MINI Regeneration - No idea on this one...
+    'MINI_Bonus_Group_3': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
+    'MINI_Bonus_Group_4': ['8'],  # Pneus
     'Outros': ['4', '6', '9'],
     'NO_SAME_BRAND_TA': ['NO_SAME_BRAND_TA'],
     'NO_TA': ['NO_TA'],
@@ -138,16 +150,6 @@ group_goals_type = {
 
 goal_types = ['Cost', 'PVP']
 
-mini_ta_mapping = {
-    'MINI_Bonus_Group_1': ['1', '2'],  # Peças + Óleos
-    'MINI_Bonus_Group_2': ['-'],  # MINI Regeneration - No idea on this one...
-    'MINI_Bonus_Group_3': ['3', '5', '7'],  # Acessórios + Jantes + Lifestyle
-    'MINI_Bonus_Group_4': ['8'],  # Pneus
-    'Outros': ['4', '6', '9'],
-    'NO_SAME_BRAND_TA': ['NO_SAME_BRAND_TA'],
-    'NO_TA': ['NO_TA'],
-}
-
 part_groups_desc_mapping = {
     'BMW_Bonus_Group_1': 'BMW - Peças + Óleos',
     'BMW_Bonus_Group_2': 'BMW - Vendas Balcão',
@@ -204,7 +206,7 @@ sales_query = '''
         SUM(Posting_Discount_Value* AdvPay_ValueIncluded) as Discount_Value, 
         SUM(((Posting_Sell_Value*AdvPay_ValueIncluded) + Menu_Difference) - (Posting_Discount_Value*AdvPay_ValueIncluded) - (Cost_Value*AdvPay_ValueIncluded)) as Gross_Margin  
     FROM [BI_CRP].[dbo].[PSE_Sales] AS Sales WITH (NOLOCK)  
-    WHERE Client_Id = 3  and Line_Type = 'P' AND NLR_Code = '701' and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  
+    WHERE Client_Id = 3  and Line_Type = 'P' AND NLR_Code = '701' and PSE_Code in ({}) --and LEFT(Part_Ref, 2) in ('MN', 'BM')  
     GROUP BY Sales.SLR_Document_Date,  
         Sales.Movement_Date,  
         Sales.SLR_Document, 
@@ -235,7 +237,7 @@ sales_query = '''
         SUM(Posting_Discount_Value* AdvPay_ValueIncluded) as Discount_Value, 
         SUM(((Posting_Sell_Value*AdvPay_ValueIncluded) + Menu_Difference) - (Posting_Discount_Value*AdvPay_ValueIncluded) - (Cost_Value*AdvPay_ValueIncluded)) as Gross_Margin  
     FROM [BI_DW_History].[dbo].[PSE_Sales] AS Sales WITH (NOLOCK)  
-    WHERE Client_Id = 3  and Line_Type='P' AND NLR_Code = '701' and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM') 
+    WHERE Client_Id = 3  and Line_Type='P' AND NLR_Code = '701' and PSE_Code in ({}) --and LEFT(Part_Ref, 2) in ('MN', 'BM') 
     GROUP BY Sales.SLR_Document_Date,  
         Sales.Movement_Date,  
         Sales.SLR_Document, 
@@ -260,7 +262,7 @@ purchases_query = '''
         WIP_Number, 
         WIP_Date_Created  
     FROM [BI_CRP].[dbo].[PSE_parts_purchase] WITH (NOLOCK)  
-    WHERE NLR_Code = '701'  AND Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')  
+    WHERE NLR_Code = '701'  AND Parts_Included=1 and PSE_Code in ({}) --and LEFT(Part_Ref, 2) in ('MN', 'BM')  
     union all  
     SELECT Movement_Date,  
         PLR_Document, 
@@ -273,7 +275,7 @@ purchases_query = '''
         WIP_Number, 
         WIP_Date_Created  
     FROM [BI_DW_History].[dbo].[PSE_parts_purchase] WITH (NOLOCK)  
-    WHERE NLR_Code = '701' AND Parts_Included=1 and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM') '''
+    WHERE NLR_Code = '701' AND Parts_Included=1 and PSE_Code in ({}) --and LEFT(Part_Ref, 2) in ('MN', 'BM') '''
 
 reg_query = '''
     SELECT Movement_Date,  
@@ -285,7 +287,7 @@ reg_query = '''
         LTRIM(RTRIM(Part_Ref)) as Part_Ref,  
         Part_Desc  
     FROM [BI_CRP].[dbo].[PSE_Parts_Adjustments] WITH (NOLOCK)  
-    WHERE NLR_Code = '701' and PSE_Code in ({}) and LEFT(Part_Ref, 2) in ('MN', 'BM')'''
+    WHERE NLR_Code = '701' and PSE_Code in ({}) --and LEFT(Part_Ref, 2) in ('MN', 'BM')'''
 
 reg_autoline_clients = '''
     SELECT *  

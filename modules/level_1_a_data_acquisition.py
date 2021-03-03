@@ -158,7 +158,7 @@ def dw_data_retrieval(pse_group, current_date, options_info, last_processed_date
         file_name = dimension[0] + '_' + pse_group_file_name + '_' + str(current_date)
 
         try:
-            df = read_csv(file_name + '.csv', index_col=0)
+            df = read_csv(file_name + '.csv', index_col=0, dtype={'PSE_Code': str})
         except FileNotFoundError:
             print('{} file not found. Retrieving data from SQL...'.format(file_name))
             df = sql_retrieve_df_specified_query(options_info.DSN_SRV3_PRD, options_info.sql_info['database'], options_info, dimension[1])
@@ -184,6 +184,7 @@ def dw_data_retrieval(pse_group, current_date, options_info, last_processed_date
     df_sales['SLR_Document_Date'] = pd.to_datetime(df_sales['SLR_Document_Date'], format='%Y%m%d')
     df_sales['WIP_Date_Created'] = pd.to_datetime(df_sales['WIP_Date_Created'], format='%Y%m%d')
     df_sales['Movement_Date'] = pd.to_datetime(df_sales['Movement_Date'], format='%Y%m%d')
+    df_history['SO_Code'] = df_history['SO_Code'].astype(str)
 
     df_history.rename(columns={'Date': 'Movement_Date', 'Quantity': 'Qty_Stock'}, inplace=True)
     return df_sales, df_history, df_product_group_dw

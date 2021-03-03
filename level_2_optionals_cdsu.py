@@ -29,7 +29,7 @@ def main():
     query_filters = {'NLR_CODE': '4R0', 'Franchise_Code_DW': '43'}
 
     df = data_acquisition(query_filters)
-    control_prints(df, 'after getting data', head=1)
+    control_prints(df, 'after getting data', head=1, date=1)
 
     df = data_processing(df)
 
@@ -55,7 +55,7 @@ def data_acquisition(query_filters):
     return df
 
 
-def control_prints(df, tag, head=0, save=0, null_analysis_flag=0):
+def control_prints(df, tag, head=0, save=0, null_analysis_flag=0, date=0):
 
     print('{}\n{}'.format(tag, df.shape))
     try:
@@ -70,6 +70,11 @@ def control_prints(df, tag, head=0, save=0, null_analysis_flag=0):
         df.to_csv('dbs/cdsu_control_save_tag_{}.csv'.format(tag))
     if null_analysis_flag:
         null_analysis(df)
+    if date:
+        try:
+            print('Current Max Sell Date is {}'.format(max(df['Data Venda'])))
+        except KeyError:
+            print('Current Max Sell Date is {}'.format(max(df['Sell_Date'])))
 
     return
 
@@ -101,7 +106,7 @@ def data_processing(df):
         df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
 
         control_prints(df, '1b', null_analysis_flag=1)
-        df.dropna(subset=['Cor', 'Colour_Ext_Code', 'Modelo', 'Interior', 'Tipo Encomenda'], axis=0, inplace=True)  # Removes all remaining NA's
+        df.dropna(subset=['Cor', 'Colour_Ext_Code', 'Modelo', 'Interior'], axis=0, inplace=True)  # Removes all remaining NA's
         control_prints(df, '2')
 
         df = new_column_creation(df, [x for x in level_2_optionals_cdsu_options.configuration_parameters_full if x != 'Modelo' and x != 'Combustível'], 0)  # Creates new columns filled with zeros, which will be filled in the future
@@ -134,7 +139,7 @@ def data_processing(df):
         df = duplicate_removal(df, subset_col='Nº Stock')  # Removes duplicate rows, based on the Stock number. This leaves one line per configuration;
         control_prints(df, '7')
 
-        df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'Custo', 'Versão', 'Tipo Encomenda', 'Franchise_Code'], project_id)  # Remove columns not needed atm;
+        df = remove_columns(df, ['Cor', 'Interior', 'Opcional', 'Custo', 'Versão', 'Franchise_Code'], project_id)  # Remove columns not needed atm;
         # Will probably need to also remove: stock_days, stock_days_norm, and one of the scores
 
         # df = remove_rows(df, [df.loc[df['Local da Venda'] == 'DCV - Viat.Toy Viseu', :].index], project_id)  # Removes the vehicles sold here, as they are from another brand (Toyota)

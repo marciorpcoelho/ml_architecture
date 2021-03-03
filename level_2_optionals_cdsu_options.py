@@ -128,7 +128,7 @@ sql_to_code_renaming = {
     'Version_Code': 'Version_Code',
     'Optional_Desc': 'Opcional',
     'Sell_Location_Desc': 'Local da Venda',
-    'Order_Type_Desc': 'Tipo Encomenda',
+    # 'Order_Type_Desc': 'Tipo Encomenda',
     'Purchase_Date': 'Data Compra',
     'Sell_Date': 'Data Venda',
     'Margin': 'Margem',

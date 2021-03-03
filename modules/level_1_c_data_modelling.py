@@ -447,16 +447,20 @@ def part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=1):
 
     all_unique_part_refs = df_al_filtered['Part_Ref'].unique()
 
-    all_unique_part_refs_bm = [x for x in all_unique_part_refs if x.startswith('BM')]
-    all_unique_part_refs_mn = [x for x in all_unique_part_refs if x.startswith('MN')]
+    # all_unique_part_refs_bm = [x for x in all_unique_part_refs if x.startswith('BM')]
+    # all_unique_part_refs_mn = [x for x in all_unique_part_refs if x.startswith('MN')]
 
-    all_unique_part_refs = all_unique_part_refs_bm + all_unique_part_refs_mn
+    # all_unique_part_refs = all_unique_part_refs_bm + all_unique_part_refs_mn
 
     all_unique_part_refs_at = [x for x in all_unique_part_refs if x.endswith('AT')]
 
     all_unique_part_refs = [x for x in all_unique_part_refs if x not in all_unique_part_refs_at]
 
-    [level_0_performance_report.log_record('{} has a weird size!'.format(x), project_id, flag=1) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
+    weird_parts = [x for x in all_unique_part_refs if re.search(r'[a-zA-Z]{2}', x)]
+    level_0_performance_report.log_record('Are these parts legit?\n{}'.format(weird_parts), project_id, flag=1)
+
+    # [level_0_performance_report.log_record('{} has a weird size!'.format(x), project_id, flag=1) for x in all_unique_part_refs if len(x) > 17 or len(x) < 13]
+    [level_0_performance_report.log_record('{} has a weird size!'.format(x), project_id, flag=1) for x in all_unique_part_refs if len(x) > 13]
 
     level_0_performance_report.log_record('{} unique part_refs between {} and {}.'.format(len(all_unique_part_refs), min_date, max_date), project_id)
 
@@ -466,6 +470,10 @@ def part_ref_selection(df_al, min_date, max_date, project_id, last_year_flag=1):
 def apv_last_stock_calculation(min_date_str, current_date, pse_code, project_id):
     # Proj_ID = 2259
     results_files = [datetime.datetime.strptime(f[17:25], format('%Y%m%d')) for f in listdir(base_path + '/output/') if f.startswith('results_merge_{}_'.format(pse_code))]
+
+    if not len(results_files):
+        results_files = [datetime.datetime.strptime(min_date_str, format('%Y%m%d'))]
+
     min_date_datetime = datetime.datetime.strptime(min_date_str, format('%Y%m%d'))
     max_date_datetime = datetime.datetime.strptime(current_date, format('%Y%m%d'))
     preprocessed_data_exists_flag = 0
@@ -565,16 +573,16 @@ def apv_photo_stock_treatment(df_sales, df_history, selected_parts, preprocessed
     df_sales.set_index(['Movement_Date'], drop=True, inplace=True)
 
     df_history['Movement_Date'] = pd.to_datetime(df_history['Movement_Date'], format='%Y-%m-%d')
-    pool = Pool(processes=int(level_0_performance_report.pool_workers_count))
+    pool = Pool(processes=int(6))
     results = pool.map(stock_and_sales_reconstitution, [(part_ref, df_sales, df_history, datetime_index) for part_ref in selected_parts])
     pool.close()
     final_df = pd.concat([result for result in results if result is not None])
 
     if preprocessed_data_exists_flag:
         old_results = level_1_a_data_acquisition.read_csv('output/results_merge_{}_{}.csv'.format(pse_code, min_date), index_col=0)
-        final_df.rename(columns={'PVP_1': 'PVP_avg', 'Cost_Sale_1': 'Cost_Sale_avg', 'Qty_Sold': 'Qty_Sold_sum_al', 'Qty_Stock': 'Stock_Qty_al', 'Movement_Date': 'index'}, inplace=True)
         final_df = pd.concat([old_results, final_df], ignore_index=True)
 
+    final_df.rename(columns={'PVP_1': 'PVP_avg', 'Cost_Sale_1': 'Cost_Sale_avg', 'Qty_Sold': 'Qty_Sold_sum_al', 'Qty_Stock': 'Stock_Qty_al', 'Movement_Date': 'index'}, inplace=True)
     final_df.to_csv('output/results_merge_{}_{}.csv'.format(pse_code, max_date))
     return final_df
 
@@ -584,7 +592,7 @@ def stock_and_sales_reconstitution(args):
 
     zero_fill_cols = ['Qty_Sold', 'PVP_1', 'Cost_Sale_1']
 
-    df_stock_filtered = df_stock.loc[df_stock['Part_Ref'] == sel_part, :]
+    df_stock_filtered = df_stock.loc[df_stock['Part_Ref'] == sel_part, :].drop_duplicates(subset='Movement_Date', keep='first', ignore_index=True)
     df_sales_dw_filtered = df_sales.loc[df_sales['Part_Ref'] == sel_part, :]
 
     result_part_ref = df_sales_dw_filtered.reindex(datetime_index).reset_index()
@@ -874,6 +882,8 @@ def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mapping
 
         df_sales = df_sales[df_sales['Product_Group'].notnull()]
         df_sales_sel_parts_grouped = df_sales.loc[df_sales['Part_Ref'].isin(selected_parts), :].groupby('Part_Ref')
+        df_sales_bmw_part_ref = df_sales[df_sales['Product_Group'].str.contains('B')]['Part_Ref'].unique()
+        df_sales_mini_part_ref = df_sales[df_sales['Part_Ref'].str.contains('M')]['Part_Ref'].unique()
 
         pool = Pool(processes=level_0_performance_report.pool_workers_count)
         results = pool.map(ta_selection, [(part_ref, df_sales_per_part_ref, regex_dict, bmw_original_oil_words, project_id, 'Product_Group') for (part_ref, df_sales_per_part_ref) in df_sales_sel_parts_grouped])
@@ -883,8 +893,10 @@ def part_ref_ta_definition(df_sales, selected_parts, pse_code, max_date, mapping
         df_part_ref_ta['Group'] = df_part_ref_ta['TA']
         df_part_ref_ta['PSE_Code'] = pse_code
 
-        df_bmw = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')].copy(), ['Group'], [mappings[0]], project_id)
-        df_mini = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')].copy(), ['Group'], [mappings[1]], project_id)
+        # df_bmw = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('BM')].copy(), ['Group'], [mappings[0]], project_id)
+        # df_mini = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].str.startswith('MN')].copy(), ['Group'], [mappings[1]], project_id)
+        df_bmw = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].isin(df_sales_bmw_part_ref)].copy(), ['Group'], [mappings[0]], project_id)
+        df_mini = level_1_b_data_processing.col_group(df_part_ref_ta[df_part_ref_ta['Part_Ref'].isin(df_sales_mini_part_ref)].copy(), ['Group'], [mappings[1]], project_id)
 
         df_part_ref_ta_grouped = pd.concat([df_bmw, df_mini])
 
@@ -959,7 +971,7 @@ def solver_dataset_preparation(df_sales, df_part_refs_ta, dtss_goal, pse_code, c
     df_sales.set_index('Part_Ref', inplace=True)
 
     df_sales_grouped = df_sales.groupby('Part_Ref')
-    pool = Pool(processes=level_0_performance_report.pool_workers_count)
+    pool = Pool(processes=6)
     results = pool.map(solver_metrics_per_part_ref, [(part_ref, group, last_year_date, dts_interval_sales, weekdays_count) for (part_ref, group) in df_sales_grouped])
     pool.close()
     df_solve = pd.concat([result for result in results if result is not None])
