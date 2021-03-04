@@ -38,26 +38,36 @@ def main():
     previous_day = (datetime.today() - timedelta(days=1)).strftime('%Y%m%d')
 
     platforms_stock, dim_product_group, dim_clients = data_acquisition(current_platforms, 'dbs/dim_product_group_section_A.csv', 'dbs/dim_clients_section_A.csv', previous_day, sel_month)
-    current_stock_master_file = master_file_reference_match(platforms_stock, previous_day, dim_clients)
-    deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'])
+    current_stock_master_file, truncate_flag = master_file_reference_match(platforms_stock, previous_day, dim_clients)
+
+    deployment(current_stock_master_file, options_file.sql_info['database_final'], options_file.sql_info['final_table'], truncate_flag)
 
     # Part 2
-    main_families_metrics_dict, other_families_metrics_dict = dgo_parts_dataiku_dataset_preparation.main()
+    if current_stock_master_file.shape[0]:
+        main_families_metrics_dict, other_families_metrics_dict = dgo_parts_dataiku_dataset_preparation.main()
+        performance_message = 'Escolhido modelo LGBM. Performance: \nFamílias Principais: \n{} \nFamílias de Outros: \n{}'.format(''.join(['{}: {:.2f}\n'.format(key, value) for key, value in zip(main_families_metrics_dict.keys(), main_families_metrics_dict.values())]), ''.join(['{}: {:.2f}\n'.format(key, value) for key, value in zip(other_families_metrics_dict.keys(), other_families_metrics_dict.values())]))
+    else:
+        performance_message = 'Não foram encontradas novas linhas. Modelo não foi retreinado.'
 
-    performance_info(options_file.project_id, options_file, 'LightGBM as a Chosen Model. Performance: \nMain Families: \n{} \nOther Families: \n{}'.format(''.join(['{}: {:.2f}\n'.format(key, value) for key, value in zip(main_families_metrics_dict.keys(), main_families_metrics_dict.values())]), ''.join(['{}: {:.2f}\n'.format(key, value) for key, value in zip(other_families_metrics_dict.keys(), other_families_metrics_dict.values())])), current_stock_master_file['Part_Ref'].nunique())
+    performance_info(options_file.project_id, options_file, performance_message, current_stock_master_file['Part_Ref'].nunique())
 
     log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[options_file.project_id]), options_file.project_id)
 
 
-def deployment(df, db, view):
-    print('Uploading dataframe into {} and table {}...'.format(db, view))
-    df.rename(columns={'Client_Id': 'Client_ID'}, inplace=True)
+def deployment(df, db, view, truncate_flag):
 
-    df['PLR_Account'] = df['PLR_Account'].fillna("")
-    df['Part_Desc_PT'] = df['Part_Desc_PT'].fillna("")
-    df['Part_Desc'] = df['Part_Desc'].fillna("")
-    if df is not None:
-        sql_inject(df, options_file.DSN_MLG_PRD, db, view, options_file, options_file.sel_cols, truncate=1, check_date=1)
+    if df.shape[0] and df is not None:
+        df.rename(columns={'Client_Id': 'Client_ID'}, inplace=True)
+
+        df['PLR_Account'] = df['PLR_Account'].fillna("")
+        df['Part_Desc_PT'] = df['Part_Desc_PT'].fillna("")
+        df['Part_Desc'] = df['Part_Desc'].fillna("")
+        if df is not None:
+            sql_inject(df, options_file.DSN_MLG_PRD, db, view, options_file, options_file.sel_cols, truncate=truncate_flag, check_date=1)
+    else:
+        log_record('Sem novas linhas para inserir em {}.'.format(view), options_file.project_id, flag=1)
+
+    return
 
 
 def master_file_reference_match(platforms_stock, previous_day, dim_clients):
@@ -70,16 +80,8 @@ def master_file_reference_match(platforms_stock, previous_day, dim_clients):
         current_stock_master_file = pd.concat(platforms_stock)
         current_stock_master_file['Part_Desc_PT'] = np.NaN
 
-        # print('BEFORE \n', current_stock_master_file.head(10))
-        # print('BEFORE Shape: ', current_stock_master_file.shape)
-        # print('BEFORE Unique Refs', current_stock_master_file['Part_Ref'].nunique())
-        # print('BEFORE Unique Refs', current_stock_master_file.drop_duplicates(subset='Part_Ref')['Part_Ref'].nunique())
-        # print('BEFORE Null Descriptions: ', current_stock_master_file['Part_Desc_PT'].isnull().sum())
-
-        for master_file_loc in options_file.master_files_converted:
-            master_file_brands = options_file.master_files_and_brand[master_file_loc]
-            master_file = read_csv(master_file_loc, index_col=0, dtype={'Part_Ref': str}, low_memory=False)
-            # master_file = master_file.loc[master_file['Part_Ref'].isin(['000012008', '000010006', '000000999'])]
+        for master_file_brands in options_file.master_file_brands:
+            master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['master_file_table'], options_file, query_filters={'Brand': ', '.join(master_file_brands)})
 
             for master_file_brand in master_file_brands:
                 brand_codes_list = brand_codes_retrieval(current_platforms, master_file_brand)
@@ -140,21 +142,21 @@ def master_file_reference_match(platforms_stock, previous_day, dim_clients):
                             matched_dfs.append(matched_refs_df_step_2)
                             non_matched_dfs = non_matched_refs_df_step_2
 
-                            if non_matched_refs_df_step_2.shape[0]:
+                            # if non_matched_refs_df_step_2.shape[0]:
                                 # Previous References Match
-                                _, matched_refs_df_step_3, non_matched_refs_df_step_3 = references_merge(non_matched_refs_df_step_2, master_file[['Supersession Leader', 'Part_Desc_PT']], 'Previous References Match', left_key='Part_Ref', right_key='Supersession Leader')
-                                matched_dfs.append(matched_refs_df_step_3)
-                                non_matched_dfs = non_matched_refs_df_step_3
+                                # _, matched_refs_df_step_3, non_matched_refs_df_step_3 = references_merge(non_matched_refs_df_step_2, master_file[['Supersession Leader', 'Part_Desc_PT']], 'Previous References Match', left_key='Part_Ref', right_key='Supersession Leader')
+                                # matched_dfs.append(matched_refs_df_step_3)
+                                # non_matched_dfs = non_matched_refs_df_step_3
 
-                                if non_matched_refs_df_step_3.shape[0]:
-                                    # Error Handling
-                                    non_matched_refs_df_step_3['Part_Ref_Step_4'] = non_matched_refs_df_step_3['Part_Ref'].apply(regex_string_replacement, args=(regex_dict['remove_hifen'],)).apply(regex_string_replacement, args=(regex_dict['remove_last_dot'],))
-                                    master_file['Part_Ref_Step_4'] = master_file['Part_Ref'].apply(regex_string_replacement, args=(regex_dict['remove_hifen'],)).apply(regex_string_replacement, args=(regex_dict['remove_last_dot'],))
-                                    master_file.drop_duplicates(subset='Part_Ref_Step_4', inplace=True)
+                            if non_matched_refs_df_step_2.shape[0]:
+                                # Error Handling
+                                non_matched_refs_df_step_2['Part_Ref_Step_4'] = non_matched_refs_df_step_2['Part_Ref'].apply(regex_string_replacement, args=(regex_dict['remove_hifen'],)).apply(regex_string_replacement, args=(regex_dict['remove_last_dot'],))
+                                master_file['Part_Ref_Step_4'] = master_file['Part_Ref'].apply(regex_string_replacement, args=(regex_dict['remove_hifen'],)).apply(regex_string_replacement, args=(regex_dict['remove_last_dot'],))
+                                master_file.drop_duplicates(subset='Part_Ref_Step_4', inplace=True)
 
-                                    _, matched_refs_df_step_4, non_matched_refs_df_step_4 = references_merge(non_matched_refs_df_step_3, master_file[['Part_Ref_Step_4', 'Part_Desc_PT']], 'Erroneous References', left_key='Part_Ref_Step_4', right_key='Part_Ref_Step_4')
-                                    matched_dfs.append(matched_refs_df_step_4)
-                                    non_matched_dfs = non_matched_refs_df_step_4
+                                _, matched_refs_df_step_4, non_matched_refs_df_step_4 = references_merge(non_matched_refs_df_step_2, master_file[['Part_Ref_Step_4', 'Part_Desc_PT']], 'Erroneous References', left_key='Part_Ref_Step_4', right_key='Part_Ref_Step_4')
+                                matched_dfs.append(matched_refs_df_step_4)
+                                non_matched_dfs = non_matched_refs_df_step_4
 
                         matched_df_brand = pd.concat(matched_dfs)
                         current_stock_master_file, _, _ = references_merge(current_stock_master_file, matched_df_brand[['Part_Ref', 'Part_Desc_PT']], 'Master Stock Match', left_key='Part_Ref', right_key='Part_Ref')
@@ -518,13 +520,63 @@ def master_file_reference_match(platforms_stock, previous_day, dim_clients):
 
     previous_master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
 
-    df_merged = pd.concat([current_stock_master_file, previous_master_file]).drop('Last_Sell_Date', axis=1)
-    df_merged = df_merged.drop_duplicates()
-    df_merged.to_csv('dbs/part_ref_master_file_matched.csv', index=False)
+    new_df = pd.concat([current_stock_master_file, previous_master_file]).drop('Last_Sell_Date', axis=1)
+    new_df = new_df.drop_duplicates()
+    new_df.to_csv('dbs/part_ref_master_file_matched.csv', index=False)
 
-    project_units_count_checkup(df_merged, 'Part_Ref', options_file, sql_check=1)
+    try:
+        project_units_count_checkup(new_df, 'Part_Ref', options_file, sql_check=1)
+        truncate_flag = 1
+    except ValueError:
+        new_df = missing_part_refs_in_master_file_table(new_df, previous_master_file)
+        truncate_flag = 0
 
-    return df_merged
+    return new_df, truncate_flag
+
+
+def missing_part_refs_in_master_file_table(new_df, previous_master_file):
+
+    new_df.rename(columns={'Client_Id': 'Client_ID'}, inplace=True)
+    new_df['PLR_Account'] = new_df['PLR_Account'].fillna("")
+    new_df['Part_Desc_PT'] = new_df['Part_Desc_PT'].fillna("")
+    new_df['Part_Desc'] = new_df['Part_Desc'].fillna("")
+    new_df['Average_Cost'] = new_df['Average_Cost'].round(4)
+    new_df['PVP_1'] = new_df['PVP_1'].round(4)
+
+    previous_master_file.rename(columns={'Client_Id': 'Client_ID'}, inplace=True)
+
+    df = pd.concat([new_df[options_file.sel_cols], previous_master_file[options_file.sel_cols]])
+
+    # for col in ['Average_Cost', 'PVP_1']:
+    #     df[col] = df[col].apply('{:0<7}'.format)
+
+    for col in list(df):
+        df[col] = df[col].astype(str)  # If i don't convert, col types will cause problems and be considered different when removing duplicates (p.ex. 10 and '10' will be considered differet values)
+
+    # test_df = new_df.loc[(new_df['Part_Ref'] == '1102600Q0H') & (new_df['Part_Desc'] == 'WASHER-DRAIN PL') & (new_df['Average_Cost'] == 1.1147), options_file.sel_cols]
+    # previous_df_test = previous_master_file.loc[(previous_master_file['Part_Ref'] == '1102600Q0H') & (previous_master_file['Part_Desc'] == 'WASHER-DRAIN PL') & (previous_master_file['Average_Cost'] == 1.1147), options_file.sel_cols]
+    # set_df = df.loc[(df['Part_Ref'] == '1102600Q0H') & (df['Part_Desc'] == 'WASHER-DRAIN PL') & (df['Average_Cost'] == '1.1147'), options_file.sel_cols]
+
+    # for col in list(test_df):
+        # print(set(test_df[col]))
+        # print(set(previous_df_test[col]))
+        # print(set(set_df[col]))
+
+    # print(set_df)
+    # print(df.loc[(df['Part_Ref'] == '1102600Q0H')])
+    # df['Part_Desc'] = df['Part_Desc'].apply(unidecode_function)
+    # df['Part_Desc_PT'] = df['Part_Desc_PT'].apply(unidecode_function)
+    # print(df.loc[(df['Part_Ref'] == '1102600Q0H')])
+    # print(previous_master_file.loc[(previous_master_file['Part_Ref'] == '1102600Q0H') & (previous_master_file['Part_Desc'] == 'WASHER-DRAIN PL') & (previous_master_file['Average_Cost'] == '1.1147'), options_file.sel_cols])
+
+    # print(df.loc[df['Part_Ref'] == '03L115562', options_file.sel_cols])
+    # print(df.loc[df['Part_Ref'] == '04152YZZA4', options_file.sel_cols])
+
+    df = df.drop_duplicates(keep=False, ignore_index=True)
+    # print(df.loc[df['Part_Ref'] == '03L115562', options_file.sel_cols])
+    # print(df.loc[df['Part_Ref'] == '04152YZZA4', options_file.sel_cols])
+
+    return df
 
 
 def particular_case_references(string_to_process, brand):

@@ -31,10 +31,14 @@ def project_units_count_checkup(df, unit_identifier_col, options_file, sql_check
 
     if not sql_check:
         if current_vehicle_count < 100:
-            raise ValueError('Apenas ' + str(current_vehicle_count) + ' unidades foram encontrados. Por favor verificar na base de dados.')
+            message = 'Apenas ' + str(current_vehicle_count) + ' unidades foram encontrados. Por favor verificar na base de dados.'
+            level_0_performance_report.log_record(message, options_file.project_id, flag=2)
+            raise ValueError(message)
     elif sql_check:
         if current_vehicle_count < last_vehicle_count:
-            raise ValueError('Atual contagem unitária ({}) é inferior à ultima contagem ({}). Por favor verificar na base de dados.'.format(current_vehicle_count, last_vehicle_count))
+            message = 'Atual contagem unitária ({}) é inferior à ultima contagem ({}). Por favor verificar na base de dados.'.format(current_vehicle_count, last_vehicle_count)
+            level_0_performance_report.log_record(message, options_file.project_id, flag=1)
+            raise ValueError(message)
         elif current_vehicle_count == last_vehicle_count:
             level_0_performance_report.log_record('Atual contagem unitária ({}) sem incrementos desde a última vez que os dados foram processados ({}). Por favor confirmar se o comportamento é o esperado.'.format(current_vehicle_count, last_vehicle_count), options_file.project_id, flag=1)
         else:

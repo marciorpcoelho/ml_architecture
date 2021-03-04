@@ -584,6 +584,7 @@ def deployment(df, main_families_cm, other_families_cm):
     df['Part_Description'] = df['Part_Description'].fillna("")
     df.dropna(subset=['Classification'], axis=0, inplace=True)
     sql_inject(df, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
+    sql_inject(df, options_file.DSN_SRV3_PRD, options_file.sql_info['database_BI_GSC'], options_file.sql_info['parts_classification_table'], options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
 
     return
 

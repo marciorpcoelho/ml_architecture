@@ -36,7 +36,8 @@ sql_info = {
     'parts_classification_refs': 'PSE_Fact_PA_Parts_Classification_Refs',
     'matrix_lvl_1': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_1',
     'matrix_lvl_2': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2',
-    'unit_count_number_history': 'LOG_Project_Units_Count_History'
+    'unit_count_number_history': 'LOG_Project_Units_Count_History',
+    'master_file_table': 'PSE_Fact_PA_Parts_Master_Files',
 }
 
 sql_to_code_renaming = {
@@ -271,36 +272,17 @@ master_files_to_convert = {
     # 'dbs/Master_Files/Opel_RE_TARIF_OPL_20200318145935': [1, [], ['Part_Ref', 'Part_Desc_PT'], 0, 0],
 }
 
-master_files_converted = [
-    'dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv',
-    'dbs/Master_Files/Nissan_tarifa.csv',  # The second Nissan file is the same as this (same references) but with one less column: Discount Code
-    'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv',
-    'dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv',
-    'dbs/Master_Files/VAG_TPCNCAVW.csv',
-    'dbs/Master_Files/VAG_TPCNCSK.csv',
-    'dbs/Master_Files/MBF820P.csv',
-    'dbs/Master_Files/Preçario BMW.csv',
-    'dbs/Master_Files/FORD _ ref.csv',
-    # 'dbs/Master_Files/Skoda_RE_TARIF_SKO_20200318111652.csv',
-    # 'dbs/Master_Files/Audi_VW_RE_TARIF_VAG_20200318112912.csv',
-    # 'dbs/Master_Files/Ford_RE_TARIF_FOR_20200318114459.csv',
-    # 'dbs/Master_Files/Hyundai_RE_TARIF_HYN_20200318142512.csv',
-    # 'dbs/Master_Files/Honda_RE_TARIF_HON_20200318122510.csv',
+master_file_brands = [
+    ['fiat'],
+    ['nissan'],
+    ['peugeot', 'citroen', 'opel', 'chevrolet'],
+    ['seat'],
+    ['volkswagen'],
+    ['skoda'],
+    ['mercedes'],
+    ['bmw'],
+    ['ford']
 ]
-
-master_files_and_brand = {
-    'dbs/Master_Files/Fiat_DiffusioneTariffaCJD.csv': ['fiat'],
-    'dbs/Master_Files/Nissan_tarifa.csv': ['nissan'],
-    'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.csv': ['peugeot', 'citroen', 'opel', 'chevrolet'],
-    'dbs/Master_Files/SEAT_I6459_Completa_200301_PO.csv': ['seat'],
-    # 'dbs/Master_Files/VAG.csv': ['volkswagen'],
-    # 'dbs/Master_Files/VAG_TPCNCAVW.csv': ['audi', 'volkswagen'],
-    'dbs/Master_Files/VAG_TPCNCAVW.csv': ['volkswagen'],
-    'dbs/Master_Files/VAG_TPCNCSK.csv': ['skoda'],
-    'dbs/Master_Files/MBF820P.csv': ['mercedes'],
-    'dbs/Master_Files/Preçario BMW.csv': ['bmw'],
-    'dbs/Master_Files/FORD _ ref.csv': ['ford']
-}
 
 # 'dbs/Master_Files/PCOC_Tabela_Precos_PSA_20200213.txt
 # fields_1, fields_2, fields_3, fields_4, fields_5, fields_6 = [], [], [], [], [], []
