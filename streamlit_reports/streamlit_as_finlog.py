@@ -100,11 +100,13 @@ def main():
     fleet_size_finlog_list = enc_Num_Vehicles_Finlog.categories_[0]
     fleet_size_finlog_filter = st.sidebar.selectbox('Dimensão da frota com Auto Seguro:', ['-'] + list(fleet_size_finlog_list), index=0)
 
-    contract_duration = st.sidebar.slider('Duração do contrato', 0, 120)
-    contract_duration = str(contract_duration)
+    contract_duration_limits = st.sidebar.slider('Duração do contrato', 0, 120, (0, 120), 1)
+    contract_duration_min = str(contract_duration_limits[0])
+    contract_duration_max = str(contract_duration_limits[1])
 
-    km_year = st.sidebar.slider('Estimativa de milhares de km por ano:', 0, 100)
-    km_year = str(km_year)
+    km_year_limits = st.sidebar.slider('Estimativa de milhares de km por ano:', 0, 100, (0, 100), 5)
+    km_year_limits_min = str(km_year_limits[0])
+    km_year_limits_max = str(km_year_limits[1])
 
     if col1.button('Perfil 1'):
         tipology_filter = 'Ligeiros de Passageiros'
@@ -117,22 +119,24 @@ def main():
         FI_filter = 'Até €1.000/Ano'
         fleet_size_total_filter = '130-169'
         fleet_size_finlog_filter = '20-29'
-        contract_duration = '48'
-        km_year = '15'
+        contract_duration_min = '48'
+        contract_duration_max = '120'
+        km_year_limits_min = '15'
+        km_year_limits_max = '30'
 
         st.write('''
                Tipologia do veículo: **{}**\n
                Marca: **{}**\n
                Combustível: **{}**\n
                Grupo de Empresas: **{}**\n
-               Franquia LL: **{}**\n
-               Franquia AR: **{}**\n
-               Franquia FI: **{}**\n
+               Franquia Responsabilidade Civil (LL): **{}**\n
+               Franquia Danos Próprios (AR): **{}**\n
+               Franquia QIV (FI): **{}**\n
                Dimensão total da frota: **{}**\n
                Dimensão da frota com Auto Seguro: **{}**\n
-               Duração do contrato: **{}**\n
-               Estimativa de km por ano: **{}**\n
-               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
+               Duração do contrato: **{} a {} meses**\n
+               Estimativa de km (milhares) por ano: **{} a {}**\n
+               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max)
                  )
 
     if col2.button('Perfil 2'):
@@ -159,22 +163,24 @@ def main():
         FI_filter = 'Até €1.000/Ano'
         fleet_size_total_filter = '250-449'
         fleet_size_finlog_filter = '>180'
-        contract_duration = '2'
-        km_year = '24'
+        contract_duration_min = '2'
+        contract_duration_max = '60'
+        km_year_limits_min = '50'
+        km_year_limits_max = '90'
 
         st.write('''
                Tipologia do veículo: **{}**\n
                Marca: **{}**\n
                Combustível: **{}**\n
                Grupo de Empresas: **{}**\n
-               Franquia LL: **{}**\n
-               Franquia AR: **{}**\n
-               Franquia FI: **{}**\n
+               Franquia Responsabilidade Civil (LL): **{}**\n
+               Franquia Danos Próprios (AR): **{}**\n
+               Franquia QIV (FI): **{}**\n
                Dimensão total da frota: **{}**\n
                Dimensão da frota com Auto Seguro: **{}**\n
-               Duração do contrato: **{}**\n
-               Estimativa de km por ano: **{}**\n
-               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
+               Duração do contrato: **{} a {} meses**\n
+               Estimativa de km (milhares) por ano: **{} a {}**\n
+               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max)
                  )
 
     if tipology_filter == '-':
@@ -197,12 +203,10 @@ def main():
         st.text("Por favor selecione a dimensão total da frota")
     elif fleet_size_finlog_filter == '-':
         st.text("Por favor selecione a dimensão da frota com Auto Seguro")
-    elif contract_duration == '0':
+    elif not contract_duration_limits:
         st.text("Por favor selecione a duração do contrato")
-    elif km_year == '0':
+    elif not km_year_limits:
         st.text("Por favor selecione a estimativa de km por ano")
-    elif km_year == '0':
-        st.text("Por favor selecione os km por ano")
     else:
 
         # st.write('''
@@ -220,16 +224,17 @@ def main():
         #        **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, client_type_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
         #          )
 
-        df = rows_to_predict_creation(options_file.DSN_MLG_DEV, 'BI_MLG', options_file, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date)
+        df = rows_to_predict_creation(options_file.DSN_MLG_DEV, 'BI_MLG', options_file, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max, contract_start_date)
 
         df = feat_eng(df)
 
-        df = df.drop(['target_accident'], axis=1)
-        df = df.drop(['target_cost'], axis=1)
+        df = df.drop(['target_accident', 'target_cost', 'target_qiv', 'target_dp'], axis=1)
 
         df.Fuel = np.nan_to_num(df.Fuel)
 
-        clf = load(base_path + options_file.MODEL_PATH)
+        clf = load(base_path + '/' + options_file.MODEL_PATH)
+        clf_qiv = load(base_path + '/' + options_file.MODEL_PATH_QIV)
+        clf_dp = load(base_path + '/' + options_file.MODEL_PATH_DP)
 
         df = apply_ohenc('LL', df, enc_LL)
         df = apply_ohenc('AR', df, enc_AR)
@@ -245,11 +250,25 @@ def main():
 
         df = df.astype('float32')
         prediction_proba = clf.predict_proba(df)
+        prediction_proba_qiv = clf_qiv.predict_proba(df)
+        prediction_proba_dp = clf_dp.predict_proba(df)
+
         prediction = np.mean([x[1] for x in prediction_proba])
+        prediction_qiv = np.mean([x[1] for x in prediction_proba_qiv])
+        prediction_dp = np.mean([x[1] for x in prediction_proba_dp])
+
+        qiv_over_dp_increase = 1 - prediction_qiv / prediction_dp
+        dp_over_qiv_increase = 1 - prediction_dp / prediction_qiv
 
         st.write('Probabilidade de sinistro: {:.1f}%'.format(prediction*100))
+        st.write('Probabilidade de ativação cobertura QIV: {:.1f}%'.format(prediction_qiv * 100))
+        st.write('Probabilidade de ativação cobertura Danos Próprios: {:.1f}%'.format(prediction_dp * 100))
+        if qiv_over_dp_increase > dp_over_qiv_increase:
+            st.write('Este perfil tem {:.1f}% mais probabilidade de ativação da Cobertura de Danos Próprios.'.format(qiv_over_dp_increase * 100))
+        elif dp_over_qiv_increase > qiv_over_dp_increase:
+            st.write('Este perfil tem {:.1f}% mais probabilidade de ativação da Cobertura de QIV.'.format(dp_over_qiv_increase * 100))
 
-        df_test_prob_full = pd.read_csv(base_path + '/' + options_file.DATA_PROB_PATH, index_col=0)
+        df_test_prob_full = pd.read_csv(base_path + '/' + options_file.DATA_PROB_PATH_ALL_COST, index_col=0)
 
         # Casos Semelhantes
         df_test_prob = df_test_prob_full.copy()
@@ -274,7 +293,8 @@ def main():
         df_test_prob_similar = df_test_prob[
             # (df_test_prob['Client_type'] == client_type_filter) &
             (df_test_prob['Vehicle_Tipology_Reverse_OHE'] == tipology_filter) &
-            (df_test_prob['Make_Reverse_OHE'].isin(make_filter))
+            (df_test_prob['Make_Reverse_OHE'].isin(make_filter) &
+            (df_test_prob['target_cost'] > 0))
         ]
 
         # Calculate the percentile for this simulation and present it
@@ -298,7 +318,7 @@ def main():
 
             st.write('Não há casos semelhantes de outros clientes para comparação.')
 
-            shap_values_plot(clf, df)
+            shap_values_plot(clf, df.rename(columns=options_file.shap_values_column_renaming))
 
         else:
             num_cases_higher_prob_similar = df_test_prob_similar[df_test_prob_similar['pred_prob'] > prediction].shape[0]
@@ -370,12 +390,12 @@ def main():
                 'Mean_monthly_repair_cost_1YEAR'
             ])
 
-            shap_values_plot(clf, df)
+            shap_values_plot(clf, df.rename(columns=options_file.shap_values_column_renaming))
 
             df_test_prob_comparable_cases = df_test_prob[
                 (df_test_prob['Vehicle_Tipology_Reverse_OHE'] == tipology_filter) &
                 (df_test_prob['Make_Reverse_OHE'].isin(make_filter)) &
-                (df_test_prob['target_accident'] == 1)
+                (df_test_prob['target_cost'] > 0)
                 ].reset_index(drop=True)
 
             df_test_prob_comparable_cases = df_test_prob_comparable_cases.sort_values('target_cost', ascending=True).reset_index(drop=True)
@@ -384,7 +404,7 @@ def main():
 
             df_test_prob_comparable_cases = df_test_prob_comparable_cases[0:cutoff_row]
 
-            avg_cost_accidents = np.mean(df_test_prob_comparable_cases[df_test_prob_comparable_cases['target_accident'] == 1].target_cost)
+            avg_cost_accidents = np.mean(df_test_prob_comparable_cases[df_test_prob_comparable_cases['target_cost'] > 0].target_cost)
 
             st.write('O custo de um sinistro em *clientes de perfil semelhante* é em média {:.2f}€ e possui a seguinte distribuição:'.format(avg_cost_accidents), unsafe_allow_html=True)
 
@@ -459,7 +479,13 @@ def load_pickle(file_path):
     return d
 
 
-def shap_values_plot(clf, df):
+def shap_values_plot(clf, in_df):
+
+    try:
+        df = in_df.drop(['Fuel_x0_0'], axis=0)
+    except KeyError:
+        df = in_df
+
     shap.initjs()
     # cols_to_remove_index = []
     explainer = shap.TreeExplainer(
@@ -500,9 +526,9 @@ def shap_values_plot(clf, df):
     return
 
 
-def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date):
+def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max, contract_start_date):
 
-    sel_values_df = selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date)
+    sel_values_df = selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max, contract_start_date)
 
     fuel_filter = query_list_string_handling(fuel_filter)
     make_filter = query_list_string_handling(make_filter)
@@ -513,7 +539,7 @@ def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_
     fleet_size_finlog_filter = query_list_string_handling(fleet_size_finlog_filter)
 
     vhe_data = get_data(dsn, db, options_file_in, options_file_in.vehicle_data_query.format(fuel_filter, make_filter, tipology_filter))
-    customer_data = get_data(dsn, db, options_file_in, options_file_in.customer_data_query.format(customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter))
+    customer_data = get_data(dsn, db, options_file_in, options_file_in.customer_data_query.format(customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, int(km_year_limits_min) * 1000 * (int(contract_duration_min) / 12)))
 
     # middle_df = pd.merge(sel_values_df, vhe_data, on=['Fuel', 'Make', 'Vehicle_Tipology'])
     if vhe_data.shape[0]:
@@ -552,6 +578,8 @@ def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_
     middle_df['Vehicle_No'] = np.nan
     middle_df['Accident_No'] = np.nan
     middle_df['target'] = np.nan
+    middle_df['target_QIV'] = np.nan
+    middle_df['target_DP'] = np.nan
 
     key_cols = ['contract_customer', 'contract_contract', 'Vehicle_No', 'Accident_No', 'target', 'FI', 'LL', 'AR', 'Customer_Group', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog', 'Contract_km', 'contract_start_date', 'contract_end_date', 'contract_duration', 'Vehicle_Tipology', 'Make', 'Fuel']
 
@@ -570,7 +598,7 @@ def query_list_string_handling(parameter):
     return parameter
 
 
-def selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year, contract_start_date):
+def selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max, contract_start_date):
     single_value_cols = ['Vehicle_Tipology', 'Customer_Group', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog', 'contract_duration', 'Contract_km', 'contract_start_date']
     df = pd.DataFrame(columns=single_value_cols)
     df['Vehicle_Tipology'] = [tipology_filter]
@@ -578,10 +606,10 @@ def selected_values_df_creation(FI_filter, LL_filter, AR_filter, tipology_filter
     # df['Client_type'] = client_type_filter
     df['Num_Vehicles_Total'] = fleet_size_total_filter
     df['Num_Vehicles_Finlog'] = fleet_size_finlog_filter
-    df['contract_duration'] = contract_duration
-    df['Contract_km'] = int(km_year) * 1000
+    df['contract_duration'] = contract_duration_min
+    df['Contract_km'] = int(km_year_limits_min) * 1000 * (int(contract_duration_min) / 12)
     df['contract_start_date'] = contract_start_date.strftime("%Y-%m-%d")
-    df['contract_end_date'] = contract_start_date + relativedelta(months=int(contract_duration))
+    df['contract_end_date'] = contract_start_date + relativedelta(months=int(contract_duration_min))
 
     df['cross_join_key'] = 1
 

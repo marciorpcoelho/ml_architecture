@@ -33,14 +33,22 @@ log_files = {
     'full_log': 'logs/finlog_cost_prediction_2527.txt'
 }
 
+gridsearch_parameters = {
+    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50, 100], 'n_estimators': [50, 100, 200], 'max_depth': ['50', '100'], 'objective': ['binary']}]],
+}
+
 project_id = 2527
 update_frequency_days = 0
 
 DATA_PATH = 'dbs/dataset_train_20200817_v6.csv'  # File created with code in get_train_dataset.py
-DATA_PROB_PATH = 'dbs/df_train_test_prob_for_plotting.csv'  # File created with jupyter notebook Finlog_20200810_candidate_V4
+DATA_PROB_PATH_ALL_COST = 'dbs/df_train_test_prob_for_plotting.csv'  # File created with jupyter notebook Finlog_20200810_candidate_V4
+DATA_PROB_PATH_QIV_COST = 'dbs/df_train_test_prob_qiv_for_plotting.csv'  # File created with jupyter notebook Finlog_20200810_candidate_V4
+DATA_PROB_PATH_DP_COST = 'dbs/df_train_test_prob_dp_for_plotting.csv'  # File created with jupyter notebook Finlog_20200810_candidate_V4
 
 # Encoders created with jupyter notebook Finlog_20200810_candidate_V4.ipynb
-MODEL_PATH = '/models/model.joblib'
+MODEL_PATH = 'models/model.joblib'
+MODEL_PATH_QIV = 'models/model_qiv.joblib'
+MODEL_PATH_DP = 'models/model_dp.joblib'
 
 enc_LL_path = '/models/enc_LL.joblib'
 enc_AR_path = '/models/enc_AR.joblib'
@@ -390,6 +398,8 @@ get_train_dataset_query = '''
         customer.Vehicle_No,
         customer.Accident_No,
         customer.target,
+        customer.target_QIV,
+        customer.target_DP,
         customer.Customer_Group,
         vehicle.FI,
         --vehicle.LA,
@@ -489,7 +499,12 @@ customer_data_query = '''
     and customer_data.Customer_Group in ({})
     and customer_data.Num_Vehicles_Total in ({})
     and customer_data.Num_Vehicles_Finlog in ({})
+    and customer_data.contract_duration between {} and {}
+    and customer_data.Contract_km > {}
+    
 '''
+
+'--and customer_data.Contract_km between {} and {}'
 
 customer_data_cols = [
         'Mean_repair_value_FULL',
@@ -534,5 +549,79 @@ vehicle_data_cols = ['Weight_Empty', 'Insurable_Value', 'Engine_CC', 'Power_kW',
 
 vhe_data_col_keys = ['Fuel', 'Make', 'Vehicle_Tipology']
 customer_data_col_keys = ['Customer_Group', 'Num_Vehicles_Total', 'Num_Vehicles_Finlog']
+
+
+shap_values_column_renaming = {
+    'Contract_km': 'KMs Contrato',
+    'contract_duration': 'Duração',
+    'Weight_Empty': 'Peso',
+    'Insurable_Value': 'Valor Segurado',
+    'Engine_CC': 'CC',
+    'Power_kW': 'KW',
+    'Max_speed': 'Vel. Máx.',
+    'Max_Add_Load': 'Peso Máx.',
+    'Mean_repair_value_FULL': 'Custos (média)',
+    'Sum_repair_value_FULL': 'Custos (soma)',
+    'Sum_contrat_km_FULL': 'KMs Contrato (soma)',
+    'Num_Accidents_FULL': '#Acidentes',
+    'Mean_contract_duration_FULL': 'Duração (média)',
+    'Mean_monthly_repair_cost_FULL': 'Custos Mês (média)',
+    'Mean_repair_value_5YEAR': 'Custos (5 anos,média)',
+    'Sum_repair_value_5YEAR': 'Custos (5 anos,soma)',
+    'Sum_contrat_km_5YEAR': 'KMs Contrato (5 anos,soma)',
+    'Num_Accidents_5YEAR': '#Acidentes (5 anos)',
+    'Mean_contract_duration_5YEAR': 'Duração (5 anos,média)',
+    'Mean_monthly_repair_cost_5YEAR': 'Custos Mês (5 anos,média)',
+    'Mean_repair_value_1YEAR': 'Custos (1 ano,média)',
+    'Sum_repair_value_1YEAR': 'Custos (1 ano,soma)',
+    'Sum_contrat_km_1YEAR': 'KMs Contrato (1 ano,soma)',
+    'Num_Accidents_1YEAR': '#Acidentes (1 ano)',
+    'Mean_contract_duration_1YEAR': 'Duração (1 ano,média)',
+    'Mean_monthly_repair_cost_1YEAR': 'Custos Mês (1ano,média)',
+    'Power_Weight_Ratio': 'Rácio Peso/Potência',
+    'contract_start_month': 'Mês Contrato',
+    'LL_x0_Fidelidade 2012 - RC 50M€ Passageiros': 'Fidelidade 2012 - RC 50M€ Passageiros',
+    'LL_x0_Zurich 2012 - RC 50M€ Comerciais': 'Zurich 2012 - RC 50M€ Comerciais',
+    'LL_x0_Zurich 2012 - RC 50M€ Passageiros': 'Zurich 2012 - RC 50M€ Passageiros',
+    'LL_x0_€50.000.000': '€50.000.000',
+    'AR_x0_Franquia 0%': 'Franquia 0%',
+    'AR_x0_Franquia 2%': 'Franquia 2%', 'AR_x0_Franquia 20%': 'Franquia 20%',
+    'AR_x0_Franquia 4%': 'Franquia 4%', 'AR_x0_Franquia 8%': 'Franquia 8%',
+    'FI_x0_Até €1.000/Ano': 'Até €1.000/Ano',
+    'FI_x0_Fidelidade 2012 - QIV Passageiros': 'Fidelidade 2012 - QIV Passageiros',
+    'FI_x0_Zurich 2012 - QIV Comerciais': 'Zurich 2012 - QIV Comerciais',
+    'FI_x0_Zurich 2012 - QIV Passageiros': 'Zurich 2012 - QIV Passageiros',
+    'Make_x0_ALFA ROMEO': 'ALFA ROMEO', 'Make_x0_AUDI': 'AUDI', 'Make_x0_BMW': 'BMW', 'Make_x0_CITROEN': 'CITROEN', 'Make_x0_DACIA': 'DACIA', 'Make_x0_DS': 'DS', 'Make_x0_FIAT': 'FIAT',
+    'Make_x0_FORD': 'FORD', 'Make_x0_HONDA': 'HONDA', 'Make_x0_HYUNDAI': 'HYUNDAI', 'Make_x0_ISUZU': 'ISUZU', 'Make_x0_IVECO': 'IVECO',
+    'Make_x0_JAGUAR': 'JAGUAR', 'Make_x0_KIA': 'KIA', 'Make_x0_LAND ROVER': 'LAND ROVER', 'Make_x0_LEXUS': 'LEXUS', 'Make_x0_MAZDA': 'MAZDA',
+    'Make_x0_MERCEDES-BENZ': 'MERCEDES-BENZ', 'Make_x0_MINI': 'MINI', 'Make_x0_MITSUBISHI': 'MITSUBISHI', 'Make_x0_NISSAN': 'NISSAN', 'Make_x0_OPEL': 'OPEL',
+    'Make_x0_PEUGEOT': 'PEUGEOT', 'Make_x0_PORSCHE': 'PORSCHE', 'Make_x0_RENAULT': 'RENAULT', 'Make_x0_SEAT': 'SEAT', 'Make_x0_SKODA': 'SKODA', 'Make_x0_SMART': 'SMART',
+    'Make_x0_TOYOTA': 'TOYOTA', 'Make_x0_VOLKSWAGEN': 'VOLKSWAGEN', 'Make_x0_VOLVO': 'VOLVO',
+    # 'Fuel_x0_0': '',
+    'Fuel_x0_Electrico': 'Electrico', 'Fuel_x0_Gasolina': 'Gasolina',
+    'Fuel_x0_Gasolina e/ou Electricidade': 'Gasolina e/ou Electricidade', 'Fuel_x0_Gasóleo': 'Gasóleo', 'Fuel_x0_Gasóleo e/ou Electricidade': 'Gasóleo e/ou Electricidade',
+    'Vehicle_Tipology_x0_Ligeiros de Mercadorias': 'Ligeiros de Mercadorias', 'Vehicle_Tipology_x0_Ligeiros de Passageiros': 'Ligeiros de Passageiros',
+    'Num_Vehicles_Total_x0_1-9': 'Total 1-9', 'Num_Vehicles_Total_x0_10-19': 'Total 10-19', 'Num_Vehicles_Total_x0_100-129': 'Total 100-129',
+    'Num_Vehicles_Total_x0_130-169': 'Total 130-169', 'Num_Vehicles_Total_x0_170-249': 'Total 170-249', 'Num_Vehicles_Total_x0_20-29': 'Total 20-29',
+    'Num_Vehicles_Total_x0_250-449': 'Total 250-449', 'Num_Vehicles_Total_x0_30-39': 'Total 30-39', 'Num_Vehicles_Total_x0_40-59': 'Total 40-59',
+    'Num_Vehicles_Total_x0_450-1499': 'Total 450-1499', 'Num_Vehicles_Total_x0_60-79': 'Total 60-79', 'Num_Vehicles_Total_x0_80-99': 'Total 80-99', 'Num_Vehicles_Total_x0_>1500': 'Total >1500',
+    'Num_Vehicles_Finlog_x0_1-9': 'Finlog 1-9', 'Num_Vehicles_Finlog_x0_10-19': 'Finlog 10-19',
+    'Num_Vehicles_Finlog_x0_100-179': 'Finlog 100-179', 'Num_Vehicles_Finlog_x0_20-29': 'Finlog 20-29', 'Num_Vehicles_Finlog_x0_30-39': 'Finlog 30-39',
+    'Num_Vehicles_Finlog_x0_40-59': 'Finlog 40-59', 'Num_Vehicles_Finlog_x0_60-79': 'Finlog 60-79', 'Num_Vehicles_Finlog_x0_80-99': 'Finlog 80-99', 'Num_Vehicles_Finlog_x0_>180': 'Finlog >180',
+    'Customer_Group_x0_Banco BPI': 'Banco BPI', 'Customer_Group_x0_Empresa': 'Empresa',
+    'Customer_Group_x0_Euronete Portugal, S.A': 'Euronete Portugal, S.A', 'Customer_Group_x0_GRUPO ADP': 'GRUPO ADP',
+    'Customer_Group_x0_Grupo Agility': 'Grupo Agility', 'Customer_Group_x0_Grupo Ambimed': 'Grupo Ambimed', 'Customer_Group_x0_Grupo CME': 'Grupo CME',
+    'Customer_Group_x0_Grupo Caetano Auto': 'Grupo Caetano Auto', 'Customer_Group_x0_Grupo Caetano Retail': 'Grupo Caetano Retail', 'Customer_Group_x0_Grupo Choice Car': 'Grupo Choice Car',
+    'Customer_Group_x0_Grupo Extrusal': 'Grupo Extrusal', 'Customer_Group_x0_Grupo Ferrovial': 'Grupo Ferrovial', 'Customer_Group_x0_Grupo Fresenius': 'Grupo Fresenius',
+    'Customer_Group_x0_Grupo Garland': 'Grupo Garland', 'Customer_Group_x0_Grupo Geserfor': 'Grupo Geserfor', 'Customer_Group_x0_Grupo Iberdata': 'Grupo Iberdata',
+    'Customer_Group_x0_Grupo Itron': 'Grupo Itron', 'Customer_Group_x0_Grupo João de Deus': 'Grupo João de Deus', 'Customer_Group_x0_Grupo M. Coutinho': 'Grupo M. Coutinho',
+    'Customer_Group_x0_Grupo MDS': 'Grupo MDS', 'Customer_Group_x0_Grupo Mota Engil': 'Grupo Mota Engil', 'Customer_Group_x0_Grupo NOS': 'Grupo NOS',
+    'Customer_Group_x0_Grupo Saint Gobain': 'Grupo Saint Gobain', 'Customer_Group_x0_Grupo Salvador Caetano': 'Grupo Salvador Caetano',
+    'Customer_Group_x0_Grupo Sausport': 'Grupo Sausport', 'Customer_Group_x0_Grupo Selplus': 'Grupo Selplus', 'Customer_Group_x0_Grupo Sonae Arauco': 'Grupo Sonae Arauco',
+    'Customer_Group_x0_Grupo Sonae Capital': 'Grupo Sonae Capital', 'Customer_Group_x0_Grupo Sonae Com': 'Grupo Sonae Com', 'Customer_Group_x0_Grupo Sonae Investimentos': 'Grupo Sonae Investimentos',
+    'Customer_Group_x0_Grupo Sonae Salsa': 'Grupo Sonae Salsa', 'Customer_Group_x0_Grupo Sonae Sierra': 'Grupo Sonae Sierra', 'Customer_Group_x0_Grupo Tolife': 'Grupo Tolife',
+    'Customer_Group_x0_Grupo Tranquilidade': 'Grupo Tranquilidade', 'Customer_Group_x0_Outro': 'Outro', 'Customer_Group_x0_Particular': 'Particular',
+    'Customer_Group_x0_Piedade, SA': 'Piedade, SA', 'Customer_Group_x0_Publicidade S.A': 'Publicidade S.A'
+}
 
 

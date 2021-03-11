@@ -1990,8 +1990,13 @@ def feat_eng(df_in):
 
     # change target column name, representing the cost
     df['target_cost'] = df.target
-    df = df.drop(['target'], axis=1)
+    df['target_qiv'] = df.target_QIV
+    df['target_dp'] = df.target_DP
+
+    df = df.drop(['target', 'target_QIV', 'target_DP'], axis=1)
     df['target_cost'] = df['target_cost'].fillna(0)
+    df['target_qiv'] = df['target_qiv'].fillna(0)
+    df['target_dp'] = df['target_dp'].fillna(0)
 
     values = {
         'Mean_repair_value_cust_full': 0,
