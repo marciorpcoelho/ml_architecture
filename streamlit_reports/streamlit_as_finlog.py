@@ -47,7 +47,6 @@ def main():
     enc_Num_Vehicles_Finlog = load(base_path + options_file.enc_Num_Vehicles_Finlog_path)
     enc_Customer_Group = load(base_path + options_file.enc_Customer_Group_path)
     # enc_Customer_Name = load(base_path + options_file.enc_Customer_Name)
-    dict_Customer_Group = load_pickle(options_file.Customer_Group_dict_path)
 
     col1, col2 = st.sidebar.beta_columns(2)
 
@@ -140,19 +139,6 @@ def main():
                  )
 
     if col2.button('Perfil 2'):
-        # tipology_filter = 'Ligeiros de Mercadorias'
-        # make_filter = 'TOYOTA'
-        # fuel_filter = 'Gasóleo'
-        # customer_group_filter = 'Grupo Choice Car'
-        # client_type_filter = 'Empresa'
-        # LL_filter = 'Fidelidade 2012 - RC 50M€ Passageiros'
-        # AR_filter = 'Franquia 4%'
-        # FI_filter = 'Até €1.000/Ano'
-        # fleet_size_total_filter = '250-449'
-        # fleet_size_finlog_filter = '80-99'
-        # contract_duration = '24'
-        # km_year = '10'
-
         tipology_filter = 'Ligeiros de Passageiros'
         make_filter = 'RENAULT'
         fuel_filter = 'Gasóleo'
@@ -185,46 +171,15 @@ def main():
 
     if tipology_filter == '-':
         st.text("Por favor selecione a tipologia do veículo")
-    elif make_filter == '-':
-        st.text("Por favor selecione a marca do veículo")
-    elif fuel_filter == '-':
-        st.text("Por favor selecione o combustível do veículo")
     elif customer_group_filter == '-':
         st.text("Por favor selecione o grupo de empresas")
-    # elif customer_name_filter == '-':
-    #     st.text("Por favor selecione o tipo de cliente")
-    elif LL_filter == '-':
-        st.text("Por favor selecione a franquia LL")
-    elif AR_filter == '-':
-        st.text("Por favor selecione a franquia AR")
-    elif FI_filter == '-':
-        st.text("Por favor selecione a franquia FI")
     elif fleet_size_total_filter == '-':
         st.text("Por favor selecione a dimensão total da frota")
     elif fleet_size_finlog_filter == '-':
         st.text("Por favor selecione a dimensão da frota com Auto Seguro")
-    elif not contract_duration_limits:
-        st.text("Por favor selecione a duração do contrato")
-    elif not km_year_limits:
-        st.text("Por favor selecione a estimativa de km por ano")
     else:
 
-        # st.write('''
-        #        Tipologia do veículo: **{}**\n
-        #        Marca: **{}**\n
-        #        Combustível: **{}**\n
-        #        Tipo de cliente: **{}**\n
-        #        Franquia LL: **{}**\n
-        #        Franquia AR: **{}**\n
-        #        Franquia FI: **{}**\n
-        #        Dimensão total da frota: **{}**\n
-        #        Dimensão da frota com Auto Seguro: **{}**\n
-        #        Duração do contrato: **{}**\n
-        #        Estimativa de km por ano: **{}**\n
-        #        **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, client_type_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration, km_year)
-        #          )
-
-        df = rows_to_predict_creation(options_file.DSN_MLG_DEV, 'BI_MLG', options_file, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max, contract_start_date)
+        df = rows_to_predict_creation(options_file.DSN_MLG_PRD, 'BI_MLG', options_file, FI_filter, LL_filter, AR_filter, tipology_filter, make_filter, fuel_filter, customer_group_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max, contract_start_date)
 
         df = feat_eng(df)
 
@@ -549,7 +504,7 @@ def rows_to_predict_creation(dsn, db, options_file_in, FI_filter, LL_filter, AR_
 
         middle_df = pd.merge(sel_values_df, vhe_data, on=['Fuel_lower', 'Make_lower', 'Vehicle_Tipology_lower'], suffixes=(None, '_y'))
     elif not vhe_data.shape[0]:
-        st.write('vhe empty')
+        # st.write('vhe empty')
         middle_df = sel_values_df
         for col in options_file.vehicle_data_cols:
             middle_df[col] = np.nan
@@ -651,7 +606,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
         raise RerunException(RerunData())

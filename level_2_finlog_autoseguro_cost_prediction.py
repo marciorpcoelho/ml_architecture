@@ -47,7 +47,7 @@ def data_acquisition():
     performance_info_append(time.time(), 'Section_A_Start')
     log_record('Início Secção A...', project_id)
 
-    df = sql_retrieve_df_specified_query(options_file.DSN_MLG_DEV, options_file.sql_info['database_mlg'], options_file, options_file.get_train_dataset_query)
+    df = sql_retrieve_df_specified_query(options_file.DSN_MLG_PRD, options_file.sql_info['database_mlg'], options_file, options_file.get_train_dataset_query)
 
     # df.to_csv('dbs/dataset_train_20200817_v6.csv', index=False)
 
