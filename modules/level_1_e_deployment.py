@@ -77,6 +77,35 @@ def apostrophe_escape(line):
     return line.replace('\'', '"')
 
 
+def sql_delete(dsn, database, view, options_file, query_filters):
+    level_0_performance_report.log_record('A apagar registos da tabela {} na BD {}...'.format(view, database), options_file.project_id)
+    query, query_filters_string_list = None, []
+
+    cnxn = odbc_connection_creation(dsn, options_file.UID, options_file.PWD, database)
+
+    if not query_filters:
+        query = 'DELETE FROM ' + view
+    elif type(query_filters) == dict:
+        for key in query_filters:
+            if type(query_filters[key]) == list:
+                testing_string = '\'%s\'' % "\', \'".join([str(x) for x in query_filters[key]])
+                query_filters_string_list.append(key + ' in (' + testing_string + ')')
+            else:
+                query_filters_string_list.append(key + ' = \'%s\'' % str(query_filters[key]))
+        query = 'DELETE FROM ' + view + ' WHERE ' + ' and '.join(query_filters_string_list)
+
+    cursor = cnxn.cursor()
+    affected_rows_count = cursor.execute(query).rowcount
+
+    level_0_performance_report.log_record('{} registo(s) apagado(s) da tabela {} na BD {}.'.format(affected_rows_count, view, database), options_file.project_id)
+
+    cnxn.commit()
+    cursor.close()
+    cnxn.close()
+
+    return
+
+
 def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check_date=0):  # v1
     time_to_last_update = options_file.update_frequency_days
 
@@ -104,6 +133,8 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
                 for index, row in df.iterrows():
                     # continue
                     cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+
+                level_0_performance_report.log_record('Inseridas {} linhas na DB {} e na tabela {}.'.format(df.shape[0], database, view), options_file.project_id)
             elif not time_result:
                 level_0_performance_report.log_record('Já existem dados mais recentes.', options_file.project_id)
         if not check_date:
@@ -111,6 +142,7 @@ def sql_inject(df, dsn, database, view, options_file, columns, truncate=0, check
             for index, row in df.iterrows():
                 # continue
                 cursor.execute("INSERT INTO " + view + "(" + columns_string + ') ' + values_string, [row[value] for value in columns])
+            level_0_performance_report.log_record('Inseridas {} linhas na DB {} e na tabela {}.'.format(df.shape[0], database, view), options_file.project_id)
 
         print('Duração: {:.2f} segundos.'.format(time.time() - start))
     except (pyodbc.ProgrammingError, pyodbc.DataError) as error:

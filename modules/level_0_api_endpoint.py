@@ -55,6 +55,12 @@ class OptimizationDataOut(BaseModel):
     optimization_total_sum: int
 
 
+class OptimizationDataBavieraOut(BaseModel):
+    selection: list
+    status: str
+    optimization_total_sum: float
+
+
 @app.get("/optimizations/apv_parts_baviera/", response_model=OptimizationDataOut)
 def solver(item: OptimizationDataIn):
     df_solve = pd.read_json(item.df_solve)
@@ -134,6 +140,37 @@ def solver(item: OptimizationDataHyundaiHondaIn):
         'status': problem.status,
         'unique_ids': [int(ref) for ref in unique_ids],  # json does not recognize numpy data types (int64 in this case) and so the values inside this list need to be converted to int before being serialized;
         'optimization_total_sum': result,
+    }
+
+    return response
+
+
+@app.get("/optimizations/vhe_baviera/", response_model=OptimizationDataBavieraOut)
+def solver(item: OptimizationDataHyundaiHondaIn):
+    dataset = pd.read_json(item.df_solve)
+    parameter_restriction_vectors = item.parameter_restriction_vectors
+    parameter_restriction = []
+
+    unique_ids_count = dataset['Configuration_ID'].nunique()
+    scores = dataset['Score (€)'].values.tolist()
+
+    selection = cp.Variable(unique_ids_count, integer=True)
+    for parameter_vector in parameter_restriction_vectors:
+        parameter_restriction.append(selection >= parameter_vector)
+
+    order_size_restriction = cp.sum(selection) <= item.sel_order_size
+    total_value = selection * scores
+
+    problem = cp.Problem(cp.Maximize(total_value), [selection >= 0, selection <= 100,
+                                                    order_size_restriction,
+                                                    ] + parameter_restriction)
+
+    result = problem.solve(solver=cp.GLPK_MI, verbose=False, qcp=True)
+
+    response = {
+        'selection': [qty for qty in selection.value],
+        'status': problem.status,
+        'optimization_total_sum': result
     }
 
     return response

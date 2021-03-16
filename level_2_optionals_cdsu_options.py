@@ -38,7 +38,7 @@ sql_info = {
     'unit_count_number_history': 'LOG_Project_Units_Count_History',
     'checkpoint_b_table': 'VHE_Fact_DW_Checkpoint_B_OrderOptimization_RTL',
     'feature_contribution': 'VHE_Fact_Feature_Contribution',
-    'final_table_temp': 'VHE_Fact_PA_OrderOptimization_RTL_TEMP_CDSU',
+    'final_table': 'VHE_Fact_PA_OrderOptimization_RTL',
     'model_mapping': ['VHE_MapBI_Model_Fase2'],
     'mappings': ['VHE_MapBI_Rims_Size', 'VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Model', 'VHE_MapBI_Version', 'VHE_MapBI_Interior_Type', 'VHE_MapBI_Color_Ext', 'VHE_MapBI_Color_Int', 'VHE_MapBI_Motor_Desc'],
     'mappings_temp': ['VHE_MapBI_Sales_Place', 'VHE_MapBI_Sales_Place_v2', 'VHE_MapBI_Sales_Place_Fase2'],  # When no training is needed in this project
@@ -46,6 +46,7 @@ sql_info = {
 }
 
 project_id = 2775
+nlr_code = '4R0'
 
 regex_dict = {
     # 'motorization_value': r'(\d{1}\.{1}\d{1}\s{0,1}[a-zA-Z]{1,3}|\d{1}\.{1}\d{1})'
@@ -127,7 +128,7 @@ sql_to_code_renaming = {
     'Version_Desc': 'Versão',
     'Version_Code': 'Version_Code',
     'Optional_Desc': 'Opcional',
-    'Sell_Location_Desc': 'Local da Venda',
+    'Site_Desc': 'Local da Venda',
     # 'Order_Type_Desc': 'Tipo Encomenda',
     'Purchase_Date': 'Data Compra',
     'Sell_Date': 'Data Venda',
@@ -222,6 +223,7 @@ columns_for_sql_temp = ['Auto_Trans', 'Park_Front_Sens', 'Rims_Size', 'Colour_Ex
                         'Average_Score_Class_GT', 'Average_Score_Class_GT_Local', 'Score_Class_GT', 'Rear_Cam', 'Fuel_Type', 'Rear_Front_Sens']
 
 column_checkpoint_sql_renaming = {
+    'NLR_Code': 'NLR_Code',
     'Jantes': 'Rims_Size',
     'Caixa Auto': 'Auto_Trans',
     'Combustível': 'Fuel_Type',

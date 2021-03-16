@@ -680,8 +680,8 @@ def data_grouping_by_locals_temp(df, configuration_parameters, project_id):
         df_grouped3 = df.groupby(configuration_parameters + ['Local da Venda_v2'])
         df = df_grouped3.apply(additional_info_temp, ('_local_v2',))
 
-        df_grouped4 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_1'])
-        df = df_grouped4.apply(additional_info_temp, ('_local_Fase2_level_1',))
+        # df_grouped4 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_1'])
+        # df = df_grouped4.apply(additional_info_temp, ('_local_Fase2_level_1',))
 
         df_grouped5 = df.groupby(configuration_parameters + ['Local da Venda_Fase2_level_2'])
         df = df_grouped5.apply(additional_info_temp, ('_local_Fase2_level_2',))

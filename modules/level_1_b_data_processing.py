@@ -9,6 +9,7 @@ import itertools
 import unidecode
 import numpy as np
 import pandas as pd
+import datetime
 from scipy import stats
 from langdetect import detect
 import matplotlib.pyplot as plt
@@ -99,7 +100,7 @@ def remove_rows(df, rows, project_id, warning=0):
 def string_replacer(df, dictionary):
 
     for key in dictionary.keys():
-        df.loc[:, key[0]] = df[key[0]].str.replace(r'\b{}\b'.format(key[1]), dictionary[key], regex=True)
+        df.loc[:, key[0]] = df[key[0]].str.replace(r'\b{}\b|\b{}'.format(key[1], key[1]), dictionary[key], regex=True)
     return df
 
 
@@ -347,29 +348,39 @@ def options_scraping(df, options_file, model_mapping={}, model_training_check=0)
     df_grouped = df.groupby('Nº Stock')
 
     # Modelo
-    level_0_performance_report.performance_info_append(time.time(), 'Model_Code_Start')
-    if model_training_check:
+    if len(list(model_mapping.keys())):
+        unique_version_code = df['Version_Code'].unique()
+        for version_code in unique_version_code:
+            found_flag = 0
+            for key in model_mapping.keys():
+                if version_code in model_mapping[key]:
+                    df.loc[df['Version_Code'] == version_code, 'Modelo'] = key
+                    found_flag = 1
+                    break
+            if not found_flag:
+                level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte código de versão: {}.'.format(version_code), project_id, flag=1)
+    else:
         unique_models = df['Modelo'].unique()
         for model in unique_models:
-            tokenized_modelo = nltk.word_tokenize(model)
-            df.loc[df['Modelo'] == model, 'Modelo'] = ' '.join(tokenized_modelo[:-3])
-    elif not model_training_check:
-        if len(list(model_mapping.keys())):
-            unique_version_code = df['Version_Code'].unique()
-            for version_code in unique_version_code:
-                found_flag = 0
-                for key in model_mapping.keys():
-                    if version_code in model_mapping[key]:
-                        df.loc[df['Version_Code'] == version_code, 'Modelo'] = key
-                        found_flag = 1
-                        break
-                if not found_flag:
-                    level_0_performance_report.log_record('Não foi encontrada a parametrização para o seguinte código de versão: {}.'.format(version_code), project_id, flag=1)
-        else:
-            unique_models = df['Modelo'].unique()
-            for model in unique_models:
-                tokenized_modelo = nltk.word_tokenize(model)
-                df.loc[df['Modelo'] == model, 'Modelo'] = tokenized_modelo.split(' ')[0]
+            min_sell_date_model = df.loc[df['Modelo'] == model, 'Data Venda'].min()
+            # print(model, min_sell_date_model, datetime.datetime.strptime('2020-10-01', "%Y-%m-%d"))
+            if model in ['Serie 4', 'X6', 'X3']:
+                tokenized_modelo = [model]
+            if min_sell_date_model < datetime.datetime.strptime('2020-10-01', "%Y-%m-%d"):
+                if model.startswith('BMW'):
+                    new_model = model[4:].capitalize()
+                    tokenized_modelo = nltk.word_tokenize(new_model)[:-3]
+                else:
+                    tokenized_modelo = nltk.word_tokenize(model)[:-3]
+            elif min_sell_date_model >= datetime.datetime.strptime('2020-10-01', "%Y-%m-%d"):  # Spiga Migration changed the way Model_Desc is made. Serie 5 Touring to (G31) Serie 5 Touring
+                if model.startswith('BMW'):
+                    new_model = model[4:].capitalize()
+                    tokenized_modelo = nltk.word_tokenize(new_model)[3::]
+                else:
+                    tokenized_modelo = nltk.word_tokenize(model)[3::]
+
+            new_model = re.sub(r'^(s)(?=[0-9])', 'Serie ', ' '.join(tokenized_modelo), flags=re.IGNORECASE)
+            df.loc[df['Modelo'] == model, 'Modelo'] = new_model
     level_0_performance_report.performance_info_append(time.time(), 'Model_Code_End')
 
     # Motorização
@@ -386,7 +397,7 @@ def options_scraping(df, options_file, model_mapping={}, model_training_check=0)
     pool = Pool(processes=level_0_performance_report.pool_workers_count)
     results = pool.map(options_scraping_per_group, [(key, group, colors_list, project_id) for (key, group) in df_grouped])
     pool.close()
-    df = pd.concat([result[0] for result in results if result is not None])
+    df = pd.concat([result for result in results if result is not None])
 
     return df
 
@@ -483,23 +494,23 @@ def options_scraping_per_group(args):
             group['Versao'] = 'advantage'
         elif 'versão' in tokenized_options or 'bmw' in tokenized_options:
             if 'line' in tokenized_options and 'sport' in tokenized_options:
-                group['Versao'] = 'line_sport'
+                group['Versao'] = 'line sport'
             if 'line' in tokenized_options and 'urban' in tokenized_options:
-                group['Versao'] = 'line_urban'
+                group['Versao'] = 'line urban'
             if 'desportiva' in tokenized_options and 'm' in tokenized_options:
-                group['Versao'] = 'desportiva_m'
+                group['Versao'] = 'desportiva m'
             if 'line' in tokenized_options and 'luxury' in tokenized_options:
-                group['Versao'] = 'line_luxury'
+                group['Versao'] = 'line luxury'
         if 'pack' in tokenized_options and 'desportivo' in tokenized_options and 'm' in tokenized_options:
             if 'S1' in tokenized_modelo:
-                group['Versao'] = 'desportiva_m'
+                group['Versao'] = 'desportiva m'
             elif 'S5' in tokenized_modelo or 'S3' in tokenized_modelo or 'S2' in tokenized_modelo:
-                group['Versao'] = 'pack_desportivo_m'
+                group['Versao'] = 'pack desportivo m'
         if 'bmw' in tokenized_options and 'modern' in tokenized_options:  # no need to search for string line, there are no bmw modern without line;
             if 'S5' in tokenized_modelo:
-                group['Versao'] = 'line_luxury'
+                group['Versao'] = 'line luxury'
             else:
-                group['Versao'] = 'line_urban'
+                group['Versao'] = 'line urban'
         if 'xline' in tokenized_options:
             group['Versao'] = 'xline'
 
@@ -846,7 +857,8 @@ def remove_zero_price_total_vhe(df, project_id):
 
 
 def margin_calculation(df):
-    df['margem_percentagem'] = (df['Margem'] / df['price_total']) * 100
+    df['margem_percentagem'] = (df['Margem'].round(2) / df['price_total'].round(2)) * 100
+    df['margem_percentagem'] = df['margem_percentagem'].round(4)
 
     return df
 
@@ -1910,10 +1922,10 @@ def master_file_processing(master_files_to_convert):
     return
 
 
-def regex_string_replacement(string_to_process, regex_rule):
+def regex_string_replacement(string_to_process, regex_rule, replacement=''):
     regex = re.compile(regex_rule)
 
-    processed_string = regex.sub('', str(string_to_process))
+    processed_string = regex.sub(replacement, str(string_to_process))
 
     return processed_string
 
@@ -1990,13 +2002,8 @@ def feat_eng(df_in):
 
     # change target column name, representing the cost
     df['target_cost'] = df.target
-    df['target_qiv'] = df.target_QIV
-    df['target_dp'] = df.target_DP
-
-    df = df.drop(['target', 'target_QIV', 'target_DP'], axis=1)
+    df = df.drop(['target'], axis=1)
     df['target_cost'] = df['target_cost'].fillna(0)
-    df['target_qiv'] = df['target_qiv'].fillna(0)
-    df['target_dp'] = df['target_dp'].fillna(0)
 
     values = {
         'Mean_repair_value_cust_full': 0,

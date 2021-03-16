@@ -9,7 +9,7 @@ from level_2_optionals_cdsu_options import project_id
 from modules.level_1_a_data_acquisition import project_units_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
 from modules.level_1_b_data_processing import null_analysis, options_scraping_v2, zero_analysis, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_conversion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
 from modules.level_1_d_model_evaluation import performance_evaluation_classification, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
-from modules.level_1_e_deployment import sql_inject, sql_date_comparison, sql_mapping_upload
+from modules.level_1_e_deployment import sql_inject, sql_delete, sql_date_comparison, sql_mapping_upload
 from modules.level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
 pd.set_option('display.expand_frame_repr', False)
 
@@ -36,7 +36,7 @@ def main():
     _, df, _ = data_grouping_by_locals_temp(df, configuration_parameters, level_2_optionals_cdsu_options.project_id)
 
     control_prints(df, 'before deployment', head=1)
-    deployment(df, level_2_optionals_cdsu_options.sql_info['database'], level_2_optionals_cdsu_options.sql_info['final_table_temp'])
+    deployment(df, level_2_optionals_cdsu_options.sql_info['database'], level_2_optionals_cdsu_options.sql_info['final_table'])
     # performance_info(level_2_optionals_cdsu_options.project_id, level_2_optionals_cdsu_options, model_choice_message, vehicle_count)
 
     log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[project_id]), project_id)
@@ -57,24 +57,24 @@ def data_acquisition(query_filters):
 
 def control_prints(df, tag, head=0, save=0, null_analysis_flag=0, date=0):
 
-    print('{}\n{}'.format(tag, df.shape))
-    try:
-        print('Unique Vehicles: {}'.format(df['Nº Stock'].nunique()))
-
-    except KeyError:
-        print('Unique Vehicles: {}'.format(df['VHE_Number'].nunique()))
-
-    if head:
-        print(df.head())
-    if save:
-        df.to_csv('dbs/cdsu_control_save_tag_{}.csv'.format(tag))
-    if null_analysis_flag:
-        null_analysis(df)
-    if date:
-        try:
-            print('Current Max Sell Date is {}'.format(max(df['Data Venda'])))
-        except KeyError:
-            print('Current Max Sell Date is {}'.format(max(df['Sell_Date'])))
+    # print('{}\n{}'.format(tag, df.shape))
+    # try:
+    #     print('Unique Vehicles: {}'.format(df['Nº Stock'].nunique()))
+    #
+    # except KeyError:
+    #     print('Unique Vehicles: {}'.format(df['VHE_Number'].nunique()))
+    #
+    # if head:
+    #     print(df.head())
+    # if save:
+    #     df.to_csv('dbs/cdsu_control_save_tag_{}.csv'.format(tag))
+    # if null_analysis_flag:
+    #     null_analysis(df)
+    # if date:
+    #     try:
+    #         print('Current Max Sell Date is {}'.format(max(df['Data Venda'])))
+    #     except KeyError:
+    #         print('Current Max Sell Date is {}'.format(max(df['Sell_Date'])))
 
     return
 
@@ -190,10 +190,12 @@ def deployment(df, db, view):
     log_record('Início Secção E...', project_id)
 
     if df is not None:
+        df['NLR_Code'] = level_2_optionals_cdsu_options.nlr_code
         # df = column_rename(df, list(level_2_optionals_cdsu_options.column_sql_renaming.keys()), list(level_2_optionals_cdsu_options.column_sql_renaming.values()))
         df = df.rename(columns=level_2_optionals_cdsu_options.column_sql_renaming)
         control_prints(df, 'before deployment, after renaming', head=1)
-        sql_inject(df, level_2_optionals_cdsu_options.DSN_MLG_DEV, db, view, level_2_optionals_cdsu_options, list(level_2_optionals_cdsu_options.column_checkpoint_sql_renaming.values()), truncate=1, check_date=1)
+        sql_delete(level_2_optionals_cdsu_options.DSN_MLG_PRD, db, view, level_2_optionals_cdsu_options, {'NLR_Code': '{}'.format(level_2_optionals_cdsu_options.nlr_code)})
+        sql_inject(df, level_2_optionals_cdsu_options.DSN_MLG_PRD, db, view, level_2_optionals_cdsu_options, list(level_2_optionals_cdsu_options.column_checkpoint_sql_renaming.values()), check_date=1)
 
     log_record('Fim Secção E.', project_id)
     performance_info_append(time.time(), 'Section_E_End')
@@ -206,5 +208,5 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = level_2_optionals_cdsu_options.project_id, str(sys.exc_info()[1])
         log_record(exception_desc, project_identifier, flag=2)
-        # error_upload(level_2_optionals_cdsu_options, project_identifier, format_exc(), exception_desc, error_flag=1)
+        error_upload(level_2_optionals_cdsu_options, project_identifier, format_exc(), exception_desc, error_flag=1)
         log_record('Falhou - Projeto: {}.'.format(str(project_dict[project_identifier])), project_identifier)
