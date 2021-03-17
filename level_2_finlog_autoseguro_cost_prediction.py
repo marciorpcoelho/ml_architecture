@@ -134,7 +134,7 @@ def data_modelling(df):
     return df_prob_target_cost
 
 
-def model_training(df, target_col, split_date, columns_to_drop, model_path, split_method):
+def model_training(df, target_col, split_date, columns_to_drop, model_path):
 
     # Cell 1
     train_X = df[df['contract_start_date'] < str(split_date)].reset_index(drop=True)

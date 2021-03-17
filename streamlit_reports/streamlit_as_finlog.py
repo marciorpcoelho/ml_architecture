@@ -183,7 +183,7 @@ def main():
 
         df = feat_eng(df)
 
-        df = df.drop(['target_accident', 'target_cost', 'target_qiv', 'target_dp'], axis=1)
+        df = df.drop(['target_accident', 'target_cost', 'target_QIV', 'target_DP'], axis=1)
 
         df.Fuel = np.nan_to_num(df.Fuel)
 
