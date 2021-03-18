@@ -38,6 +38,7 @@ sql_info = {
     'matrix_lvl_2': 'PSE_Fact_PA_Parts_Conf_Matrix_Lvl_2',
     'unit_count_number_history': 'LOG_Project_Units_Count_History',
     'master_file_table': 'PSE_Fact_PA_Parts_Master_Files',
+    'update_codes_sp': 'usp_PSE_Parts_Classification_Upd'
 }
 
 sql_to_code_renaming = {

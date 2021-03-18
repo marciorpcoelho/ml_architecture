@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import time
+import pyodbc
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
 from modules.level_1_e_deployment import sql_inject
 from modules.level_1_a_data_acquisition import sql_retrieve_df
@@ -585,6 +586,19 @@ def deployment(df, main_families_cm, other_families_cm):
     df.dropna(subset=['Classification'], axis=0, inplace=True)
     sql_inject(df, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
     sql_inject(df, options_file.DSN_SRV3_PRD, options_file.sql_info['database_BI_GSC'], options_file.sql_info['parts_classification_table'], options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
+    sql_sp_run(options_file.DSN_SRV3_PRD, options_file.sql_info['database_BI_GSC'], options_file)
+    return
+
+
+def sql_sp_run(dsn, db, options_file_in):
+    cnxn = pyodbc.connect('DSN={};UID={};PWD={};DATABASE={}'.format(dsn, options_file_in.UID, options_file_in.PWD, db), searchescape='\\')
+    cursor = cnxn.cursor()
+
+    cursor.execute('EXEC {}.[dbo].{}'.format(db, options_file_in.sql_info['update_codes_sp']))
+
+    cnxn.commit()
+    cursor.close()
+    cnxn.close()
 
     return
 

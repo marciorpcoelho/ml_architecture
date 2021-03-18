@@ -4,6 +4,7 @@ import shap
 import time
 # import logging
 import pickle
+import altair as alt
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -68,13 +69,6 @@ def main():
 
     customer_group_list = enc_Customer_Group.categories_[0]
     customer_group_filter = st.sidebar.selectbox('Grupo de Empresas:', ['-'] + list(customer_group_list), index=0)
-    # if customer_group_filter != '-':
-    #     customer_name_list = dict_Customer_Group[customer_group_filter]
-    # else:
-    #     customer_name_list = list(enc_Customer_Name.categories_[0])
-    # customer_name_filter = st.sidebar.multiselect('Cliente(s):', list(customer_name_list))
-    # if not len(customer_name_filter):
-    #     customer_name_filter = customer_name_list
 
     LL_list = list(enc_LL.categories_[0])
     LL_filter = st.sidebar.multiselect('Cobertura Responsabilidade Civil (LL):', LL_list)
@@ -212,16 +206,8 @@ def main():
         prediction_qiv = np.mean([x[1] for x in prediction_proba_qiv])
         prediction_dp = np.mean([x[1] for x in prediction_proba_dp])
 
-        qiv_over_dp_increase = 1 - prediction_qiv / prediction_dp
-        dp_over_qiv_increase = 1 - prediction_dp / prediction_qiv
-
-        st.write('Probabilidade de sinistro: {:.1f}%'.format(prediction*100))
-        st.write('Probabilidade de ativação cobertura QIV: {:.1f}%'.format(prediction_qiv * 100))
-        st.write('Probabilidade de ativação cobertura Danos Próprios: {:.1f}%'.format(prediction_dp * 100))
-        if qiv_over_dp_increase > dp_over_qiv_increase:
-            st.write('Este perfil tem {:.1f}% mais probabilidade de ativação da Cobertura de Danos Próprios.'.format(qiv_over_dp_increase * 100))
-        elif dp_over_qiv_increase > qiv_over_dp_increase:
-            st.write('Este perfil tem {:.1f}% mais probabilidade de ativação da Cobertura de QIV.'.format(dp_over_qiv_increase * 100))
+        st.markdown("<h2 style='text-align: left;'> Sinistro: </h2>", unsafe_allow_html=True)
+        st.markdown("Probabilidade de sinistro: **{:.1f}%**".format(prediction*100))
 
         df_test_prob_full = pd.read_csv(base_path + '/' + options_file.DATA_PROB_PATH_ALL_COST, index_col=0)
 
@@ -345,6 +331,10 @@ def main():
                 'Mean_monthly_repair_cost_1YEAR'
             ])
 
+            st.markdown("<h2 style='text-align: left;'> Estudo por Cobertura: </h2>", unsafe_allow_html=True)
+            cover_prob_display(prediction_qiv, prediction_dp)
+
+            st.markdown("<h2 style='text-align: left;'> Exploração de probabilidade de sinistro: </h2>", unsafe_allow_html=True)
             shap_values_plot(clf, df.rename(columns=options_file.shap_values_column_renaming))
 
             df_test_prob_comparable_cases = df_test_prob[
@@ -361,6 +351,7 @@ def main():
 
             avg_cost_accidents = np.mean(df_test_prob_comparable_cases[df_test_prob_comparable_cases['target_cost'] > 0].target_cost)
 
+            st.markdown("<h2 style='text-align: left;'> Distribuição de custos de Sinistros: </h2>", unsafe_allow_html=True)
             st.write('O custo de um sinistro em *clientes de perfil semelhante* é em média {:.2f}€ e possui a seguinte distribuição:'.format(avg_cost_accidents), unsafe_allow_html=True)
 
             repair_cost_similar = df_test_prob_comparable_cases.target_cost
@@ -413,12 +404,69 @@ def main():
             # st.write('As reparações mais comuns em veículos semelhantes são:')
 
             # st.write(auth_description.head(20))
-
             #st.pyplot(bbox_inches='tight', dpi=300, pad_inches=0)
             print('Finished')
 
 
-@st.cache
+def cover_prob_display(prediction_qiv, prediction_dp):
+    altair_plot = altair_bar_chart_plot(prediction_qiv, prediction_dp)
+
+    col3, col4 = st.beta_columns(2)
+    col3.altair_chart(altair_plot, use_container_width=True)
+    qiv_over_dp_increase = 1 - prediction_qiv / prediction_dp
+    dp_over_qiv_increase = 1 - prediction_dp / prediction_qiv
+    if qiv_over_dp_increase > dp_over_qiv_increase:
+        col4.markdown('Este perfil tem **{:.1f}%** mais probabilidade de ativação da Cobertura de Danos Próprios.'.format(qiv_over_dp_increase * 100))
+    elif dp_over_qiv_increase > qiv_over_dp_increase:
+        col4.markdown('Este perfil tem **{:.1f}%** mais probabilidade de ativação da Cobertura de QIV.'.format(dp_over_qiv_increase * 100))
+
+    return
+
+
+def altair_bar_chart_plot(prediction_qiv, prediction_dp):
+    source_df = pd.DataFrame()
+    source_df['Covers'] = ['QIV', 'Danos Próprios']
+    source_df['Prob'] = [prediction_qiv, prediction_dp]
+    source_df['Prob'] = source_df['Prob'].round(3)
+
+    altair_bar_chart = alt.Chart(source_df, title='% Ativação por Cobertura').mark_bar().encode(
+        x=alt.X('Covers',
+                axis=alt.Axis(
+                    title='Cobertura',
+                    labelAngle=0,
+                    )
+                ),
+        y=alt.Y('Prob',
+                axis=alt.Axis(
+                    format='%',
+                    title='% de Ativação'
+                    ),
+                scale=alt.Scale(
+                    domain=(0, 1)
+                    )
+                ),
+    )
+
+    text = altair_bar_chart.mark_text(
+        align='center',
+        baseline='middle',
+        dy=-5
+    ).encode(
+        text='Prob'
+    )
+
+    st.markdown("""
+        <style type='text/css'>
+            details {
+                display: none;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    return altair_bar_chart + text
+
+
+@st.cache(show_spinner=False)
 def load_data(data_path):
 
     data = pd.read_csv(data_path)
@@ -465,7 +513,7 @@ def shap_values_plot(clf, in_df):
 
     # new_shap_values = [np.array([new_shap_values_0]), np.array([new_shap_values_1])]
 
-    st.write('Valores a vermelho sobem a previsão de custo, enquanto valores a azul fazem o valor descer:')
+    st.write('Valores a vermelho sobem a probabilidade de sinistro, enquanto valores a azul fazem o valor descer:')
     fig_shap_force_plot = shap.force_plot(
         base_value=explainer.expected_value[1],
         shap_values=shap_values[1][0],
