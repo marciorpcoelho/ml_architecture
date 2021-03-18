@@ -59,7 +59,7 @@ def main():
     parameters_values, parameter_restriction_vectors = [], []
     max_number_of_cars_sold = max(data[column_translate['Number_Cars_Sold_Local_Fase2_Level_1']])
 
-    sel_locals = st.sidebar.multiselect('Concessões:', list(data[column_translate['Sales_Place_Fase2_Level_1']].unique()))
+    sel_locals = st.sidebar.multiselect('Concessões:', [x for x in list(data[column_translate['Sales_Place_Fase2_Level_1']].unique()) if x is not None])
     sel_model = st.sidebar.selectbox('Modelo:', ['-'] + [x for x in data[column_translate['Model_Code']].unique()], index=0)
 
     if sel_locals != session_state.locals or sel_model != session_state.model:
@@ -75,7 +75,7 @@ def main():
             return
 
     st.sidebar.title('Opções:')
-    sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas localmente por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, max_number_of_cars_sold, value=1)
+    sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas localmente por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, int(max_number_of_cars_sold), value=1)
     sel_number_of_configuration = st.sidebar.number_input('Por favor escolha o número de configurações a apresentar:', value=10)
     sel_values_filters = [sel_locals, sel_min_sold_cars, sel_model]
     sel_values_col_filters = [column_translate['Sales_Place_Fase2_Level_1'], column_translate['Number_Cars_Sold_Local_Fase2_Level_1'], column_translate['Model_Code']]

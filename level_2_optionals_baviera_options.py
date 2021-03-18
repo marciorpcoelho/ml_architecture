@@ -411,5 +411,7 @@ col_color_dict = {
 
 col_decimals_place_dict = {
     'Quantidade': '{:.0f}',
-    'Score (€)': '{:.3f}'
+    'Score (€)': '{:.3f}',
+    '#Vendas Local': '{:.0f}',
+    '#Vendas Global': '{:.0f}',
 }
