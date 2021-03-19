@@ -94,9 +94,7 @@ def main():
                 parameters_values.append(sel_parameter_values)
 
             data_filtered = filter_data(data_filtered, parameters_values, [x for x in configuration_parameters_full_rename if x != column_translate['Model_Code']], ['in' for x in configuration_parameters_full if x != column_translate['Model_Code']])
-            status, total_value_optimized, selection = solver(data_filtered, parameter_restriction_vectors, sel_order_size)
-            # status, total_value_optimized, selection = solver_api(data_filtered, parameter_restriction_vectors, sel_order_size)
-            print(selection)
+            status, total_value_optimized, selection = solver_api(data_filtered, parameter_restriction_vectors, sel_order_size)
 
             if status == 'optimal':
                 data_filtered['Quantity'] = selection
@@ -107,7 +105,7 @@ def main():
                     complementary_configurations, complementary_configurations_index = complementary_configurations_function(data_filtered.copy(), current_solution_size, sel_number_of_configuration)
                     data_filtered.loc[data_filtered.index.isin(complementary_configurations_index), 'Quantity'] = 1
 
-                sel_configurations = quantity_processing(data_filtered.copy(deep=True), sel_order_size)
+                sel_configurations = quantity_processing(data_filtered.loc[data_filtered['Quantity'] > 0, :].copy(deep=True), sel_order_size)
                 df_display = sel_configurations[['Quantity'] + [x for x in configuration_parameters_full_rename if x not in column_translate['Model_Code']] + [column_translate['Number_Cars_Sold_Local_Fase2_Level_1']] + [column_translate['Number_Cars_Sold']] + [column_translate['Average_Score_Euros_Local_Fase2_Level_1']]].reset_index(drop=True).rename(columns={'Quantity': 'Quantidade'})
                 st.write('Sugestão Encomenda:', df_display
                          .style.apply(highlight_cols, col_dict=options_file.col_color_dict)
@@ -145,7 +143,6 @@ def complementary_configurations_function(df, current_solution_size, min_number_
 
 
 def quantity_processing(df, sel_order_size):
-    df = df.loc[df['Quantity'] > 0, :]
     total_score = df[column_translate['Average_Score_Euros_Local_Fase2_Level_1']].sum()
 
     df.loc[:, 'Score Weight'] = df.loc[:, column_translate['Average_Score_Euros_Local_Fase2_Level_1']] / total_score
@@ -210,7 +207,7 @@ def solver_api(dataset, parameter_restriction_vectors, sel_order_size):
 
 @st.cache(show_spinner=False, ttl=60*60*24*12)
 def get_data(options_file_in):
-    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG_PRD, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in)
+    df = level_1_a_data_acquisition.sql_retrieve_df(options_file_in.DSN_MLG_PRD, options_file_in.sql_info['database_final'], options_file_in.sql_info['final_table'], options_file_in, query_filters={'NLR_Code': str(options_file_in.nlr_code)})
     df = level_1_b_data_processing.column_rename(df, configuration_parameters_full + extra_parameters, configuration_parameters_full_rename + extra_parameters_rename)
     df = df.loc[df[column_translate['Model_Code']] != '', :]
 
