@@ -5,10 +5,9 @@ import pandas as pd
 from traceback import format_exc
 import level_2_optionals_baviera_options
 
-from level_2_optionals_baviera_options import project_id, classification_models, k, gridsearch_score
+from level_2_optionals_baviera_options import project_id
 from modules.level_1_a_data_acquisition import project_units_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
-from modules.level_1_b_data_processing import null_analysis, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_conversion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
-from modules.level_1_c_data_modelling import classification_model_training, save_model
+from modules.level_1_b_data_processing import remove_zero_price_total_vhe, lowercase_column_conversion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, new_features, global_variables_saving, column_rename
 from modules.level_1_d_model_evaluation import performance_evaluation_classification, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
 from modules.level_1_e_deployment import sql_inject, sql_delete, sql_date_comparison, sql_mapping_upload
 from modules.level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
@@ -214,21 +213,6 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     log_record('Fim Secção B.', project_id)
     performance_info_append(time.time(), 'Section_B_End')
     return df
-
-
-def data_modelling(df, datasets, models):
-    performance_info_append(time.time(), 'Section_C_Start')
-    log_record('Início Secção C...', project_id)
-
-    df.sort_index(inplace=True)
-
-    classes, best_models, running_times = classification_model_training(models, datasets['train_x'], datasets['train_y'], classification_models, k, gridsearch_score, project_id)  # Training of each referenced model
-    save_model(best_models, models, project_id)
-
-    log_record('Fim Secção C.', project_id)
-    performance_info_append(time.time(), 'Section_C_End')
-
-    return classes, best_models, running_times
 
 
 def model_evaluation(df, models, best_models, running_times, datasets, number_of_features, options_file, oversample_check, proj_id):

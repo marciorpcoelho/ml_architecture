@@ -9,7 +9,6 @@ margin_threshold = 3.5
 stock_days_threshold = 45
 update_frequency_days = 0
 selected_configuration_parameters = ['Motor', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Modelo', 'Sensores Est. Tras.', 'Sensores Est. Front.', 'Tipo_Interior', 'Versao', 'Combustível', 'Câmara Traseira']
-# Full: ['7_Lug', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Farois_Xenon', 'Jantes', 'Modelo', 'Navegação', 'Prot.Solar', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 if 'nt' in os.name:
     DSN_SRV3_PRD = os.getenv('DSN_SRV3_Prd')

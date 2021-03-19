@@ -6,11 +6,11 @@ from traceback import format_exc
 import level_2_optionals_cdsu_options
 
 from level_2_optionals_cdsu_options import project_id
-from modules.level_1_a_data_acquisition import project_units_count_checkup, read_csv, sql_retrieve_df, sql_mapping_retrieval
-from modules.level_1_b_data_processing import null_analysis, options_scraping_v2, zero_analysis, constant_columns_removal, remove_zero_price_total_vhe, lowercase_column_conversion, remove_rows, remove_columns, string_replacer, date_cols, options_scraping, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, col_group, new_features, ohe, global_variables_saving, dataset_split, column_rename, feature_selection, sell_place_parametrization
-from modules.level_1_d_model_evaluation import performance_evaluation_classification, model_choice, plot_roc_curve, feature_contribution, multiprocess_model_evaluation, data_grouping_by_locals_temp
-from modules.level_1_e_deployment import sql_inject, sql_delete, sql_date_comparison, sql_mapping_upload
-from modules.level_0_performance_report import performance_info_append, performance_info, error_upload, log_record, project_dict
+from modules.level_1_a_data_acquisition import sql_retrieve_df
+from modules.level_1_b_data_processing import options_scraping_v2, remove_zero_price_total_vhe, lowercase_column_conversion, remove_rows, remove_columns, string_replacer, color_replacement, new_column_creation, score_calculation, duplicate_removal, total_price, margin_calculation, new_features, column_rename
+from modules.level_1_d_model_evaluation import data_grouping_by_locals_temp
+from modules.level_1_e_deployment import sql_inject, sql_delete, sql_date_comparison
+from modules.level_0_performance_report import performance_info_append, error_upload, log_record, project_dict, performance_info
 pd.set_option('display.expand_frame_repr', False)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s', datefmt='%H:%M:%S @ %d/%m/%y', filename=level_2_optionals_cdsu_options.log_files['full_log'], filemode='a')
@@ -33,11 +33,11 @@ def main():
 
     df = data_processing(df)
 
-    _, df, _ = data_grouping_by_locals_temp(df, configuration_parameters, level_2_optionals_cdsu_options.project_id)
+    model_choice_message, df, vehicle_count = data_grouping_by_locals_temp(df, configuration_parameters, level_2_optionals_cdsu_options.project_id)
 
     control_prints(df, 'before deployment', head=1)
     deployment(df, level_2_optionals_cdsu_options.sql_info['database'], level_2_optionals_cdsu_options.sql_info['final_table'])
-    # performance_info(level_2_optionals_cdsu_options.project_id, level_2_optionals_cdsu_options, model_choice_message, vehicle_count)
+    performance_info(level_2_optionals_cdsu_options.project_id, level_2_optionals_cdsu_options, model_choice_message, vehicle_count)
 
     log_record('Conclusão com sucesso - Projeto {}.\n'.format(project_dict[project_id]), project_id)
 
