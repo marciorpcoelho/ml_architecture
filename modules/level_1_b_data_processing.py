@@ -568,23 +568,23 @@ def options_scraping_per_group(args):
     if 'dakota' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in dakota_colors]
         if color_int:
-            group['Cor_Interior'] = 'dakota_' + color_int[0]
+            group['Cor_Interior'] = 'dakota {}'.format(color_int[0])
     elif 'nappa' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in nappa_colors]
         if color_int:
-            group['Cor_Interior'] = 'nappa_' + color_int[0]
+            group['Cor_Interior'] = 'nappa {}'.format(color_int[0])
     elif 'vernasca' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in vernasca_colors]
         if color_int:
-            group['Cor_Interior'] = 'vernasca_' + color_int[0]
+            group['Cor_Interior'] = 'vernasca {}'.format(color_int[0])
     elif 'nevada' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in nevada_colors]
         if color_int:
-            group['Cor_Interior'] = 'nevada_' + color_int[0]
+            group['Cor_Interior'] = 'nevada {}'.format(color_int[0])
     elif 'merino' in tokenized_interior:
         color_int = [x for x in tokenized_interior if x in merino_colors]
         if color_int:
-            group['Cor_Interior'] = 'merino_' + color_int[0]
+            group['Cor_Interior'] = 'merino {}'.format(color_int[0])
     else:
         if 'antraci' in tokenized_interior or 'antracit' in tokenized_interior or 'anthracite/silver' in tokenized_interior or 'preto/laranja' in tokenized_interior or 'preto/silver' in tokenized_interior or 'preto/preto' in tokenized_interior or 'confort' in tokenized_interior or 'standard' in tokenized_interior or 'preto' in tokenized_interior or 'antracite' in tokenized_interior or 'antracite/laranja' in tokenized_interior or 'antracite/preto' in tokenized_interior or 'antracite/cinza/preto' in tokenized_interior or 'antracite/vermelho/preto' in tokenized_interior or 'antracite/vermelho' in tokenized_interior or 'interiores' in tokenized_interior:
             group['Cor_Interior'] = 'preto'
