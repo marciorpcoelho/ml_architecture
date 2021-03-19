@@ -26,20 +26,21 @@ st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a
 
 configuration_parameters_full = ['Motor_Desc', 'Alarm', 'AC_Auto', 'Open_Roof', 'Auto_Trans', 'Colour_Ext', 'Colour_Int', 'LED_Lights', 'Rims_Size', 'Model_Code', 'Navigation', 'Park_Front_Sens', 'Roof_Bars', 'Interior_Type', 'Version']
 configuration_parameters_full_rename = ['Motorização', 'Alarme', 'AC Auto', 'Teto Abrir', 'Caixa Auto.', 'Cor Exterior', 'Cor Interior', 'Faróis LED', 'Tam. Jantes', 'Modelo', 'Navegação', 'Sens. Diant.', 'Barras Tej.', 'Tipo Interior', 'Versão']
-extra_parameters = ['Average_Score_Euros_Local_Fase2_Level_1', 'Number_Cars_Sold', 'Number_Cars_Sold_Local_Fase2_Level_1', 'Sales_Place_Fase2_Level_1']
+extra_parameters = ['Average_Score_Euros_Local_Fase2_Level_2', 'Number_Cars_Sold', 'Number_Cars_Sold_Local_Fase2_Level_2', 'Sales_Place_Fase2_Level_2']
 extra_parameters_rename = ['Score (€)', '#Vendas Global', '#Vendas Local', 'Concessão']
 boolean_columns = ['Alarme', 'AC Auto', 'Teto Abrir', 'Caixa Auto.', 'Faróis LED', 'Navegação', 'Sens. Diant.', 'Barras Tej.']
 
 column_translate = {
-    'Average_Score_Euros_Local_Fase2_Level_1': 'Score (€)',
-    'Number_Cars_Sold_Local_Fase2_Level_1': '#Vendas Local',
+    'Average_Score_Euros_Local_Fase2_Level_2': 'Score (€)',
+    'Number_Cars_Sold_Local_Fase2_Level_2': '#Vendas Local',
     'Number_Cars_Sold': '#Vendas Global',
-    'Sales_Place_Fase2_Level_1': 'Concessão',
+    'Sales_Place_Fase2_Level_2': 'Concessão',
     'Model_Code': 'Modelo',
     'Colour_Ext': 'Cor Exterior',
     'Colour_Int': 'Cor Interior',
     'Motor_Desc': 'Motorização',
     'Quantity': 'Quantidade',
+    'Version': 'Versão',
 }
 
 hide_menu_style = """
@@ -59,9 +60,9 @@ def main():
     data = get_data(options_file)
 
     parameters_values, parameter_restriction_vectors = [], []
-    max_number_of_cars_sold = max(data[column_translate['Number_Cars_Sold_Local_Fase2_Level_1']])
+    max_number_of_cars_sold = max(data[column_translate['Number_Cars_Sold_Local_Fase2_Level_2']])
 
-    sel_locals = st.sidebar.multiselect('Concessões:', [x for x in list(data[column_translate['Sales_Place_Fase2_Level_1']].unique()) if x is not None])
+    sel_locals = st.sidebar.multiselect('Concessões:', [x for x in list(data[column_translate['Sales_Place_Fase2_Level_2']].unique()) if x is not None])
     sel_model = st.sidebar.selectbox('Modelo:', ['-'] + [x for x in data[column_translate['Model_Code']].unique()], index=0)
 
     if sel_locals != session_state.locals or sel_model != session_state.model:
@@ -70,8 +71,8 @@ def main():
         session_state.overwrite_button_pressed, session_state.save_button_pressed_flag = 0, 0
 
     if sel_model != '-' and sel_locals != '':
-        if data[(data[column_translate['Sales_Place_Fase2_Level_1']].isin(sel_locals)) & (data[column_translate['Model_Code']] == sel_model)].shape[0]:
-            max_number_of_cars_sold = max(data[(data[column_translate['Sales_Place_Fase2_Level_1']].isin(sel_locals)) & (data[column_translate['Model_Code']] == sel_model)][column_translate['Number_Cars_Sold_Local_Fase2_Level_1']])
+        if data[(data[column_translate['Sales_Place_Fase2_Level_2']].isin(sel_locals)) & (data[column_translate['Model_Code']] == sel_model)].shape[0]:
+            max_number_of_cars_sold = max(data[(data[column_translate['Sales_Place_Fase2_Level_2']].isin(sel_locals)) & (data[column_translate['Model_Code']] == sel_model)][column_translate['Number_Cars_Sold_Local_Fase2_Level_2']])
         else:
             st.error('Não foram encontrados registos para a concessão e modelo selecionados.')
             return
@@ -80,7 +81,7 @@ def main():
     sel_min_sold_cars = st.sidebar.number_input('Por favor escolha um valor mínimo de viaturas vendidas localmente por configuração (valor máximo é de {}):'.format(max_number_of_cars_sold), 1, int(max_number_of_cars_sold), value=1)
     sel_number_of_configuration = st.sidebar.number_input('Por favor escolha o número de configurações a apresentar:', value=10)
     sel_values_filters = [sel_locals, sel_min_sold_cars, sel_model]
-    sel_values_col_filters = [column_translate['Sales_Place_Fase2_Level_1'], column_translate['Number_Cars_Sold_Local_Fase2_Level_1'], column_translate['Model_Code']]
+    sel_values_col_filters = [column_translate['Sales_Place_Fase2_Level_2'], column_translate['Number_Cars_Sold_Local_Fase2_Level_2'], column_translate['Model_Code']]
 
     if '-' not in sel_values_filters and max_number_of_cars_sold:
         data_filtered = filter_data(data, sel_values_filters, sel_values_col_filters, ['in', 'ge', None])
@@ -100,7 +101,7 @@ def main():
 
             if status == 'optimal':
                 data_filtered['Quantity'] = selection
-                data_filtered.sort_values(by=column_translate['Average_Score_Euros_Local_Fase2_Level_1'], inplace=True, ascending=False)
+                data_filtered.sort_values(by=column_translate['Average_Score_Euros_Local_Fase2_Level_2'], inplace=True, ascending=False)
 
                 current_solution_size = len([x for x in selection if x > 0])
                 if current_solution_size < sel_number_of_configuration:  # Checks if the optimization results is a single configuration or too few (< min_number_of_configuration)
@@ -108,7 +109,7 @@ def main():
                     data_filtered.loc[data_filtered.index.isin(complementary_configurations_index), 'Quantity'] = 1
 
                 sel_configurations = quantity_processing(data_filtered.loc[data_filtered['Quantity'] > 0, :].copy(deep=True), sel_order_size)
-                df_display = sel_configurations[['Quantity'] + [x for x in configuration_parameters_full_rename if x not in column_translate['Model_Code']] + [column_translate['Number_Cars_Sold_Local_Fase2_Level_1']] + [column_translate['Number_Cars_Sold']] + [column_translate['Average_Score_Euros_Local_Fase2_Level_1']]].reset_index(drop=True).rename(columns={'Quantity': 'Quantidade'})
+                df_display = sel_configurations[['Quantity'] + [x for x in configuration_parameters_full_rename if x not in column_translate['Model_Code']] + [column_translate['Number_Cars_Sold_Local_Fase2_Level_2']] + [column_translate['Number_Cars_Sold']] + [column_translate['Average_Score_Euros_Local_Fase2_Level_2']]].reset_index(drop=True).rename(columns={'Quantity': 'Quantidade'})
                 st.write('Sugestão Encomenda:', df_display
                          .style.apply(highlight_cols, col_dict=options_file.col_color_dict)
                          .format(options_file.col_decimals_place_dict)
@@ -145,9 +146,9 @@ def complementary_configurations_function(df, current_solution_size, min_number_
 
 
 def quantity_processing(df, sel_order_size):
-    total_score = df[column_translate['Average_Score_Euros_Local_Fase2_Level_1']].sum()
+    total_score = df[column_translate['Average_Score_Euros_Local_Fase2_Level_2']].sum()
 
-    df.loc[:, 'Score Weight'] = df.loc[:, column_translate['Average_Score_Euros_Local_Fase2_Level_1']] / total_score
+    df.loc[:, 'Score Weight'] = df.loc[:, column_translate['Average_Score_Euros_Local_Fase2_Level_2']] / total_score
     df.loc[:, 'Weighted Order'] = df.loc[:, 'Score Weight'] * sel_order_size
     df.loc[:, 'Quantity'] = df.loc[:, 'Weighted Order'].round()
 
@@ -170,7 +171,7 @@ def solver(dataset, parameter_restriction_vectors, sel_order_size):
     parameter_restriction = []
 
     unique_ids_count = dataset['Configuration_ID'].nunique()
-    scores = dataset[column_translate['Average_Score_Euros_Local_Fase2_Level_1']].values.tolist()
+    scores = dataset[column_translate['Average_Score_Euros_Local_Fase2_Level_2']].values.tolist()
 
     selection = cp.Variable(unique_ids_count, integer=True)
     for parameter_vector in parameter_restriction_vectors:
@@ -217,6 +218,7 @@ def get_data(options_file_in):
 
     df = df[df[column_translate['Colour_Ext']] != 'undefined']
     df = df[df[column_translate['Colour_Int']] != '0']
+    df = df[df[column_translate['Version']] != '0']
 
     return df[configuration_parameters_full_rename + extra_parameters_rename]
 
@@ -246,8 +248,8 @@ def filter_data(dataset, value_filters_list, col_filters_list, operations_list):
 def configuration_id_preparation(df):
     df['Configuration_ID'] = df.groupby(configuration_parameters_full_rename + extra_parameters_rename).ngroup()
     df.drop_duplicates(subset='Configuration_ID', inplace=True)
-    df.sort_values(by=column_translate['Average_Score_Euros_Local_Fase2_Level_1'], ascending=False, inplace=True)
-    df = df[df[column_translate['Average_Score_Euros_Local_Fase2_Level_1']] > 0]
+    df.sort_values(by=column_translate['Average_Score_Euros_Local_Fase2_Level_2'], ascending=False, inplace=True)
+    df = df[df[column_translate['Average_Score_Euros_Local_Fase2_Level_2']] > 0]
 
     return df
 
