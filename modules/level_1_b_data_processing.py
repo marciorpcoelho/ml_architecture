@@ -100,6 +100,8 @@ def remove_rows(df, rows, project_id, warning=0):
 def string_replacer(df, dictionary):
 
     for key in dictionary.keys():
+        if not len([x for x in key[1] if x not in string.punctuation]):
+            print('Is this key correcly escaped - {} ? With the double \\?'.format(key[1]))
         df.loc[:, key[0]] = df[key[0]].str.replace(r'\b{}\b|\b{}'.format(key[1], key[1]), dictionary[key], regex=True)
     return df
 
@@ -310,11 +312,13 @@ def options_scraping_motorization(df, options_file, fillna_value=None, regex_app
 
 
 def options_scraping_interior_type(df, options_file, fillna_value=None, regex_approach=1):
-    level_0_performance_report.performance_info_append(time.time(), 'Int_Type_Start')
+    print(df)
 
+    level_0_performance_report.performance_info_append(time.time(), 'Int_Type_Start')
     if regex_approach:
         string_regex_extraction(df, 'Interior', 'Tipo_Interior', options_file.regex_dict['interior_type_value'], fillna_value)
 
+    print(df)
     level_0_performance_report.performance_info_append(time.time(), 'Int_Type_End')
     return df
 
