@@ -1,13 +1,5 @@
 import os
-import numpy as np
-import xgboost as xgb
-import lightgbm as lgb
 from py_dotenv import read_dotenv
-from sklearn.naive_bayes import GaussianNB
-from sklearn.neural_network import MLPClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn import tree, linear_model, svm
-from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, VotingClassifier
 dotenv_path = '/info.env'
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 read_dotenv(base_path + dotenv_path)
@@ -29,6 +21,7 @@ elif 'posix' in os.name:
 UID = os.getenv('UID')
 PWD = os.getenv('PWD')
 configuration_parameters_full = ['Motor', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Modelo', 'Sensores Est. Tras.', 'Sensores Est. Front.', 'Tipo_Interior', 'Versao', 'Combustível', 'Câmara Traseira']
+api_backend_loc = 'optimizations/vhe_baviera/'
 
 # Dictionaries:
 sql_info = {
@@ -261,4 +254,30 @@ column_checkpoint_sql_renaming = {
 
 log_files = {
     'full_log': 'logs/optionals_cdsu.txt'
+}
+
+col_color_dict = {
+    'Quantidade': 'Beige',
+    'Motorização': 'FloralWhite',
+    'Caixa Auto.': 'FloralWhite',
+    'Cor Exterior': 'FloralWhite',
+    'Tam. Jantes': 'FloralWhite',
+    'Jantes': 'FloralWhite',
+    'Sensores Est. Tras.': 'FloralWhite',
+    'Sensores Est. Front.': 'FloralWhite',
+    'Barras Tej.': 'FloralWhite',
+    'Tipo Interior': 'FloralWhite',
+    'Combustível': 'FloralWhite',
+    'Câmara Traseira': 'FloralWhite',
+    'Versão': 'FloralWhite',
+    '#Vendas Local': 'Lavender',
+    '#Vendas Global': 'LightGrey',
+    'Score (€)': 'LightBlue'
+}
+
+col_decimals_place_dict = {
+    'Quantidade': '{:.0f}',
+    'Score (€)': '{:.3f}',
+    '#Vendas Local': '{:.0f}',
+    '#Vendas Global': '{:.0f}',
 }

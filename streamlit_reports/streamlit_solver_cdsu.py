@@ -1,34 +1,34 @@
 import streamlit as st
 import cvxpy as cp
 import json
-import time
 import requests
 import sys
 import os
+import time
 import base64
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
+sys.path.insert(1, base_path)
 from traceback import format_exc
 from streamlit.script_runner import RerunException
 from streamlit.script_request_queue import RerunData
-base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', ''))
-sys.path.insert(1, base_path)
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_b_data_processing as level_1_b_data_processing
 import modules.level_1_e_deployment as level_1_e_deployment
-import level_2_optionals_baviera_options as options_file
+import level_2_optionals_cdsu_options as options_file
 from modules.level_0_api_endpoint import api_endpoint_ip
 from modules.level_0_performance_report import log_record, error_upload
 import modules.SessionState as sessionstate
 
-st.set_page_config(page_title='Sugestão de Encomenda - Baviera', layout="wide")
+st.set_page_config(page_title='Sugestão de Encomenda - CDSU', layout="wide")
 
-st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda Baviera - DEMO</h1>", unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas BMW</h2>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda CDSU - DEMO</h1>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Volkswagen</h2>", unsafe_allow_html=True)
 
-configuration_parameters_full = ['Motor_Desc', 'Alarm', 'AC_Auto', 'Open_Roof', 'Auto_Trans', 'Colour_Ext', 'Colour_Int', 'LED_Lights', 'Rims_Size', 'Model_Code', 'Navigation', 'Park_Front_Sens', 'Roof_Bars', 'Interior_Type', 'Version']
-configuration_parameters_full_rename = ['Motorização', 'Alarme', 'AC Auto', 'Teto Abrir', 'Caixa Auto.', 'Cor Exterior', 'Cor Interior', 'Faróis LED', 'Tam. Jantes', 'Modelo', 'Navegação', 'Sens. Diant.', 'Barras Tej.', 'Tipo Interior', 'Versão']
-extra_parameters = ['Average_Score_Euros_Local_Fase2_Level_1', 'Number_Cars_Sold', 'Number_Cars_Sold_Local_Fase2_Level_1', 'Sales_Place_Fase2_Level_1']
+configuration_parameters_full = ['Motor_Desc', 'Auto_Trans', 'Colour_Ext', 'Rims_Size', 'Model_Code', 'Park_Rear_Sens', 'Park_Front_Sens', 'Interior_Type', 'Version', 'Fuel_Type', 'Rear_Cam']
+configuration_parameters_full_rename = ['Motorização', 'Caixa Auto.', 'Cor Exterior', 'Jantes', 'Modelo', 'Sensores Est. Tras.', 'Sensores Est. Front.', 'Tipo Interior', 'Versão', 'Combustível', 'Câmara Traseira']
+extra_parameters = ['Average_Score_Euros_Local', 'Number_Cars_Sold', 'Number_Cars_Sold_Local', 'Sales_Place']
 extra_parameters_rename = ['Score (€)', '#Vendas Global', '#Vendas Local', 'Concessão']
-boolean_columns = ['Alarme', 'AC Auto', 'Teto Abrir', 'Caixa Auto.', 'Faróis LED', 'Navegação', 'Sens. Diant.', 'Barras Tej.']
+boolean_columns = ['Caixa Auto.', 'Sensores Est. Tras.', 'Sensores Est. Front.', 'Câmara Traseira']
 
 column_translate = {
     'Average_Score_Euros_Local_Fase2_Level_1': 'Score (€)',
@@ -59,7 +59,7 @@ def main():
     data = get_data(options_file)
 
     parameters_values, parameter_restriction_vectors = [], []
-    max_number_of_cars_sold = max(data[column_translate['Number_Cars_Sold_Local_Fase2_Level_1']])
+    max_number_of_cars_sold = max(data[column_translate['Number_Cars_Sold']])
 
     sel_locals = st.sidebar.multiselect('Concessões:', [x for x in list(data[column_translate['Sales_Place_Fase2_Level_1']].unique()) if x is not None])
     sel_model = st.sidebar.selectbox('Modelo:', ['-'] + [x for x in data[column_translate['Model_Code']].unique()], index=0)
@@ -145,6 +145,7 @@ def complementary_configurations_function(df, current_solution_size, min_number_
 
 
 def quantity_processing(df, sel_order_size):
+    # df = df.loc[df['Quantity'] > 0, :]
     total_score = df[column_translate['Average_Score_Euros_Local_Fase2_Level_1']].sum()
 
     df.loc[:, 'Score Weight'] = df.loc[:, column_translate['Average_Score_Euros_Local_Fase2_Level_1']] / total_score
@@ -216,7 +217,6 @@ def get_data(options_file_in):
     df = level_1_b_data_processing.boolean_replacement(df, boolean_columns)
 
     df = df[df[column_translate['Colour_Ext']] != 'undefined']
-    df = df[df[column_translate['Colour_Int']] != '0']
 
     return df[configuration_parameters_full_rename + extra_parameters_rename]
 

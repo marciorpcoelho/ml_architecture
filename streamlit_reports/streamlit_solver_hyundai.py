@@ -17,7 +17,7 @@ from modules.level_0_performance_report import log_record, error_upload
 from modules.level_0_api_endpoint import api_endpoint_ip
 import level_2_order_optimization_hyundai_options as options_file
 import modules.SessionState as SessionState
-from modules.level_1_b_data_processing import null_analysis, df_join_function
+from modules.level_1_b_data_processing import df_join_function
 from level_2_order_optimization_hyundai_options import configuration_parameters, client_lvl_cols, client_lvl_cols_renamed, score_weights, cols_to_normalize, reverse_normalization_cols
 
 st.set_page_config(page_title='Sugestão de Encomenda - Importador', layout="wide")
