@@ -17,7 +17,7 @@ from scipy.spatial.distance import cdist, pdist
 from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from dateutil.relativedelta import relativedelta
-from sklearn.metrics import silhouette_score, calinski_harabaz_score
+from sklearn.metrics import silhouette_score, calinski_harabasz_score
 import modules.level_1_a_data_acquisition as level_1_a_data_acquisition
 import modules.level_1_b_data_processing as level_1_b_data_processing
 import modules.level_0_performance_report as level_0_performance_report
@@ -180,7 +180,7 @@ def clustering_training(df, max_n_clusters):
         centroids.append(m.cluster_centers_)
 
         s = silhouette_score(df, m.labels_, random_state=42)
-        ch = calinski_harabaz_score(df, m.labels_)
+        ch = calinski_harabasz_score(df, m.labels_)
         elbow = between_clusters_distance(df, m.cluster_centers_)
 
         inertia_scores.append(m.inertia_)
