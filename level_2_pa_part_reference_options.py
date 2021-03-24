@@ -127,37 +127,15 @@ current_stock_query = '''
         GROUP BY Part_Ref
     )
     SELECT
-        distinct a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, AVG(Average_Cost) as Average_Cost, AVG(PVP_1) as PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
+        distinct a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, AVG(a.Average_Cost / a.Currency_Rate) as Average_Cost, AVG(a.PVP_1 / a.Currency_Rate) as PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
     FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month as a WITH (NOLOCK)
     inner join max_date as b on a.Part_Ref = b.Part_Ref and ISNULL(a.Last_Sell_Date, '1') = b.max_date_value
     LEFT JOIN [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC] as Parts_DIM on Parts_DIM.Product_Group_Code = a.Product_Group_DW
-    WHERE 1=1
-    and Last_Sell_Date = '{}'
-    and Warehouse_Code = -1
-    GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
-'''
-
-current_stock_query_afr = '''
-    WITH max_date as (
-        SELECT 
-            Part_Ref, MAX(ISNULL(Last_Sell_Date,'1')) as max_date_value
-        FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month WITH (NOLOCK)
-        WHERE 1=1
-        GROUP BY Part_Ref
-    )
-    SELECT
-        distinct a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, AVG(a.Average_Cost / Currency_Rate.Fixed_Rate) as Average_Cost, AVG(a.PVP_1 / Currency_Rate.Fixed_Rate) as PVP_1, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
-    FROM {}.dbo.PSE_Fact_BI_Parts_Stock_Month as a WITH (NOLOCK)
-    inner join max_date as b on a.Part_Ref = b.Part_Ref and ISNULL(a.Last_Sell_Date, '1') = b.max_date_value
-    LEFT JOIN [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC] as Parts_DIM on Parts_DIM.Product_Group_Code = a.Product_Group_DW
-    LEFT JOIN [BI_AFR].[dbo].[GBL_Currencies_FixedRate] as Currency_Rate on a.Client_Id = Currency_Rate.Client_Id and a.Environment = Currency_Rate.Environment and YEAR(GETDATE()) = Currency_Rate.Currency_Year
     WHERE 1=1 
     and Last_Sell_Date = '{}'
     and Warehouse_Code = -1
     GROUP BY a.Part_Ref, Part_Desc, Product_Group_DW, a.Client_Id, Franchise_Code, Franchise_Code_DW, PLR_Account, Last_Sell_Date, Parts_DIM.PT_Product_Group_Level_2_Desc, Parts_DIM.Product_Group_Level_2_Code, Parts_DIM.Product_Group_Level_1_Code, Parts_DIM.PT_Product_Group_Level_1_Desc
 '''
-
-'''    LEFT JOIN [BI_AFR].[dbo].[GBL_Currencies_FixedRate] as Currency_Rate on a.Client_Id = Currency_Rate.Client_Id and a.Environment = Currency_Rate.Environment and COALESCE(YEAR(a.Last_Sell_Date), YEAR(GETDATE())) = Currency_Rate.Currency_Year'''
 
 dms_franchises = '''SELECT *
 FROM {}.dbo.PSE_MapDMS_Franchises'''
