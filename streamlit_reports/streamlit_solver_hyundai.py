@@ -121,10 +121,12 @@ def main():
     session_state.sel_proposals_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Propostas: (default={:.0f}%)'.format(score_weights['Proposals_VDC_normalized'] * 100), 0, 100, value=int(score_weights['Proposals_VDC_normalized'] * 100), key=session_state.run_id_scores)
     session_state.sel_oc_stock_diff_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de O.C. vs Stock: (default={:.0f}%)'.format(score_weights['Stock_OC_Diff_normalized'] * 100), 0, 100, value=int(score_weights['Stock_OC_Diff_normalized'] * 100), key=session_state.run_id_scores)
     session_state.sel_co2_nedc_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Co2 (NEDC): (default={:.0f}%)'.format(score_weights['NEDC_normalized'] * 100), 0, 100, value=int(score_weights['NEDC_normalized'] * 100), key=session_state.run_id_scores)
-    if options_file.nlr_code_desc[sel_brand] == 702:
-        session_state.sel_configurator_count_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Configurador: (default={:.0f}%)'.format(score_weights['Configurator_Count_normalized'] * 100), 0, 100, value=int(score_weights['Configurator_Count_normalized'] * 100), key=session_state.run_id_scores)
-    elif options_file.nlr_code_desc[sel_brand] == 706:
-        session_state.sel_configurator_count_score_weight = 0
+
+    if '-' not in sel_brand:
+        if options_file.nlr_code_desc[sel_brand] == 702:
+            session_state.sel_configurator_count_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Configurador: (default={:.0f}%)'.format(score_weights['Configurator_Count_normalized'] * 100), 0, 100, value=int(score_weights['Configurator_Count_normalized'] * 100), key=session_state.run_id_scores)
+        elif options_file.nlr_code_desc[sel_brand] == 706:
+            session_state.sel_configurator_count_score_weight = 0
 
     weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight + session_state.sel_configurator_count_score_weight
     if weights_sum != 100:
