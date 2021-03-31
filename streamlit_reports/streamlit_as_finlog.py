@@ -12,6 +12,8 @@ import streamlit as st
 from datetime import date
 from joblib import load
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import streamlit.components.v1 as components
 from traceback import format_exc
 from dateutil.relativedelta import relativedelta
 from streamlit.script_runner import RerunException
@@ -254,6 +256,7 @@ def main():
             sns.kdeplot(prob_full, shade=True, legend=False)
             ax.set(xlim=(0, 1))
             ax.axvline(prediction, 0, 1)
+            ax.set_xlabel('% de Sinistro')
             ax.set_title('Dist. de prob. de sinistro:')
             st.pyplot(fig)
 
@@ -270,66 +273,24 @@ def main():
 
             # Accident probability distributions
             fig, ax = plt.subplots(1, 2)
+            ax[0].set_ylabel('Probabilidade')
             prob_full = df_test_prob['pred_prob']
             prob_similar = df_test_prob_similar['pred_prob']
 
             sns.kdeplot(prob_full, shade=True, ax=ax[0], legend=False)
             sns.kdeplot(prob_similar, shade=True, ax=ax[1], legend=False)
             ax[1].set(xlim=(0, 1))
+            ax[1].set_xlabel('% de Sinistro')
             ax[1].axvline(prediction, 0, 1)
             ax[1].set_title('Dist. de prob. de sinistro \n (Mesma Tipologia, Marca e \n Tipo de Cliente)')
 
             ax[0].set(xlim=(0, 1))
+            ax[0].set_xlabel('% de Sinistro')
             ax[0].axvline(prediction, 0, 1)
             ax[0].set_title('Dist. de prob. de sinistro \n (Sem Filtros)')
 
             st.pyplot(fig)
             plt.clf()
-
-            # shap_features_full = df.copy()
-            # #shap_features_full = shap_features_full.head(1).T.reset_index()
-
-            # shap_features_full = shap_features_full.drop([
-            #     'Mean_repair_value_FULL',
-            #     'Sum_repair_value_FULL',
-            #     'Sum_contrat_km_FULL',
-            #     'Num_Accidents_FULL',
-            #     'Mean_contract_duration_FULL',
-            #     'Mean_monthly_repair_cost_FULL',
-            #     'Mean_repair_value_5YEAR',
-            #     'Sum_repair_value_5YEAR',
-            #     'Sum_contrat_km_5YEAR',
-            #     'Num_Accidents_5YEAR',
-            #     'Mean_contract_duration_5YEAR',
-            #     'Mean_monthly_repair_cost_5YEAR',
-            #     'Mean_repair_value_1YEAR',
-            #     'Sum_repair_value_1YEAR',
-            #     'Sum_contrat_km_1YEAR',
-            #     'Num_Accidents_1YEAR',
-            #     'Mean_contract_duration_1YEAR',
-            #     'Mean_monthly_repair_cost_1YEAR'
-            # ], axis = 1)
-
-            list_remove = list([
-                'Mean_repair_value_FULL',
-                'Sum_repair_value_FULL',
-                'Sum_contrat_km_FULL',
-                'Num_Accidents_FULL',
-                'Mean_contract_duration_FULL',
-                'Mean_monthly_repair_cost_FULL',
-                'Mean_repair_value_5YEAR',
-                'Sum_repair_value_5YEAR',
-                'Sum_contrat_km_5YEAR',
-                'Num_Accidents_5YEAR',
-                'Mean_contract_duration_5YEAR',
-                'Mean_monthly_repair_cost_5YEAR',
-                'Mean_repair_value_1YEAR',
-                'Sum_repair_value_1YEAR',
-                'Sum_contrat_km_1YEAR',
-                'Num_Accidents_1YEAR',
-                'Mean_contract_duration_1YEAR',
-                'Mean_monthly_repair_cost_1YEAR'
-            ])
 
             st.markdown("<h2 style='text-align: left;'> Estudo por Cobertura: </h2>", unsafe_allow_html=True)
             cover_prob_display(prediction_qiv, prediction_dp)
@@ -355,11 +316,25 @@ def main():
             st.write('O custo de um sinistro em *clientes de perfil semelhante* é em média {:.2f}€ e possui a seguinte distribuição:'.format(avg_cost_accidents), unsafe_allow_html=True)
 
             repair_cost_similar = df_test_prob_comparable_cases.target_cost
-            plt.hist(repair_cost_similar, bins=50)
-            # fig_repair_cost, ax = plt.plot()
-            plt.figsize = (15, 15)
-            plt.title('Distribuição de custos de sinistro')
-            # st.pyplot()
+            fig, ax = plt.subplots(1, 1, figsize=(15, 6))
+            plt.hist(repair_cost_similar, bins=25)
+            plt.title('Distribuição de custos de sinistro', size=15)
+            plt.xlabel('Custos por Sinistro (€)', size=15)
+            plt.ylabel('Freq. Absoluta por Custo', size=15)
+
+            colors = ['blue', 'white', 'white', 'white']
+            labels = [
+                      'Custos', 'Média: {:.2f}€'.format(repair_cost_similar.mean()),
+                      'Mediana: {:.2f}€'.format(repair_cost_similar.median()),
+                      'Mín.: {:.2f}€'.format(repair_cost_similar.min()),
+                      'Máx.: {:.2f}€'.format(repair_cost_similar.max())
+                      ]
+
+            patches_list = []
+            for c, l in zip(colors, labels):
+                patches_list.append(mpatches.Patch(color=c, label=l))
+            plt.legend(handles=patches_list, fontsize=15)
+
             st.pyplot(plt)
             plt.clf()
 
@@ -482,6 +457,11 @@ def load_pickle(file_path):
     return d
 
 
+def st_shap(plot, height=None):
+    shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
+    components.html(shap_html, height=height)
+
+
 def shap_values_plot(clf, in_df):
 
     try:
@@ -490,7 +470,6 @@ def shap_values_plot(clf, in_df):
         df = in_df
 
     shap.initjs()
-    # cols_to_remove_index = []
     explainer = shap.TreeExplainer(
         model=clf  # ,
         # data = df,
@@ -499,32 +478,17 @@ def shap_values_plot(clf, in_df):
 
     shap_values = explainer.shap_values(df)
 
-    # col_names = list(df)
-    # for col in list_remove:
-    #     cols_to_remove_index.append(col_names.index(col))
-
-    # cols_to_remove_index.sort(reverse=True)
-
-    # for idx in cols_to_remove_index:
-    #     del col_names[idx]
-    #     # del shap_values[0][0][idx]
-    # new_shap_values_0 = np.delete(shap_values[0][0], cols_to_remove_index, None)
-    # new_shap_values_1 = np.delete(shap_values[1][0], cols_to_remove_index, None)
-
-    # new_shap_values = [np.array([new_shap_values_0]), np.array([new_shap_values_1])]
-
     st.write('Valores a vermelho sobem a probabilidade de sinistro, enquanto valores a azul fazem o valor descer:')
-    fig_shap_force_plot = shap.force_plot(
+
+    st_shap(shap.force_plot(
         base_value=explainer.expected_value[1],
         shap_values=shap_values[1][0],
         feature_names=df.columns,  # col_names,
-        matplotlib=True,
+        # matplotlib=True,
         show=False,
-        figsize=(16, 5),
-        link='logit'
+        figsize=(20, 3),
+        link='logit')
     )
-    st.pyplot(fig_shap_force_plot, bbox_inches='tight', dpi=300, pad_inches=0)
-    plt.clf()
 
     return
 
