@@ -82,6 +82,7 @@ score_weights = {
     'Proposals_VDC_normalized': 0.11,
     'Stock_OC_Diff_normalized': 0.17,
     'NEDC_normalized': 0.11,
+    'Configurator_Count_normalized': 0.06,
 }
 
 cols_to_normalize = [
@@ -91,7 +92,8 @@ cols_to_normalize = [
     'Sum_Qty_CHS',
     'Proposals_VDC',
     'Stock_OC_Diff',
-    'NEDC'
+    'NEDC',
+    'Config_Total',
 ]
 
 # Reversed columns normalization (the greater the normalized value, the worst)
@@ -164,7 +166,9 @@ column_translate_dict = {
     'PT_Stock_Status_Level_1_Desc': 'Estado (1º Nível)',
     'PT_Stock_Status_Desc': 'Estado (2º Nível)',
     'SLR_Document_Date_CHS': 'Dt.Venda',
-    'Quantity_CHS': 'Quantidade'
+    'Quantity_CHS': 'Quantidade',
+    'Config_Total': '#Configurador',
+    'Config_Total_normalized': '#Configurador (score)',
 }
 
 col_color_dict = {
@@ -192,6 +196,8 @@ col_color_dict = {
     "Co2 (NEDC)": 'SlateGrey',
     'Co2 (NEDC) (score)': 'SlateGrey',
     "Score": 'LightBlue',
+    '#Configurador': 'DarkKhaki',
+    '#Configurador (score)': 'DarkKhaki',
 }
 
 col_decimals_place_dict = {
@@ -213,6 +219,8 @@ col_decimals_place_dict = {
     "O.C. vs Stock (score)": '{:.2f}',
     "Co2 (NEDC)": '{:.1f}',
     'Co2 (NEDC) (score)': '{:.2f}',
+    '#Configurador': '{:.0f}',
+    '#Configurador (score)': '{:.2f}',
     "Score": '{:.3f}',
 }
 

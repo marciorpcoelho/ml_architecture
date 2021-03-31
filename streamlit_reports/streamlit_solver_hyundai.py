@@ -49,9 +49,17 @@ placeholder_sales_plan_date = st.empty()
 placeholder_proposal_date = st.empty()
 placeholder_margins_date = st.empty()
 
-session_state = SessionState.get(first_run_flag=0, run_id=0, run_id_scores=0, save_button_pressed_flag=0, model='', brand='', daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'], sel_margin_score_weight = score_weights['TotalGrossMarginPerc_normalized'], sel_margin_ratio_score_weight = score_weights['MarginRatio_normalized'], sel_qty_sold_score_weight = score_weights['Sum_Qty_CHS_normalized'], sel_proposals_score_weight = score_weights['Proposals_VDC_normalized'], sel_oc_stock_diff_score_weight = score_weights['Stock_OC_Diff_normalized'], sel_co2_nedc_score_weight = score_weights['NEDC_normalized'])
+session_state = SessionState.get(first_run_flag=0, run_id=0, run_id_scores=0, save_button_pressed_flag=0, model='', brand='',
+                                 daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'],
+                                 sel_margin_score_weight=score_weights['TotalGrossMarginPerc_normalized'],
+                                 sel_margin_ratio_score_weight=score_weights['MarginRatio_normalized'],
+                                 sel_qty_sold_score_weight=score_weights['Sum_Qty_CHS_normalized'],
+                                 sel_proposals_score_weight=score_weights['Proposals_VDC_normalized'],
+                                 sel_oc_stock_diff_score_weight=score_weights['Stock_OC_Diff_normalized'],
+                                 sel_co2_nedc_score_weight=score_weights['NEDC_normalized'],
+                                 sel_configurator_count_score_weight=score_weights['Configurator_Count_normalized'])
 
-temp_cols = ['Avg_DaysInStock_Global', 'Avg_DaysInStock_Global_normalized', '#Veículos Vendidos', 'Sum_Qty_CHS_normalized', 'Proposals_VDC', 'Proposals_VDC_normalized', 'Margin_HP', 'TotalGrossMarginPerc', 'TotalGrossMarginPerc_normalized', 'MarginRatio', 'MarginRatio_normalized', 'OC', 'Stock_VDC', 'Stock_OC_Diff', 'Stock_OC_Diff_normalized', 'NEDC', 'NEDC_normalized']
+temp_cols = ['Avg_DaysInStock_Global', 'Avg_DaysInStock_Global_normalized', '#Veículos Vendidos', 'Sum_Qty_CHS_normalized', 'Proposals_VDC', 'Proposals_VDC_normalized', 'Margin_HP', 'TotalGrossMarginPerc', 'TotalGrossMarginPerc_normalized', 'MarginRatio', 'MarginRatio_normalized', 'OC', 'Stock_VDC', 'Stock_OC_Diff', 'Stock_OC_Diff_normalized', 'NEDC', 'NEDC_normalized', 'Config_Total', 'Config_Total_normalized']
 total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
@@ -66,7 +74,7 @@ def main():
 
     data_v2 = col_normalization(data_v2.copy(), cols_to_normalize, reverse_normalization_cols)
     max_number_of_cars_sold = max(data_v2['Sum_Qty_CHS'])
-    sel_brand = st.sidebar.selectbox('Marca:', ['-', 'Hyundai', 'Honda'], index=0, key=session_state.run_id)
+    sel_brand = st.sidebar.selectbox('Marca:', ['-'] + [x for x in options_file.nlr_code_desc.keys()], index=0, key=session_state.run_id)
 
     if '-' not in sel_brand:
         co2_nedc, co2_wltp, total_sales = co2_processing(all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), :].copy(), end_month_index, current_year)
@@ -113,8 +121,12 @@ def main():
     session_state.sel_proposals_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Propostas: (default={:.0f}%)'.format(score_weights['Proposals_VDC_normalized'] * 100), 0, 100, value=int(score_weights['Proposals_VDC_normalized'] * 100), key=session_state.run_id_scores)
     session_state.sel_oc_stock_diff_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de O.C. vs Stock: (default={:.0f}%)'.format(score_weights['Stock_OC_Diff_normalized'] * 100), 0, 100, value=int(score_weights['Stock_OC_Diff_normalized'] * 100), key=session_state.run_id_scores)
     session_state.sel_co2_nedc_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Co2 (NEDC): (default={:.0f}%)'.format(score_weights['NEDC_normalized'] * 100), 0, 100, value=int(score_weights['NEDC_normalized'] * 100), key=session_state.run_id_scores)
+    if options_file.nlr_code_desc[sel_brand] == 702:
+        session_state.sel_configurator_count_score_weight = st.sidebar.number_input('Por favor escolha um peso para o critério de Configurador: (default={:.0f}%)'.format(score_weights['Configurator_Count_normalized'] * 100), 0, 100, value=int(score_weights['Configurator_Count_normalized'] * 100), key=session_state.run_id_scores)
+    elif options_file.nlr_code_desc[sel_brand] == 706:
+        session_state.sel_configurator_count_score_weight = 0
 
-    weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight
+    weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight + session_state.sel_configurator_count_score_weight
     if weights_sum != 100:
         st.sidebar.error('Alerta: Soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
 
@@ -126,11 +138,15 @@ def main():
         session_state.sel_proposals_score_weight = score_weights['Proposals_VDC_normalized'] * 100
         session_state.sel_oc_stock_diff_score_weight = score_weights['Stock_OC_Diff_normalized'] * 100
         session_state.sel_co2_nedc_score_weight = score_weights['NEDC_normalized'] * 100
+        if options_file.nlr_code_desc[sel_brand] == 702:
+            session_state.sel_configurator_count_score_weight = score_weights['Configurator_Count_normalized'] * 100
+        elif options_file.nlr_code_desc[sel_brand] == 706:
+            session_state.sel_configurator_count_score_weight = 0
 
         session_state.run_id_scores += 1
         raise RerunException(RerunData())
 
-    data_v2['Score'] = data_v2.apply(score_calculation, args=(session_state.sel_daysinstock_score_weight / 100, session_state.sel_margin_score_weight / 100, session_state.sel_margin_ratio_score_weight / 100, session_state.sel_qty_sold_score_weight / 100, session_state.sel_proposals_score_weight / 100, session_state.sel_oc_stock_diff_score_weight / 100, session_state.sel_co2_nedc_score_weight / 100), axis=1)
+    data_v2['Score'] = data_v2.apply(score_calculation, args=(session_state.sel_daysinstock_score_weight / 100, session_state.sel_margin_score_weight / 100, session_state.sel_margin_ratio_score_weight / 100, session_state.sel_qty_sold_score_weight / 100, session_state.sel_proposals_score_weight / 100, session_state.sel_oc_stock_diff_score_weight / 100, session_state.sel_co2_nedc_score_weight / 100, session_state.sel_configurator_count_score_weight / 100), axis=1)
 
     if sel_model != session_state.model:
         session_state.model = sel_model
@@ -152,12 +168,21 @@ def main():
         if sel_configurations_v2.shape[0]:
             sel_configurations_v2.rename(index=str, columns={'Quantity': 'Sug.Encomenda', 'Sum_Qty_CHS': '#Veículos Vendidos'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
             st.markdown("<h3 style='text-align: left;'>Sugestão de Encomenda - Score v2:</h3>", unsafe_allow_html=True)
-            st.write('', sel_configurations_v2[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + temp_cols + ['Score']]
-                     .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
-                     .style.apply(highlight_cols, col_dict=options_file.col_color_dict)
-                     .format(options_file.col_decimals_place_dict)
-                     )
-            sel_configurations_v2.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
+
+            if options_file.nlr_code_desc[sel_brand] == 702:
+                st.write('', sel_configurations_v2[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + temp_cols + ['Score']]
+                         .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
+                         .style.apply(highlight_cols, col_dict=options_file.col_color_dict)
+                         .format(options_file.col_decimals_place_dict)
+                         )
+                sel_configurations_v2.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
+            elif options_file.nlr_code_desc[sel_brand] == 706:
+                st.write('', sel_configurations_v2[['Sug.Encomenda'] + [x for x in configuration_parameters if x not in 'PT_PDB_Model_Desc'] + [x for x in temp_cols if not x.startswith('Config')] + ['Score']]
+                         .rename(columns=options_file.column_translate_dict).reset_index(drop=True)
+                         .style.apply(highlight_cols, col_dict=options_file.col_color_dict)
+                         .format(options_file.col_decimals_place_dict)
+                         )
+                sel_configurations_v2.rename(index=str, columns={'Sug.Encomenda': 'Quantity'}, inplace=True)  # ToDo: For some reason this column in particular is not changing its name by way of the renaming argument in the previous st.write. This is a temporary solution
 
             if sel_min_number_of_configuration > sel_configurations_v2.shape[0]:
                 placeholder_value.error("Alerta: Número mínimo de configurações é superior ao número de configurações disponíveis para este modelo ({}).".format(sel_configurations_v2.shape[0]))
@@ -334,7 +359,7 @@ def col_normalization(df, cols_to_normalize_in, cols_to_normalize_reverse_in):
 
 
 @st.cache(show_spinner=False)
-def score_calculation(x, sel_daysinstock_score_weight, sel_margin_score_weight, sel_margin_ratio_score_weight, sel_qty_sold_score_weight, sel_proposals_score_weight, sel_oc_stock_diff_score_weight, sel_co2_nedc_score_weight):
+def score_calculation(x, sel_daysinstock_score_weight, sel_margin_score_weight, sel_margin_ratio_score_weight, sel_qty_sold_score_weight, sel_proposals_score_weight, sel_oc_stock_diff_score_weight, sel_co2_nedc_score_weight, sel_configurator_count_score_weight):
 
     y = \
         x['Avg_DaysInStock_Global_normalized'] * sel_daysinstock_score_weight \
@@ -343,7 +368,8 @@ def score_calculation(x, sel_daysinstock_score_weight, sel_margin_score_weight, 
         + x['Sum_Qty_CHS_normalized'] * sel_qty_sold_score_weight \
         + x['Proposals_VDC_normalized'] * sel_proposals_score_weight \
         + x['Stock_OC_Diff_normalized'] * sel_oc_stock_diff_score_weight \
-        + x['NEDC_normalized'] * sel_co2_nedc_score_weight
+        + x['NEDC_normalized'] * sel_co2_nedc_score_weight \
+        + x['Config_Total_normalized'] * sel_configurator_count_score_weight
 
     return y
 
