@@ -401,8 +401,8 @@ def cover_prob_display(prediction_qiv, prediction_dp):
 def altair_bar_chart_plot(prediction_qiv, prediction_dp):
     source_df = pd.DataFrame()
     source_df['Covers'] = ['QIV', 'Danos Próprios']
-    source_df['Prob'] = [prediction_qiv, prediction_dp]
-    source_df['Prob'] = source_df['Prob'].round(3)
+    source_df['Prob'] = [prediction_qiv*100, prediction_dp*100]
+    source_df['Prob'] = source_df['Prob'].round(2)
 
     altair_bar_chart = alt.Chart(source_df, title='% Ativação por Cobertura').mark_bar().encode(
         x=alt.X('Covers',
@@ -413,11 +413,10 @@ def altair_bar_chart_plot(prediction_qiv, prediction_dp):
                 ),
         y=alt.Y('Prob',
                 axis=alt.Axis(
-                    format='%',
                     title='% de Ativação'
                     ),
                 scale=alt.Scale(
-                    domain=(0, 1)
+                    domain=(1, 100)
                     )
                 ),
     )
@@ -618,7 +617,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
         raise RerunException(RerunData())
