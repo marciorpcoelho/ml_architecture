@@ -128,9 +128,9 @@ def main():
         elif options_file.nlr_code_desc[sel_brand] == 706:
             session_state.sel_configurator_count_score_weight = 0
 
-    weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight + session_state.sel_configurator_count_score_weight
-    if weights_sum != 100:
-        st.sidebar.error('Alerta: Soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
+        weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight + session_state.sel_configurator_count_score_weight
+        if weights_sum != 100:
+            st.sidebar.error('Alerta: Soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
 
     if st.sidebar.button('Reset Pesos'):
         session_state.sel_daysinstock_score_weight = score_weights['Avg_DaysInStock_Global_normalized'] * 100
