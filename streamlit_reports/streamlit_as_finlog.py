@@ -103,67 +103,67 @@ def main():
     km_year_limits_min = str(km_year_limits[0])
     km_year_limits_max = str(km_year_limits[1])
 
-    if col1.button('Perfil 1'):
-        tipology_filter = 'Ligeiros de Passageiros'
-        make_filter = ['AUDI', 'CITROEN']
-        fuel_filter = fuel_filter
-        customer_group_filter = 'Banco BPI'
-        # customer_name_filter = ['Banco BPI, S.A.', 'BANCO PORTUGUES DE INVESTIMENTO, SA']
-        LL_filter = LL_filter
-        AR_filter = ['Franquia 8%', 'Franquia 4%']
-        FI_filter = 'Até €1.000/Ano'
-        fleet_size_total_filter = '130-169'
-        fleet_size_finlog_filter = '20-29'
-        contract_duration_min = '48'
-        contract_duration_max = '120'
-        km_year_limits_min = '15'
-        km_year_limits_max = '30'
+    # if col1.button('Perfil 1'):
+    #     tipology_filter = 'Ligeiros de Passageiros'
+    #     make_filter = ['AUDI', 'CITROEN']
+    #     fuel_filter = fuel_filter
+    #     customer_group_filter = 'Banco BPI'
+    #     # customer_name_filter = ['Banco BPI, S.A.', 'BANCO PORTUGUES DE INVESTIMENTO, SA']
+    #     LL_filter = LL_filter
+    #     AR_filter = ['Franquia 8%', 'Franquia 4%']
+    #     FI_filter = 'Até €1.000/Ano'
+    #     fleet_size_total_filter = '130-169'
+    #     fleet_size_finlog_filter = '20-29'
+    #     contract_duration_min = '48'
+    #     contract_duration_max = '120'
+    #     km_year_limits_min = '15'
+    #     km_year_limits_max = '30'
+    #
+    #     st.write('''
+    #            Tipologia do veículo: **{}**\n
+    #            Marca: **{}**\n
+    #            Combustível: **{}**\n
+    #            Grupo de Empresas: **{}**\n
+    #            Franquia Responsabilidade Civil (LL): **{}**\n
+    #            Franquia Danos Próprios (AR): **{}**\n
+    #            Franquia QIV (FI): **{}**\n
+    #            Dimensão total da frota: **{}**\n
+    #            Dimensão da frota com Auto Seguro: **{}**\n
+    #            Duração do contrato: **{} a {} meses**\n
+    #            Estimativa de km (milhares) por ano: **{} a {}**\n
+    #            **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max)
+    #              )
 
-        st.write('''
-               Tipologia do veículo: **{}**\n
-               Marca: **{}**\n
-               Combustível: **{}**\n
-               Grupo de Empresas: **{}**\n
-               Franquia Responsabilidade Civil (LL): **{}**\n
-               Franquia Danos Próprios (AR): **{}**\n
-               Franquia QIV (FI): **{}**\n
-               Dimensão total da frota: **{}**\n
-               Dimensão da frota com Auto Seguro: **{}**\n
-               Duração do contrato: **{} a {} meses**\n
-               Estimativa de km (milhares) por ano: **{} a {}**\n
-               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max)
-                 )
-
-    if col2.button('Perfil 2'):
-        tipology_filter = 'Ligeiros de Passageiros'
-        make_filter = 'RENAULT'
-        fuel_filter = 'Gasóleo'
-        customer_group_filter = 'Empresa'
-        # customer_name_filter = 'Modelo Continente Hipermercados, S.A.'
-        LL_filter = '€50.000.000'
-        AR_filter = 'Franquia 2%'
-        FI_filter = 'Até €1.000/Ano'
-        fleet_size_total_filter = '250-449'
-        fleet_size_finlog_filter = '>180'
-        contract_duration_min = '2'
-        contract_duration_max = '60'
-        km_year_limits_min = '50'
-        km_year_limits_max = '90'
-
-        st.write('''
-               Tipologia do veículo: **{}**\n
-               Marca: **{}**\n
-               Combustível: **{}**\n
-               Grupo de Empresas: **{}**\n
-               Franquia Responsabilidade Civil (LL): **{}**\n
-               Franquia Danos Próprios (AR): **{}**\n
-               Franquia QIV (FI): **{}**\n
-               Dimensão total da frota: **{}**\n
-               Dimensão da frota com Auto Seguro: **{}**\n
-               Duração do contrato: **{} a {} meses**\n
-               Estimativa de km (milhares) por ano: **{} a {}**\n
-               **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max)
-                 )
+    # if col2.button('Perfil 2'):
+    #     tipology_filter = 'Ligeiros de Passageiros'
+    #     make_filter = 'RENAULT'
+    #     fuel_filter = 'Gasóleo'
+    #     customer_group_filter = 'Empresa'
+    #     # customer_name_filter = 'Modelo Continente Hipermercados, S.A.'
+    #     LL_filter = '€50.000.000'
+    #     AR_filter = 'Franquia 2%'
+    #     FI_filter = 'Até €1.000/Ano'
+    #     fleet_size_total_filter = '250-449'
+    #     fleet_size_finlog_filter = '>180'
+    #     contract_duration_min = '2'
+    #     contract_duration_max = '60'
+    #     km_year_limits_min = '50'
+    #     km_year_limits_max = '90'
+    #
+    #     st.write('''
+    #            Tipologia do veículo: **{}**\n
+    #            Marca: **{}**\n
+    #            Combustível: **{}**\n
+    #            Grupo de Empresas: **{}**\n
+    #            Franquia Responsabilidade Civil (LL): **{}**\n
+    #            Franquia Danos Próprios (AR): **{}**\n
+    #            Franquia QIV (FI): **{}**\n
+    #            Dimensão total da frota: **{}**\n
+    #            Dimensão da frota com Auto Seguro: **{}**\n
+    #            Duração do contrato: **{} a {} meses**\n
+    #            Estimativa de km (milhares) por ano: **{} a {}**\n
+    #            **---------- ##### ----------** '''.format(tipology_filter, make_filter, fuel_filter, customer_group_filter, LL_filter, AR_filter, FI_filter, fleet_size_total_filter, fleet_size_finlog_filter, contract_duration_min, contract_duration_max, km_year_limits_min, km_year_limits_max)
+    #              )
 
     if tipology_filter == '-':
         st.text("Por favor selecione a tipologia do veículo")
@@ -262,6 +262,8 @@ def main():
 
             st.write('Não há casos semelhantes de outros clientes para comparação.')
 
+            cover_prob_display(prediction_qiv, prediction_dp)
+
             shap_values_plot(clf, df.rename(columns=options_file.shap_values_column_renaming))
 
         else:
@@ -322,9 +324,10 @@ def main():
             plt.xlabel('Custos por Sinistro (€)', size=15)
             plt.ylabel('Freq. Absoluta por Custo', size=15)
 
-            colors = ['blue', 'white', 'white', 'white']
+            colors = ['blue', 'white', 'white', 'white', 'white']
             labels = [
-                      'Custos', 'Média: {:.2f}€'.format(repair_cost_similar.mean()),
+                      'Custos',
+                      'Média: {:.2f}€'.format(repair_cost_similar.mean()),
                       'Mediana: {:.2f}€'.format(repair_cost_similar.median()),
                       'Mín.: {:.2f}€'.format(repair_cost_similar.min()),
                       'Máx.: {:.2f}€'.format(repair_cost_similar.max())
@@ -617,7 +620,7 @@ if __name__ == '__main__':
     except Exception as exception:
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
         raise RerunException(RerunData())
