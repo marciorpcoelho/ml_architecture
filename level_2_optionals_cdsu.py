@@ -102,7 +102,7 @@ def data_processing(df):
                                ('Versão', 'confortine'): 'confortline', ('Versão', 'cofrtl'): 'confortline', ('Versão', 'confortlline'): 'confortline', ('Versão', 'highl'): 'highline', ('Modelo', 'up!'): 'up'}
 
     control_prints(df, '1', head=1)
-    df = string_replacer(df, dict_strings_to_replace, level_2_optionals_cdsu_options.project_id)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
+    df = string_replacer(df, dict_strings_to_replace)  # Replaces the strings mentioned in dict_strings_to_replace which are typos, useless information, etc
     control_prints(df, '1b', head=1)
     df.dropna(subset=['Cor', 'Colour_Ext_Code', 'Modelo', 'Interior'], axis=0, inplace=True)  # Removes all remaining NA's
     control_prints(df, '2')
