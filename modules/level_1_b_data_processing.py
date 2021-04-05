@@ -243,7 +243,7 @@ def options_scraping_v2(df, options_file, model_mapping={}, model_training_check
     elif options_file.project_id == 2775:  # CDSU
         options_scraping_model(df, options_file.project_id, approach='first_word')
         options_scraping_motorization(df, options_file, fillna_value='Sem Info Motorização', regex_approach=1)
-        options_scraping_interior_type(df, options_file, fillna_value='Tecido', regex_approach=1)
+        options_scraping_interior_type(df, options_file, fillna_value='tecido', regex_approach=1)
         options_scraping_version(df, options_file, fillna_value='Sem Info Versão', regex_approach=1)
         # Combustível columns is handled as is;
 
@@ -384,6 +384,7 @@ def options_scraping(df, options_file, model_mapping={}, model_training_check=0)
                     tokenized_modelo = nltk.word_tokenize(model)[3::]
 
             new_model = re.sub(r'^(s)(?=[0-9])', 'Serie ', ' '.join(tokenized_modelo), flags=re.IGNORECASE)
+            new_model = re.sub(r'\b[5|3]P\b', '5p', new_model)
             df.loc[df['Modelo'] == model, 'Modelo'] = new_model
     level_0_performance_report.performance_info_append(time.time(), 'Model_Code_End')
 
