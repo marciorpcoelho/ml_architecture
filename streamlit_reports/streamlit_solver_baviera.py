@@ -21,7 +21,7 @@ import modules.SessionState as sessionstate
 
 st.set_page_config(page_title='Sugestão de Encomenda - Baviera', layout="wide")
 
-st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda Baviera - DEMO</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda Baviera</h1>", unsafe_allow_html=True)
 st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas BMW</h2>", unsafe_allow_html=True)
 
 configuration_parameters_full = ['Motor_Desc', 'Alarm', 'AC_Auto', 'Open_Roof', 'Auto_Trans', 'Colour_Ext', 'Colour_Int', 'LED_Lights', 'Rims_Size', 'Model_Code', 'Navigation', 'Park_Front_Sens', 'Roof_Bars', 'Interior_Type', 'Version']
@@ -49,6 +49,11 @@ hide_menu_style = """
         </style>
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+url_hyperlink = '''
+    <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
+'''.format(options_file.documentation_url_solver_app)
+st.markdown(url_hyperlink, unsafe_allow_html=True)
 
 api_backend = api_endpoint_ip + options_file.api_backend_loc
 
@@ -132,7 +137,7 @@ def file_export(df, file_name):
 
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
-    href = f'<a href="data:file/csv;base64,{b64}">Gravar Classificações</a> (carregar botão direito e Guardar Link como: {file_name}.csv)'
+    href = f'<a href="data:file/csv;base64,{b64}">Gravar Sugestão</a> (carregar botão direito e Guardar Link como: {file_name}.csv)'
     st.markdown(href, unsafe_allow_html=True)
 
 

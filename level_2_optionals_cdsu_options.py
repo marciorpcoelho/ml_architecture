@@ -21,6 +21,7 @@ UID = os.getenv('UID')
 PWD = os.getenv('PWD')
 configuration_parameters_full = ['Motor', 'Caixa Auto', 'Cor_Exterior', 'Jantes', 'Modelo', 'Sensores Est. Tras.', 'Sensores Est. Front.', 'Tipo_Interior', 'Versao', 'Combustível', 'Câmara Traseira']
 api_backend_loc = 'optimizations/vhe_baviera/'
+documentation_url_solver_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/ETKWxwRwUPZCp2vxOitn8YsBLn7L8uccdTLoCPttVwjNKg?e=ZCpc6a'
 
 # Dictionaries:
 sql_info = {

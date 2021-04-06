@@ -24,6 +24,7 @@ PWD = os.getenv('PWD')
 configuration_parameters_full = ['Motor', 'Alarme', 'AC Auto', 'Barras_Tej', 'Caixa Auto', 'Cor_Exterior', 'Cor_Interior', 'Farois_LED', 'Jantes', 'Modelo', 'Navegação', 'Sensores', 'Teto_Abrir', 'Tipo_Interior', 'Versao']
 
 api_backend_loc = 'optimizations/vhe_baviera/'
+documentation_url_solver_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/EUWZf6nO24dDiaJQJNR_xxwBG7dF4s14v6rl47QfnjqfIw?e=QqdHxh'
 
 # Dictionaries:
 sql_info = {
