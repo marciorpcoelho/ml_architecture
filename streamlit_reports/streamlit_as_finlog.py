@@ -37,6 +37,10 @@ st.markdown(hide_menu_style, unsafe_allow_html=True)
 st.markdown("<h1 style='text-align: center;'>Finlog - Demo</h1>", unsafe_allow_html=True)
 st.markdown("<h2 style='text-align: center;'>Previsão de Probabilidade de Sinistro</h2>", unsafe_allow_html=True)
 
+url_hyperlink = '''
+    <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
+'''.format(options_file.documentation_url_solver_app)
+st.markdown(url_hyperlink, unsafe_allow_html=True)
 
 def main():
     enc_LL = load(base_path + options_file.enc_LL_path)

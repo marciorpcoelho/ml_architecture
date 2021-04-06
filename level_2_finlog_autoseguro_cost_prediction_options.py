@@ -39,6 +39,8 @@ gridsearch_parameters = {
 
 project_id = 2527
 update_frequency_days = 0
+documentation_url_solver_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/EaOjRaxuRj9IjvChppY8VggBmbV8dzVSA1xeE-VdwiuVFQ?e=BYclqX'
+
 
 DATA_PATH = 'dbs/dataset_train_20200817_v6.csv'  # File created with code in get_train_dataset.py
 DATA_PROB_PATH_ALL_COST = 'dbs/df_train_test_prob_for_plotting.csv'  # File created with jupyter notebook Finlog_20200810_candidate_V4
