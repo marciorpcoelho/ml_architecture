@@ -47,8 +47,8 @@ def main():
     cm_family_dict_lvl_2 = cm_replacements(cm_family_lvl_2)
 
     family_dict_sorted = family_dict_sorting(cm_family_dict_lvl_1, cm_family_dict_lvl_2)
-    st.sidebar.title('Tarefa:')
-    sel_page = st.sidebar.radio('', ['Análise de Classificações', 'Correções às Famílias Atuais', 'Exportação de Classificações'], index=1)
+    st.sidebar.title('Objetivo:')
+    sel_page = st.sidebar.radio('', ['Análise de Classificações', 'Correções às Famílias Atuais', 'Exportação de Classificações'], index=0)
 
     if sel_page == 'Correções às Famílias Atuais':
         data_original = get_dataset_sql(options_file.others_families_dict, options_file, options_file.classified_app_query)
@@ -171,72 +171,83 @@ def main():
         data_original = get_dataset_sql(options_file.others_families_dict, options_file, options_file.non_classified_app_query)
         data = product_group_description(data_original, df_product_group)
 
-        sel_text = st.text_input('Pesquisar pela(s) palavra(s):', '', key=session_state.run_id)
-        sel_text_option = st.radio('Escolha a forma de pesquisa:', ('contains', 'starts'), format_func=radio_button_options)
+        st.subheader('Por favor escolha a família a explorar: ')
+        sel_family = st.selectbox('', ['-'] + [x for x in df_product_group['PT_Product_Group_Desc'].unique()], key=session_state.run_id, format_func=lambda x: df_product_group.loc[df_product_group['PT_Product_Group_Desc'] == x, 'Product_Group_Merge'].values[0] if x != '-' else '-')
+        sel_family_converted = family_code_convertion(sel_family, df_product_group)
         sel_all_refs_flag = st.sidebar.checkbox('Selecionar todas as referências.', value=True)
+        st.subheader('Ou em alternativa, pesquise pela(s) palavra(s):')
+        sel_text = st.text_input('', key=session_state.run_id)
+        sel_text_option = st.sidebar.radio('Escolha a forma de pesquisa na descrição:', ('equals', 'contains', 'starts'), format_func=radio_button_options, index=0)
 
-        if sel_text != '':
-            # if sel_text_option == 'starts' and sel_text_option != session_state.sel_text_option or sel_text_option == 'starts' and sel_text != session_state.sel_text or sel_text_option == 'starts' and sel_all_refs_flag != session_state.sel_all_refs_flag:
-            if sel_text_option == 'starts':
-                data_df = data.loc[data['Part_Description'].str.startswith(sel_text), :]
-            # elif sel_text_option == 'contains' and sel_text_option != session_state.sel_text_option or sel_text_option == 'contains' and sel_text != session_state.sel_text or sel_text_option == 'contains' and sel_all_refs_flag != session_state.sel_all_refs_flag:
-            elif sel_text_option == 'contains':
-                sel_text_regex = sel_text_regex_conversion(sel_text)
+        if sel_family != '-':
+            data_filtered = filter_data(data, [sel_family_converted], ['Product_Group_DW'], [None])
+            st.write('#Peças da familía {}: {}'.format(sel_family, data_filtered.shape[0]))
+            unique_part_descs = data_filtered['Part_Description'].value_counts().reset_index()
 
-                data_df = data.loc[data['Part_Description'].str.contains(sel_text_regex, case=False, regex=True), :]
-            table_title = 'Peças que {} - {}'.format(radio_button_options('table_' + sel_text_option), sel_text)
-        else:
-            data_df = data.head(50)
-            table_title = 'Amostra de classificações'
-
-        table_title += ' ({} referências):'.format(data_df.shape[0])
-        if data_df.shape[0] > 0:
+            table_title = 'Descrições existentes na família {} - {} descrições:'.format(sel_family, unique_part_descs.shape[0])
             fig = go.Figure(data=[go.Table(
                 columnwidth=[],
                 header=dict(
-                    values=[options_file.column_translate_dict['Part_Ref'], options_file.column_translate_dict['Part_Description'], options_file.column_translate_dict['Part_Cost'], options_file.column_translate_dict['Part_PVP'], options_file.column_translate_dict['Product_Group_DW_desc'], options_file.column_translate_dict['Classification_desc'], options_file.column_translate_dict['Classification_Prob']],
-                    align=['center', 'center', 'center', 'center'],
+                    values=['Descrição', 'Contagem'],
+                    align=['center', 'center'],
                 ),
                 cells=dict(
-                    # values=[session_state.data['Part_Ref'].head(50), session_state.data['Part_Description'].head(50), session_state.data['Part_Cost'].round(2).head(50), session_state.data['Part_PVP'].round(2).head(50), session_state.data['Product_Group_DW_desc'].head(50), session_state.data['Classification_desc'].head(50), session_state.data['Classification_Prob'].round(2).head(50)],
-                    values=[data_df['Part_Ref'], data_df['Part_Description'], data_df['Part_Cost'].round(2), data_df['Part_PVP'].round(2), data_df['Product_Group_DW_desc'], data_df['Classification_desc'], data_df['Classification_Prob'].round(2)],
-                    align=['center', 'left', 'center', 'center'],
+                    values=[unique_part_descs['index'], unique_part_descs['Part_Description']],
+                    align=['left', 'center'],
                 ),
             )]
             )
-            fig.update_layout(width=1500, height=500, title=table_title)
+            fig.update_layout(width=800, height=500, title=table_title)
             st.write(fig)
-        else:
-            st.error('Não existem peças nas condições referidas. Por favor altere o(s) valor(es) do(s) filtro(s).')
 
-        sel_part_ref = ''
-        if not sel_all_refs_flag:
-            sel_part_ref = st.multiselect('Por favor escolha a(s) referência(s) a alterar:', [x for x in data_df['Part_Ref'].unique()], key=session_state.run_id)
-            data_df = filter_data(data_df, [sel_part_ref], ['Part_Ref'], ['in'])
+            sel_text = st.selectbox('Lista de descrições para a família selecionada:', ['-'] + [x for x in unique_part_descs['index'].values])
 
-        # data_cost_min, data_cost_max = session_state.data['Part_Cost'].min().item(), session_state.data['Part_Cost'].max().item()
-        # data_pvp_min, data_pvp_max = session_state.data['Part_PVP'].min().item(), session_state.data['Part_PVP'].max().item()
-        #
-        # sel_costs = st.sidebar.slider('Por favor escolha os valores limite de custo:', data_cost_min, data_cost_max, (data_cost_min, data_cost_max), 10.0)
-        # sel_pvps = st.sidebar.slider('Por favor escolha os valores limite de venda:', data_pvp_min, data_pvp_max, (data_pvp_min, data_pvp_max), 10.0)
+        if sel_text not in ['', '-']:
+            if sel_text_option == 'starts':
+                data_df = data.loc[data['Part_Description'].str.startswith(sel_text), :]
+            elif sel_text_option == 'contains':
+                sel_text_regex = sel_text_regex_conversion(sel_text)
+                data_df = data.loc[data['Part_Description'].str.contains(sel_text_regex, case=False, regex=True), :]
+            elif sel_text_option == 'equals':
+                data_df = filter_data(data, [sel_text], ['Part_Description'], [None])
 
-        # if sel_text != '':
-        # session_state.data = filter_data(data, [sel_costs[1], sel_costs[0], sel_pvps[1], sel_pvps[0]], ['Part_Cost', 'Part_Cost', 'Part_PVP', 'Part_PVP'], ['le', 'ge', 'le', 'ge'])
+            if data_df.shape[0] > 0:
+                table_title = 'Peças que {} - {} ({} referências):'.format(radio_button_options('table_' + sel_text_option), sel_text, data_df.shape[0])
+                fig = go.Figure(data=[go.Table(
+                    columnwidth=[],
+                    header=dict(
+                        values=[options_file.column_translate_dict['Part_Ref'], options_file.column_translate_dict['Part_Description'], options_file.column_translate_dict['Part_Cost'], options_file.column_translate_dict['Part_PVP'], options_file.column_translate_dict['Product_Group_DW_desc'], options_file.column_translate_dict['Classification_desc'], options_file.column_translate_dict['Classification_Prob']],
+                        align=['center', 'center', 'center', 'center'],
+                    ),
+                    cells=dict(
+                        # values=[session_state.data['Part_Ref'].head(50), session_state.data['Part_Description'].head(50), session_state.data['Part_Cost'].round(2).head(50), session_state.data['Part_PVP'].round(2).head(50), session_state.data['Product_Group_DW_desc'].head(50), session_state.data['Classification_desc'].head(50), session_state.data['Classification_Prob'].round(2).head(50)],
+                        values=[data_df['Part_Ref'], data_df['Part_Description'], data_df['Part_Cost'].round(2), data_df['Part_PVP'].round(2), data_df['Product_Group_DW_desc'], data_df['Classification_desc'], data_df['Classification_Prob'].round(2)],
+                        align=['center', 'left', 'center', 'center'],
+                    ),
+                )]
+                )
+                fig.update_layout(width=1500, height=500, title=table_title)
+                st.write(fig)
+            else:
+                st.error('Não existem peças nas condições referidas. Por favor altere o(s) valor(es) do(s) filtro(s).')
 
-        # if sel_part_ref != '-':
-        sel_family_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + [x for x in df_product_group['PT_Product_Group_Desc'].unique()], key=session_state.run_id, format_func=lambda x: df_product_group.loc[df_product_group['PT_Product_Group_Desc'] == x, 'Product_Group_Merge'].values[0] if x != '-' else '-')
-        if st.button('Alterar'):
-            if not data_df.shape[0]:
-                st.error('Por favor escolha as referências a alterar.')
-                return
+            if not sel_all_refs_flag:
+                sel_part_ref = st.multiselect('Por favor escolha a(s) referência(s) a alterar:', [x for x in data_df['Part_Ref'].unique()], key=session_state.run_id)
+                data_df = filter_data(data_df, [sel_part_ref], ['Part_Ref'], ['in'])
 
-            if sel_family_overwrite != '-':
-                update_family(data_df.copy(), sel_family_overwrite, df_product_group)
-                session_state.run_id += 1
-                time.sleep(0.1)
-                raise RerunException(RerunData())
-            elif sel_family_overwrite == '-':
-                st.error('Por favor escolha uma família de peças.')
+            sel_family_overwrite = st.selectbox('Por favor escolha a família para as peças selecionadas: ', ['-'] + [x for x in df_product_group['PT_Product_Group_Desc'].unique()], key=session_state.run_id, format_func=lambda x: df_product_group.loc[df_product_group['PT_Product_Group_Desc'] == x, 'Product_Group_Merge'].values[0] if x != '-' else '-')
+            if st.button('Alterar'):
+                if not data_df.shape[0]:
+                    st.error('Por favor escolha as referências a alterar.')
+                    return
+
+                if sel_family_overwrite != '-':
+                    update_family(data_df.copy(), sel_family_overwrite, df_product_group)
+                    session_state.run_id += 1
+                    time.sleep(0.1)
+                    raise RerunException(RerunData())
+                elif sel_family_overwrite == '-':
+                    st.error('Por favor escolha uma família de peças.')
 
     elif sel_page == 'Exportação de Classificações':
         st.write('Nesta página é possível exportar uma família completa de peças, de acordo com a classificação mais recente do modelo de machine learning.')
@@ -486,10 +497,12 @@ def family_dict_sorting(family_dict_lvl_1, family_dict_lvl_2):
 def radio_button_options(option):
 
     radio_options_dict = {
-        'contains': 'Descrição contém palavra(s) escolhida(s)',
-        'starts': 'Descrição começa pela palavra escolhida',
-        'table_contains': 'contêm a(s) palavra(s)',
-        'table_starts': 'começam pela palavra',
+        'contains': 'Contém palavra(s) escolhida(s)',
+        'starts': 'Começa pela palavra escolhida',
+        'equals': 'Igual à(s) palavra(s) escolhida(s)',
+        'table_contains': 'com descrições contêm a(s) palavra(s)',
+        'table_starts': 'com descrições que começam pela palavra',
+        'table_equals': 'com descrições iguais à(s) palavra(s)',
     }
 
     return radio_options_dict[option]
