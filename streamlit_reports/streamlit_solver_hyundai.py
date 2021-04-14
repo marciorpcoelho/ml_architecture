@@ -78,7 +78,7 @@ temp_cols = ['Avg_DaysInStock_Global', 'Avg_DaysInStock_Global_normalized', '#Ve
 total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 # choose between Order Optimization or CO2 simulator
-main_function = st.sidebar.selectbox(
+main_function = st.selectbox(
     label = 'Aplicação:', 
     options = ['Simulador CO2', 'Order Optimization'],
     help = 'Por favor escolha a aplicação a usar'
@@ -91,6 +91,9 @@ def co2_simulator():
     from datetime import datetime
     
     st.markdown("<h1 style='text-align: center;'>Simulador de CO2</h1>", unsafe_allow_html=True)
+    
+    col1, col2 = st.beta_columns([1, 3])
+    
     
     months= {
         1: "Jan",
@@ -171,9 +174,10 @@ def co2_simulator():
     sales_plan['Alteração'] = 0
     sales_plan['Total'] = sales_plan['Ano'] + sales_plan['Alteração'].astype(int)
     
-    st.sidebar.title('Alterações ao plano de vendas:')
-    
-    session_state.change_co2_target = st.sidebar.checkbox(
+    col1.title('Alterações ao plano de vendas:')
+    #col2.title('Alterações ao plano de vendas:')
+
+    session_state.change_co2_target = col1.checkbox(
         label = 'Alterar valor global de CO2?',
         value = session_state.change_co2_target,
         key = session_state.change_co2_target,
@@ -190,15 +194,15 @@ def co2_simulator():
         total_co2_original = (sales_plan['WLTP_CO2']*sales_plan['Ano']).sum()
         target_co2 = (total_co2_original)/(total_vhe_original)
             
-    model_list = input_options['PT_PDB_Model_Desc'].drop_duplicates().values#.astype(int).astype(str)
-    vhe_model = st.sidebar.selectbox('Modelo a adicionar ao plano:', ['-'] + list(model_list), index=0)
+    model_list = sorted(input_options['PT_PDB_Model_Desc'].drop_duplicates().values)#.astype(int).astype(str)
+    vhe_model = col1.selectbox('Modelo a adicionar ao plano:', ['-'] + list(model_list), index=0)
     
-    version_list = input_options[input_options['PT_PDB_Model_Desc'] == vhe_model]['version_co2'].drop_duplicates().values#.astype(int).astype(str)
-    vhe_version = st.sidebar.selectbox('Versão a adicionar ao plano:', ['-'] + list(version_list), index=0)
+    version_list = sorted(input_options[input_options['PT_PDB_Model_Desc'] == vhe_model]['version_co2'].drop_duplicates().values)#.astype(int).astype(str)
+    vhe_version = col1.selectbox('Versão a adicionar ao plano:', ['-'] + list(version_list), index=0)
     
-    vhe_num = st.sidebar.number_input('Numero de veículos:', value = 0)
+    vhe_num = col1.number_input('Numero de veículos:', value = 0)
 
-    write_changes = st.sidebar.button(
+    write_changes = col1.button(
         label = 'Calcular'#,
         #help = 'Aplicar as alterações selecionadas e calcular numero de veiculos elétricos a adicionar ao plano'
         )
@@ -245,7 +249,7 @@ def co2_simulator():
     total_vhe_original = sales_plan_changed['Ano'].sum()
     total_co2_original = (sales_plan_changed['WLTP_CO2']*sales_plan_changed['Ano']).sum()
     co2_original = (total_co2_original)/(total_vhe_original)
-    st.write(
+    with col2: st.write(
         'Emissão média de CO2 do plano de vendas original = ' + str(np.round(co2_original, 4)) + 
         ' g/km, com ' + str(int(np.round(total_vhe_original, 0))) + ' veículos'
         )
@@ -254,7 +258,7 @@ def co2_simulator():
     total_vhe_changed = sales_plan_changed['Total'].sum()
     total_co2_changed = (sales_plan_changed['WLTP_CO2'] * sales_plan_changed['Total']).sum()
     co2_changed = (total_co2_changed)/(total_vhe_changed)
-    st.write(
+    with col2: st.write(
         'Emissão média de CO2 do plano de vendas alterado = ' + str(np.round(co2_changed, 4)) + 
         ' g/km, com ', str(int(np.round(total_vhe_changed, 0))), 'veículos. Foram adicionados  ', 
         str(int(np.round(total_vhe_changed - total_vhe_original, 0))), 'veículos ao plano original'
@@ -273,7 +277,7 @@ def co2_simulator():
     sales_plan_changed.loc[sales_plan_changed['WLTP_CO2'] == 0, 'Alteração'] = sales_plan_changed.loc[sales_plan_changed['WLTP_CO2'] == 0, 'Alteração'] + add_electric_vhe
     sales_plan_changed['Total'] = sales_plan_changed['Ano'] + sales_plan_changed['Alteração'].astype(int)
     
-    st.write(
+    with col2: st.write(
         'Adicionando ' + str(add_electric_vhe) + 
         ' veículos elétricos ao plano de vendas, para atingir o valor alvo de CO2 de ',
         str(np.round(target_co2, 4)), ' g/km'
@@ -283,7 +287,7 @@ def co2_simulator():
     total_vhe_final = int(sales_plan_changed['Total'].sum())
     total_co2_final = (sales_plan_changed['WLTP_CO2']*sales_plan_changed['Total']).sum()
     co2_final = (total_co2_final)/(total_vhe_final)
-    st.write('Emissão média de CO2 do plano de vendas final = ' + str(np.round(co2_final, 4)) + ' g/km, com ' + str(np.round(total_vhe_final, 0)) + ' veículos')
+    with col2: st.write('Emissão média de CO2 do plano de vendas final = ' + str(np.round(co2_final, 4)) + ' g/km, com ' + str(np.round(total_vhe_final, 0)) + ' veículos')
     
     def rower(data):
         
@@ -326,45 +330,32 @@ def co2_simulator():
 
         return z
     
-    st.dataframe(
+    col2.dataframe(
         data = sales_plan_changed[[
             'WLTP_CO2', 'Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ano', 'Alteração', 'Total'
             ]].astype(int).style.apply(rower, axis=None),
         height = 2000
         )
     
-    st.write('Total de veiculos por mês:')
+    with col2: st.write('Total de veiculos por mês:')
     sales_plan_sum = pd.DataFrame(sales_plan_changed[[
         'Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ano', 'Alteração', 'Total'
         ]].sum(axis = 0)).T.astype(int)
-    st.dataframe(sales_plan_sum)
-
-
-
-
-
-
-
-
-
-
-
-
-
+    col2.dataframe(sales_plan_sum)
 
     print('3')
-    st.sidebar.write('Alterações em cache:')
+    col1.write('Alterações em cache:')
     
     changes_print = {}
     print('3.1')
     
     if session_state.sales_plan_changes == {}:
         print('3.2 empty')
-        st.sidebar.table(
-        pd.DataFrame(
-            #list(changes_print.items()),
-            columns = ['Veiculo','Numero de veiculos']).set_index('Veiculo')
-        )  
+        col1.table(
+            pd.DataFrame(
+                #list(changes_print.items()),
+                columns = ['Veiculo','Numero de veiculos']).set_index('Veiculo')
+            )  
         print('3.3 empty')
     
     else:
@@ -376,14 +367,14 @@ def co2_simulator():
         print('3.3')
         #print(changes_print)
         print('3.4')
-        st.sidebar.table(
+        col1.table(
             pd.DataFrame(
                 list(changes_print.items()),
                 columns = ['Veiculo','Numero de veiculos']).set_index('Veiculo')
             )
         print(pd.DataFrame(columns = ['Veiculo','Numero de veiculos']))
         print('3.5')
-        reset_changes = st.sidebar.button('Limpar alterações em cache')
+        reset_changes = col1.button('Limpar alterações em cache')
     
         if reset_changes:
             session_state.sales_plan_changes = {}
@@ -475,7 +466,7 @@ def get_vehicle_data(options_file):
         
     return vehicle_data
 
-def main():
+def order_optimization():
     
     st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda - Importador</h1>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Hyundai e Honda</h2>", unsafe_allow_html=True)
@@ -953,15 +944,16 @@ def client_replacement(df, client_lvl_cols_in, client_lvl_sels):
 
     return df
 
+def main(main_function):
+    if main_function == 'Simulador CO2':
+        co2_simulator()
+        
+    else:
+        order_optimization()
 
 if __name__ == '__main__':
     try:
-        
-        if main_function == 'Simulador CO2':
-            co2_simulator()
-            
-        else:
-            main()
+        main(main_function)
             
     except Exception as exception:
         print('ERRO!!!')
