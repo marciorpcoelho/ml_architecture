@@ -23,6 +23,15 @@ update_frequency_days = 0
 documentation_url_app = 'https://gruposalvadorcaetano.sharepoint.com/:b:/s/rigor/6825_DGAA/EZBq5HGuxpxPkt6R2VrX0loBOLtKr_UKYPUmH0UTPlbibw?e=VeWKhZ'
 sel_cols = ['Part_Ref', 'Part_Desc', 'Product_Group_DW', 'Client_ID', 'Average_Cost', 'PVP_1', 'PLR_Account', 'Part_Desc_PT']
 
+main_families_clf_path = 'models/main_families_clf.joblib'
+other_families_clf_path = 'models/other_families_clf.joblib'
+scaler_path = 'models/scaler_{}_{}.joblib'
+hashing_vectorizer_path = 'models/hashing_vectorizer_{}_{}.joblib'
+svd_truncated_path = 'models/svd_truncated_{}_{}.joblib'
+encoder_path = 'models/enc_{}_{}.joblib'
+inv_target_map = 'models/inv_target_map_{}'
+
+
 sql_info = {
     'database_BI_AFR': 'BI_RCG',
     'database_BI_CRP': 'BI_CRP',
@@ -111,6 +120,17 @@ product_group_app_query = '''
           ,[PT_Product_Group_Desc]
       FROM [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC]
       where Product_Group_Code not in (1, 2, 44, 45)
+    '''
+
+
+product_group_complete_app_query = '''
+    SELECT [Product_Group_Code]
+      ,[PT_Product_Group_Desc]
+      ,[ES_Product_Group_Desc]
+      ,[EN_Product_Group_Desc]
+      ,[FR_Product_Group_Desc]
+    FROM [BI_AFR].[dbo].[PSE_Dim_Product_Groups_GSC]
+    where Product_Group_Code not in (1, 2, 44, 45)
     '''
 
 # current_stock_query = '''SELECT DISTINCT Part_Ref, Part_Desc, Product_Group_DW, Client_Id, Franchise_Code, Franchise_Code_DW, Average_Cost, PVP_1, PLR_Account
@@ -234,6 +254,11 @@ brand_codes_per_franchise = '''
     select DISTINCT Client_Id, Franchise_Code_DMS as Original_Value
     from {}.dbo.PSE_MapDMS_Franchises WITH (NOLOCK)
     where Franchise like '%{}%'
+'''
+
+brand_codes_per_platform = '''
+    select DISTINCT Client_ID, Franchise_Code_DMS, Franchise
+    from {}.dbo.PSE_MapDMS_Franchises WITH (NOLOCK)
 '''
 
 master_files_to_convert = {

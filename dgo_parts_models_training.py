@@ -13,9 +13,7 @@ from sklearn.decomposition import TruncatedSVD
 import warnings
 import sklearn.exceptions
 warnings.filterwarnings("ignore", category=sklearn.exceptions.UndefinedMetricWarning)
-
 from collections import defaultdict, Counter
-
 
 pd.set_option('display.width', 3000)
 pd.set_option('display.max_rows', 200)
@@ -112,13 +110,13 @@ def dataset_preparation(ml_dataset):
     drop_rows_when_missing = [u'Part_Ref']
     impute_when_missing = [{'impute_with': u'MEAN', 'feature': u'PVP_1_avg'}, {'impute_with': u'MEAN', 'feature': u'Average_Cost_avg'}]
 
-    # Features for which we drop rows with missing values"
+    # Features for which we drop rows with missing values
     for feature in drop_rows_when_missing:
         train = train[train[feature].notnull()]
         test = test[test[feature].notnull()]
         # print('Dropped missing records in %s' % feature)
 
-    # Features for which we impute missing values"
+    # Features for which we impute missing values
     for feature in impute_when_missing:
         if feature['impute_with'] == 'MEAN':
             v = train[feature['feature']].mean()

@@ -4,7 +4,7 @@ import time
 import pyodbc
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
 from modules.level_1_e_deployment import sql_inject
-from modules.level_1_a_data_acquisition import sql_retrieve_df
+from modules.level_1_a_data_acquisition import sql_retrieve_df, sql_retrieve_df_specified_query
 from modules.level_1_d_model_evaluation import algorithms_performance_dataset_creation, model_performance_saving
 from modules.level_0_performance_report import log_record
 import level_2_pa_part_reference_options as options_file
@@ -171,36 +171,56 @@ others_families_dict_str = {
 def main():
     dgo_family_10_loc = 'dbs/dgo_familia_10_prepared.csv'
     dgo_family_13_loc = 'dbs/dgo_familia_13_prepared.csv'
+    dgo_manual_classified_parts_loc = 'dbs/dgo_classified_parts.csv'
 
     log_record('Step 1 started.', options_file.project_id)
-    master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
+    # master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
+    # master_file.to_csv('dbs/master_file.csv', index=False)
+
+    master_file = pd.read_csv('dbs/master_file.csv')
     master_file['Product_Group_DW'] = master_file['Product_Group_DW'].astype(str)
     log_record('Step 1 ended.', options_file.project_id)
 
+    print(master_file.head())
+
     master_file = flow_step_2(master_file)
-    print('2 - master_file shape', master_file.shape)
+    # control_prints(master_file, '2')
     master_file = flow_step_3(master_file)
-    print('3 - master_file shape', master_file.shape)
+    # control_prints(master_file, '3')
+
+    sys.exit()
     master_file = flow_step_4(master_file)
-    print('4 - master_file shape', master_file.shape)
-    master_file, manual_classifications = flow_step_5(master_file, [dgo_family_10_loc, dgo_family_13_loc])
-    print('5 - master_file shape', master_file.shape)
+    control_prints(master_file, '4')
+    master_file, manual_classifications = flow_step_5(master_file, [dgo_family_10_loc, dgo_family_13_loc, dgo_manual_classified_parts_loc])
+    control_prints(master_file, '5')
     master_file_non_classified, master_file_other_families, master_file_classified_families = flow_step_6(master_file)
-    print('6 - files shape', master_file_non_classified.shape, master_file_classified_families.shape, master_file_other_families.shape)
+    control_prints(master_file_non_classified, '6a')
+    control_prints(master_file_classified_families, '6b')
+    control_prints(master_file_other_families, '6c')
     master_file_classified_families_filtered = flow_step_7(master_file_classified_families)
-    print('7 - master_file_classified_families_filtered shape', master_file_classified_families_filtered.shape)
+    control_prints(master_file_classified_families_filtered, '7 - master_file_classified_families_filtered')
     master_file_other_families_filtered = flow_step_7(master_file_other_families)
-    print('7 - master_file_other_families_filtered shape', master_file_other_families_filtered.shape)
+    control_prints(master_file_other_families_filtered, '7 - master_file_other_families_filtered')
     master_file_final, main_families_cm, main_families_metrics_dict, other_families_cm, other_families_metrics_dict = flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified)
-    print('8 - master_file_final shape', master_file_final.shape)
+    control_prints(master_file_final, '8')
     master_file_final = flow_step_9(master_file_final)
-    print('9 - master_file_final shape', master_file_final.shape)
+    control_prints(master_file_final, '9')
     master_file_final = flow_step_10(master_file_final, manual_classifications)
-    print('10 - master_file_final shape', master_file_final.shape)
+    control_prints(master_file_final, '10')
     master_file_final.to_csv('dbs/master_file_final.csv')
     deployment(master_file_final, main_families_cm, other_families_cm)
 
     return main_families_metrics_dict, other_families_metrics_dict
+
+
+def control_prints(df, tag):
+    # print(tag)
+    # print(df.shape)
+    # try:
+    #     print(df['Part_Ref'].value_counts())
+    # except KeyError:
+    #     pass
+    return
 
 
 # compute_current_stock_all_platforms_master_stock_matched_04_2020_prepared_distinct
@@ -216,6 +236,10 @@ def flow_step_2(df):
 # compute_Dataset_w_Count_prepared
 def flow_step_3(df):
     log_record('Step 3 started.', options_file.project_id)
+
+    # Step 0
+    df = feature_engineering_part_ref(df)
+    df = feature_engineering_part_desc(df)
 
     # Step 1
     regex_filter_1 = r'^[0-9]*$'
@@ -262,6 +286,95 @@ def flow_step_3(df):
     return df
 
 
+def feature_engineering_part_ref(df):
+    # Get information from the part reference
+
+    # Letters/numbers/space/etc count:
+    start = time.time()
+    df = digit_counts(df, 'Part_Ref')
+    print('Digit Counts Elapsed time: {:.2f}s'.format(time.time() - start))
+
+    start_2 = time.time()
+    df = brand_codes_selection(df, 'Part_Ref')
+    print('Brand Codes Selection Elapsed time: {:.2f}s'.format(time.time() - start_2))
+
+    return df
+
+
+def feature_engineering_part_desc(df):
+
+    part_desc_similarity(df, 'Part_Desc')
+    part_desc_similarity(df, 'Part_Desc_PT')
+
+
+def part_desc_similarity(df, col):
+
+    df = get_data_product_group_sql(options_file.others_families_dict, options_file)
+    stop_words_pt = ['de', 'da', 'e', 'O.', '+', '/', '-']
+    df['PT_Product_Group_Desc_clean'] = df['PT_Product_Group_Desc'].apply(lambda x: ' '.join([word for word in x.split() if word not in stop_words_pt]))
+    unique_family_names = list(df['PT_Product_Group_Desc_clean'].unique())
+
+
+def get_data_product_group_sql(others_dict, options_file_in):
+    df = sql_retrieve_df_specified_query(options_file_in.DSN_SRV3_PRD, options_file_in.sql_info['database_BI_AFR'], options_file_in, options_file_in.product_group_complete_app_query)
+    df['Product_Group_Code'] = df['Product_Group_Code'].astype('str')
+
+    df = df[df['Product_Group_Code'] != '77']
+    df.loc[df['Product_Group_Code'] == '75', 'Product_Group_Code'] = '75/77'
+    df.loc[df['PT_Product_Group_Desc'] == 'Lazer', 'PT_Product_Group_Desc'] = 'Lazer/Marroquinaria'
+
+    for key in others_dict.keys():
+        df.loc[df['Product_Group_Code'] == str(key), 'PT_Product_Group_Desc'] = others_dict[key]
+
+    df['Product_Group_Merge'] = df['PT_Product_Group_Level_1_Desc'] + ', ' + df['PT_Product_Group_Level_2_Desc'] + ', ' + df['PT_Product_Group_Desc']
+    df.sort_values(by='Product_Group_Merge', inplace=True)
+    # df['PT_Product_Group_Desc'] = df['PT_Product_Group_Desc'].map(others_dict).fillna(df['PT_Product_Group_Desc'])
+
+    return df
+
+
+def digit_counts(df, col):
+
+    df['part_ref_length'] = df.apply(lambda x: len(x[col]), axis=1)
+    df['part_ref_digits_count'] = df.apply(lambda x: sum(c.isdigit() for c in x[col]), axis=1)
+    df['part_ref_letters_count'] = df.apply(lambda x: sum(c.isalpha() for c in x[col]), axis=1)
+    df['part_ref_spaces_count'] = df.apply(lambda x: sum(c.isspace() for c in x[col]), axis=1)
+    df['part_ref_others_count'] = df.apply(lambda x: len(x[col]) - x['part_ref_digits_count'] - x['part_ref_letters_count'] - x['part_ref_spaces_count'], axis=1)
+
+    return df
+
+
+def brand_codes_detection(x, brand_codes_regex_dict, col):
+    x['brand'] = x[[col]].str.extract(brand_codes_regex_dict[str(x['Client_Id'])], expand=False)[0]
+    return x
+
+
+def brand_codes_selection(df, col):
+    brand_codes_regex_dict = brand_codes_retrieval()
+    df = df.apply(lambda x: brand_codes_detection(x, brand_codes_regex_dict, col), axis=1)
+    df['brand'] = df['brand'].fillna('N/A')
+
+    return df
+
+
+def brand_codes_retrieval():
+    platforms = ['BI_AFR', 'BI_CRP', 'BI_IBE', 'BI_CA']
+    query = ' UNION ALL '.join([options_file.brand_codes_per_platform.format(x) for x in platforms])
+    brand_codes_df = sql_retrieve_df_specified_query(options_file.DSN_SRV3_PRD, 'BI_AFR', options_file, query)
+    brand_codes_df['code_len'] = brand_codes_df['Franchise_Code_DMS'].str.len()
+    brand_codes_df.sort_values(by='code_len', ascending=False, inplace=True)
+
+    # brand_codes_platform = brand_codes_df[brand_codes_df['Client_ID'] == int(x['Client_ID'])]
+    brand_codes_regex_dict = {}
+    for client_id in brand_codes_df['Client_ID'].unique():
+        filtered_df = brand_codes_df[brand_codes_df['Client_ID'] == client_id]
+        unique_brands = filtered_df['Franchise_Code_DMS'].unique()
+        regex_rules = 'r^(' + '|'.join(unique_brands) + ')'
+        brand_codes_regex_dict[str(client_id)] = regex_rules
+
+    return brand_codes_regex_dict
+
+
 # compute_Dataset_w_Count_prepared_by_Part_Ref_2_1_1
 def flow_step_4(df):
     log_record('Step 4 started.', options_file.project_id)
@@ -296,6 +409,8 @@ def flow_step_5(df, manual_classified_files_loc):
 
     # Step 1
     df = classification_corrections_start(df, all_classifications)
+
+    df = product_group_dw_complete_replaces(df.copy())
 
     log_record('Step 5 ended.', options_file.project_id)
     return df, all_classifications
