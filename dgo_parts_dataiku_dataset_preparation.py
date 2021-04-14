@@ -174,21 +174,13 @@ def main():
     dgo_manual_classified_parts_loc = 'dbs/dgo_classified_parts.csv'
 
     log_record('Step 1 started.', options_file.project_id)
-    # master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
-    # master_file.to_csv('dbs/master_file.csv', index=False)
-
-    master_file = pd.read_csv('dbs/master_file.csv')
+    master_file = sql_retrieve_df(options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['final_table'], options_file, column_renaming=1)
     master_file['Product_Group_DW'] = master_file['Product_Group_DW'].astype(str)
     log_record('Step 1 ended.', options_file.project_id)
-
-    print(master_file.head())
-
     master_file = flow_step_2(master_file)
-    # control_prints(master_file, '2')
+    control_prints(master_file, '2')
     master_file = flow_step_3(master_file)
-    # control_prints(master_file, '3')
-
-    sys.exit()
+    control_prints(master_file, '3')
     master_file = flow_step_4(master_file)
     control_prints(master_file, '4')
     master_file, manual_classifications = flow_step_5(master_file, [dgo_family_10_loc, dgo_family_13_loc, dgo_manual_classified_parts_loc])
