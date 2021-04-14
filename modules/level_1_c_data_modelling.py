@@ -110,6 +110,8 @@ def classification_model_training(models, train_x, train_y, classification_model
             vote_clf.clf_grid_fit(x=train_x, y=train_y.values.ravel())
             vote_clf_best = vote_clf.grid.best_estimator_
             vote_clf_best.fit(train_x, train_y.values.ravel())
+            vote_clf_best_params = vote_clf.grid.best_params_
+            level_0_performance_report.log_record('Parâmetros escolhidos para o modelo {} - {}'.format(model, ''.join(['{}: {}\n'.format(key, value) for key, value in zip(vote_clf_best_params.keys(), vote_clf_best_params.values())])), project_id)
             best_models_pos_fit['voting'] = vote_clf_best
             running_times['voting'] = time.time() - start
         else:
@@ -121,7 +123,8 @@ def classification_model_training(models, train_x, train_y, classification_model
             except AttributeError:
                 clf.clf_grid_fit(x=train_x, y=train_y)
             clf_best = clf.grid.best_estimator_
-
+            clf_best_params = clf.grid.best_params_
+            level_0_performance_report.log_record('Parâmetros escolhidos para o modelo {} - {}'.format(model, ''.join(['{}: {}\n'.format(key, value) for key, value in zip(clf_best_params.keys(), clf_best_params.values())])), project_id)
             best_models_pre_fit[model] = clf_best
             try:
                 clf_best.fit(train_x, train_y.values.ravel())
