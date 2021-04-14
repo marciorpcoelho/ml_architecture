@@ -229,6 +229,90 @@ nlr_code_desc = {
     'Honda': 706
 }
 
+eff_sales_temp_query = '''
+    WITH sales AS (
+        SELECT DISTINCT
+        	sales.SLR_Document_Date,
+        	YEAR(sales.SLR_Document_Date) AS Sale_Year_int,
+        	MONTH(sales.SLR_Document_Date) AS Sale_Month_int,
+        	CASE
+        		WHEN MONTH(sales.SLR_Document_Date) = 1 THEN 'Jan'
+        		WHEN MONTH(sales.SLR_Document_Date) = 2 THEN 'Fev'
+        		WHEN MONTH(sales.SLR_Document_Date) = 3 THEN 'Mar'
+        		WHEN MONTH(sales.SLR_Document_Date) = 4 THEN 'Apr'
+        		WHEN MONTH(sales.SLR_Document_Date) = 5 THEN 'May'
+        		WHEN MONTH(sales.SLR_Document_Date) = 6 THEN 'Jun'
+        		WHEN MONTH(sales.SLR_Document_Date) = 7 THEN 'Jul'
+        		WHEN MONTH(sales.SLR_Document_Date) = 8 THEN 'Aug'
+        		WHEN MONTH(sales.SLR_Document_Date) = 9 THEN 'Sep'
+        		WHEN MONTH(sales.SLR_Document_Date) = 10 THEN 'Oct'
+        		WHEN MONTH(sales.SLR_Document_Date) = 11 THEN 'Nov'
+        		WHEN MONTH(sales.SLR_Document_Date) = 12 THEN 'Dec'
+        		ELSE NULL 
+        	END AS Sale_Month_str,
+        	sales.NLR_Code,
+        	sales.Environment,
+        	sales.VehicleData_Code,
+        	sales.Chassis_Number,
+        	bd_prod.PDB_Combined_CO2,
+    		bd_prod.PT_PDB_Franchise_Desc,
+    		bd_prod.PT_PDB_Model_Desc,
+    		bd_prod.PT_PDB_Version_Desc,
+    		bd_prod.PT_PDB_Commercial_Version_Desc,
+        	sp.WLTP_CO2,
+        	sp.NEDC_CO2,
+        	ROW_NUMBER() OVER (
+        		PARTITION BY Chassis_Number 
+        		ORDER BY SLR_Document_Date DESC
+        		) AS row_num
+        FROM
+        	[scsqlsrv3\PRD].[BI_DTR].dbo.[VHE_Fact_BI_Sales_DTR] sales WITH (NOLOCK) --vendas
+        left JOIN
+        	[scsqlsrv3\PRD].[BI_DTR].dbo.[VHE_Dim_VehicleData_DTR] bd_prod --bd de produto
+        ON
+        	sales.VehicleData_Code = bd_prod.VehicleData_Code
+        LEFT JOIN
+        	[scsqlsrv3\PRD].[BI_DTR].dbo.VHE_Setup_Sales_Plan_DTR AS SP --bd de produto
+        ON 
+        	SP.Factory_Model_Code = bd_prod.Factory_Model_Code AND
+        	SP.Local_Vehicle_Option_Code = bd_prod.Local_Vehicle_Option_Code
+    )
+    SELECT 
+        NLR_Code,
+        Sale_Year_int AS Sales_Plan_Year,
+        Sale_Month_str,
+        COUNT(Chassis_Number) AS Num_Sales,
+        WLTP_CO2
+    FROM
+        sales
+    WHERE
+        row_num = 1
+    GROUP BY
+        NLR_Code,
+        Sale_Year_int,
+        Sale_Month_str,
+        WLTP_CO2;'''
+        
+vehicle_data_query = '''
+    WITH all_vehicles AS (
+    	SELECT 
+    		Factory_Model_Code, 
+    		PDB_OCN,
+    		PT_PDB_Franchise_Desc,
+    		PT_PDB_Model_Desc,
+    		PT_PDB_Version_Desc,
+    		PT_PDB_Commercial_Version_Desc,
+    		Record_Date,
+    		ROW_NUMBER() OVER (
+    			PARTITION BY Factory_Model_Code, PDB_OCN
+    			ORDER BY Record_Date DESC
+    			) AS row_num 
+    	FROM [scsqlsrv3\PRD].[BI_DTR].dbo.[VHE_Dim_VehicleData_DTR]
+    )
+    SELECT *
+    FROM all_vehicles
+    WHERE row_num = 1'''    
+
 sales_query_filtered = '''
         SELECT *
         FROM [BI_DTR].dbo.[VHE_Fact_BI_Sales_DTR] WITH (NOLOCK)
@@ -716,11 +800,11 @@ version_grouping = {
 # Cor Exterior
 ext_color_translation = {
     'Amarelo': ['acid yellow', 'acid yellow (tt)', 'ral1016', 'charge yellow'],
-    'Azul': ['champion blue (teto preto)', 'teal', 'teal ( teto preto ) ', 'surfy blue', 'intense blue (teto preto)', 'aqua turquoise', 'p crystal blue m.', 'slate blue (teto preto)', 'midnight blue beam m', 'midnight blue beam m.', 'aqua turquoise (teto preto)', 'cosmic blue m.', 'obsidian blue p.', 'stormy sea', 'ocean view', 'aqua sparkling', 'clean slate', 'intense blue', 'brilliant sporty blue m.', 'morpho blue p.', 'stargazing blue', 'champion blue', 'ceramic blue', 'stellar blue', 'blue lagoon', 'performance blue', 'morning blue', 'ara blue', 'marina blue', 'ceramic blue (tt)', 'blue lagoon (tt)', 'skyride blue m.',
+    'Azul': ['teal', 'teal ( teto preto ) ', 'surfy blue', 'intense blue (teto preto)', 'aqua turquoise', 'p crystal blue m.', 'slate blue (teto preto)', 'midnight blue beam m', 'midnight blue beam m.', 'aqua turquoise (teto preto)', 'cosmic blue m.', 'obsidian blue p.', 'stormy sea', 'ocean view', 'aqua sparkling', 'clean slate', 'intense blue', 'brilliant sporty blue m.', 'morpho blue p.', 'stargazing blue', 'champion blue', 'ceramic blue', 'stellar blue', 'blue lagoon', 'performance blue', 'morning blue', 'ara blue', 'marina blue', 'ceramic blue (tt)', 'blue lagoon (tt)', 'skyride blue m.',
              'twilight blue m.', 'surf blue', 'taffeta white iii', 'dive in jeju'],
-    'Branco': ['atlas white (tt)', 'glacier white', 'atlas white', 'polar white ( teto preto )', 'polar white (teto vermelho)', 'polar white  (teto preto)', 'taffeta white', 'platinum white p', 'platinum white p.', 'white orchid p.', 'polar white', 'white sand', 'creamy white', 'chalk white', 'pure white', 'white crystal', 'white cream', 'chalk white (tt)', 'championship white', 'psunlight whitepearl'],
-    'Castanho': ['silky bronze ( teto cinza )', 'brass', 'brass (teto preto)', 'iced coffee', 'moon rock', 'golden brown m.', 'cashmere brown', 'tan brown', 'demitasse brown', 'premium agate brown p.'],
-    'Cinzento': ['cyber gray (tt)', 'amazon grey ( teto preto )', 'amazon grey ', 'cyber gray', 'shining gray m', 'urban titanium m.', 'velvet dune', 'velvet dune (tt)', 'dark knight (tt)', 'wild explorer', 'rain forest', 'magnetic force', 'olivine grey', 'dark knight', 'star dust', 'polished metal m.', 'shining grey m.', 'modern steel m.', 'micron grey', 'galactic grey', 'iron gray', 'galactic grey (tt)', 'sonic grey p.', 'shadow grey', 'stone gray'],
+    'Branco': ['polar white ( teto preto )', 'polar white (teto vermelho)', 'polar white  (teto preto)', 'taffeta white', 'platinum white p', 'platinum white p.', 'white orchid p.', 'polar white', 'white sand', 'creamy white', 'chalk white', 'pure white', 'white crystal', 'white cream', 'chalk white (tt)', 'championship white', 'psunlight whitepearl'],
+    'Castanho': ['brass', 'brass (teto preto)', 'iced coffee', 'moon rock', 'golden brown m.', 'cashmere brown', 'tan brown', 'demitasse brown', 'premium agate brown p.'],
+    'Cinzento': ['amazon grey ( teto preto )', 'amazon grey ', 'cyber gray', 'shining gray m', 'urban titanium m.', 'velvet dune', 'velvet dune (tt)', 'dark knight (tt)', 'wild explorer', 'rain forest', 'magnetic force', 'olivine grey', 'dark knight', 'star dust', 'polished metal m.', 'shining grey m.', 'modern steel m.', 'micron grey', 'galactic grey', 'iron gray', 'galactic grey (tt)', 'sonic grey p.', 'shadow grey', 'stone gray'],
     'Laranja': ['tangerine comet (tt)', 'tangerine comet', 'sunset orange ii'],
     'Prateado': ['shimmering silver ( teto cinza ) ', 'shimmering silver ', 'aurora grey', 'fluidic metal', 'star dust (teto vermelho)', 'sleek silver (teto preto)', 'lunar silver m.', 'platinum silver', 'sleek silver', 'lake silver', 'aurora silver', 'titanium silver', 'platinum silve', 'typhoon silver', 'lake silver (tt)', 'alabaster silver m.', 'tinted silver m.', 'platinum gray m'],
     'Preto': ['phantom black ( teto cinza )', 'electric shadow', 'phantom black (teto vermelho)', 'midnight burgundy p.', 'crystal black p.', 'ruse black m.', 'phantom black', ' black2'],
@@ -743,7 +827,7 @@ int_color_translation = {
     'Bege': ['beige', 'sahara beige', 'dark beige', 'elegant beige'],
     'Bege/Preto': ['beige + black'],
     'Branco': ['ivory'],
-    'Castanho': ['brilliant brown', 'cognac'],
+    'Castanho': ['brilliant brown'],
     'Cinzento': ['light grey', 'gray2', 'blue grey', 'grey', 'pele sintética cinza', 'dark grey', 'grey/blue'],
     'Laranja': ['orange'],
     'Preto': ['black', 'black 2', 'black 3', 'black3', 'neutral black', 'black/darred 4', ' black2'],
