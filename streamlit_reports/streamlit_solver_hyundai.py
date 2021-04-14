@@ -20,11 +20,7 @@ import modules.SessionState as SessionState
 from modules.level_1_b_data_processing import df_join_function
 from level_2_order_optimization_hyundai_options import configuration_parameters, client_lvl_cols, client_lvl_cols_renamed, score_weights, cols_to_normalize, reverse_normalization_cols
 
-st.set_page_config(
-    page_title='Sugestão de Encomenda - Importador', 
-    layout="wide", 
-    initial_sidebar_state = "expanded" 
-    )
+st.set_page_config(page_title='Sugestão de Encomenda - Importador', layout="wide")
 
 min_number_of_configuration = 10
 api_backend = api_endpoint_ip + options_file.api_backend_loc
