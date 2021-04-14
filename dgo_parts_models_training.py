@@ -2,7 +2,10 @@ import sys
 import numpy as np
 import pandas as pd
 import sklearn as sk
+from sklearn.preprocessing import OneHotEncoder, MinMaxScaler, StandardScaler
+from joblib import dump
 import time
+import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import auc, precision_score, confusion_matrix, make_scorer, recall_score, accuracy_score
 from modules.level_1_c_data_modelling import classification_model_training
@@ -24,8 +27,8 @@ def main():
     return
 
 
-def model_training(ml_dataset, clf=None):
-    train, test, train_X, test_X, train_Y, test_Y, target_map, inv_target_map = dataset_preparation(ml_dataset)
+def model_training(ml_dataset, tag, clf=None):
+    train, test, train_X, test_X, train_Y, test_Y, target_map, inv_target_map = dataset_preparation(ml_dataset, tag)
     cm_flag = 0
     df_cm_train, df_cm_test = pd.DataFrame(), pd.DataFrame()
     metrics_dict = {}
@@ -83,7 +86,7 @@ def model_training(ml_dataset, clf=None):
     return ml_dataset_scored, clf, df_cm_train, df_cm_test, metrics_dict
 
 
-def dataset_preparation(ml_dataset):
+def dataset_preparation(ml_dataset, tag):
     ml_dataset = ml_dataset[[u'PLR_Account_first', u'Product_Group_DW', u'PVP_1_avg', u'Part_Desc_PT_concat', u'Client_Id', u'Part_Desc_concat', u'Part_Ref', u'Average_Cost_avg']]
 
     categorical_features = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
@@ -98,6 +101,11 @@ def dataset_preparation(ml_dataset):
 
     target_map = target_map_creation(ml_dataset)
     inv_target_map = {target_map[label]: label for label in target_map}
+
+    file_handler = open(options_file.inv_target_map.format(tag), 'wb')
+    pickle.dump(inv_target_map, file_handler)
+    file_handler.close()
+
     ml_dataset['__target__'] = ml_dataset['Product_Group_DW'].map(str).map(target_map)
     del ml_dataset['Product_Group_DW']
 
@@ -134,36 +142,41 @@ def dataset_preparation(ml_dataset):
 
     categorical_to_dummy_encode = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
     dummy_values = select_dummy_values(train, categorical_to_dummy_encode, limit_dummies=100)
-    dummy_encode_dataframe(train, dummy_values)
-    dummy_encode_dataframe(test, dummy_values)
+    dummy_encode_dataframe(train, dummy_values, tag, save_enc=1)
+    dummy_encode_dataframe(test, dummy_values, tag)
 
     rescale_features = {u'Average_Cost_avg': u'AVGSTD', u'PVP_1_avg': u'AVGSTD'}
     for (feature_name, rescale_method) in rescale_features.items():
         if rescale_method == 'MINMAX':
-            _min = train[feature_name].min()
-            _max = train[feature_name].max()
-            scale = _max - _min
-            shift = _min
+            scaler = MinMaxScaler()
+            scaler.fit(train[[feature_name]])
+            scale = scaler.scale_
         else:
-            shift = train[feature_name].mean()
-            scale = train[feature_name].std()
+            scaler = StandardScaler()
+            scaler.fit(train[[feature_name]])
+            scale = scaler.scale_
         if scale == 0.:
             del train[feature_name]
             del test[feature_name]
             # print('Feature %s was dropped because it has no variance' % feature_name)
         else:
             # print('Rescaled %s' % feature_name)
-            train[feature_name] = (train[feature_name] - shift).astype(np.float64) / scale
-            test[feature_name] = (test[feature_name] - shift).astype(np.float64) / scale
+            dump(scaler, options_file.scaler_path.format(feature_name, tag))
+            train[feature_name] = scaler.transform(train[[feature_name]])
+            test[feature_name] = scaler.transform(test[[feature_name]])
 
     text_svds = {}
     for text_feature in text_features:
         n_components = 50
         text_svds[text_feature] = TruncatedSVD(n_components=n_components)
         s = HashingVectorizer(n_features=100000).transform(train[text_feature])
-        text_svds[text_feature].fit(s)
-        train_transformed = text_svds[text_feature].transform(s)
+        dump(s, options_file.hashing_vectorizer_path.format(text_feature, tag))
 
+        text_svds[text_feature].fit(s)
+        svd_truncated = text_svds[text_feature]
+        dump(svd_truncated, options_file.svd_truncated_path.format(text_feature, tag))
+
+        train_transformed = text_svds[text_feature].transform(s)
         test_transformed = text_svds[text_feature].transform(HashingVectorizer(n_features=100000).transform(test[text_feature]))
 
         for i in range(0, n_components):
@@ -208,8 +221,13 @@ def model_prediction(model, df_to_predict, full_df, target_map, inv_target_map):
     return predictions, probabilities, df_scored
 
 
-def dummy_encode_dataframe(df, dummy_values):
+def dummy_encode_dataframe(df, dummy_values, tag, save_enc=0):
     for (feature, dummy_values) in dummy_values.items():
+        if save_enc:
+            encoder = OneHotEncoder(handle_unknown='ignore')
+            encoder.fit(df[df[feature].isin(dummy_values)][[feature]])
+            dump(encoder, options_file.encoder_path.format(feature, tag))
+
         for dummy_value in dummy_values:
             dummy_name = u'%s_value_%s' % (feature, coerce_to_unicode(dummy_value))
             df[dummy_name] = (df[feature] == dummy_value).astype(float)

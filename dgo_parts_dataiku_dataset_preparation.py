@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from joblib import dump
 import time
 import pyodbc
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
@@ -449,8 +450,10 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
 
     starting_cols = list(master_file_classified_families_filtered)
 
-    _, main_families_clf, main_families_cm_train, main_families_cm_test, main_families_metrics_dict = model_training(master_file_classified_families_filtered)  # Modelo conhece 50 familias
-    _, other_families_clf, other_families_cm_train, other_families_cm_test, other_families_metrics_dict = model_training(master_file_other_families_filtered)  # Modelo conhece 8 familias
+    _, main_families_clf, main_families_cm_train, main_families_cm_test, main_families_metrics_dict = model_training(master_file_classified_families_filtered, 'main_families_clf')  # Modelo conhece 50 familias
+    dump(main_families_clf, options_file.main_families_clf_path)
+    _, other_families_clf, other_families_cm_train, other_families_cm_test, other_families_metrics_dict = model_training(master_file_other_families_filtered, 'other_families_clf')  # Modelo conhece 8 familias
+    dump(other_families_clf, options_file.other_families_clf_path)
 
     # print('Main Families CM (Test): \n{}'.format(main_families_cm_test))
     main_families_cm_test.to_csv('dbs/main_families_cm_temp.csv')
@@ -458,7 +461,7 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     other_families_cm_test.to_csv('dbs/other_families_cm_tmp.csv')
 
     # First Classification
-    master_file_scored, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), main_families_clf)
+    master_file_scored, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), 'second_main_families_clf', clf=main_families_clf)
     master_file_scored = prob_thres_col_creation(master_file_scored)
 
     # First 0.5 CutOff
@@ -468,7 +471,7 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     print('first classification, sub 50 shape:', master_file_scored_sub_50.shape)
 
     # Second Classification
-    master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], other_families_clf)
+    master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], 'second_others', clf=other_families_clf)
     master_file_sub_50_scored = prob_thres_col_creation(master_file_sub_50_scored)
 
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])

@@ -33,7 +33,7 @@ class ClassificationTraining(object):
             self.clf = clf()
 
     def grid_search(self, parameters, k, score):
-        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, iid=True, n_jobs=7, error_score=np.nan)
+        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, n_jobs=7, error_score=np.nan)
 
     def clf_grid_fit(self, x, y):
         self.grid.fit(x, y)
@@ -87,7 +87,7 @@ class RegressionTraining(object):
         return self.clf.predict(x)
 
     def grid_search(self, parameters, k, score):
-        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, iid=True, scoring=score, n_jobs=-1, error_score=np.nan)
+        self.grid = GridSearchCV(estimator=self.clf, param_grid=parameters, cv=k, scoring=score, n_jobs=-1, error_score=np.nan)
 
     def clf_grid_fit(self, x, y):
         self.grid.fit(x, y)
