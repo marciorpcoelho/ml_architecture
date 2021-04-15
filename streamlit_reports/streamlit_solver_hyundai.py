@@ -177,15 +177,17 @@ def co2_simulator():
         help = 'Caso opte por não alterar o valor global de CO2, será usado o valor de CO2 do plano de vendas, sem alterações'
         )
     
+    total_vhe_original = sales_plan['Ano'].sum()
+    total_co2_original = (sales_plan['WLTP_CO2']*sales_plan['Ano']).sum()
+    target_co2 = (total_co2_original)/(total_vhe_original)
+    
+    # input target CO2 value and changes to plan
     if session_state.change_co2_target:
-        # input target CO2 value and changes to plan
-        
-        target_co2 = st.sidebar.number_input('Valor global de CO2:', value = 100.0)
-        
-    else:
-        total_vhe_original = sales_plan['Ano'].sum()
-        total_co2_original = (sales_plan['WLTP_CO2']*sales_plan['Ano']).sum()
-        target_co2 = (total_co2_original)/(total_vhe_original)
+        target_co2 = col1.number_input(
+            label = 'Valor global de CO2:', 
+            value = target_co2,
+            step = 0.0001
+            )
             
     model_list = sorted(input_options['PT_PDB_Model_Desc'].drop_duplicates().values)#.astype(int).astype(str)
     vhe_model = col1.selectbox('Modelo a adicionar ao plano:', ['-'] + list(model_list), index=0)
@@ -196,8 +198,8 @@ def co2_simulator():
     vhe_num = col1.number_input('Numero de veículos:', value = 0)
 
     write_changes = col1.button(
-        label = 'Calcular'#,
-        #help = 'Aplicar as alterações selecionadas e calcular numero de veiculos elétricos a adicionar ao plano'
+        label = 'Calcular',
+        help = 'Aplicar as alterações ao plano de vendas e calcular numero de veiculos elétricos a adicionar ao plano'
         )
     
     if write_changes:
@@ -938,8 +940,6 @@ if __name__ == '__main__':
         main(main_function)
             
     except Exception as exception:
-        print('ERRO!!!')
-        print(sys.exc_info())
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
         error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
