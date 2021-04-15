@@ -461,12 +461,14 @@ def order_optimization():
     all_brands_sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     live_ocn_df = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['current_live_ocn_table'], model_flag=1)
     end_month_index, current_year = period_calculation()
+    
     dw_last_updated_date = data_v2['Record_Date'].max()
     placeholder_dw_date.markdown("<p style='text-align: right;'>Última Atualização DW - {}</p>".format(dw_last_updated_date), unsafe_allow_html=True)
 
     data_v2 = col_normalization(data_v2.copy(), cols_to_normalize, reverse_normalization_cols)
     max_number_of_cars_sold = max(data_v2['Sum_Qty_CHS'])
     sel_brand = st.sidebar.selectbox('Marca:', ['-'] + [x for x in options_file.nlr_code_desc.keys()], index=0, key=session_state.run_id)
+    
     if '-' not in sel_brand:
         co2_nedc, co2_wltp, total_sales = co2_processing(all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), :].copy(), end_month_index, current_year)
         
@@ -482,12 +484,14 @@ def order_optimization():
 
         data_models_v2 = data_v2.loc[data_v2['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'PT_PDB_Model_Desc'].unique()
         sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(sorted(data_models_v2)), index=0)
+        
         sales_plan_last_updated_date = all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'Record_Date'].max()
         proposals_last_updated_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
         margins_last_update_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
 
         placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
         placeholder_margins_date.markdown("<p style='text-align: right;'>Última Atualização Margens HP - {}</p>".format(margins_last_update_date), unsafe_allow_html=True)
+        
         if sel_brand == 'Hyundai':
             placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
         elif sel_brand == 'Honda':
@@ -706,6 +710,7 @@ def co2_processing(df, end_date_month_number, current_year):
         df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == current_year), :].loc[:, ['Jan']].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
     else:
         df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == current_year), :].loc[:, total_months_list[0:end_date_month_number - 1]].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
+    
     df.loc[:, 'Sales_Sum_Times_Co2_WLTP'] = df['Sales_Sum'] * df['WLTP_CO2']
     df.loc[:, 'Sales_Sum_Times_Co2_NEDC'] = df['Sales_Sum'] * df['NEDC_CO2']
     co2_wltp_sum = df['Sales_Sum_Times_Co2_WLTP'].sum(axis=0)
