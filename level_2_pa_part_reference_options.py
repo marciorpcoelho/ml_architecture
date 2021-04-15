@@ -69,7 +69,9 @@ column_translate_dict = {
 
 gridsearch_parameters = {
     # 'lr': [LogisticRegression, [{'C': [0.01, 0.1, 1, 10, 100], 'solver': ['lbfgs', 'newton-cg'], 'max_iter': [2000], 'multi_class': ['ovr', 'multinomial']}]],
-    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50, 100], 'n_estimators': [50, 100, 200], 'max_depth': ['50', '100'], 'objective': ['multiclass']}]],
+    # 'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31, 50, 100], 'n_estimators': [50, 100, 200], 'max_depth': ['50', '100'], 'objective': ['multiclass']}]],
+    'lgb': [lgb.LGBMClassifier, [{'num_leaves': [15, 31], 'n_estimators': [100, 200], 'max_depth': ['50'], 'objective': ['multiclass']}]],
+    # 'lgb': [lgb.LGBMClassifier, [{'num_leaves': [10], 'n_estimators': [10], 'max_depth': ['10'], 'objective': ['multiclass']}]],
 
 }
 

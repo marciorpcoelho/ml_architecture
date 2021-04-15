@@ -87,9 +87,9 @@ def model_training(ml_dataset, tag, clf=None):
 
 
 def dataset_preparation(ml_dataset, tag):
-    ml_dataset = ml_dataset[[u'PLR_Account_first', u'Product_Group_DW', u'PVP_1_avg', u'Part_Desc_PT_concat', u'Client_Id', u'Part_Desc_concat', u'Part_Ref', u'Average_Cost_avg']]
+    ml_dataset = ml_dataset[[u'PLR_Account_first', u'Product_Group_DW', u'PVP_1_avg', u'Part_Desc_PT_concat', u'Client_Id', u'Part_Desc_concat', u'Average_Cost_avg']]
 
-    categorical_features = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
+    categorical_features = [u'PLR_Account_first', u'Client_Id']
     numerical_features = [u'PVP_1_avg', u'Average_Cost_avg']
     text_features = [u'Part_Desc_PT_concat', u'Part_Desc_concat']
     for feature in categorical_features:
@@ -115,7 +115,7 @@ def dataset_preparation(ml_dataset, tag):
     # print('Train data has %i rows and %i columns' % (train.shape[0], train.shape[1]))
     # print('Test data has %i rows and %i columns' % (test.shape[0], test.shape[1]))
 
-    drop_rows_when_missing = [u'Part_Ref']
+    drop_rows_when_missing = []
     impute_when_missing = [{'impute_with': u'MEAN', 'feature': u'PVP_1_avg'}, {'impute_with': u'MEAN', 'feature': u'Average_Cost_avg'}]
 
     # Features for which we drop rows with missing values
@@ -140,7 +140,7 @@ def dataset_preparation(ml_dataset, tag):
         test[feature['feature']] = test[feature['feature']].fillna(v)
         # print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
-    categorical_to_dummy_encode = [u'PLR_Account_first', u'Client_Id', u'Part_Ref']
+    categorical_to_dummy_encode = [u'PLR_Account_first', u'Client_Id']
     dummy_values = select_dummy_values(train, categorical_to_dummy_encode, limit_dummies=100)
     dummy_encode_dataframe(train, dummy_values, tag, save_enc=1)
     dummy_encode_dataframe(test, dummy_values, tag)
