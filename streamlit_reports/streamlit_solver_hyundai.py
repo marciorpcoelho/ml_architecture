@@ -371,16 +371,25 @@ def co2_simulator():
         print(pd.DataFrame(columns = ['Veiculo','Numero de veiculos']))
         print('3.5')
         reset_changes = col1.button('Limpar alterações em cache')
-    
         if reset_changes:
             session_state.sales_plan_changes = {}
             session_state.num_added_electrics = 0
+            
+    # save file
+    current_date, _ = level_1_e_deployment.time_tags(format_date='%Y%m%d')
+
+    csv = sales_plan_changed.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    file_name = 'Plano_Vendas_{}_{}.csv'.format('Hyundai', current_date)
+    
+    href = f'<a href="data:file/csv;base64,{b64}" download={file_name}>Gravar Plano de vendas como csv</a>'
+    with col1: st.markdown(href, unsafe_allow_html=True)
 
 @st.cache(show_spinner=False)
 def get_co2_eff_sales(options_file):   
         
     eff_sales = level_1_a_data_acquisition.sql_retrieve_df_specified_query(
-        'SQL Prd',  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
+        options_file.DSN_SRV3_PRD,  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
         options_file.sql_info['database_source'], 
         options_file, 
         options_file.eff_sales_temp_query
@@ -393,7 +402,7 @@ def get_co2_sales_plan(options_file):
         
     sales_plan_raw = get_data_v2(
         options_file,
-        'SQL Prd',  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR 
+        options_file.DSN_SRV3_PRD,  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR 
         options_file.sql_info['database_source'], 
         options_file.sql_info['sales_plan_aux']
     )
@@ -406,7 +415,7 @@ def get_co2_sales_plan(options_file):
     sales_plan_raw = sales_plan_raw[sales_plan_raw['Sales_Plan_Year'] == 2021] 
         
     vehicle_data = level_1_a_data_acquisition.sql_retrieve_df_specified_query(
-        'SQL Prd',  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
+        options_file.DSN_SRV3_PRD,  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
         options_file.sql_info['database_source'], 
         options_file, 
         options_file.vehicle_data_query
@@ -454,7 +463,7 @@ def get_co2_sales_plan(options_file):
 def get_vehicle_data(options_file):   
         
     vehicle_data = level_1_a_data_acquisition.sql_retrieve_df_specified_query(
-        'SQL Prd',  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
+        options_file.DSN_SRV3_PRD,  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
         options_file.sql_info['database_source'], 
         options_file, 
         options_file.vehicle_data_query
@@ -463,7 +472,7 @@ def get_vehicle_data(options_file):
     return vehicle_data
 
 def order_optimization():
-    
+    print('oo 1')
     st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda - Importador</h1>", unsafe_allow_html=True)
     st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Hyundai e Honda</h2>", unsafe_allow_html=True)
 
@@ -476,37 +485,45 @@ def order_optimization():
     all_brands_sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     live_ocn_df = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['current_live_ocn_table'], model_flag=1)
     end_month_index, current_year = period_calculation()
-
+    print('oo 2')
     dw_last_updated_date = data_v2['Record_Date'].max()
     placeholder_dw_date.markdown("<p style='text-align: right;'>Última Atualização DW - {}</p>".format(dw_last_updated_date), unsafe_allow_html=True)
 
     data_v2 = col_normalization(data_v2.copy(), cols_to_normalize, reverse_normalization_cols)
     max_number_of_cars_sold = max(data_v2['Sum_Qty_CHS'])
     sel_brand = st.sidebar.selectbox('Marca:', ['-'] + [x for x in options_file.nlr_code_desc.keys()], index=0, key=session_state.run_id)
-
+    print('oo 3')
     if '-' not in sel_brand:
-        co2_nedc, co2_wltp, total_sales = co2_processing(all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), :].copy(), end_month_index, current_year)
+        print('oo 3.1')
+        co2_nedc, co2_wltp, total_sales = co2_processing(
+            all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), :].copy(), 
+            end_month_index, 
+            current_year
+            )
+        
+        print('oo 3.1.1')
         co2_nedc_before_order = co2_nedc / total_sales
         co2_wltp_before_order = co2_wltp / total_sales
         st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc_before_order, co2_wltp_before_order))
+        print('oo 3.1.2')
         if end_month_index == 1:
             sel_period_string = '{} de {}'.format('Jan', current_year)
         else:
             sel_period_string = '{} a {} de {}'.format(total_months_list[0], total_months_list[end_month_index - 1], current_year)
-
+        print('oo 3.2')
         st.write('Plano de Vendas Total, {}: {} viaturas'.format(sel_period_string, int(total_sales)))
         placeholder_sales_plan_single_model = st.empty()
 
         data_models_v2 = data_v2.loc[data_v2['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'PT_PDB_Model_Desc'].unique()
         sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(sorted(data_models_v2)), index=0)
-
+        print('oo 3.3')
         sales_plan_last_updated_date = all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'Record_Date'].max()
         proposals_last_updated_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
         margins_last_update_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
 
         placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
         placeholder_margins_date.markdown("<p style='text-align: right;'>Última Atualização Margens HP - {}</p>".format(margins_last_update_date), unsafe_allow_html=True)
-
+        print('oo 3.4')
         if sel_brand == 'Hyundai':
             placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
         elif sel_brand == 'Honda':
@@ -719,16 +736,19 @@ def period_calculation():
 
 @st.cache(show_spinner=False)
 def co2_processing(df, end_date_month_number, current_year):
+    
+    print('co2 1')
     # The following condition is only for the first year of the month, where, even though January isn't complete, we default to use the sales plan for that month;
     if end_date_month_number == 1:
         df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == current_year), :].loc[:, ['Jan']].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
     else:
         df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == current_year), :].loc[:, total_months_list[0:end_date_month_number - 1]].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
-
+    print('co2 2')
     df.loc[:, 'Sales_Sum_Times_Co2_WLTP'] = df['Sales_Sum'] * df['WLTP_CO2']
     df.loc[:, 'Sales_Sum_Times_Co2_NEDC'] = df['Sales_Sum'] * df['NEDC_CO2']
     co2_wltp_sum = df['Sales_Sum_Times_Co2_WLTP'].sum(axis=0)
     co2_nedc_sum = df['Sales_Sum_Times_Co2_NEDC'].sum(axis=0)
+    print('co2 3')
     total_sales = df['Sales_Sum'].sum(axis=0)
 
     return co2_nedc_sum, co2_wltp_sum, total_sales
