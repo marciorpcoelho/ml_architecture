@@ -299,6 +299,8 @@ def feature_engineering_part_desc(df):
     part_desc_similarity(df, 'Part_Desc')
     part_desc_similarity(df, 'Part_Desc_PT')
 
+    return df
+
 
 def part_desc_similarity(df, col):
 
@@ -385,7 +387,7 @@ def flow_step_4(df):
 
     df = df.groupby('Part_Ref').apply(group_by_rules)
     df.reset_index(inplace=True)
-    df.to_csv('dbs/df_after_flow_step_4.csv')
+    df.to_csv('dbs/df_after_flow_step_4.csv', index=False)
 
     log_record('Step 4 ended.', options_file.project_id)
     return df
@@ -474,6 +476,16 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], 'second_others', clf=other_families_clf)
     master_file_sub_50_scored = prob_thres_col_creation(master_file_sub_50_scored)
 
+    print('master_file_scored_over_50')
+    print(list(master_file_scored_over_50))
+    print(len(list(master_file_scored_over_50)))
+    print('duplicated master_file_scored_over_50: {}'.format(master_file_scored_over_50.columns.duplicated()))
+
+    print('master_file_sub_50_scored')
+    print(list(master_file_sub_50_scored))
+    print(len(list(master_file_sub_50_scored)))
+    print('duplicated master_file_sub_50_scored: {}'.format(master_file_sub_50_scored.columns.duplicated()))
+
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])
     print(master_file_final.shape)
 
@@ -544,17 +556,15 @@ def flow_step_10(df, manual_classifications):
 
 
 def prob_thres_col_creation(df):
-    compute_Dataset_w_Count_prepared_by_Part_Ref_scored_df = df
+    proba_cols = [x for x in list(df) if x.startswith('proba')]
 
-    data_non_classified_scored_df = compute_Dataset_w_Count_prepared_by_Part_Ref_scored_df  # For this sample code, simply copy input to output
-    proba_cols = [x for x in list(data_non_classified_scored_df) if x.startswith('proba')]
-
-    data_non_classified_scored_df['Max_Prob'] = data_non_classified_scored_df[proba_cols].max(axis=1)
-    data_non_classified_scored_df['New_Prediction_50'] = np.where(data_non_classified_scored_df['Max_Prob'] <= 0.5, 1, data_non_classified_scored_df['prediction'])
-    data_non_classified_scored_df['New_Prediction_80'] = np.where(data_non_classified_scored_df['Max_Prob'] < 0.8, 1, data_non_classified_scored_df['prediction'])
-    data_non_classified_scored_df['New_Prediction_85'] = np.where(data_non_classified_scored_df['Max_Prob'] < 0.85, 1, data_non_classified_scored_df['prediction'])
-    data_non_classified_scored_df['New_Prediction_90'] = np.where(data_non_classified_scored_df['Max_Prob'] < 0.9, 1, data_non_classified_scored_df['prediction'])
-    data_non_classified_scored_df['New_Prediction_95'] = np.where(data_non_classified_scored_df['Max_Prob'] < 0.95, 1, data_non_classified_scored_df['prediction'])
+    df['Max_Prob'] = df[proba_cols].max(axis=1)
+    df['New_Prediction_50'] = np.where(df['Max_Prob'] <= 0.5, 1, df['prediction'])
+    df['New_Prediction_80'] = np.where(df['Max_Prob'] < 0.8, 1, df['prediction'])
+    df['New_Prediction_85'] = np.where(df['Max_Prob'] < 0.85, 1, df['prediction'])
+    df['New_Prediction_90'] = np.where(df['Max_Prob'] < 0.9, 1, df['prediction'])
+    df['New_Prediction_95'] = np.where(df['Max_Prob'] < 0.95, 1, df['prediction'])
+    df = df.drop(proba_cols, axis=1)
 
     return df
 
