@@ -76,7 +76,7 @@ total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 # choose between Order Optimization or CO2 simulator
 main_function = st.selectbox(
     label = 'Aplicação:', 
-    options = ['Simulador CO2', 'Order Optimization'],
+    options = ['Simulador CO2', 'Sug. Encomenda'],
     help = 'Por favor escolha a aplicação a usar'
     )
 
