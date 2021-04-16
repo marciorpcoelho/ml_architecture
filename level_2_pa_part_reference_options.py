@@ -194,6 +194,8 @@ stop_words = {
     'Parts_Specific_Common_Stop_Words': ['esquerdo', 'direito', 'frente', 'tras', 'kit', 'jogo']  # Added 'esquerdo', 'direito', 'frente', 'tras' because they appear in too many Product Groups and provide nearly no information;
 }
 
+stop_words_common = ['de', 'do', 'da', 'a', 'e', 'o', 'p', 'para', 'com', 'from', 'and', 'y', 'la']
+
 abbreviations_dict = {
     'str': 'string',
     'abbr': 'abbreviation',
