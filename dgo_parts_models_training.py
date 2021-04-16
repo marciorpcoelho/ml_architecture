@@ -27,8 +27,8 @@ def main():
     return
 
 
-def model_training(ml_dataset, tag, clf=None):
-    train, test, train_X, test_X, train_Y, test_Y, target_map, inv_target_map = dataset_preparation(ml_dataset, tag)
+def model_training(df_full, cols, tag, clf=None):
+    train, test, train_X, test_X, train_Y, test_Y, target_map, inv_target_map = dataset_preparation(df_full, cols, tag)
     cm_flag = 0
     df_cm_train, df_cm_test = pd.DataFrame(), pd.DataFrame()
     metrics_dict = {}
@@ -78,7 +78,7 @@ def model_training(ml_dataset, tag, clf=None):
     predictions = pd.concat([predictions_train, predictions_test])
     probabilities = pd.concat([probabilities_train, probabilities_test])
 
-    ml_dataset_scored = ml_dataset.join(predictions, how='left')
+    ml_dataset_scored = df_full.join(predictions, how='left')
     ml_dataset_scored = ml_dataset_scored.join(probabilities, how='left')
     # ml_dataset_scored['Product_Group_DW'] = ml_dataset_scored['__target__'].replace(inv_target_map)
     # ml_dataset_scored.drop('__target__', axis=1, inplace=True)
@@ -86,10 +86,10 @@ def model_training(ml_dataset, tag, clf=None):
     return ml_dataset_scored, clf, df_cm_train, df_cm_test, metrics_dict
 
 
-def dataset_preparation(ml_dataset, tag):
-    ml_dataset = ml_dataset[[u'PLR_Account_first', u'Product_Group_DW', u'PVP_1_avg', u'Part_Desc_PT_concat', u'Client_Id', u'Part_Desc_concat', u'Average_Cost_avg']]
+def dataset_preparation(df, cols, tag):
+    ml_dataset = df[cols]
 
-    categorical_features = [u'PLR_Account_first', u'Client_Id']
+    categorical_features = [u'PLR_Account_first', u'Client_Id', u'brand']
     numerical_features = [u'PVP_1_avg', u'Average_Cost_avg']
     text_features = [u'Part_Desc_PT_concat', u'Part_Desc_concat']
     for feature in categorical_features:
@@ -140,8 +140,7 @@ def dataset_preparation(ml_dataset, tag):
         test[feature['feature']] = test[feature['feature']].fillna(v)
         # print('Imputed missing values in feature %s with value %s' % (feature['feature'], coerce_to_unicode(v)))
 
-    categorical_to_dummy_encode = [u'PLR_Account_first', u'Client_Id']
-    dummy_values = select_dummy_values(train, categorical_to_dummy_encode, limit_dummies=100)
+    dummy_values = select_dummy_values(train, categorical_features, limit_dummies=100)
     dummy_encode_dataframe(train, dummy_values, tag, save_enc=1)
     dummy_encode_dataframe(test, dummy_values, tag)
 
