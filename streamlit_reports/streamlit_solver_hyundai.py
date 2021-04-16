@@ -5,7 +5,7 @@ import numpy as np
 import os
 import sys
 import time
-from datetime import date
+from datetime import date, datetime
 from traceback import format_exc
 from streamlit.script_runner import RerunException
 from streamlit.script_request_queue import RerunData
@@ -83,9 +83,8 @@ main_function = st.selectbox(
 def co2_simulator():
     from sympy import solve, Poly, Eq, Function, exp
     from sympy.abc import x, y, z, a, b
-    from datetime import datetime
     
-    st.markdown("<h1 style='text-align: center;'>Simulador de CO2</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Simulador de CO2 - Hyundai</h1>", unsafe_allow_html=True)
     
     col1, col2 = st.beta_columns([1, 3])
     
@@ -113,10 +112,8 @@ def co2_simulator():
     
     # get cached data for sales plan and effective sales 
     eff_sales = get_co2_eff_sales(options_file)
-    eff_sales = eff_sales[eff_sales['NLR_Code'] == '702']
-    eff_sales = eff_sales[eff_sales['Sales_Plan_Year'] == 2021]
-    
-    #st.dataframe(eff_sales)
+    eff_sales = eff_sales[eff_sales['NLR_Code'] == str(options_file.nlr_code_desc['Hyundai'])]
+    eff_sales = eff_sales[eff_sales['Sales_Plan_Year'] == datetime.today().year]
     
     # get sales plan
     sales_plan, input_options = get_co2_sales_plan(options_file)
@@ -159,7 +156,8 @@ def co2_simulator():
     sales_plan = sales_plan[original_cols]
     sales_plan = sales_plan.sort_values(by = 'WLTP_CO2')
             
-    sales_plan['Ano'] = sales_plan[['Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']].sum(axis = 1)
+    # sales_plan['Ano'] = sales_plan[['Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']].sum(axis = 1)
+    sales_plan['Ano'] = sales_plan[total_months_list].sum(axis = 1)
     sales_plan = sales_plan.groupby(['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2']).sum()
     sales_plan = sales_plan.reset_index()
     
@@ -314,16 +312,20 @@ def co2_simulator():
         return z
     
     col2.dataframe(
-        data = sales_plan_changed[[
-            'WLTP_CO2', 'Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ano', 'Alteração', 'Total'
-            ]].astype(int).style.apply(rower, axis=None),
+        data = sales_plan_changed[
+            list(['WLTP_CO2']) + 
+            total_months_list + 
+            list(['Ano', 'Alteração', 'Total'])
+            ].astype(int).style.apply(rower, axis=None),
         height = 2000
         )
-    
+        
     with col2: st.write('Total de veiculos por mês:')
-    sales_plan_sum = pd.DataFrame(sales_plan_changed[[
-        'Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ano', 'Alteração', 'Total'
-        ]].sum(axis = 0)).T.astype(int)
+    sales_plan_sum = pd.DataFrame(sales_plan_changed[
+        list(['WLTP_CO2']) + 
+        total_months_list + 
+        list(['Ano', 'Alteração', 'Total'])
+        ].sum(axis = 0)).T.astype(int)
     col2.dataframe(sales_plan_sum)
 
     col1.write('Alterações em cache:')
@@ -428,11 +430,12 @@ def get_co2_sales_plan(options_file):
     
     input_options["version_co2"] = input_options["PT_PDB_Commercial_Version_Desc"] + ' - ' + input_options["WLTP_CO2"].astype(str) + ' g/km'
     
-    #st.dataframe(input_options)
-    
     # data filtering and processing
-    sales_plan['Ano'] = sales_plan[['Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']].sum(axis = 1)
-    sales_plan = sales_plan[['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2', 'Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ano']]
+    sales_plan['Ano'] = sales_plan[total_months_list].sum(axis = 1)
+    sales_plan['Ano'] = sales_plan[total_months_list].sum(axis = 1)
+
+    #sales_plan = sales_plan[['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2', 'Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ano']]
+    sales_plan = sales_plan[list(['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2']) + total_months_list + list(['Ano'])]
     sales_plan = sales_plan.groupby(['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2']).sum()
     sales_plan = sales_plan.reset_index()
 
@@ -442,7 +445,7 @@ def get_co2_sales_plan(options_file):
 def get_vehicle_data(options_file):   
         
     vehicle_data = level_1_a_data_acquisition.sql_retrieve_df_specified_query(
-        options_file.DSN_SRV3_PRD,  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
+        options_file.DSN_SRV3_PRD,  
         options_file.sql_info['database_source'], 
         options_file, 
         options_file.vehicle_data_query
@@ -932,19 +935,24 @@ def main(main_function):
     if main_function == 'Simulador CO2':
         co2_simulator()
         
-    else:
+    elif main_function == 'Sug. Encomenda':
         order_optimization()
+        
+    else:
+        return
 
 if __name__ == '__main__':
     try:
         main(main_function)
             
     except Exception as exception:
-        project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
-        log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
-        error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
-        session_state.run_id += 1
-        st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
-        time.sleep(10)
+        print('ERRO!')
+        print(sys.exc_info())
+        # project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
+        # log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
+        # error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
+        # session_state.run_id += 1
+        # st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
+        time.sleep(2)
         raise RerunException(RerunData())
 
