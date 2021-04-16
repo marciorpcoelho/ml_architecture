@@ -75,7 +75,7 @@ total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 
 # choose between Order Optimization or CO2 simulator
 main_function = st.selectbox(
-    label = 'Por favor escolha a aplicação a usar', 
+    label = 'Por favor escolha a aplicação a usar:', 
     options = ['Simulador CO2', 'Sug. Encomenda'],
     help = 'Por favor escolha a aplicação a usar'
     )
@@ -958,4 +958,3 @@ if __name__ == '__main__':
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
         raise RerunException(RerunData())
-
