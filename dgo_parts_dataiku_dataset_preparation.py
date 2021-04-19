@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
+from joblib import dump
+from sklearn import feature_extraction
 import time
+import nltk
+import string
 import pyodbc
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
 from modules.level_1_e_deployment import sql_inject
@@ -179,10 +183,12 @@ def main():
     log_record('Step 1 ended.', options_file.project_id)
     master_file = flow_step_2(master_file)
     control_prints(master_file, '2')
-    master_file = flow_step_3(master_file)
+    master_file, keywords_df = flow_step_3(master_file)
     control_prints(master_file, '3')
     master_file = flow_step_4(master_file)
     control_prints(master_file, '4')
+    master_file = flow_step_4_5(master_file, keywords_df)
+    control_prints(master_file, '4.5')
     master_file, manual_classifications = flow_step_5(master_file, [dgo_family_10_loc, dgo_family_13_loc, dgo_manual_classified_parts_loc])
     control_prints(master_file, '5')
     master_file_non_classified, master_file_other_families, master_file_classified_families = flow_step_6(master_file)
@@ -199,7 +205,7 @@ def main():
     control_prints(master_file_final, '9')
     master_file_final = flow_step_10(master_file_final, manual_classifications)
     control_prints(master_file_final, '10')
-    master_file_final.to_csv('dbs/master_file_final.csv')
+    master_file_final.to_csv('dbs/master_file_final.csv', index=False)
     deployment(master_file_final, main_families_cm, other_families_cm)
 
     return main_families_metrics_dict, other_families_metrics_dict
@@ -230,21 +236,33 @@ def flow_step_3(df):
     log_record('Step 3 started.', options_file.project_id)
 
     # Step 0
-    df = feature_engineering_part_ref(df)
-    df = feature_engineering_part_desc(df)
-
-    # Step 1
-    regex_filter_1 = r'^[0-9]*$'
-    filter_1 = df['Part_Desc_PT'].str.contains(regex_filter_1, na=False)
-    filter_2 = df['Part_Desc'].str.contains(regex_filter_1, na=False)
-    df = df[~filter_1 & ~filter_2]
-
-    # Step 2
     lower_case_cols = ['Part_Desc_PT', 'Part_Desc']
     df = lowercase_column_conversion(df.copy(), lower_case_cols)
 
-    # Step 3
+    # Step 1
     df = trim_columns(df.copy(), lower_case_cols)
+
+    # Step 1.5
+    text_cols = ['Part_Desc_PT', 'Part_Desc']
+    for col in text_cols:
+        df[col] = df[col].apply(remove_punctuations)
+        df[col] = df[col].apply(lambda x: ' '.join([word for word in x.split() if word not in options_file.stop_words_common]))
+
+    # Step 2
+    df = feature_engineering_counts(df)
+    # df = feature_engineering_part_desc(df)
+
+    # Step 3
+    # Removes numbers
+    df['Part_Desc_PT'] = df['Part_Desc_PT'].str.replace(r'\d+', ' ')
+    df['Part_Desc'] = df['Part_Desc'].str.replace(r'\d+', ' ')
+
+    # Step 3.5
+    # Creates keywords data
+    part_desc_keywords = keyword_generation(df, 'Part_Desc')
+    part_desc_pt_keywords = keyword_generation(df, 'Part_Desc_PT')
+    keywords = pd.concat([part_desc_keywords, part_desc_pt_keywords])
+    keywords.to_csv('dbs/keywords_per_product_group_dw.csv', index=False)
 
     # Step 4
     df = product_group_dw_corrections_on_desc(df.copy())
@@ -275,15 +293,80 @@ def flow_step_3(df):
     df = product_group_dw_complete_replaces(df.copy())
 
     log_record('Step 3 ended.', options_file.project_id)
+    return df, keywords
+
+
+def keyword_generation(df, text_col):
+
+    final_df = pd.DataFrame()
+    df_grouped = df[df['Product_Group_DW'] != '1'].groupby('Product_Group_DW')
+
+    for key, group in df_grouped:
+        _, df_words = get_ngrams_from_df(group, text_col, 3, ngrams_degree=2)
+        df_words['Column'] = text_col
+
+        final_df = pd.concat([final_df, df_words])
+
+    final_df.to_csv('dbs/product_group_dw_{}_keywords.csv'.format(text_col), index=False)
+
     return df
 
 
-def feature_engineering_part_ref(df):
+def detect_keywords(df, col, list_words):
+
+    lst_grams = [len(word.split(" ")) for word in list_words]
+    vectorizer = feature_extraction.text.CountVectorizer(
+        vocabulary=list_words,
+        ngram_range=(min(lst_grams), max(lst_grams)))
+    dtf_X = pd.DataFrame(vectorizer.fit_transform(df[col]).todense(), columns=[col + '_' + word for word in list_words])
+    ## add the new features as columns
+    df = pd.concat([df, dtf_X.set_index(df.index)], axis=1)
+
+    return df
+
+
+def get_ngrams_from_df(df, desc_col, top_ngrams_count, ngrams_degree=1):
+    corpus = df[desc_col]
+    lst_tokens = nltk.tokenize.word_tokenize(corpus.str.cat(sep=" "))
+    dict_words = {}
+    df_words = pd.DataFrame()
+
+    # Unigrams
+    dic_words_freq = nltk.FreqDist(lst_tokens)
+    df_words = pd.concat([df_words, pd.DataFrame(dic_words_freq.most_common(top_ngrams_count), columns=["Word", "Freq"])])
+    df_words['ngram_degree'] = 1
+    dict_words[1] = [word[0] for word in dic_words_freq.most_common(top_ngrams_count)]
+    # print('1-grams: {}'.format(dict_words[1]))
+
+    if ngrams_degree > 1:
+        for ngram_degree in range(2, ngrams_degree+1):
+            dic_words_freq = nltk.FreqDist(nltk.ngrams(lst_tokens, ngrams_degree))
+            dtf = pd.DataFrame(dic_words_freq.most_common(top_ngrams_count), columns=["Word", "Freq"])
+            dtf["Word"] = dtf["Word"].apply(lambda x: " ".join(string for string in x))
+            dtf['ngram_degree'] = ngram_degree
+            df_words = pd.concat([df_words, dtf])
+            list_words_ngram = [" ".join(string for string in word[0]) for word in dic_words_freq.most_common(top_ngrams_count)]
+            # print('{}-grams: {}'.format(ngrams_degree, list_words_ngram))
+            dict_words[ngram_degree] = list_words_ngram
+
+    df_words.sort_values(by=['Freq', 'ngram_degree'], ascending=False, inplace=True)
+    return dict_words, df_words
+
+
+def remove_punctuations(text):
+    for punctuation in string.punctuation:
+        text = text.replace(punctuation, '')
+    return text
+
+
+def feature_engineering_counts(df):
     # Get information from the part reference
 
     # Letters/numbers/space/etc count:
     start = time.time()
     df = digit_counts(df, 'Part_Ref')
+    df = digit_counts(df, 'Part_Desc')
+    df = digit_counts(df, 'Part_Desc_PT')
     print('Digit Counts Elapsed time: {:.2f}s'.format(time.time() - start))
 
     start_2 = time.time()
@@ -297,6 +380,8 @@ def feature_engineering_part_desc(df):
 
     part_desc_similarity(df, 'Part_Desc')
     part_desc_similarity(df, 'Part_Desc_PT')
+
+    return df
 
 
 def part_desc_similarity(df, col):
@@ -318,20 +403,17 @@ def get_data_product_group_sql(others_dict, options_file_in):
     for key in others_dict.keys():
         df.loc[df['Product_Group_Code'] == str(key), 'PT_Product_Group_Desc'] = others_dict[key]
 
-    df['Product_Group_Merge'] = df['PT_Product_Group_Level_1_Desc'] + ', ' + df['PT_Product_Group_Level_2_Desc'] + ', ' + df['PT_Product_Group_Desc']
-    df.sort_values(by='Product_Group_Merge', inplace=True)
-    # df['PT_Product_Group_Desc'] = df['PT_Product_Group_Desc'].map(others_dict).fillna(df['PT_Product_Group_Desc'])
-
     return df
 
 
 def digit_counts(df, col):
 
-    df['part_ref_length'] = df.apply(lambda x: len(x[col]), axis=1)
-    df['part_ref_digits_count'] = df.apply(lambda x: sum(c.isdigit() for c in x[col]), axis=1)
-    df['part_ref_letters_count'] = df.apply(lambda x: sum(c.isalpha() for c in x[col]), axis=1)
-    df['part_ref_spaces_count'] = df.apply(lambda x: sum(c.isspace() for c in x[col]), axis=1)
-    df['part_ref_others_count'] = df.apply(lambda x: len(x[col]) - x['part_ref_digits_count'] - x['part_ref_letters_count'] - x['part_ref_spaces_count'], axis=1)
+    df[col + '_length'] = df.apply(lambda x: len(x[col]), axis=1)
+    df[col + '_word_count'] = df.apply(lambda x: len(str(x[col]).split(" ")), axis=1)
+    df[col + '_digits_count'] = df.apply(lambda x: sum(c.isdigit() for c in x[col]), axis=1)
+    df[col + '_letters_count'] = df.apply(lambda x: sum(c.isalpha() for c in x[col]), axis=1)
+    df[col + '_spaces_count'] = df.apply(lambda x: sum(c.isspace() for c in x[col]), axis=1)
+    df[col + '_others_count'] = df.apply(lambda x: len(x[col]) - x[col + '_digits_count'] - x[col + '_letters_count'] - x[col + '_spaces_count'], axis=1)
 
     return df
 
@@ -384,9 +466,22 @@ def flow_step_4(df):
 
     df = df.groupby('Part_Ref').apply(group_by_rules)
     df.reset_index(inplace=True)
-    df.to_csv('dbs/df_after_flow_step_4.csv')
+    df.to_csv('dbs/df_after_flow_step_4.csv', index=False)
 
     log_record('Step 4 ended.', options_file.project_id)
+    return df
+
+
+def flow_step_4_5(df, keywords_df):
+    log_record('Step 4.5 started', options_file.project_id)
+    keywords_col_1 = list(set(keywords_df.loc[keywords_df['Column'] == 'Part_Desc', 'Word']))
+    keywords_col_2 = list(set(keywords_df.loc[keywords_df['Column'] == 'Part_Desc_PT', 'Word']))
+
+    # Detects keywords data
+    df = detect_keywords(df, 'Part_Desc_concat', keywords_col_1)
+    df = detect_keywords(df, 'Part_Desc_PT_concat', keywords_col_2)
+
+    log_record('Step 4.5 ended.', options_file.project_id)
     return df
 
 
@@ -447,10 +542,12 @@ def flow_step_7(df):
 def flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified):
     log_record('Step 8 started.', options_file.project_id)
 
-    starting_cols = list(master_file_classified_families_filtered)
+    starting_cols = [x for x in list(master_file_classified_families_filtered) if x not in ['Part_Ref']]
 
-    _, main_families_clf, main_families_cm_train, main_families_cm_test, main_families_metrics_dict = model_training(master_file_classified_families_filtered)  # Modelo conhece 50 familias
-    _, other_families_clf, other_families_cm_train, other_families_cm_test, other_families_metrics_dict = model_training(master_file_other_families_filtered)  # Modelo conhece 8 familias
+    _, main_families_clf, main_families_cm_train, main_families_cm_test, main_families_metrics_dict = model_training(master_file_classified_families_filtered, starting_cols, 'main_families_clf')  # Modelo conhece 50 familias
+    dump(main_families_clf, options_file.main_families_clf_path)
+    _, other_families_clf, other_families_cm_train, other_families_cm_test, other_families_metrics_dict = model_training(master_file_other_families_filtered, starting_cols, 'other_families_clf')  # Modelo conhece 8 familias
+    dump(other_families_clf, options_file.other_families_clf_path)
 
     # print('Main Families CM (Test): \n{}'.format(main_families_cm_test))
     main_families_cm_test.to_csv('dbs/main_families_cm_temp.csv')
@@ -458,7 +555,7 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     other_families_cm_test.to_csv('dbs/other_families_cm_tmp.csv')
 
     # First Classification
-    master_file_scored, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), main_families_clf)
+    master_file_scored, _, _, _, _ = model_training(pd.concat([master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified]), starting_cols, 'second_main_families_clf', clf=main_families_clf)
     master_file_scored = prob_thres_col_creation(master_file_scored)
 
     # First 0.5 CutOff
@@ -468,8 +565,18 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     print('first classification, sub 50 shape:', master_file_scored_sub_50.shape)
 
     # Second Classification
-    master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], other_families_clf)
+    master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], starting_cols, 'second_others', clf=other_families_clf)
     master_file_sub_50_scored = prob_thres_col_creation(master_file_sub_50_scored)
+
+    print('master_file_scored_over_50')
+    print(list(master_file_scored_over_50))
+    print(len(list(master_file_scored_over_50)))
+    print('duplicated master_file_scored_over_50: {}'.format(master_file_scored_over_50.columns.duplicated()))
+
+    print('master_file_sub_50_scored')
+    print(list(master_file_sub_50_scored))
+    print(len(list(master_file_sub_50_scored)))
+    print('duplicated master_file_sub_50_scored: {}'.format(master_file_sub_50_scored.columns.duplicated()))
 
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])
     print(master_file_final.shape)
@@ -541,17 +648,15 @@ def flow_step_10(df, manual_classifications):
 
 
 def prob_thres_col_creation(df):
-    compute_Dataset_w_Count_prepared_by_Part_Ref_scored_df = df
+    proba_cols = [x for x in list(df) if x.startswith('proba')]
 
-    data_non_classified_scored_df = compute_Dataset_w_Count_prepared_by_Part_Ref_scored_df  # For this sample code, simply copy input to output
-    proba_cols = [x for x in list(data_non_classified_scored_df) if x.startswith('proba')]
-
-    data_non_classified_scored_df['Max_Prob'] = data_non_classified_scored_df[proba_cols].max(axis=1)
-    data_non_classified_scored_df['New_Prediction_50'] = np.where(data_non_classified_scored_df['Max_Prob'] <= 0.5, 1, data_non_classified_scored_df['prediction'])
-    data_non_classified_scored_df['New_Prediction_80'] = np.where(data_non_classified_scored_df['Max_Prob'] < 0.8, 1, data_non_classified_scored_df['prediction'])
-    data_non_classified_scored_df['New_Prediction_85'] = np.where(data_non_classified_scored_df['Max_Prob'] < 0.85, 1, data_non_classified_scored_df['prediction'])
-    data_non_classified_scored_df['New_Prediction_90'] = np.where(data_non_classified_scored_df['Max_Prob'] < 0.9, 1, data_non_classified_scored_df['prediction'])
-    data_non_classified_scored_df['New_Prediction_95'] = np.where(data_non_classified_scored_df['Max_Prob'] < 0.95, 1, data_non_classified_scored_df['prediction'])
+    df['Max_Prob'] = df[proba_cols].max(axis=1)
+    df['New_Prediction_50'] = np.where(df['Max_Prob'] <= 0.5, 1, df['prediction'])
+    df['New_Prediction_80'] = np.where(df['Max_Prob'] < 0.8, 1, df['prediction'])
+    df['New_Prediction_85'] = np.where(df['Max_Prob'] < 0.85, 1, df['prediction'])
+    df['New_Prediction_90'] = np.where(df['Max_Prob'] < 0.9, 1, df['prediction'])
+    df['New_Prediction_95'] = np.where(df['Max_Prob'] < 0.95, 1, df['prediction'])
+    df = df.drop(proba_cols, axis=1)
 
     return df
 
@@ -614,7 +719,27 @@ def group_by_rules(x):
     d['PLR_Account_first'] = x['PLR_Account'].head(1).values[0]
     d['Part_Desc_PT_concat'] = ' '.join(list(set(x['Part_Desc_PT'])))
 
-    return pd.Series(d, index=['Part_Desc_concat', 'Product_Group_DW', 'Client_Id', 'Average_Cost_avg', 'PVP_1_avg', 'PLR_Account_first', 'Part_Desc_PT_concat'])
+    d['Part_Ref_length'] = x['Part_Ref_length'].mean()
+    d['Part_Ref_digits_count'] = x['Part_Ref_digits_count'].mean()
+    d['Part_Ref_letters_count'] = x['Part_Ref_letters_count'].mean()
+    d['Part_Ref_spaces_count'] = x['Part_Ref_spaces_count'].mean()
+    d['Part_Ref_others_count'] = x['Part_Ref_others_count'].mean()
+
+    d['Part_Desc_length'] = x['Part_Desc_length'].mean()
+    d['Part_Desc_digits_count'] = x['Part_Desc_digits_count'].mean()
+    d['Part_Desc_letters_count'] = x['Part_Desc_letters_count'].mean()
+    d['Part_Desc_spaces_count'] = x['Part_Desc_spaces_count'].mean()
+    d['Part_Desc_others_count'] = x['Part_Desc_others_count'].mean()
+
+    d['Part_Desc_PT_length'] = x['Part_Desc_PT_length'].mean()
+    d['Part_Desc_PT_digits_count'] = x['Part_Desc_PT_digits_count'].mean()
+    d['Part_Desc_PT_letters_count'] = x['Part_Desc_PT_letters_count'].mean()
+    d['Part_Desc_PT_spaces_count'] = x['Part_Desc_PT_spaces_count'].mean()
+    d['Part_Desc_PT_others_count'] = x['Part_Desc_PT_others_count'].mean()
+
+    d['brand'] = x['brand'].head(1).values[0]
+
+    return pd.Series(d, index=['Part_Desc_concat', 'Product_Group_DW', 'Client_Id', 'Average_Cost_avg', 'PVP_1_avg', 'PLR_Account_first', 'Part_Desc_PT_concat', 'part_ref_length', 'part_ref_digits_count', 'part_ref_letters_count', 'part_ref_spaces_count', 'part_ref_others_count', 'brand'])
 
 
 def product_group_dw_complete_replaces(df):
@@ -688,7 +813,7 @@ def deployment(df, main_families_cm, other_families_cm):
     df['Classification_Prob'] = df['Classification_Prob'].round(2)
     df['Part_Cost'] = df['Part_Cost'].round(2)
     df['Part_PVP'] = df['Part_PVP'].round(2)
-    df = df.astype({'Client_ID': 'str', 'Part_Cost': 'str', 'Part_PVP': 'str', 'Classification_Prob': 'str'})
+    df = df.astype({'Part_Ref': 'str', 'Client_ID': 'str', 'Part_Cost': 'str', 'Part_PVP': 'str', 'Classification_Prob': 'str'})
     df['Part_Description'] = df['Part_Description'].fillna("")
     df.dropna(subset=['Classification'], axis=0, inplace=True)
     sql_inject(df, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['parts_classification_table'], options_file, columns=['Part_Ref', 'Part_Description', 'Part_Cost', 'Part_PVP', 'Client_ID', 'Product_Group_DW', 'Classification', 'Classification_Prob', 'Classification_Flag'], truncate=1, check_date=1)
