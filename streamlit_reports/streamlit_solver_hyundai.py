@@ -86,7 +86,7 @@ def co2_simulator():
     from sympy import solve, Poly, Eq, Function, exp
     from sympy.abc import x, y, z, a, b
 
-    st.markdown("<h1 style='text-align: center;'>Simulador de CO2 - Hyundai</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Simulador de CO2 - Hyundai - Demo</h1>", unsafe_allow_html=True)
 
     col1, col2 = st.beta_columns([1, 3])
 
@@ -257,7 +257,7 @@ def co2_simulator():
     co2_final = (total_co2_final)/(total_vhe_final)
     with col2:
         st.write(
-            'Emissão média de CO2 do plano de vendas final = {} g/km, com {} veículos'.format(co2_final, total_vhe_final)
+            'Emissão média de CO2 do plano de vendas final = {:.4f} g/km, com {:.0f} veículos'.format(co2_final, total_vhe_final)
         )
 
     def rower(data):
