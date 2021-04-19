@@ -5,7 +5,7 @@ import numpy as np
 import os
 import sys
 import time
-from datetime import date
+from datetime import date, datetime
 from traceback import format_exc
 from streamlit.script_runner import RerunException
 from streamlit.script_request_queue import RerunData
@@ -29,8 +29,8 @@ truncate_query = ''' DELETE
 FROM [BI_DTR].[dbo].[VHE_Fact_MLG_OrderOptimization_Solver_Optimization_DTR]
 WHERE PT_PDB_Model_Desc = '{}'  '''
 
-st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda - Importador</h1>", unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Hyundai e Honda</h2>", unsafe_allow_html=True)
+# st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda - Importador</h1>", unsafe_allow_html=True)
+# st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Hyundai e Honda</h2>", unsafe_allow_html=True)
 
 hide_menu_style = """
         <style>
@@ -39,45 +39,448 @@ hide_menu_style = """
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
 
-url_hyperlink = '''
-    <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
-'''.format(options_file.documentation_url_solver_app)
-st.markdown(url_hyperlink, unsafe_allow_html=True)
+# url_hyperlink = '''
+#     <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
+# '''.format(options_file.documentation_url_solver_app)
+# st.markdown(url_hyperlink, unsafe_allow_html=True)
 
 placeholder_dw_date = st.empty()
 placeholder_sales_plan_date = st.empty()
 placeholder_proposal_date = st.empty()
 placeholder_margins_date = st.empty()
 
-session_state = SessionState.get(first_run_flag=0, run_id=0, run_id_scores=0, save_button_pressed_flag=0, model='', brand='',
-                                 daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'],
-                                 sel_margin_score_weight=score_weights['TotalGrossMarginPerc_normalized'],
-                                 sel_margin_ratio_score_weight=score_weights['MarginRatio_normalized'],
-                                 sel_qty_sold_score_weight=score_weights['Sum_Qty_CHS_normalized'],
-                                 sel_proposals_score_weight=score_weights['Proposals_VDC_normalized'],
-                                 sel_oc_stock_diff_score_weight=score_weights['Stock_OC_Diff_normalized'],
-                                 sel_co2_nedc_score_weight=score_weights['NEDC_normalized'],
-                                 sel_configurator_count_score_weight=score_weights['Configurator_Count_normalized'])
+session_state = SessionState.get(
+    first_run_flag=0, 
+    run_id=0, 
+    run_id_scores=0, 
+    save_button_pressed_flag=0, 
+    model='',
+    brand='',
+    daysinstock_score_weight=score_weights['Avg_DaysInStock_Global_normalized'],
+    sel_margin_score_weight=score_weights['TotalGrossMarginPerc_normalized'],
+    sel_margin_ratio_score_weight=score_weights['MarginRatio_normalized'],
+    sel_qty_sold_score_weight=score_weights['Sum_Qty_CHS_normalized'],
+    sel_proposals_score_weight=score_weights['Proposals_VDC_normalized'],
+    sel_oc_stock_diff_score_weight=score_weights['Stock_OC_Diff_normalized'],
+    sel_co2_nedc_score_weight=score_weights['NEDC_normalized'],
+    sel_configurator_count_score_weight=score_weights['Configurator_Count_normalized'],
+    #
+    sales_plan_changes = {},
+    change_co2_target = False,
+    num_added_electrics = 0
+    )
 
 temp_cols = ['Avg_DaysInStock_Global', 'Avg_DaysInStock_Global_normalized', '#Veículos Vendidos', 'Sum_Qty_CHS_normalized', 'Proposals_VDC', 'Proposals_VDC_normalized', 'Margin_HP', 'TotalGrossMarginPerc', 'TotalGrossMarginPerc_normalized', 'MarginRatio', 'MarginRatio_normalized', 'OC', 'Stock_VDC', 'Stock_OC_Diff', 'Stock_OC_Diff_normalized', 'NEDC', 'NEDC_normalized', 'Config_Total', 'Config_Total_normalized']
 total_months_list = ['Jan', 'Fev', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+# choose between Order Optimization or CO2 simulator
+main_function = st.selectbox(
+    label = 'Por favor escolha a aplicação a usar:', 
+    options = ['Simulador CO2', 'Sug. Encomenda'],
+    help = 'Por favor escolha a aplicação a usar'
+    )
 
-def main():
+def co2_simulator():
+    from sympy import solve, Poly, Eq, Function, exp
+    from sympy.abc import x, y, z, a, b
+    
+    st.markdown("<h1 style='text-align: center;'>Simulador de CO2 - Hyundai</h1>", unsafe_allow_html=True)
+    
+    col1, col2 = st.beta_columns([1, 3])
+    
+    months= {
+        1: "Jan",
+        2: "Fev",
+        3: "Mar",
+        4: "Apr",
+        5: "May",
+        6: "Jun",
+        7: "Jul",
+        8: "Aug",
+        9: "Sep",
+        10: "Oct",
+        11: "Nov",
+        12: "Dec"
+    }
+    
+    # get current month
+    current_month = datetime.today().month
+    current_month_str = months.get(current_month, "Invalid month")
+    month_list = list(months.values())
+    current_month_idx = month_list.index(current_month_str)
+    months_eff_sales = month_list[:current_month_idx]
+    
+    # get cached data for sales plan and effective sales 
+    eff_sales = get_co2_eff_sales(options_file)
+    eff_sales = eff_sales[eff_sales['NLR_Code'] == str(options_file.nlr_code_desc['Hyundai'])]
+    eff_sales = eff_sales[eff_sales['Sales_Plan_Year'] == datetime.today().year]
+    
+    # get sales plan
+    sales_plan, input_options = get_co2_sales_plan(options_file)
+    original_cols = sales_plan.columns
+    
+    # replace sales plan with effective sales values in the months before the current one
+    for month in months_eff_sales:
+        
+        month_sales = eff_sales[eff_sales['Sale_Month_str'] == month][['NLR_Code', 'Sales_Plan_Year', 'Num_Sales', 'WLTP_CO2']]
+        month_sales = month_sales.rename(columns={'Num_Sales': month})
+        
+        sales_plan = sales_plan.drop(month, axis = 1)
+        
+        sales_plan = sales_plan.merge(
+            right = month_sales,
+            how = 'outer',
+            left_on = ['WLTP_CO2', 'NLR_Code', 'Sales_Plan_Year'],
+            right_on = ['WLTP_CO2', 'NLR_Code', 'Sales_Plan_Year']
+        )
+        
+    # Process current month: in the cases where the effective sales value is higher
+    # than the sales plan, use the effective sales. Otherwise, use the sales plan
+    month_sales = eff_sales[eff_sales['Sale_Month_str'] == current_month_str][['NLR_Code', 'Sales_Plan_Year', 'Num_Sales', 'WLTP_CO2']]
+    month_sales = month_sales.rename(columns={'Num_Sales': current_month_str + '_sales'})
+    
+    sales_plan = sales_plan.merge(
+        right = month_sales,
+        how = 'outer',
+        left_on = ['WLTP_CO2', 'NLR_Code', 'Sales_Plan_Year'],
+        right_on = ['WLTP_CO2', 'NLR_Code', 'Sales_Plan_Year']
+    )
+    
+    month_list_and_current_sales = month_list.copy()
+    month_list_and_current_sales.append(current_month_str + '_sales')
+    
+    sales_plan[month_list_and_current_sales] = sales_plan[month_list_and_current_sales].fillna(0)    
+    sales_plan[current_month_str] = sales_plan[[current_month_str, current_month_str + '_sales']].max(axis = 1)
+    
+    # filter columns and order rows
+    sales_plan = sales_plan[original_cols]
+    sales_plan = sales_plan.sort_values(by = 'WLTP_CO2')
+            
+    # sales_plan['Ano'] = sales_plan[['Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']].sum(axis = 1)
+    sales_plan['Ano'] = sales_plan[total_months_list].sum(axis = 1)
+    sales_plan = sales_plan.groupby(['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2']).sum()
+    sales_plan = sales_plan.reset_index()
+    
+    # Add Alteração and Total columns
+    sales_plan['Alteração'] = 0
+    sales_plan['Total'] = sales_plan['Ano'] + sales_plan['Alteração'].astype(int)
+    
+    col1.title('Alterações ao plano de vendas:')
+    #col2.title('Alterações ao plano de vendas:')
+
+    session_state.change_co2_target = col1.checkbox(
+        label = 'Alterar valor global de CO2?',
+        value = session_state.change_co2_target,
+        key = session_state.change_co2_target,
+        help = 'Caso opte por não alterar o valor global de CO2, será usado o valor de CO2 do plano de vendas, sem alterações'
+        )
+    
+    total_vhe_original = sales_plan['Ano'].sum()
+    total_co2_original = (sales_plan['WLTP_CO2']*sales_plan['Ano']).sum()
+    target_co2 = (total_co2_original)/(total_vhe_original)
+    
+    # input target CO2 value and changes to plan
+    if session_state.change_co2_target:
+        target_co2 = col1.number_input(
+            label = 'Valor global de CO2:', 
+            value = target_co2,
+            step = 0.0001
+            )
+            
+    model_list = sorted(input_options['PT_PDB_Model_Desc'].drop_duplicates().values)#.astype(int).astype(str)
+    vhe_model = col1.selectbox('Modelo a adicionar ao plano:', ['-'] + list(model_list), index=0)
+    
+    version_list = sorted(input_options[input_options['PT_PDB_Model_Desc'] == vhe_model]['version_co2'].drop_duplicates().values)#.astype(int).astype(str)
+    vhe_version = col1.selectbox('Versão a adicionar ao plano:', ['-'] + list(version_list), index=0)
+    
+    vhe_num = col1.number_input('Numero de veículos:', value = 0)
+
+    write_changes = col1.button(
+        label = 'Calcular',
+        help = 'Aplicar as alterações ao plano de vendas e calcular numero de veiculos elétricos a adicionar ao plano'
+        )
+    
+    if write_changes:
+        vhe_co2 = input_options[
+            (input_options['PT_PDB_Model_Desc'] == vhe_model) &
+            (input_options['version_co2'] == vhe_version)
+            ]['WLTP_CO2'].values[0]
+        
+        # update session_state
+        if vhe_co2 != '-':
+            #session_state.sales_plan_changes[vhe_co2] = [vhe_model, vhe_version, vhe_co2]
+            session_state.sales_plan_changes[vhe_model, vhe_version, vhe_co2] = [vhe_num]
+            
+        sales_plan_changed = sales_plan.copy()
+        
+        for key, value in session_state.sales_plan_changes.items():
+            sales_plan_changed.loc[sales_plan_changed['WLTP_CO2'] == key[2], 'Alteração'] = value
+            
+        sales_plan_changed['Total'] = sales_plan_changed['Ano'] + sales_plan_changed['Alteração'].astype(int)
+        
+    else:
+        if session_state.sales_plan_changes == {}:
+            sales_plan_changed = sales_plan.copy()
+        
+        else:
+            sales_plan_changed = sales_plan.copy()
+            sales_plan_changed.loc[sales_plan_changed['WLTP_CO2'] == 0, 'Alteração'] = session_state.num_added_electrics
+
+            for key, value in session_state.sales_plan_changes.items():
+                sales_plan_changed.loc[sales_plan_changed['WLTP_CO2'] == key[2], 'Alteração'] = value
+            
+        sales_plan_changed['Total'] = sales_plan_changed['Ano'] + sales_plan_changed['Alteração'].astype(int)
+
+    # CO2 value with original sales plan
+    total_vhe_original = sales_plan_changed['Ano'].sum()
+    total_co2_original = (sales_plan_changed['WLTP_CO2']*sales_plan_changed['Ano']).sum()
+    co2_original = (total_co2_original)/(total_vhe_original)
+    with col2: st.write(
+        'Emissão média de CO2 do plano de vendas original = ' + str(np.round(co2_original, 4)) + 
+        ' g/km, com ' + str(int(np.round(total_vhe_original, 0))) + ' veículos'
+        )
+    
+    # CO2 value with changed sales plan
+    total_vhe_changed = sales_plan_changed['Total'].sum()
+    total_co2_changed = (sales_plan_changed['WLTP_CO2'] * sales_plan_changed['Total']).sum()
+    co2_changed = (total_co2_changed)/(total_vhe_changed)
+    with col2: st.write(
+        'Emissão média de CO2 do plano de vendas alterado = ' + str(np.round(co2_changed, 4)) + 
+        ' g/km, com ', str(int(np.round(total_vhe_changed, 0))), 'veículos. Foram adicionados  ', 
+        str(int(np.round(total_vhe_changed - total_vhe_original, 0))), 'veículos ao plano original'
+        )
+    
+    # solve the equation and get the number of additional electric vehicles to add to the plan
+    add_electric_vhe = solve(-target_co2 + (total_co2_changed/(total_vhe_changed + x)))
+    if add_electric_vhe[0] < 0.0001:
+        add_electric_vhe = 0
+    else:
+    
+        add_electric_vhe = np.ceil(add_electric_vhe)[0]
+    session_state.num_added_electrics = add_electric_vhe
+    
+    #add the additional electric vehicles to the plan
+    sales_plan_changed.loc[sales_plan_changed['WLTP_CO2'] == 0, 'Alteração'] = sales_plan_changed.loc[sales_plan_changed['WLTP_CO2'] == 0, 'Alteração'] + add_electric_vhe
+    sales_plan_changed['Total'] = sales_plan_changed['Ano'] + sales_plan_changed['Alteração'].astype(int)
+    
+    with col2: st.write(
+        'Adicionando ' + str(add_electric_vhe) + 
+        ' veículos elétricos ao plano de vendas, para atingir o valor alvo de CO2 de ',
+        str(np.round(target_co2, 4)), ' g/km'
+        )
+    
+    # CO2 value with changed sales plan and additional electric vehicles
+    total_vhe_final = int(sales_plan_changed['Total'].sum())
+    total_co2_final = (sales_plan_changed['WLTP_CO2']*sales_plan_changed['Total']).sum()
+    co2_final = (total_co2_final)/(total_vhe_final)
+    with col2: st.write('Emissão média de CO2 do plano de vendas final = ' + str(np.round(co2_final, 4)) + ' g/km, com ' + str(np.round(total_vhe_final, 0)) + ' veículos')
+    
+    def rower(data):
+        
+        # color every other row in light grey
+        s = data.index % 2 != 0
+        s = pd.concat([pd.Series(s)] * data.shape[1], axis=1) #6 or the n of cols u have
+        z = pd.DataFrame(
+            np.where(s, 'background-color:#f2f2f2', ''),
+            index = data.index, 
+            columns = data.columns
+            )
+        
+        # color current month's column with a strong color
+        months= {
+            1: "Jan",
+            2: "Fev",
+            3: "Mar",
+            4: "Apr",
+            5: "May",
+            6: "Jun",
+            7: "Jul",
+            8: "Aug",
+            9: "Sep",
+            10: "Oct",
+            11: "Nov",
+            12: "Dec"
+        }
+        current_month = datetime.today().month
+        current_month_str = months.get(current_month, "Invalid month")
+        z[current_month_str] = 'background-color:khaki'
+        
+        # color rows where 'Alteração' is not null with a strong color
+        non_null_indexes = data[data['Alteração'] != 0].index
+        z[z.index.isin(data[data['Alteração'] != 0].index)] = 'background-color:goldenrod'
+
+        return z
+    
+    col2.dataframe(
+        data = sales_plan_changed[
+            ['WLTP_CO2'] + 
+            total_months_list + 
+            ['Ano', 'Alteração', 'Total']
+            ].astype(int).style.apply(rower, axis=None),
+        height = 2000
+        )
+        
+    with col2: st.write('Total de veiculos por mês:')
+    sales_plan_sum = pd.DataFrame(sales_plan_changed[
+        ['WLTP_CO2'] + 
+        total_months_list + 
+        ['Ano', 'Alteração', 'Total']
+        ].sum(axis = 0)).T.astype(int)
+    col2.dataframe(sales_plan_sum)
+
+    col1.write('Alterações em cache:')
+    
+    changes_print = {}
+    
+    if session_state.sales_plan_changes == {}:
+        col1.table(
+            pd.DataFrame(
+                #list(changes_print.items()),
+                columns = ['Veiculo','Numero de veiculos']).set_index('Veiculo')
+            )  
+    
+    else:
+        
+        for key, value in session_state.sales_plan_changes.items():
+            
+            changes_print[key[0] + ' ' + key[1]] = value[0]
+
+        col1.table(
+            pd.DataFrame(
+                list(changes_print.items()),
+                columns = ['Veiculo','Numero de veiculos']).set_index('Veiculo')
+            )
+        print(pd.DataFrame(columns = ['Veiculo','Numero de veiculos']))
+        reset_changes = col1.button('Limpar alterações em cache')
+        if reset_changes:
+            session_state.sales_plan_changes = {}
+            session_state.num_added_electrics = 0
+            
+    # save file
+    current_date, _ = level_1_e_deployment.time_tags(format_date='%Y%m%d')
+
+    csv = sales_plan_changed.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    file_name = 'Plano_Vendas_{}_{}.csv'.format('Hyundai', current_date)
+    
+    href = f'<a href="data:file/csv;base64,{b64}" download={file_name}>Gravar Plano de vendas como csv</a>'
+    with col1: st.markdown(href, unsafe_allow_html=True)
+
+@st.cache(show_spinner=False)
+def get_co2_eff_sales(options_file):   
+        
+    eff_sales = level_1_a_data_acquisition.sql_retrieve_df_specified_query(
+        options_file.DSN_SRV3_PRD,  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
+        options_file.sql_info['database_source'], 
+        options_file, 
+        options_file.eff_sales_temp_query
+    )
+        
+    return eff_sales
+        
+@st.cache(show_spinner=False)
+def get_co2_sales_plan(options_file):   
+        
+    sales_plan_raw = get_data_v2(
+        options_file,
+        options_file.DSN_SRV3_PRD,  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR 
+        options_file.sql_info['database_source'], 
+        options_file.sql_info['sales_plan_aux']
+    )
+    
+    #	Factory_Model_Code	Local_Vehicle_Option_Code
+    # 	G7S6ZCZ7Z	           GAMC
+
+    
+    sales_plan_raw = sales_plan_raw[sales_plan_raw['NLR_Code'] == '702']
+    sales_plan_raw = sales_plan_raw[sales_plan_raw['Sales_Plan_Year'] == 2021] 
+        
+    vehicle_data = level_1_a_data_acquisition.sql_retrieve_df_specified_query(
+        options_file.DSN_SRV3_PRD,  # ÂLTERAR PARA options_file.DSN_SRV3_PRD QUANDO FOR FEITA A MIGRACAO PARA O SERVIDOR
+        options_file.sql_info['database_source'], 
+        options_file, 
+        options_file.vehicle_data_query
+    )
+    
+    sales_plan = sales_plan_raw.merge(
+        right = vehicle_data[[
+            'Factory_Model_Code', 
+            'PDB_OCN', 
+            'PT_PDB_Franchise_Desc',
+            'PT_PDB_Model_Desc',
+            'PT_PDB_Version_Desc',
+            'PT_PDB_Commercial_Version_Desc'
+            ]].drop_duplicates(),
+        how = 'left',
+        left_on = ['Factory_Model_Code', 'Local_Vehicle_Option_Code'],
+        right_on = ['Factory_Model_Code', 'PDB_OCN']
+        )
+
+    sales_plan_raw = sales_plan_raw.sort_values(by = ['Factory_Model_Code', 'Local_Vehicle_Option_Code'])
+    sales_plan = sales_plan.sort_values(by = ['Factory_Model_Code', 'PDB_OCN'])
+
+    
+    input_options = sales_plan[[
+        'PT_PDB_Franchise_Desc',
+        'PT_PDB_Model_Desc',
+        'PT_PDB_Version_Desc',
+        'PT_PDB_Commercial_Version_Desc',
+        'WLTP_CO2'
+        ]].dropna().drop_duplicates().reset_index(drop = True)
+    
+    input_options["version_co2"] = input_options["PT_PDB_Commercial_Version_Desc"] + ' - ' + input_options["WLTP_CO2"].astype(str) + ' g/km'
+    
+    # data filtering and processing
+    sales_plan['Ano'] = sales_plan[total_months_list].sum(axis = 1)
+    sales_plan['Ano'] = sales_plan[total_months_list].sum(axis = 1)
+
+    #sales_plan = sales_plan[['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2', 'Jan', 'Fev', 'Mar',  'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ano']]
+    sales_plan = sales_plan[
+        ['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2'] + 
+        total_months_list + 
+        ['Ano']
+        ]
+    sales_plan = sales_plan.groupby(['NLR_Code', 'Sales_Plan_Year', 'WLTP_CO2']).sum()
+    sales_plan = sales_plan.reset_index()
+
+    return sales_plan, input_options
+           
+@st.cache(show_spinner=False)
+def get_vehicle_data(options_file):   
+        
+    vehicle_data = level_1_a_data_acquisition.sql_retrieve_df_specified_query(
+        options_file.DSN_SRV3_PRD,  
+        options_file.sql_info['database_source'], 
+        options_file, 
+        options_file.vehicle_data_query
+    )
+        
+    return vehicle_data
+
+def order_optimization():
+    st.markdown("<h1 style='text-align: center;'>Sugestão de Encomenda - Importador</h1>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>Sugestão de Configurações para a encomenda mensal de viaturas Hyundai e Honda</h2>", unsafe_allow_html=True)
+
+    url_hyperlink = '''
+        <a href= "{}" > <p style="text-align:right"> Manual de Utilizador </p></a>
+    '''.format(options_file.documentation_url_solver_app)
+    st.markdown(url_hyperlink, unsafe_allow_html=True)
+
     data_v2 = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['new_score_streamlit_view'], model_flag=1)
     all_brands_sales_plan = get_data_v2(options_file, options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file.sql_info['sales_plan_aux'])
     live_ocn_df = get_data_v2(options_file, options_file.DSN_MLG_PRD, options_file.sql_info['database_final'], options_file.sql_info['current_live_ocn_table'], model_flag=1)
     end_month_index, current_year = period_calculation()
-
+    
     dw_last_updated_date = data_v2['Record_Date'].max()
     placeholder_dw_date.markdown("<p style='text-align: right;'>Última Atualização DW - {}</p>".format(dw_last_updated_date), unsafe_allow_html=True)
 
     data_v2 = col_normalization(data_v2.copy(), cols_to_normalize, reverse_normalization_cols)
     max_number_of_cars_sold = max(data_v2['Sum_Qty_CHS'])
     sel_brand = st.sidebar.selectbox('Marca:', ['-'] + [x for x in options_file.nlr_code_desc.keys()], index=0, key=session_state.run_id)
-
+    
     if '-' not in sel_brand:
         co2_nedc, co2_wltp, total_sales = co2_processing(all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), :].copy(), end_month_index, current_year)
+        
         co2_nedc_before_order = co2_nedc / total_sales
         co2_wltp_before_order = co2_wltp / total_sales
         st.write('Situação Atual de Co2 (NEDC/WLTP): {:.2f}/{:.2f} gCo2/km'.format(co2_nedc_before_order, co2_wltp_before_order))
@@ -85,20 +488,19 @@ def main():
             sel_period_string = '{} de {}'.format('Jan', current_year)
         else:
             sel_period_string = '{} a {} de {}'.format(total_months_list[0], total_months_list[end_month_index - 1], current_year)
-
         st.write('Plano de Vendas Total, {}: {} viaturas'.format(sel_period_string, int(total_sales)))
         placeholder_sales_plan_single_model = st.empty()
 
         data_models_v2 = data_v2.loc[data_v2['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'PT_PDB_Model_Desc'].unique()
         sel_model = st.sidebar.selectbox('Modelo:', ['-'] + list(sorted(data_models_v2)), index=0)
-
+        
         sales_plan_last_updated_date = all_brands_sales_plan.loc[all_brands_sales_plan['NLR_Code'] == str(options_file.nlr_code_desc[sel_brand]), 'Record_Date'].max()
         proposals_last_updated_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.proposals_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
         margins_last_update_date = run_single_query(options_file.DSN_SRV3_PRD, options_file.sql_info['database_source'], options_file, options_file.margins_max_date_query.format(options_file.nlr_code_desc[sel_brand])).values[0][0]
 
         placeholder_sales_plan_date.markdown("<p style='text-align: right;'>Última Atualização Plano de Vendas - {}</p>".format(sales_plan_last_updated_date), unsafe_allow_html=True)
         placeholder_margins_date.markdown("<p style='text-align: right;'>Última Atualização Margens HP - {}</p>".format(margins_last_update_date), unsafe_allow_html=True)
-
+        
         if sel_brand == 'Hyundai':
             placeholder_proposal_date.markdown("<p style='text-align: right;'>Última Atualização Propostas HPK - {}</p>".format(proposals_last_updated_date), unsafe_allow_html=True)
         elif sel_brand == 'Honda':
@@ -128,9 +530,9 @@ def main():
         elif options_file.nlr_code_desc[sel_brand] == 706:
             session_state.sel_configurator_count_score_weight = 0
 
-        weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight + session_state.sel_configurator_count_score_weight
-        if weights_sum != 100:
-            st.sidebar.error('Alerta: Soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
+    weights_sum = session_state.sel_daysinstock_score_weight + session_state.sel_margin_score_weight + session_state.sel_margin_ratio_score_weight + session_state.sel_qty_sold_score_weight + session_state.sel_proposals_score_weight + session_state.sel_oc_stock_diff_score_weight + session_state.sel_co2_nedc_score_weight + session_state.sel_configurator_count_score_weight
+    if weights_sum != 100:
+        st.sidebar.error('Alerta: Soma dos pesos é atualmente de {}%. Por favor validar e corrigir pesos de acordo.'.format(weights_sum))
 
     if st.sidebar.button('Reset Pesos'):
         session_state.sel_daysinstock_score_weight = score_weights['Avg_DaysInStock_Global_normalized'] * 100
@@ -311,12 +713,13 @@ def period_calculation():
 
 @st.cache(show_spinner=False)
 def co2_processing(df, end_date_month_number, current_year):
+    
     # The following condition is only for the first year of the month, where, even though January isn't complete, we default to use the sales plan for that month;
     if end_date_month_number == 1:
         df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == current_year), :].loc[:, ['Jan']].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
     else:
         df.loc[:, 'Sales_Sum'] = df.loc[(df['Sales_Plan_Year'] == current_year), :].loc[:, total_months_list[0:end_date_month_number - 1]].sum(axis=1)  # First, filter dataframe for the current year of the sales plan, then select only the running year months;
-
+    
     df.loc[:, 'Sales_Sum_Times_Co2_WLTP'] = df['Sales_Sum'] * df['WLTP_CO2']
     df.loc[:, 'Sales_Sum_Times_Co2_NEDC'] = df['Sales_Sum'] * df['NEDC_CO2']
     co2_wltp_sum = df['Sales_Sum_Times_Co2_WLTP'].sum(axis=0)
@@ -532,11 +935,22 @@ def client_replacement(df, client_lvl_cols_in, client_lvl_sels):
 
     return df
 
+def main(main_function):
+    if main_function == 'Simulador CO2':
+        co2_simulator()
+        
+    elif main_function == 'Sug. Encomenda':
+        order_optimization()
+        
+    else:
+        return
 
 if __name__ == '__main__':
     try:
-        main()
+        main(main_function)
+            
     except Exception as exception:
+
         project_identifier, exception_desc = options_file.project_id, str(sys.exc_info()[1])
         log_record('OPR Error - ' + exception_desc, project_identifier, flag=2, solution_type='OPR')
         error_upload(options_file, project_identifier, format_exc(), exception_desc, error_flag=1, solution_type='OPR')
@@ -544,4 +958,3 @@ if __name__ == '__main__':
         st.error('AVISO: Ocorreu um erro. Os administradores desta página foram notificados com informação do erro e este será corrigido assim que possível. Entretanto, esta aplicação será reiniciada. Obrigado pela sua compreensão.')
         time.sleep(10)
         raise RerunException(RerunData())
-
