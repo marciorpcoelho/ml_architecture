@@ -368,10 +368,10 @@ def additional_info_temp(x, tag):
     # This function is very similar to additional_info with exception to average_score_pred, as this function was created to deal with a non-trained approach;
 
     x['nr_cars_sold' + str(tag[0])] = len(x)
-    x['average_percentage_margin' + str(tag[0])] = x['margem_percentagem'].mean()
-    x['average_stock_days' + str(tag[0])] = x['stock_days'].mean()
-    x['average_score' + str(tag[0])] = x['score_class_gt'].mean()
-    x['average_score_euros' + str(tag[0])] = x['score_euros'].mean()
+    x['average_percentage_margin' + str(tag[0])] = x['margem_percentagem'].mean().round(4)
+    x['average_stock_days' + str(tag[0])] = x['stock_days'].mean().round(4)
+    x['average_score' + str(tag[0])] = x['score_class_gt'].mean().round(4)
+    x['average_score_euros' + str(tag[0])] = x['score_euros'].mean().round(4)
     return x
 
 

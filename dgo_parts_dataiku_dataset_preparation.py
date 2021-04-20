@@ -3,9 +3,11 @@ import numpy as np
 from joblib import dump
 from sklearn import feature_extraction
 import time
+import gc
 import nltk
 import string
 import pyodbc
+from unidecode import unidecode
 from modules.level_1_b_data_processing import lowercase_column_conversion, trim_columns
 from modules.level_1_e_deployment import sql_inject
 from modules.level_1_a_data_acquisition import sql_retrieve_df, sql_retrieve_df_specified_query
@@ -54,6 +56,11 @@ exact_matches_dict = {
     'altavoz bluetooth azul': '62',
     'grasa de vaselina': '48',
     'chaine': '5',
+    'amortecedor': '3',
+    'jpastilhas tra': '98',
+    'radiador': '41',
+    'correia': '97',
+    'vela ignicao': '15',
 }
 partial_matches_dict = {
     "^injector.{0,}|^inyector.{0,}|^injecteur.{0,}":
@@ -126,6 +133,10 @@ partial_matches_dict = {
         "48",
     "^spray\\s{0,}limpeza.{0,}|^spray\\s{0,}de\\s{0,}limpeza.{0,}":
         "46",
+    "^continenta.{0,}":
+        "49",
+    "^micheli.{0,}":
+        "49",
     "^adhesivo.{0,}":
         "48",
     "^kit\\s{0,}dist.{0,}":
@@ -142,7 +153,14 @@ partial_matches_dict = {
         "97",
     "^key\\s{0,}chain.{0,}":
         "77",
-    "^additif.{0,}": "102"
+    "^additif.{0,}":
+        "102",
+    "^amortecedo.{0,}":
+        "3",
+    "^radiado.{0,}":
+        "41",
+    "^vela.{0,}":
+        "",
 }
 parts_families_replacement = {
     '75': '75/77',
@@ -231,6 +249,10 @@ def flow_step_2(df):
     return df
 
 
+def coerce_to_unicode(x):
+    return str(x)
+
+
 # compute_Dataset_w_Count_prepared
 def flow_step_3(df):
     log_record('Step 3 started.', options_file.project_id)
@@ -245,6 +267,8 @@ def flow_step_3(df):
     # Step 1.5
     text_cols = ['Part_Desc_PT', 'Part_Desc']
     for col in text_cols:
+        df[col] = df[col].apply(unidecode)
+        df[col] = df[col].apply(coerce_to_unicode)
         df[col] = df[col].apply(remove_punctuations)
         df[col] = df[col].apply(lambda x: ' '.join([word for word in x.split() if word not in options_file.stop_words_common]))
 
@@ -309,7 +333,7 @@ def keyword_generation(df, text_col):
 
     final_df.to_csv('dbs/product_group_dw_{}_keywords.csv'.format(text_col), index=False)
 
-    return df
+    return final_df
 
 
 def detect_keywords(df, col, list_words):
@@ -542,11 +566,11 @@ def flow_step_7(df):
 def flow_step_8(master_file_classified_families_filtered, master_file_other_families_filtered, master_file_non_classified):
     log_record('Step 8 started.', options_file.project_id)
 
-    starting_cols = [x for x in list(master_file_classified_families_filtered) if x not in ['Part_Ref']]
+    starting_cols = [x for x in list(master_file_classified_families_filtered) if x not in ['PLR_Account_first']]
 
-    _, main_families_clf, main_families_cm_train, main_families_cm_test, main_families_metrics_dict = model_training(master_file_classified_families_filtered, starting_cols, 'main_families_clf')  # Modelo conhece 50 familias
+    _, main_families_clf, _, main_families_cm_test, main_families_metrics_dict = model_training(master_file_classified_families_filtered, starting_cols, 'main_families_clf')  # Modelo conhece 50 familias
     dump(main_families_clf, options_file.main_families_clf_path)
-    _, other_families_clf, other_families_cm_train, other_families_cm_test, other_families_metrics_dict = model_training(master_file_other_families_filtered, starting_cols, 'other_families_clf')  # Modelo conhece 8 familias
+    _, other_families_clf, _, other_families_cm_test, other_families_metrics_dict = model_training(master_file_other_families_filtered, starting_cols, 'other_families_clf')  # Modelo conhece 8 familias
     dump(other_families_clf, options_file.other_families_clf_path)
 
     # print('Main Families CM (Test): \n{}'.format(main_families_cm_test))
@@ -563,20 +587,12 @@ def flow_step_8(master_file_classified_families_filtered, master_file_other_fami
     print('first classification, over 50 shape:', master_file_scored_over_50.shape)
     master_file_scored_sub_50 = master_file_scored[master_file_scored['Max_Prob'] <= 0.5]
     print('first classification, sub 50 shape:', master_file_scored_sub_50.shape)
+    del master_file_scored
+    gc.collect()
 
     # Second Classification
     master_file_sub_50_scored, _, _, _, _ = model_training(master_file_scored_sub_50[starting_cols], starting_cols, 'second_others', clf=other_families_clf)
     master_file_sub_50_scored = prob_thres_col_creation(master_file_sub_50_scored)
-
-    print('master_file_scored_over_50')
-    print(list(master_file_scored_over_50))
-    print(len(list(master_file_scored_over_50)))
-    print('duplicated master_file_scored_over_50: {}'.format(master_file_scored_over_50.columns.duplicated()))
-
-    print('master_file_sub_50_scored')
-    print(list(master_file_sub_50_scored))
-    print(len(list(master_file_sub_50_scored)))
-    print('duplicated master_file_sub_50_scored: {}'.format(master_file_sub_50_scored.columns.duplicated()))
 
     master_file_final = pd.concat([master_file_scored_over_50, master_file_sub_50_scored])
     print(master_file_final.shape)
@@ -650,7 +666,6 @@ def flow_step_10(df, manual_classifications):
 def prob_thres_col_creation(df):
     proba_cols = [x for x in list(df) if x.startswith('proba')]
 
-    df['Max_Prob'] = df[proba_cols].max(axis=1)
     df['New_Prediction_50'] = np.where(df['Max_Prob'] <= 0.5, 1, df['prediction'])
     df['New_Prediction_80'] = np.where(df['Max_Prob'] < 0.8, 1, df['prediction'])
     df['New_Prediction_85'] = np.where(df['Max_Prob'] < 0.85, 1, df['prediction'])

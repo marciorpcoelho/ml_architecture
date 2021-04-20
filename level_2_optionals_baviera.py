@@ -56,7 +56,7 @@ def main():
 
 def control_prints(df, tag, head=0, save=0, null_analysis_flag=0, date=0):
 
-    # print('{}\n{}'.format(tag, df.shape))
+    # print('{} - {}'.format(tag, df.shape))
     # try:
     #     print('Unique Vehicles: {}'.format(df['Nº Stock'].nunique()))
     # except KeyError:
@@ -177,22 +177,25 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
 
             # control_prints(df, 'mapping_testing_before', head=1)
 
-            df = pd.merge(df, mapping_sell_place, left_on='Local da Venda', right_on='Original_Value')
+            df = pd.merge(df, mapping_sell_place, left_on='Local da Venda', right_on='Original_Value', how='left')
             df = column_rename(df, ['Mapped_Value'], ['Local da Venda_v1'])
             df = df.drop(['Original_Value'], axis=1)
+            nan_detection(df, 'Local da Venda', 'Local da Venda_v1')
             control_prints(df, 'mapping_testing_v1', head=1)
 
-            df = pd.merge(df, mapping_sell_place_v2, left_on='Local da Venda', right_on='Original_Value')
+            df = pd.merge(df, mapping_sell_place_v2, left_on='Local da Venda', right_on='Original_Value', how='left')
             df = column_rename(df, ['Mapped_Value'], ['Local da Venda_v2'])
             df = df.drop(['Original_Value'], axis=1)
+            nan_detection(df, 'Local da Venda', 'Local da Venda_v2')
             control_prints(df, 'mapping_testing_v2', head=1)
 
             mapping_sell_place_fase2['Mapped_Value'] = mapping_sell_place_fase2['Mapped_Value'].str.lower()
 
             # print(mapping_sell_place_fase2)
-            df = pd.merge(df, mapping_sell_place_fase2, left_on='Local da Venda_v2', right_on='Mapped_Value')
+            df = pd.merge(df, mapping_sell_place_fase2, left_on='Local da Venda_v2', right_on='Mapped_Value', how='left')
             df = column_rename(df, ['Original_Value'], ['Local da Venda_fase2'])
             df = df.drop(['Mapped_Value'], axis=1)
+            nan_detection(df, 'Local da Venda_v2', 'Local da Venda_fase2')
             control_prints(df, 'after mapping fase2', head=1)
 
         df = df.drop(['Local da Venda'], axis=1)
@@ -213,6 +216,21 @@ def data_processing(df, target_variable, oversample_check, number_of_features):
     log_record('Fim Secção B.', project_id)
     performance_info_append(time.time(), 'Section_B_End')
     return df
+
+
+def nan_detection(df, original_col, new_col):
+    new_col_rows_with_nan = df[df[new_col].isnull()]
+
+    if new_col_rows_with_nan.shape[0]:
+        log_record('Aviso no Merge de Colunas  - NaNs detetados em: {}, não encontrada a parametrização para {} nos veículos(s) com VHE_Number(s): {}'.format(
+            new_col,
+            new_col_rows_with_nan[original_col].unique(),
+            new_col_rows_with_nan['Nº Stock'].unique()),
+            project_id,
+            flag=1
+        )
+
+    return
 
 
 def model_evaluation(df, models, best_models, running_times, datasets, number_of_features, options_file, oversample_check, proj_id):
