@@ -379,7 +379,7 @@ def get_ngrams_from_df(df, desc_col, top_ngrams_count, ngrams_degree=1):
 
 def remove_punctuations(text):
     for punctuation in string.punctuation:
-        text = text.replace(punctuation, '')
+        text = text.replace(punctuation, ' ')
     return text
 
 
@@ -754,7 +754,11 @@ def group_by_rules(x):
 
     d['brand'] = x['brand'].head(1).values[0]
 
-    return pd.Series(d, index=['Part_Desc_concat', 'Product_Group_DW', 'Client_Id', 'Average_Cost_avg', 'PVP_1_avg', 'PLR_Account_first', 'Part_Desc_PT_concat', 'part_ref_length', 'part_ref_digits_count', 'part_ref_letters_count', 'part_ref_spaces_count', 'part_ref_others_count', 'brand'])
+    return pd.Series(d, index=['Part_Desc_concat', 'Product_Group_DW', 'Client_Id', 'Average_Cost_avg', 'PVP_1_avg', 'PLR_Account_first', 'Part_Desc_PT_concat',
+                               'Part_Ref_length', 'Part_Ref_digits_count', 'Part_Ref_letters_count', 'Part_Ref_spaces_count', 'Part_Ref_others_count',
+                               'Part_Desc_length', 'Part_Desc_digits_count', 'Part_Desc_letters_count', 'Part_Desc_spaces_count', 'Part_Desc_others_count',
+                               'Part_Desc_PT_length', 'Part_Desc_PT_digits_count', 'Part_Desc_PT_letters_count', 'Part_Desc_PT_spaces_count', 'Part_Desc_PT_others_count',
+                               'brand'])
 
 
 def product_group_dw_complete_replaces(df):
