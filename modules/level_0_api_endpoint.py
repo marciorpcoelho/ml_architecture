@@ -4,6 +4,11 @@ from typing import Optional
 import pandas as pd
 import numpy as np
 import cvxpy as cp
+import os
+from py_dotenv import read_dotenv
+dotenv_path = '/info.env'
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
+read_dotenv(base_path + dotenv_path)
 
 app = FastAPI(
     title='Predictive Analytics API Endpoint',
@@ -11,7 +16,7 @@ app = FastAPI(
     version='0.1'
 )
 
-api_endpoint_ip = 'http://10.10.10.170:8000/'
+api_endpoint_ip = os.getenv('API_IP')
 
 
 class OptimizationDataIn(BaseModel):
